@@ -42,7 +42,8 @@
         </view>
       </view>
       <view class="u-actions" wx:if="{{item.role !== 'super_admin'}}">
-        <button class="btn-remove" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onRemoveUser">移出群组</button>
+        <button wx:if="{{isSuperAdmin && item.role === 'admin'}}" class="btn-demote" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onDemoteAdmin">解除管理员</button>
+        <button class="btn-remove" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onDeleteUser">删除用户</button>
       </view>
     </view>
   </block>

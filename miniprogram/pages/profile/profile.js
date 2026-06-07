@@ -29,6 +29,14 @@ Page({
     }
     if (!userInfo.groupIds) userInfo.groupIds = [];
 
+    // 转换头像 cloud:// → 临时 URL
+    if (userInfo.avatarUrl && userInfo.avatarUrl.startsWith('cloud://')) {
+      try {
+        const urlRes = await wx.cloud.getTempFileURL({ fileList: [userInfo.avatarUrl] });
+        userInfo.avatarUrl = urlRes.fileList[0].tempFileURL;
+      } catch {}
+    }
+
     const gRes = await dbUtil.getGroups();
     const ids = userInfo.groupIds;
     const names = ids.map(id => {
@@ -117,13 +125,27 @@ Page({
         groupIds: selectedGroupIds,
       };
       await dbUtil.updateUser(userInfo._id, updateData);
-      // 为新加的群创建审批
+      // 群组加入无需审批，增加新群成员数
       const oldIds = userInfo.groupIds || [];
       for (const gid of selectedGroupIds) {
-        if (!oldIds.includes(gid)) await dbUtil.createJoinRequest(userInfo._id, gid);
+        if (!oldIds.includes(gid)) {
+          dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
+        }
+      }
+      for (const gid of oldIds) {
+        if (!selectedGroupIds.includes(gid)) {
+          dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(-1) } }).catch(() => {});
+        }
       }
 
       const updatedUser = { ...userInfo, ...updateData };
+      // 转换头像 cloud:// → 临时 URL 用于显示
+      if (updatedUser.avatarUrl && updatedUser.avatarUrl.startsWith('cloud://')) {
+        try {
+          const urlRes = await wx.cloud.getTempFileURL({ fileList: [updatedUser.avatarUrl] });
+          updatedUser.avatarUrl = urlRes.fileList[0].tempFileURL;
+        } catch {}
+      }
       wx.setStorageSync('userInfo', updatedUser);
       // 重新计算群名
       const names = selectedGroupIds.map(id => {

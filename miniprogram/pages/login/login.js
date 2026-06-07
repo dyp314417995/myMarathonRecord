@@ -145,10 +145,9 @@ Page({
           city: city.trim(), pb10k, pbHalf, pbFull,
           groupIds: selectedGroupIds
         });
-        // 为每个新增的群创建审批
-        const oldIds = user.groupIds || [];
+        // 更新群成员数
         for (const gid of selectedGroupIds) {
-          if (!oldIds.includes(gid)) await dbUtil.createJoinRequest(user._id, gid);
+          dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
       } else {
         // 新用户注册
@@ -158,9 +157,10 @@ Page({
           groupIds: selectedGroupIds,
         };
         const addRes = await dbUtil.createUser(userData);
-        user = { _id: addRes._id, ...userData, role: 'user', status: selectedGroupIds.length ? 'pending' : 'approved' };
+        user = { _id: addRes._id, ...userData, role: 'user', status: 'approved' };
+        // 更新群成员数
         for (const gid of selectedGroupIds) {
-          await dbUtil.createJoinRequest(addRes._id, gid);
+          dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
         // 注册送50积分
         await pointsUtil.addRecord({
@@ -177,7 +177,7 @@ Page({
       wx.setStorageSync('userInfo', user);
 
       wx.hideLoading();
-      wx.showToast({ title: selectedGroupIds.length ? '已提交申请，等待审批' : '注册成功', icon: 'success' });
+      wx.showToast({ title: '注册成功', icon: 'success' });
       setTimeout(() => {
         wx.reLaunch({ url: '/pages/home/home' });
       }, 1500);

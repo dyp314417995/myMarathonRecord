@@ -9,7 +9,8 @@
     "pages/super-admin/manage",
     "pages/points/index",
     "pages/points/apply",
-    "pages/points/admin"
+    "pages/points/admin",
+    "pages/groups/index"
   ],
   "usingComponents": {},
   "window": {

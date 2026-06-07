@@ -58,11 +58,11 @@
     <!-- 权限范围 -->
     <text class="form-label" style="margin-top:24rpx;">权限范围</text>
     <view class="perm-options">
-      <view class="perm-option {{permissions.approve_join ? 'active' : ''}}" data-key="approve_join" bindtap="onTogglePermission">
-        <text>✅ 审批加入</text>
+      <view class="perm-option {{permissions.approve_points ? 'active' : ''}}" data-key="approve_points" bindtap="onTogglePermission">
+        <text>⭐ 积分审批</text>
       </view>
       <view class="perm-option {{permissions.remove_user ? 'active' : ''}}" data-key="remove_user" bindtap="onTogglePermission">
-        <text>❌ 移除用户</text>
+        <text>👥 移除用户</text>
       </view>
     </view>
 

@@ -22,7 +22,7 @@
           </view>
 
           <view class="group-actions">
-            <text class="action-edit" data-id="{{item._id}}" data-name="{{item.name}}" data-qr="{{item.qrCode}}" bindtap="onEdit">编辑</text>
+            <text class="action-edit" data-id="{{item._id}}" data-name="{{item.name}}" data-desc="{{item.description}}" data-remark="{{item.remark}}" data-qr="{{item.qrCode}}" bindtap="onEdit">编辑</text>
             <text class="action-del" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onDeleteGroup">删除</text>
           </view>
         </view>
@@ -42,7 +42,13 @@
     <text class="form-label">群名称</text>
     <input class="form-input" placeholder="请输入群名称" value="{{groupName}}" bindinput="onNameInput" focus />
 
-    <text class="form-label" style="margin-top:24rpx;">群二维码（可选）</text>
+    <text class="form-label" style="margin-top:16rpx;">群介绍</text>
+    <textarea class="form-textarea" placeholder="群介绍..." value="{{groupDesc}}" bindinput="onDescInput" />
+
+    <text class="form-label" style="margin-top:16rpx;">备注</text>
+    <input class="form-input" placeholder="群已满，请联系管理员邀请加入" value="{{groupRemark}}" bindinput="onRemarkInput" />
+
+    <text class="form-label" style="margin-top:16rpx;">群二维码（可选）</text>
     <view class="qr-area">
       <image wx:if="{{qrCodeTemp}}" class="qr-preview" src="{{qrCodeTemp}}" mode="aspectFit" />
       <image wx:elif="{{qrCode}}" class="qr-preview" src="{{qrCode}}" mode="aspectFit" />

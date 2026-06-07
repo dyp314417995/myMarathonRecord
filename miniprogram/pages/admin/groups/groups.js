@@ -8,6 +8,8 @@ Page({
     modalTitle: '',
     editId: '',           // 编辑模式下存 group._id
     groupName: '',
+    groupDesc: '',
+    groupRemark: '',
     qrCode: '',           // 已有二维码 cloud fileID
     qrCodeTemp: '',       // 新选的临时路径
     qrCodeNew: '',        // 新上传后的 cloud fileID（确认时合并）
@@ -34,10 +36,9 @@ Page({
 
   // ========== 添加 ==========
   onShowAdd() {
-    this.setData({ showModal: true, modalTitle: '添加新群组', editId: '', groupName: '', qrCode: '', qrCodeTemp: '', qrCodeNew: '' });
+    this.setData({ showModal: true, modalTitle: '添加新群组', editId: '', groupName: '', groupDesc: '', groupRemark: '', qrCode: '', qrCodeTemp: '', qrCodeNew: '' });
   },
 
-  // ========== 编辑 ==========
   onEdit(e) {
     const { id, name, qr } = e.currentTarget.dataset;
     this.setData({ showModal: true, modalTitle: '编辑群组', editId: id, groupName: name, qrCode: qr || '', qrCodeTemp: '', qrCodeNew: '' });
@@ -66,7 +67,7 @@ Page({
 
   // ========== 确认提交 ==========
   async onSubmit() {
-    const { editId, groupName, qrCodeTemp, qrCodeNew, qrCode } = this.data;
+    const { editId, groupName, groupDesc, groupRemark, qrCodeTemp, qrCodeNew, qrCode } = this.data;
     const name = groupName.trim();
     if (!name) return wx.showToast({ title: '请输入群名', icon: 'none' });
 
@@ -83,7 +84,7 @@ Page({
         finalQR = uploadRes.fileID;
       }
 
-      const data = { name, qrCode: finalQR };
+      const data = { name, description: groupDesc.trim(), remark: groupRemark.trim() || '群已满，请联系管理员邀请加入', qrCode: finalQR };
       if (editId) {
         // 编辑模式
         await dbUtil.updateGroup(editId, data);

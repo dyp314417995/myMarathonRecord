@@ -25,10 +25,7 @@
         <text class="stat-num">{{userInfo.city || '未设置'}}</text>
         <text class="stat-label">城市</text>
       </view>
-      <view class="stat-item" wx:if="{{role === 'admin' || role === 'super_admin'}}">
-        <text class="stat-num highlight">{{pendingCount}}</text>
-        <text class="stat-label">待审批</text>
-      </view>
+
     </view>
   </view>
 
@@ -40,11 +37,6 @@
         <text class="menu-icon">👤</text>
         <text class="menu-text">管理员配置</text>
         <text class="menu-desc">配置/管理管理员</text>
-      </view>
-      <view class="menu-item card" bindtap="onApproval">
-        <text class="menu-icon">✅</text>
-        <text class="menu-text">审批加入</text>
-        <text class="menu-desc">{{pendingCount}}条待审批</text>
       </view>
       <view class="menu-item card" bindtap="onManageUsers">
         <text class="menu-icon">👥</text>
@@ -68,11 +60,6 @@
   <block wx:elif="{{role === 'admin'}}">
     <view class="section-title">管理功能</view>
     <view class="menu-grid">
-      <view class="menu-item card" bindtap="onApproval">
-        <text class="menu-icon">✅</text>
-        <text class="menu-text">审批加入</text>
-        <text class="menu-desc">{{pendingCount}}条待审批</text>
-      </view>
       <view class="menu-item card" bindtap="onManageUsers">
         <text class="menu-icon">👥</text>
         <text class="menu-text">用户管理</text>
@@ -104,6 +91,11 @@
         <text class="menu-icon">👤</text>
         <text class="menu-text">个人资料</text>
         <text class="menu-desc">编辑信息</text>
+      </view>
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
+        <text class="menu-desc">查看/扫码进群</text>
       </view>
     </view>
   </block>

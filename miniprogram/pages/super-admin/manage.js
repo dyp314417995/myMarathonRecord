@@ -13,7 +13,7 @@ Page({
     validFrom: '',
     validTo: '',
     permissions: {
-      approve_join: true,
+      approve_points: true,
       remove_user: true,
     },
   },
@@ -44,9 +44,18 @@ Page({
           validFrom: this.formatDate(new Date(admin.validFrom)),
           validTo: this.formatDate(new Date(admin.validTo)),
         };
-      } catch { return admin; }
+      } catch {
+        return null; // 用户已删除，过滤掉
+      }
     }));
-    this.setData({ admins: enriched, loading: false });
+    // 同一用户只保留最新记录
+    const seen = {};
+    const deduped = enriched.filter(Boolean).filter(a => {
+      if (seen[a.userId]) return false;
+      seen[a.userId] = true;
+      return true;
+    });
+    this.setData({ admins: deduped, loading: false });
   },
 
   // 加载普通用户列表（用于选择）
@@ -62,7 +71,7 @@ Page({
     this.setData({
       showAdd: true, selectedUserId: '', selectedUserName: '',
       validFrom: today, validTo: nextYear,
-      permissions: { approve_join: true, remove_user: true },
+      permissions: { approve_points: true, remove_user: true },
     });
   },
 
@@ -92,11 +101,13 @@ Page({
     if (new Date(validTo) <= new Date(validFrom)) return wx.showToast({ title: '结束日期必须大于开始日期', icon: 'none' });
 
     const permList = [];
-    if (permissions.approve_join) permList.push('approve_join');
+    if (permissions.approve_points) permList.push('approve_points');
     if (permissions.remove_user) permList.push('remove_user');
     if (permList.length === 0) return wx.showToast({ title: '请至少选择一个权限', icon: 'none' });
 
     try {
+      // 先撤销该用户已有的管理员记录
+      await dbUtil.db.collection('admins').where({ userId: selectedUserId }).update({ data: { status: 'revoked' } });
       await dbUtil.createAdmin({
         userId: selectedUserId,
         validFrom: new Date(validFrom),
@@ -144,7 +155,7 @@ Page({
 
   // 权限名称映射
   permName(key) {
-    const map = { approve_join: '审批加入', remove_user: '移除用户' };
+    const map = { approve_points: '积分审批', remove_user: '移除用户' };
     return map[key] || key;
   },
 });

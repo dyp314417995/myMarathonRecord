@@ -25,9 +25,9 @@ App({
     const countRes = await db.collection('groups').count();
     if (countRes.total === 0) {
       const defaultGroups = [
-        { name: '一群', sort: 1, createTime: new Date() },
-        { name: '二群', sort: 2, createTime: new Date() },
-        { name: '分舵群', sort: 3, createTime: new Date() },
+        { name: '一群', description: '', remark: '群已满，请联系管理员邀请加入', sort: 1, createTime: new Date() },
+        { name: '二群', description: '', remark: '群已满，请联系管理员邀请加入', sort: 2, createTime: new Date() },
+        { name: '分舵群', description: '', remark: '群已满，请联系管理员邀请加入', sort: 3, createTime: new Date() },
       ];
       for (const g of defaultGroups) {
         await db.collection('groups').add({ data: g });

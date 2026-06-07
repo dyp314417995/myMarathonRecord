@@ -23,6 +23,16 @@ const _ = db.command;
  * │ createTime   │ 创建时间 (Date)                       │
  * │ updateTime   │ 更新时间 (Date)                       │
  * ├──────────────┴──────────────────────────────────────┤
+ * │ groups 集合 - 群组表                                  │
+ * ├──────────────┬──────────────────────────────────────┤
+ * │ name         │ 群名称                                │
+ * │ description  │ 群介绍 (String)                       │
+ * │ remark       │ 备注, 默认"群已满，请联系管理员邀请加入" │
+ * │ qrCode       │ 二维码 cloud:// fileID                │
+ * │ memberCount  │ 成员数                                │
+ * │ sort         │ 排序                                  │
+ * │ createTime   │ 创建时间                              │
+ * ├──────────────┴──────────────────────────────────────┤
  * │ 安全规则: doc._openid == auth.openid (用户仅读写自己) │
  * └─────────────────────────────────────────────────────┘
  * 
@@ -82,7 +92,7 @@ async function createUser(data) {
     data: {
       ...data,
       role: 'user',
-      status: (data.groupIds && data.groupIds.length) ? 'pending' : 'approved',
+      status: 'approved',
       createTime: now,
       updateTime: now,
     }

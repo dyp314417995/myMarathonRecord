@@ -74,18 +74,11 @@ Page({
         role = adminInfo ? 'admin' : 'user';
       }
 
-      // 超管和管理员获取待审批数
-      let pendingCount = 0;
-      if (role === 'super_admin' || role === 'admin') {
-        const pendingRes = await dbUtil.getPendingRequests();
-        pendingCount = pendingRes.data.length;
-      }
-
       app.globalData.userInfo = user;
       app.globalData.isSuperAdmin = role === 'super_admin';
       app.globalData.isAdmin = role === 'admin' || role === 'super_admin';
 
-      this.setData({ userInfo: user, role, groupName, status: user.status, pendingCount });
+      this.setData({ userInfo: user, role, groupName, status: user.status });
 
     } catch (err) {
       console.error('加载用户信息失败:', err);
@@ -123,5 +116,8 @@ Page({
   },
   onPointsAdmin() {
     wx.navigateTo({ url: '/pages/points/admin' });
+  },
+  onGroups() {
+    wx.navigateTo({ url: '/pages/groups/index' });
   },
 });

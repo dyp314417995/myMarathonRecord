@@ -10,6 +10,7 @@ Page({
     searchKey: '',
     sortBy: 'time',
     sortAsc: false,
+    isSuperAdmin: false,
     // 详情弹窗
     showDetail: false,
     detailUser: null,
@@ -18,6 +19,8 @@ Page({
   },
 
   async onShow() {
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    this.setData({ isSuperAdmin: userInfo.role === 'super_admin' });
     await this.loadUsers();
   },
 
@@ -108,21 +111,52 @@ Page({
 
   onHideDetail() { this.setData({ showDetail: false }); },
 
+  async onDemoteAdmin(e) {
+    const { id, name } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '解除管理员',
+      content: `确认将"${name}"降为普通用户？`,
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        // 标记 admin 记录为 revoked
+        await dbUtil.db.collection('admins').where({ userId: id, status: 'active' })
+          .update({ data: { status: 'revoked' } });
+        // 改用户角色
+        await dbUtil.updateUser(id, { role: 'user' });
+        wx.showToast({ title: '已解除', icon: 'success' });
+        this.loadUsers();
+      }
+    });
+  },
+
   fmtDate(d) {
     const dt = new Date(d);
     return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
   },
 
-  onRemoveUser(e) {
+  onDeleteUser(e) {
     const { id, name } = e.currentTarget.dataset;
     wx.showModal({
-      title: '确认移除',
-      content: `确认将用户"${name}"移出群组？`,
+      title: '确认删除',
+      content: `确认删除用户"${name}"？删除后该用户可重新注册。`,
       confirmColor: '#ff4d4f',
       success: async (res) => {
         if (!res.confirm) return;
-        await dbUtil.updateUser(id, { groupIds: [], status: 'approved' });
-        wx.showToast({ title: '已移除', icon: 'success' });
+        // 更新群成员数
+        const user = this.data.allUsers.find(u => u._id === id);
+        if (user && user.groupIds) {
+          for (const gid of user.groupIds) {
+            dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(-1) } }).catch(() => {});
+          }
+        }
+        // 清除管理员记录
+        if (user && user.role === 'admin') {
+          dbUtil.db.collection('admins').where({ userId: id, status: 'active' })
+            .update({ data: { status: 'revoked' } }).catch(() => {});
+        }
+        await dbUtil.db.collection('users').doc(id).remove();
+        wx.showToast({ title: '已删除', icon: 'success' });
         this.loadUsers();
       }
     });

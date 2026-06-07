@@ -87,7 +87,7 @@
   <!-- 提交按钮 -->
   <view class="btn-area">
     <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">
-      {{selectedGroupIds.length ? '提交申请' : '完成注册'}}
+      完成注册
     </button>
     <view class="skip-link" bindtap="onSkip">稍后完善</view>
   </view>
