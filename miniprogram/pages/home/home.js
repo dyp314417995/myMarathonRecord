@@ -95,4 +95,12 @@ Page({
   onProfile() {
     wx.navigateTo({ url: '/pages/profile/profile' });
   },
+
+  // 积分
+  onPoints() {
+    wx.navigateTo({ url: '/pages/points/index' });
+  },
+  onPointsAdmin() {
+    wx.navigateTo({ url: '/pages/points/admin' });
+  },
 });

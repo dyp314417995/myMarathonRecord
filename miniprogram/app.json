@@ -6,7 +6,10 @@
     "pages/admin/approval/approval",
     "pages/admin/users/users",
     "pages/admin/groups/groups",
-    "pages/super-admin/manage"
+    "pages/super-admin/manage",
+    "pages/points/index",
+    "pages/points/apply",
+    "pages/points/admin"
   ],
   "usingComponents": {},
   "window": {

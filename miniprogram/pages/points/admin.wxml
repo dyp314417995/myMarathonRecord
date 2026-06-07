@@ -1,0 +1,83 @@
+<!-- pages/points/admin.wxml -->
+<view class="admin-page">
+  <!-- Tab -->
+  <view class="tabs">
+    <view class="tab {{tab === 'rules' ? 'active' : ''}}" data-tab="rules" bindtap="onTabChange">规则</view>
+    <view class="tab {{tab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="onTabChange">审批</view>
+    <view class="tab {{tab === 'record' ? 'active' : ''}}" data-tab="record" bindtap="onTabChange">录入/扣减</view>
+  </view>
+
+  <!-- 规则管理 -->
+  <block wx:if="{{tab === 'rules'}}">
+    <view wx:for="{{rules}}" wx:key="_id" class="card rule-card">
+      <view class="rule-row">
+        <view class="rule-info">
+          <text class="rule-name">{{item.name}}</text>
+          <text class="rule-meta">+{{item.points}}分{{item.monthlyLimit ? '，月上限'+item.monthlyLimit : ''}}</text>
+        </view>
+        <text class="rule-status {{item.status === 'active' ? 'on' : 'off'}}"
+              data-id="{{item._id}}" data-status="{{item.status}}"
+              bindtap="onToggleRuleStatus">{{item.status === 'active' ? '启用' : '禁用'}}</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 审批 -->
+  <block wx:if="{{tab === 'review'}}">
+    <block wx:for="{{pendingList}}" wx:key="_id">
+      <view class="card review-card">
+        <view class="req-header">
+          <text class="req-name">{{item.userName}}</text>
+          <text class="tag tag-orange">待审批</text>
+        </view>
+        <text class="req-cat">{{item.category}} +{{item.points}}分</text>
+        <text class="req-desc">{{item.description || '无说明'}}</text>
+        <view wx:if="{{item.images.length > 0}}" class="req-imgs">
+          <image wx:for="{{item.images}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="req-img" />
+        </view>
+        <view class="req-actions">
+          <button class="btn-reject" data-id="{{item._id}}" bindtap="onReject">拒绝</button>
+          <button class="btn-approve" data-id="{{item._id}}" bindtap="onApprove">通过</button>
+        </view>
+      </view>
+    </block>
+    <view wx:if="{{pendingList.length === 0}}" class="empty-state">
+      <text>暂无待审批</text>
+    </view>
+  </block>
+
+  <!-- 录入/扣减 -->
+  <block wx:if="{{tab === 'record'}}">
+    <view class="card">
+      <view class="form-group">
+        <text class="form-label">选择用户</text>
+        <view class="form-input user-trigger" bindtap="showUserPicker">
+          <text class="{{selectedUserName ? '' : 'placeholder'}}">{{selectedUserName || '点击选择用户'}}</text>
+        </view>
+      </view>
+      <view class="form-group">
+        <text class="form-label">积分数量（正=加，负=扣）</text>
+        <input class="form-input" type="number" placeholder="如：-30 表示扣减30分" value="{{deductPoints}}" bindinput="onPointsInput" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">原因/说明</text>
+        <input class="form-input" placeholder="如：购买迈胜能量胶3盒" value="{{deductReason}}" bindinput="onReasonInput" />
+      </view>
+      <button class="btn-primary" bindtap="onSubmitDeduct">确认提交</button>
+    </view>
+
+    <!-- 用户选择器 -->
+    <view class="modal-mask" wx:if="{{showUserPicker}}" catchtap="hideUserPicker"></view>
+    <view class="modal-box" wx:if="{{showUserPicker}}">
+      <text class="modal-title">选择用户</text>
+      <input class="form-input" placeholder="搜索昵称" value="{{userFilter}}" bindinput="onSearchUser" focus />
+        <scroll-view scroll-y class="user-list">
+        <view wx:for="{{filteredUsers}}" wx:key="_id"
+              class="picker-item" data-id="{{item._id}}" data-name="{{item.nickName}}" bindtap="onSelectUser">
+          <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
+        </view>
+      </scroll-view>
+      <button class="btn-outline" bindtap="hideUserPicker" style="margin-top:24rpx;">取消</button>
+    </view>
+  </block>
+</view>

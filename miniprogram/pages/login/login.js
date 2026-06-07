@@ -1,5 +1,6 @@
 // pages/login/login.js - 登录即注册
 const dbUtil = require('../../utils/db');
+const pointsUtil = require('../../utils/points');
 const app = getApp();
 
 Page({
@@ -150,6 +151,14 @@ Page({
         for (const gid of selectedGroupIds) {
           await dbUtil.createJoinRequest(addRes._id, gid);
         }
+        // 注册送50积分
+        await pointsUtil.addRecord({
+          userId: addRes._id, type: 'earn', category: '注册赠送',
+          points: 50, description: '新用户注册赠送',
+          images: [], earnDate: new Date(),
+          expireDate: new Date(Date.now() + 365 * 86400000),
+          status: 'approved',
+        });
       }
 
       // 保存到全局和本地

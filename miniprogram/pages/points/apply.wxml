@@ -1,0 +1,42 @@
+<!-- pages/points/apply.wxml -->
+<view class="apply-page">
+  <view class="card">
+    <text class="card-title">选择类型</text>
+    <view class="cat-options">
+      <view wx:for="{{rules}}" wx:key="category"
+            class="cat-option {{selectedCat === item.category ? 'active' : ''}}"
+            data-cat="{{item.category}}" bindtap="onSelectCat">
+        <text>{{item.category}}</text>
+        <text class="cat-desc">+{{item.points}}分 {{item.monthlyLimit ? '(月上限'+item.monthlyLimit+'次)' : ''}}</text>
+      </view>
+    </view>
+    <!-- 本月次数 -->
+    <view wx:if="{{selectedCat && monthlyLimit}}" class="count-tip">
+      <text>本月已提交 {{monthlyCount}}/{{monthlyLimit}} 次</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="card-title">上传图片 *</text>
+    <view class="img-grid">
+      <block wx:for="{{images}}" wx:key="index">
+        <view class="img-item">
+          <image src="{{item}}" mode="aspectFill" />
+          <text class="img-remove" data-idx="{{index}}" bindtap="onRemoveImage">✕</text>
+        </view>
+      </block>
+      <view wx:if="{{images.length < 4}}" class="img-item img-add" bindtap="onChooseImage">
+        <text>+</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="card-title">积分说明（选填）</text>
+    <textarea class="form-textarea" placeholder="简单描述一下..." value="{{description}}" bindinput="onDescInput" />
+  </view>
+
+  <view class="btn-area">
+    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">提交申请</button>
+  </view>
+</view>

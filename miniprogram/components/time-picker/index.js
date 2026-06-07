@@ -1,4 +1,4 @@
-// components/time-picker/index.js - 时间选择器 HH:MM:SS
+里// components/time-picker/index.js - 时间选择器 HH:MM:SS
 Component({
   properties: {
     value: { type: String, value: '' },       // 当前值 "1:32:59"

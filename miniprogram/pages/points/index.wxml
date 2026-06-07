@@ -1,0 +1,46 @@
+<!-- pages/points/index.wxml -->
+<view class="points-page">
+  <!-- 积分余额卡片 -->
+  <view class="balance-card">
+    <text class="balance-label">当前积分</text>
+    <text class="balance-num">{{balance}}</text>
+    <text class="balance-unit">分</text>
+    <!-- 即将过期提醒 -->
+    <view wx:if="{{expiringPoints > 0}}" class="expiring-tip">
+      <text>⚠️ {{expiringPoints}} 分将在 {{expiringDays}} 天后过期</text>
+    </view>
+  </view>
+
+  <!-- 操作区 -->
+  <view class="action-row">
+    <button class="btn-primary" bindtap="onApply">提交积分申请</button>
+    <view class="admin-entry" bindtap="onAdmin">
+      <text>积分管理</text>
+    </view>
+  </view>
+
+  <!-- 记录列表 -->
+  <view class="section-title">积分明细</view>
+  <block wx:for="{{records}}" wx:key="_id">
+    <view class="card record-card">
+      <view class="record-row">
+        <view class="record-info">
+          <text class="record-cat">{{item.category}}</text>
+          <text class="record-desc">{{item.description || '无说明'}}</text>
+          <text class="record-date">{{item.createTime}}</text>
+        </view>
+        <view class="record-points">
+          <text class="{{item.points > 0 ? 'earn' : 'use'}}">{{item.points > 0 ? '+' : ''}}{{item.points}}</text>
+          <text class="tag tag-gray" wx:if="{{item.status === 'pending'}}">审核中</text>
+          <text class="tag tag-green" wx:elif="{{item.status === 'approved'}}">已通过</text>
+          <text class="tag tag-red" wx:elif="{{item.status === 'rejected'}}">已拒绝</text>
+          <text class="tag tag-orange" wx:elif="{{item.status === 'expired'}}">已过期</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{records.length === 0}}" class="empty-state">
+    <text>暂无积分记录</text>
+  </view>
+</view>
