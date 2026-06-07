@@ -25,15 +25,24 @@ Page({
   // 加载管理员列表
   async loadAdmins() {
     const res = await dbUtil.getAdminList();
-    // 关联用户信息
     const enriched = await Promise.all(res.data.map(async (admin) => {
       try {
         const userRes = await dbUtil.db.collection('users').doc(admin.userId).get();
+        let avatar = userRes.data.avatarUrl || '';
+        // 如果是 cloud fileID，转临时 URL
+        if (avatar && avatar.startsWith('cloud://')) {
+          try {
+            const urlRes = await wx.cloud.getTempFileURL({ fileList: [avatar] });
+            avatar = urlRes.fileList[0].tempFileURL;
+          } catch {}
+        }
         return {
           ...admin,
           userName: userRes.data.nickName || '未知',
-          userAvatar: userRes.data.avatarUrl,
+          userAvatar: avatar,
           isExpired: new Date(admin.validTo) < new Date(),
+          validFrom: this.formatDate(new Date(admin.validFrom)),
+          validTo: this.formatDate(new Date(admin.validTo)),
         };
       } catch { return admin; }
     }));
@@ -49,7 +58,7 @@ Page({
   // 显示添加弹窗
   onShowAdd() {
     const today = this.formatDate(new Date());
-    const nextYear = this.formatDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000));
+    const nextYear = this.formatDate(new Date(Date.now() + 36500 * 24 * 60 * 60 * 1000));
     this.setData({
       showAdd: true, selectedUserId: '', selectedUserName: '',
       validFrom: today, validTo: nextYear,

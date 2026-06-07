@@ -125,12 +125,23 @@ Page({
     wx.showLoading({ title: '注册中...' });
 
     try {
+      // 上传头像到云存储（如果是临时路径）
+      let finalAvatar = avatarUrl;
+      if (avatarUrl && (avatarUrl.startsWith('http://tmp') || avatarUrl.startsWith('wxfile://'))) {
+        try {
+          const upRes = await wx.cloud.uploadFile({
+            cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
+            filePath: avatarUrl,
+          });
+          finalAvatar = upRes.fileID;
+        } catch {}
+      }
+
       // 检查是否已注册
       let user = await dbUtil.getCurrentUser();
       if (user) {
-        // 已注册，更新信息
         await dbUtil.updateUser(user._id, {
-          avatarUrl, nickName, phoneNumber: phoneNumber.trim(),
+          avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
           groupIds: selectedGroupIds
         });
@@ -142,7 +153,7 @@ Page({
       } else {
         // 新用户注册
         const userData = {
-          avatarUrl, nickName, phoneNumber: phoneNumber.trim(),
+          avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
           groupIds: selectedGroupIds,
         };

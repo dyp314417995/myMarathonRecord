@@ -29,6 +29,13 @@ Page({
       }
       // 更新本地缓存
       wx.setStorageSync('userInfo', user);
+      // 转换头像 cloud:// → 临时 URL
+      if (user.avatarUrl && user.avatarUrl.startsWith('cloud://')) {
+        try {
+          const urlRes = await wx.cloud.getTempFileURL({ fileList: [user.avatarUrl] });
+          user.avatarUrl = urlRes.fileList[0].tempFileURL;
+        } catch {}
+      }
 
       // 兼容旧数据：groupId → groupIds
       if (!user.groupIds && user.groupId) {

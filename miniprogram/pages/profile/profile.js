@@ -58,6 +58,10 @@ Page({
     this.setData({ editing: false, userInfo, selectedGroupIds: ids, selectedGroupMap: this.buildMap(ids), groupNames: names });
   },
 
+  onChooseAvatar(e) {
+    this.setData({ 'userInfo.avatarUrl': e.detail.avatarUrl });
+  },
+
   onInput(e) {
     const { field } = e.currentTarget.dataset;
     this.setData({ [`userInfo.${field}`]: e.detail.value });
@@ -91,8 +95,19 @@ Page({
 
     wx.showLoading({ title: '保存中...' });
     try {
+      // 上传新头像
+      let avatarUrl = userInfo.avatarUrl || '';
+      if (avatarUrl && (avatarUrl.startsWith('http://tmp') || avatarUrl.startsWith('wxfile://'))) {
+        const upRes = await wx.cloud.uploadFile({
+          cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
+          filePath: avatarUrl,
+        });
+        avatarUrl = upRes.fileID;
+      }
+
       const updateData = {
         phoneNumber: userInfo.phoneNumber.trim(),
+        avatarUrl,
         city: userInfo.city ? userInfo.city.trim() : '',
         pb10k: userInfo.pb10k || '',
         pbHalf: userInfo.pbHalf || '',

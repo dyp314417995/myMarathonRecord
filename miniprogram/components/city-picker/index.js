@@ -74,40 +74,34 @@ Component({
       });
     },
 
-    // 列变化
+    // 列变化 — picker-view 返回所有列的值数组，需自行判断哪列变了
     onColumnChange(e) {
-      const { column, value } = e.detail;
-      const pickerValue = [...this.data.pickerValue];
-      pickerValue[column] = value;
+      const newValues = e.detail.value;    // [省索引, 市索引, 区索引]
+      const oldValues = this.data.pickerValue;
+      let col = 0;
+      if (newValues[0] !== oldValues[0]) col = 0;
+      else if (newValues[1] !== oldValues[1]) col = 1;
+      else col = 2;
 
-      if (column === 0) {
-        // 省变了，重置市和区
+      const pickerValue = [...newValues];
+
+      if (col === 0) {
         pickerValue[1] = 0;
         pickerValue[2] = 0;
-        const cityList = cityData[value].children.map(c => c.name);
-        const districtList = cityData[value].children[0].children.map(d => d.name);
-        const result = this.data.provinces[value] + '-' + cityList[0] + '-' + (districtList[0] || '');
-        this.setData({
-          cities: cityList,
-          districts: districtList,
-          pickerValue,
-          result,
-        });
-      } else if (column === 1) {
-        // 市变了，重置区
+        const cityList = cityData[newValues[0]].children.map(c => c.name);
+        const districtList = cityData[newValues[0]].children[0].children.map(d => d.name);
+        const result = this.data.provinces[newValues[0]] + '-' + cityList[0] + '-' + (districtList[0] || '');
+        this.setData({ cities: cityList, districts: districtList, pickerValue, result });
+      } else if (col === 1) {
         pickerValue[2] = 0;
         const pi = pickerValue[0];
-        const districtList = cityData[pi].children[value].children.map(d => d.name);
-        const result = this.data.provinces[pi] + '-' + this.data.cities[value] + '-' + (districtList[0] || '');
-        this.setData({
-          districts: districtList,
-          pickerValue,
-          result,
-        });
-      } else if (column === 2) {
+        const districtList = cityData[pi].children[newValues[1]].children.map(d => d.name);
+        const result = this.data.provinces[pi] + '-' + this.data.cities[newValues[1]] + '-' + (districtList[0] || '');
+        this.setData({ districts: districtList, pickerValue, result });
+      } else {
         const pi = pickerValue[0];
         const ci = pickerValue[1];
-        const result = this.data.provinces[pi] + '-' + this.data.cities[ci] + '-' + (this.data.districts[value] || '');
+        const result = this.data.provinces[pi] + '-' + this.data.cities[ci] + '-' + (this.data.districts[newValues[2]] || '');
         this.setData({ pickerValue, result });
       }
     },

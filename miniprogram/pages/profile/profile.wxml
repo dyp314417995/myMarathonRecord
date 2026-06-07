@@ -34,6 +34,12 @@
   <block wx:else>
     <!-- 编辑模式 -->
     <view class="card">
+      <view class="avatar-row">
+        <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          <image class="avatar-sm" src="{{userInfo.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+          <text class="avatar-tip">点击更换头像</text>
+        </button>
+      </view>
       <view class="form-group">
         <text class="form-label">昵称 *</text>
         <input class="form-input" value="{{userInfo.nickName}}" data-field="nickName" bindinput="onInput" />

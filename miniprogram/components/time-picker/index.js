@@ -1,4 +1,4 @@
-里// components/time-picker/index.js - 时间选择器 HH:MM:SS
+// components/time-picker/index.js - 时间选择器 HH:MM:SS
 Component({
   properties: {
     value: { type: String, value: '' },       // 当前值 "1:32:59"
@@ -32,7 +32,7 @@ Component({
       const parts = timeStr.split(':');
       let h = parseInt(parts[0]) || 0;
       let m = parseInt(parts[1]) || 0;
-      let s = parseInt(parts[2]) || 0;
+      let s = this.data.value ? (parseInt(parts[2]) || 0) : 30;
       h = Math.min(h, 9);
       m = Math.min(m, 59);
       s = Math.min(s, 59);

@@ -25,12 +25,17 @@ Page({
             dbUtil.db.collection('users').doc(req.userId).get(),
             dbUtil.db.collection('groups').doc(req.groupId).get(),
           ]);
+          let avatar = userRes.data.avatarUrl || '';
+          if (avatar && avatar.startsWith('cloud://')) {
+            try { const u = await wx.cloud.getTempFileURL({ fileList: [avatar] }); avatar = u.fileList[0].tempFileURL; } catch {}
+          }
           return {
             ...req,
             userName: userRes.data.nickName || '未知',
-            userAvatar: userRes.data.avatarUrl,
+            userAvatar: avatar,
             userCity: userRes.data.city,
             groupName: groupRes.data ? groupRes.data.name : '未知群',
+            createTime: this.fmt(req.createTime),
           };
         } catch { return req; }
       }));
@@ -63,6 +68,12 @@ Page({
         }
       }
     });
+  },
+
+  fmt(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   },
 
   // 审批拒绝

@@ -33,6 +33,12 @@
   background: #e8f5e9; border-color: #1aad19; color: #1aad19; font-weight: 600;
 }
 
+.avatar-row { display: flex; justify-content: center; margin-bottom: 32rpx; }
+.avatar-btn { background: none; border: none; padding: 0; line-height: 1; display: flex; flex-direction: column; align-items: center; }
+.avatar-btn::after { border: none; }
+.avatar-sm { width: 120rpx; height: 120rpx; border-radius: 50%; background: #f0f0f0; }
+.avatar-tip { font-size: 24rpx; color: #999; margin-top: 8rpx; }
+
 .btn-area { padding: 24rpx; }
 .btn-outline { margin-top: 20rpx; }
 
