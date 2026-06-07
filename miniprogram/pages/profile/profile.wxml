@@ -13,12 +13,13 @@
   <block wx:if="{{!editing}}">
     <!-- 查看模式 -->
     <view class="card">
-      <view class="info-row"><text class="info-label">姓名</text><text class="info-value">{{userInfo.realName || '-'}}</text></view>
       <view class="info-row"><text class="info-label">昵称</text><text class="info-value">{{userInfo.nickName || '-'}}</text></view>
       <view class="info-row"><text class="info-label">手机号</text><text class="info-value">{{userInfo.phoneNumber || '-'}}</text></view>
-      <view class="info-row"><text class="info-label">微信号</text><text class="info-value">{{userInfo.wechatId || '-'}}</text></view>
       <view class="info-row"><text class="info-label">城市</text><text class="info-value">{{userInfo.city || '-'}}</text></view>
-      <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{groupName}}</text></view>
+      <view class="info-row"><text class="info-label">10公里PB</text><text class="info-value">{{userInfo.pb10k || '-'}}</text></view>
+      <view class="info-row"><text class="info-label">半马PB</text><text class="info-value">{{userInfo.pbHalf || '-'}}</text></view>
+      <view class="info-row"><text class="info-label">全马PB</text><text class="info-value">{{userInfo.pbFull || '-'}}</text></view>
+      <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{groupNames}}</text></view>
       <view class="info-row"><text class="info-label">状态</text>
         <text class="tag tag-green" wx:if="{{userInfo.status === 'approved'}}">已通过</text>
         <text class="tag tag-orange" wx:elif="{{userInfo.status === 'pending'}}">待审批</text>
@@ -34,11 +35,7 @@
     <!-- 编辑模式 -->
     <view class="card">
       <view class="form-group">
-        <text class="form-label">姓名 *</text>
-        <input class="form-input" value="{{userInfo.realName}}" data-field="realName" bindinput="onInput" />
-      </view>
-      <view class="form-group">
-        <text class="form-label">昵称</text>
+        <text class="form-label">昵称 *</text>
         <input class="form-input" value="{{userInfo.nickName}}" data-field="nickName" bindinput="onInput" />
       </view>
       <view class="form-group">
@@ -46,26 +43,46 @@
         <input class="form-input" type="number" value="{{userInfo.phoneNumber}}" data-field="phoneNumber" bindinput="onInput" />
       </view>
       <view class="form-group">
-        <text class="form-label">微信号</text>
-        <input class="form-input" value="{{userInfo.wechatId}}" data-field="wechatId" bindinput="onInput" />
-      </view>
-      <view class="form-group">
         <text class="form-label">城市</text>
-        <input class="form-input" value="{{userInfo.city}}" data-field="city" bindinput="onInput" />
+        <view class="form-input city-trigger" bindtap="onShowCityPicker">
+          <text class="{{userInfo.city ? '' : 'placeholder'}}">{{userInfo.city || '点击选择省/市/区'}}</text>
+          <text class="city-arrow">▾</text>
+        </view>
       </view>
     </view>
 
-    <!-- 选择群组 -->
+    <!-- 跑马成绩（选填） -->
     <view class="card">
-      <text class="card-title">选择所属群</text>
-      <view class="group-options">
-        <view class="group-option {{selectedGroupId === '' ? 'active' : ''}}" data-id="" bindtap="onSelectGroup">
-          <text>未加入</text>
+      <text class="card-title">🏃 跑马成绩（选填）</text>
+      <view class="form-group">
+        <text class="form-label">10公里PB</text>
+        <view class="form-input city-trigger" bindtap="onShowTimePicker" data-field="pb10k" data-label="10公里PB" data-def="0:50:00">
+          <text class="{{userInfo.pb10k ? '' : 'placeholder'}}">{{userInfo.pb10k || '点击选择'}}</text>
+          <text class="city-arrow">▾</text>
         </view>
-        <view wx:for="{{groups}}" wx:key="_id"
-              class="group-option {{selectedGroupId === item._id ? 'active' : ''}}"
-              data-id="{{item._id}}" bindtap="onSelectGroup">
-          <text>{{item.name}}</text>
+      </view>
+      <view class="form-group">
+        <text class="form-label">半马PB</text>
+        <view class="form-input city-trigger" bindtap="onShowTimePicker" data-field="pbHalf" data-label="半马PB" data-def="2:00:00">
+          <text class="{{userInfo.pbHalf ? '' : 'placeholder'}}">{{userInfo.pbHalf || '点击选择'}}</text>
+          <text class="city-arrow">▾</text>
+        </view>
+      </view>
+      <view class="form-group">
+        <text class="form-label">全马PB</text>
+        <view class="form-input city-trigger" bindtap="onShowTimePicker" data-field="pbFull" data-label="全马PB" data-def="3:30:00">
+          <text class="{{userInfo.pbFull ? '' : 'placeholder'}}">{{userInfo.pbFull || '点击选择'}}</text>
+          <text class="city-arrow">▾</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 选择群组（可多选） -->
+    <view class="card">
+      <text class="card-title">选择所属群（可多选）</text>
+      <view class="group-options">
+        <view wx:for="{{groups}}" wx:key="_id" class="group-option {{selectedGroupMap[item._id] ? 'active' : ''}}" data-id="{{item._id}}" bindtap="onToggleGroup">
+          <text>{{selectedGroupMap[item._id] ? '☑' : '☐'}} {{item.name}}</text>
         </view>
       </view>
     </view>
@@ -75,4 +92,10 @@
       <button class="btn-outline" bindtap="onCancel" style="margin-top:20rpx;">取消</button>
     </view>
   </block>
+
+  <!-- 城市选择器 -->
+  <city-picker value="{{userInfo.city}}" show="{{showCityPicker}}" bind:confirm="onCityConfirm" bind:cancel="onCityCancel"></city-picker>
+
+  <!-- 时间选择器 -->
+  <time-picker value="{{timeValue}}" show="{{showTimePicker}}" label="{{timeLabel}}" default-value="{{timeDefault}}" bind:confirm="onTimeConfirm" bind:cancel="onTimeCancel"></time-picker>
 </view>

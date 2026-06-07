@@ -9,7 +9,7 @@
       <view class="user-row">
         <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
         <view class="u-info">
-          <text class="u-name">{{item.realName || item.nickName || '未知用户'}}</text>
+          <text class="u-name">{{item.nickName || '未知用户'}}</text>
           <text class="u-meta">{{item.city || '未知'}} · {{item.groupName}}</text>
         </view>
         <view class="u-tags">
@@ -19,7 +19,7 @@
         </view>
       </view>
       <view class="u-actions" wx:if="{{item.role !== 'super_admin'}}">
-        <button class="btn-remove" data-id="{{item._id}}" data-name="{{item.realName || item.nickName}}" catchtap="onRemoveUser">移出群组</button>
+        <button class="btn-remove" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onRemoveUser">移出群组</button>
       </view>
     </view>
   </block>

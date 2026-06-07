@@ -35,3 +35,10 @@
 
 .btn-area { padding: 24rpx; }
 .btn-outline { margin-top: 20rpx; }
+
+/* 城市选择触发器 */
+.city-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.city-trigger .placeholder { color: #bbb; }
+.city-arrow { color: #bbb; font-size: 32rpx; margin-left: 12rpx; }

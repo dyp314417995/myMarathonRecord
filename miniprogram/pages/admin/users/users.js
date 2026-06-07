@@ -22,7 +22,7 @@ Page({
 
       const users = res.data.map(u => ({
         ...u,
-        groupName: groupMap[u.groupId] || '未加入',
+        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
       }));
       this.setData({ users, loading: false });
     } catch (err) {
@@ -41,7 +41,7 @@ Page({
       success: async (res) => {
         if (!res.confirm) return;
         try {
-          await dbUtil.updateUser(id, { groupId: null, status: 'approved' });
+          await dbUtil.updateUser(id, { groupIds: [], status: 'approved' });
           wx.showToast({ title: '已移除', icon: 'success' });
           this.loadUsers();
         } catch (err) {

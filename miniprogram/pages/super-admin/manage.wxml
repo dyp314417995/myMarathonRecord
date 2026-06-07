@@ -42,9 +42,9 @@
     <scroll-view scroll-y class="user-picker" wx:if="{{users.length > 0}}">
       <view wx:for="{{users}}" wx:key="_id"
             class="picker-item {{selectedUserId === item._id ? 'active' : ''}}"
-            data-id="{{item._id}}" data-name="{{item.realName || item.nickName}}"
+            data-id="{{item._id}}" data-name="{{item.nickName}}"
             bindtap="onSelectUser">
-        <text>{{item.realName || item.nickName}}（{{item.city || '未知'}}）</text>
+        <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
       </view>
     </scroll-view>
     <text wx:if="{{selectedUserName}}" style="color:#1aad19;font-size:26rpx;margin-top:12rpx;">已选：{{selectedUserName}}</text>

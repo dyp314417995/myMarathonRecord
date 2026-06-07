@@ -46,12 +46,21 @@
   background: #f7f7f7; border: 2rpx solid #f7f7f7;
   font-size: 28rpx; color: #666; text-align: center;
   transition: all 0.2s;
+  position: relative;
 }
 .group-option.active {
   background: #e8f5e9; border-color: #1aad19; color: #1aad19;
   font-weight: 600;
 }
+.group-check { font-size: 28rpx; }
 
 /* 底部 */
 .btn-area { padding: 32rpx 24rpx 0; }
 .skip-link { text-align: center; color: #999; font-size: 26rpx; margin-top: 24rpx; }
+
+/* 城市选择触发器 */
+.city-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.city-trigger .placeholder { color: #bbb; }
+.city-arrow { color: #bbb; font-size: 32rpx; margin-left: 12rpx; }

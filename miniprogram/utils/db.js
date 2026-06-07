@@ -13,11 +13,12 @@ const _ = db.command;
  * │ nickName     │ 微信昵称 (String)                     │
  * │ avatarUrl    │ 微信头像 (String)                     │
  * │ phoneNumber  │ 手机号 (String)                       │
- * │ realName     │ 真实姓名 (String)                     │
- * │ wechatId     │ 微信号 (String)                       │
  * │ city         │ 城市 (String)                         │
+ * │ pb10k        │ 10公里PB, 格式1:32:59 (String,选填)    │
+ * │ pbHalf       │ 半马PB (String,选填)                   │
+ * │ pbFull       │ 全马PB (String,选填)                   │
  * │ role         │ 角色: 'super_admin'|'admin'|'user'   │
- * │ groupId      │ 所属群ID, null=未加入 (String|null)   │
+ * │ groupIds     │ 所属群ID数组, []=未加入 (Array)         │
  * │ status       │ 状态: 'pending'|'approved'|'rejected' │
  * │ createTime   │ 创建时间 (Date)                       │
  * │ updateTime   │ 更新时间 (Date)                       │
@@ -81,7 +82,7 @@ async function createUser(data) {
     data: {
       ...data,
       role: 'user',
-      status: data.groupId ? 'pending' : 'approved',
+      status: (data.groupIds && data.groupIds.length) ? 'pending' : 'approved',
       createTime: now,
       updateTime: now,
     }
@@ -117,6 +118,11 @@ async function createGroup(data) {
 /** 删除群组 */
 async function deleteGroup(groupId) {
   return await db.collection('groups').doc(groupId).remove();
+}
+
+/** 更新群组 */
+async function updateGroup(groupId, data) {
+  return await db.collection('groups').doc(groupId).update({ data });
 }
 
 // ============ 管理员操作 ============
@@ -187,7 +193,7 @@ async function reviewRequest(requestId, status, reviewerId) {
 module.exports = {
   db, _,
   getCurrentUser, createUser, updateUser, getUserList,
-  getGroups, createGroup, deleteGroup,
+  getGroups, createGroup, updateGroup, deleteGroup,
   getAdminList, createAdmin, updateAdmin, checkIsAdmin, checkIsSuperAdmin,
   createJoinRequest, getPendingRequests, reviewRequest,
 };

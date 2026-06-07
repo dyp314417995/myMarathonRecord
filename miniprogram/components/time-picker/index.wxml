@@ -1,0 +1,31 @@
+<!-- components/time-picker/index.wxml -->
+<view class="picker-overlay" wx:if="{{show}}" catchtap="onCancel">
+  <view class="picker-container" catchtap="">
+    <view class="picker-header">
+      <text class="picker-cancel" bindtap="onCancel">取消</text>
+      <text class="picker-title">{{label}}</text>
+      <text class="picker-confirm" bindtap="onConfirm">确定</text>
+    </view>
+    <view class="picker-tabs">
+      <text class="picker-tab">时</text>
+      <text class="picker-tab">分</text>
+      <text class="picker-tab">秒</text>
+    </view>
+    <picker-view
+      class="picker-view"
+      value="{{pickerValue}}"
+      bindchange="onChange"
+      indicator-style="height:50px;"
+    >
+      <picker-view-column>
+        <view wx:for="{{hours}}" wx:key="*this" class="picker-item">{{item}}</view>
+      </picker-view-column>
+      <picker-view-column>
+        <view wx:for="{{minutes}}" wx:key="*this" class="picker-item">{{item}}</view>
+      </picker-view-column>
+      <picker-view-column>
+        <view wx:for="{{seconds}}" wx:key="*this" class="picker-item">{{item}}</view>
+      </picker-view-column>
+    </picker-view>
+  </view>
+</view>

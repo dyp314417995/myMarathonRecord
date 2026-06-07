@@ -24,10 +24,6 @@
   <view class="card">
     <text class="card-title">基本信息</text>
     <view class="form-group">
-      <text class="form-label">真实姓名 *</text>
-      <input class="form-input" placeholder="请输入真实姓名" value="{{realName}}" bindinput="onInput" data-field="realName" />
-    </view>
-    <view class="form-group">
       <text class="form-label">手机号 *</text>
       <view class="phone-row">
         <input class="form-input phone-input" type="number" placeholder="请输入手机号" value="{{phoneNumber}}" bindinput="onPhoneInput" />
@@ -35,34 +31,63 @@
       </view>
     </view>
     <view class="form-group">
-      <text class="form-label">微信号</text>
-      <input class="form-input" placeholder="微信号（选填）" value="{{wechatId}}" bindinput="onInput" data-field="wechatId" />
-    </view>
-    <view class="form-group">
       <text class="form-label">所在城市</text>
-      <input class="form-input" placeholder="例如：北京、上海" value="{{city}}" bindinput="onInput" data-field="city" />
+      <view class="form-input city-trigger" bindtap="onShowCityPicker">
+        <text class="{{city ? '' : 'placeholder'}}">{{city || '点击选择省/市/区'}}</text>
+        <text class="city-arrow">▾</text>
+      </view>
     </view>
   </view>
 
-  <!-- 选择所属群 -->
+  <!-- 跑马成绩（选填） -->
   <view class="card">
-    <text class="card-title">选择所属群</text>
-    <view class="group-options">
-      <view class="group-option {{selectedGroupId === '' ? 'active' : ''}}" data-id="" data-name="未加入" bindtap="onSelectGroup">
-        <text>未加入</text>
+    <text class="card-title">🏃 跑马成绩（选填）</text>
+    <view class="form-group">
+      <text class="form-label">10公里PB</text>
+      <view class="form-input city-trigger" bindtap="onShowTimePicker" data-field="pb10k" data-label="10公里PB" data-def="0:50:00">
+        <text class="{{pb10k ? '' : 'placeholder'}}">{{pb10k || '点击选择'}}</text>
+        <text class="city-arrow">▾</text>
       </view>
-      <view wx:for="{{groups}}" wx:key="_id"
-            class="group-option {{selectedGroupId === item._id ? 'active' : ''}}"
-            data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onSelectGroup">
-        <text>{{item.name}}</text>
+    </view>
+    <view class="form-group">
+      <text class="form-label">半马PB</text>
+      <view class="form-input city-trigger" bindtap="onShowTimePicker" data-field="pbHalf" data-label="半马PB" data-def="2:00:00">
+        <text class="{{pbHalf ? '' : 'placeholder'}}">{{pbHalf || '点击选择'}}</text>
+        <text class="city-arrow">▾</text>
+      </view>
+    </view>
+    <view class="form-group">
+      <text class="form-label">全马PB</text>
+      <view class="form-input city-trigger" bindtap="onShowTimePicker" data-field="pbFull" data-label="全马PB" data-def="3:30:00">
+        <text class="{{pbFull ? '' : 'placeholder'}}">{{pbFull || '点击选择'}}</text>
+        <text class="city-arrow">▾</text>
       </view>
     </view>
   </view>
+
+  <!-- 选择所属群（可多选） -->
+  <view class="card">
+    <text class="card-title">选择所属群（可多选）</text>
+    <view class="group-options">
+      <view wx:for="{{groups}}" wx:key="_id"
+            class="group-option {{selectedGroupMap[item._id] ? 'active' : ''}}"
+            data-id="{{item._id}}" bindtap="onToggleGroup">
+        <text class="group-check">{{selectedGroupMap[item._id] ? '☑' : '☐'}} {{item.name}}</text>
+        <text wx:if="{{item.qrCodeUrl}}" class="qr-icon" data-url="{{item.qrCodeUrl}}" catchtap="onPreviewQR">📱扫码</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 城市选择器 -->
+  <city-picker value="{{city}}" show="{{showCityPicker}}" bind:confirm="onCityConfirm" bind:cancel="onCityCancel"></city-picker>
+
+  <!-- 时间选择器 -->
+  <time-picker value="{{timeValue}}" show="{{showTimePicker}}" label="{{timeLabel}}" default-value="{{timeDefault}}" bind:confirm="onTimeConfirm" bind:cancel="onTimeCancel"></time-picker>
 
   <!-- 提交按钮 -->
   <view class="btn-area">
     <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">
-      {{selectedGroupId ? '提交申请' : '完成注册'}}
+      {{selectedGroupIds.length ? '提交申请' : '完成注册'}}
     </button>
     <view class="skip-link" bindtap="onSkip">稍后完善</view>
   </view>

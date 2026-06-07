@@ -4,7 +4,7 @@ const app = getApp();
 
 Page({
   data: {
-    userInfo: null,
+    userInfo: {},
     role: '',          // 'super_admin' | 'admin' | 'user'
     groupName: '',
     status: '',
@@ -17,21 +17,33 @@ Page({
 
   async loadUserInfo() {
     try {
-      let user = wx.getStorageSync('userInfo');
+      // 始终从数据库拉最新数据
+      let user = await dbUtil.getCurrentUser();
       if (!user) {
-        user = await dbUtil.getCurrentUser();
-        if (!user) {
-          wx.redirectTo({ url: '/pages/login/login' });
-          return;
-        }
-        wx.setStorageSync('userInfo', user);
+        // 数据库没有，试试本地缓存
+        user = wx.getStorageSync('userInfo');
       }
+      if (!user) {
+        wx.redirectTo({ url: '/pages/login/login' });
+        return;
+      }
+      // 更新本地缓存
+      wx.setStorageSync('userInfo', user);
+
+      // 兼容旧数据：groupId → groupIds
+      if (!user.groupIds && user.groupId) {
+        user.groupIds = [user.groupId];
+        // 回写到数据库
+        dbUtil.updateUser(user._id, { groupIds: [user.groupId] }).catch(() => {});
+      }
+      if (!user.groupIds) user.groupIds = [];
 
       // 读取群组名称
+      const ids = user.groupIds;
       let groupName = '未加入';
-      if (user.groupId) {
-        const gRes = await dbUtil.db.collection('groups').doc(user.groupId).get();
-        if (gRes.data) groupName = gRes.data.name;
+      if (ids.length > 0) {
+        const gRes = await dbUtil.db.collection('groups').where({ _id: dbUtil._.in(ids) }).get();
+        groupName = gRes.data.map(g => g.name).join('、');
       }
 
       // 检查管理员身份

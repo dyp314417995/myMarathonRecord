@@ -1,0 +1,31 @@
+<!-- components/city-picker/index.wxml -->
+<view class="picker-overlay" wx:if="{{show}}" catchtap="onCancel">
+  <view class="picker-container" catchtap="">
+    <view class="picker-header">
+      <text class="picker-cancel" bindtap="onCancel">取消</text>
+      <text class="picker-title">选择城市</text>
+      <text class="picker-confirm" bindtap="onConfirm">确定</text>
+    </view>
+    <view class="picker-tabs">
+      <text class="picker-tab">省</text>
+      <text class="picker-tab">市</text>
+      <text class="picker-tab">区</text>
+    </view>
+    <picker-view
+      class="picker-view"
+      value="{{pickerValue}}"
+      bindchange="onColumnChange"
+      indicator-style="height:50px;"
+    >
+      <picker-view-column>
+        <view wx:for="{{provinces}}" wx:key="*this" class="picker-item">{{item}}</view>
+      </picker-view-column>
+      <picker-view-column>
+        <view wx:for="{{cities}}" wx:key="*this" class="picker-item">{{item}}</view>
+      </picker-view-column>
+      <picker-view-column>
+        <view wx:for="{{districts}}" wx:key="*this" class="picker-item">{{item}}</view>
+      </picker-view-column>
+    </picker-view>
+  </view>
+</view>

@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "登录注册",
-  "usingComponents": {}
+  "usingComponents": {
+    "city-picker": "/components/city-picker/index",
+    "time-picker": "/components/time-picker/index"
+  }
 }

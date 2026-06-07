@@ -1,32 +1,61 @@
 <!-- pages/admin/groups/groups.wxml - 群组管理 -->
 <view class="groups-page">
-  <view class="card group-list">
+  <view wx:if="{{groups.length === 0}}" class="empty-state">
+    <text>暂无群组，请添加</text>
+  </view>
+
+  <view class="group-list">
     <block wx:for="{{groups}}" wx:key="_id">
-      <view class="list-item">
-        <view>
-          <text class="group-name">{{item.name}}</text>
-          <text class="group-count">成员 {{item.memberCount || 0}} 人</text>
+      <view class="card group-card">
+        <view class="group-row">
+          <!-- 排序按钮 -->
+          <view class="sort-btns">
+            <view class="sort-btn {{index === 0 ? 'disabled' : ''}}" data-index="{{index}}" bindtap="onMoveUp">▲</view>
+            <view class="sort-btn {{index === groups.length - 1 ? 'disabled' : ''}}" data-index="{{index}}" bindtap="onMoveDown">▼</view>
+          </view>
+
+          <view class="group-info">
+            <text class="group-name">{{item.name}}</text>
+            <text class="group-count">成员 {{item.memberCount || 0}} 人</text>
+            <!-- 二维码缩略图 -->
+            <image wx:if="{{item.qrCodeUrl}}" class="qr-thumb" src="{{item.qrCodeUrl}}" mode="aspectFill" bindtap="onPreviewQR" data-url="{{item.qrCodeUrl}}" />
+          </view>
+
+          <view class="group-actions">
+            <text class="action-edit" data-id="{{item._id}}" data-name="{{item.name}}" data-qr="{{item.qrCode}}" bindtap="onEdit">编辑</text>
+            <text class="action-del" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onDeleteGroup">删除</text>
+          </view>
         </view>
-        <button class="btn-delete-sm" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onDeleteGroup">删除</button>
       </view>
     </block>
-    <view wx:if="{{groups.length === 0}}" style="text-align:center;padding:40rpx 0;color:#999;">
-      暂无群组，请添加
-    </view>
   </view>
 
   <view class="btn-area">
-    <button class="btn-outline" bindtap="onShowAdd">+ 添加群组</button>
+    <button class="btn-primary" bindtap="onShowAdd">+ 添加群组</button>
   </view>
 
-  <!-- 添加群组弹窗 -->
-  <view class="modal-mask" wx:if="{{showAdd}}" bindtap="onHideAdd"></view>
-  <view class="modal-box" wx:if="{{showAdd}}">
-    <text class="modal-title">添加新群组</text>
-    <input class="form-input" placeholder="请输入群名称" value="{{newGroupName}}" bindinput="onNameInput" focus />
+  <!-- 弹窗（添加/编辑） -->
+  <view class="modal-mask" wx:if="{{showModal}}" catchtap="onHideModal"></view>
+  <view class="modal-box" wx:if="{{showModal}}" catchtap="">
+    <text class="modal-title">{{modalTitle}}</text>
+
+    <text class="form-label">群名称</text>
+    <input class="form-input" placeholder="请输入群名称" value="{{groupName}}" bindinput="onNameInput" focus />
+
+    <text class="form-label" style="margin-top:24rpx;">群二维码（可选）</text>
+    <view class="qr-area">
+      <image wx:if="{{qrCodeTemp}}" class="qr-preview" src="{{qrCodeTemp}}" mode="aspectFit" />
+      <image wx:elif="{{qrCode}}" class="qr-preview" src="{{qrCode}}" mode="aspectFit" />
+      <view wx:else class="qr-placeholder">未上传</view>
+    </view>
+    <view class="qr-btns">
+      <button class="btn-outline qr-btn" bindtap="onChooseQRCode">{{qrCodeTemp || qrCode ? '重新选择' : '选择图片'}}</button>
+      <button wx:if="{{qrCodeTemp || qrCode}}" class="btn-outline qr-btn" bindtap="onClearQR" style="color:#ff4d4f;border-color:#ff4d4f;">清除</button>
+    </view>
+
     <view class="modal-actions">
-      <button class="btn-outline" bindtap="onHideAdd">取消</button>
-      <button class="btn-primary" style="flex:1;padding:20rpx;" bindtap="onAddGroup">确认添加</button>
+      <button class="btn-outline" bindtap="onHideModal">取消</button>
+      <button class="btn-primary" style="flex:1;padding:20rpx;" bindtap="onSubmit">确认保存</button>
     </view>
   </view>
 </view>

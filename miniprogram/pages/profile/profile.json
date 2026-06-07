@@ -1,1 +1,7 @@
-{"navigationBarTitleText":"个人资料","usingComponents":{}}
+{
+  "navigationBarTitleText": "个人资料",
+  "usingComponents": {
+    "city-picker": "/components/city-picker/index",
+    "time-picker": "/components/time-picker/index"
+  }
+}

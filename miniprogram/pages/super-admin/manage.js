@@ -31,7 +31,7 @@ Page({
         const userRes = await dbUtil.db.collection('users').doc(admin.userId).get();
         return {
           ...admin,
-          userName: userRes.data.realName || userRes.data.nickName || '未知',
+          userName: userRes.data.nickName || '未知',
           userAvatar: userRes.data.avatarUrl,
           isExpired: new Date(admin.validTo) < new Date(),
         };

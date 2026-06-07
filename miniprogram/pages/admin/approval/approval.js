@@ -27,7 +27,7 @@ Page({
           ]);
           return {
             ...req,
-            userName: userRes.data.realName || userRes.data.nickName || '未知',
+            userName: userRes.data.nickName || '未知',
             userAvatar: userRes.data.avatarUrl,
             userCity: userRes.data.city,
             groupName: groupRes.data ? groupRes.data.name : '未知群',
@@ -52,8 +52,10 @@ Page({
         try {
           // 更新申请状态
           await dbUtil.reviewRequest(id, 'approved', this.data.currentUserId);
-          // 更新用户的群组和状态
-          await dbUtil.updateUser(userId, { groupId, status: 'approved' });
+          // 更新用户的群组（追加）和状态
+          await dbUtil.db.collection('users').doc(userId).update({
+            data: { groupIds: dbUtil._.addToSet(groupId), status: 'approved' }
+          });
           wx.showToast({ title: '已通过', icon: 'success' });
           this.loadRequests();
         } catch (err) {

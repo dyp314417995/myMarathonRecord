@@ -5,7 +5,7 @@
     <view class="user-info" bindtap="onProfile">
       <image class="user-avatar" src="{{userInfo.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
       <view class="user-detail">
-        <text class="user-name">{{userInfo.realName || userInfo.nickName || '未设置'}}</text>
+        <text class="user-name">{{userInfo.nickName || '未设置'}}</text>
         <view class="user-meta">
           <text class="tag tag-green" wx:if="{{role === 'super_admin'}}">超级管理员</text>
           <text class="tag tag-blue" wx:elif="{{role === 'admin'}}">管理员</text>

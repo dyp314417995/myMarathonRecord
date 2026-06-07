@@ -1,11 +1,26 @@
 /* pages/admin/groups/groups.wxss */
-.group-list { padding: 16rpx 28rpx; }
+.group-list { padding: 0 12rpx; }
+.group-card { padding: 20rpx 24rpx; margin: 12rpx 12rpx; }
+
+.group-row { display: flex; align-items: flex-start; }
+.sort-btns { display: flex; flex-direction: column; gap: 8rpx; margin-right: 16rpx; padding-top: 4rpx; }
+.sort-btn {
+  width: 44rpx; height: 44rpx; line-height: 44rpx; text-align: center;
+  background: #f5f5f5; border-radius: 8rpx; font-size: 20rpx; color: #666;
+}
+.sort-btn.disabled { opacity: 0.3; }
+
+.group-info { flex: 1; }
 .group-name { font-size: 30rpx; font-weight: 600; display: block; }
 .group-count { font-size: 24rpx; color: #999; margin-top: 4rpx; display: block; }
-.btn-delete-sm {
-  background: #fff; color: #ff4d4f; border: 2rpx solid #ff4d4f;
-  border-radius: 8rpx; padding: 10rpx 24rpx; font-size: 24rpx;
+.qr-thumb {
+  width: 80rpx; height: 80rpx; border-radius: 8rpx; margin-top: 8rpx;
+  border: 1rpx solid #eee;
 }
+
+.group-actions { display: flex; flex-direction: column; gap: 12rpx; align-items: flex-end; }
+.action-edit { font-size: 26rpx; color: #1aad19; }
+.action-del { font-size: 26rpx; color: #ff4d4f; }
 
 .btn-area { padding: 24rpx; }
 
@@ -15,9 +30,21 @@
   background: rgba(0,0,0,0.5); z-index: 100;
 }
 .modal-box {
-  position: fixed; top: 40%; left: 48rpx; right: 48rpx;
-  background: #fff; border-radius: 20rpx; padding: 40rpx 32rpx;
-  z-index: 101;
+  position: fixed; top: 10%; left: 32rpx; right: 32rpx; bottom: 10%;
+  background: #fff; border-radius: 20rpx; padding: 32rpx;
+  z-index: 101; overflow-y: auto;
 }
 .modal-title { font-size: 32rpx; font-weight: 600; display: block; margin-bottom: 24rpx; text-align: center; }
+
+.qr-area {
+  width: 200rpx; height: 200rpx; border-radius: 12rpx;
+  background: #f7f7f7; margin: 12rpx auto; display: flex;
+  align-items: center; justify-content: center; overflow: hidden;
+}
+.qr-preview { width: 100%; height: 100%; }
+.qr-placeholder { color: #ccc; font-size: 26rpx; }
+
+.qr-btns { display: flex; gap: 16rpx; margin-top: 16rpx; justify-content: center; }
+.qr-btn { flex: 1; padding: 16rpx 0; font-size: 24rpx; }
+
 .modal-actions { display: flex; gap: 20rpx; margin-top: 32rpx; }
