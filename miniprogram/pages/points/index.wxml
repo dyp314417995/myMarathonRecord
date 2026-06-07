@@ -14,10 +14,21 @@
   <!-- 操作区 -->
   <view class="action-row">
     <button class="btn-primary" bindtap="onApply">提交积分申请</button>
-    <view class="admin-entry" bindtap="onAdmin">
-      <text>积分管理</text>
+    <view class="admin-entry" bindtap="onToggleRules">
+      <text>积分规则</text>
     </view>
   </view>
+
+  <!-- 积分规则（可折叠） -->
+  <block wx:if="{{showRules}}">
+    <view class="card" wx:for="{{rules}}" wx:key="_id">
+      <view class="rule-row">
+        <text class="rule-cat">{{item.category}}</text>
+        <text class="rule-detail">+{{item.points}}分{{item.monthlyLimit ? '，月上限'+item.monthlyLimit+'次' : ''}}</text>
+      </view>
+      <text class="rule-desc">{{item.name}}</text>
+    </view>
+  </block>
 
   <!-- 记录列表 -->
   <view class="section-title">积分明细</view>

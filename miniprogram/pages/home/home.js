@@ -37,6 +37,20 @@ Page({
         } catch {}
       }
 
+      // V1.0 老用户补发 50 积分
+      const pointsUtil = require('../../utils/points');
+      const oldBonus = await dbUtil.db.collection('points_records')
+        .where({ userId: user._id, category: '注册赠送' }).count();
+      if (oldBonus.total === 0) {
+        pointsUtil.addRecord({
+          userId: user._id, type: 'earn', category: '注册赠送',
+          points: 50, description: '新用户注册赠送（补发）',
+          images: [], earnDate: user.createTime || new Date(),
+          expireDate: new Date((user.createTime ? new Date(user.createTime).getTime() : Date.now()) + 365 * 86400000),
+          status: 'approved',
+        }).catch(() => {});
+      }
+
       // 兼容旧数据：groupId → groupIds
       if (!user.groupIds && user.groupId) {
         user.groupIds = [user.groupId];

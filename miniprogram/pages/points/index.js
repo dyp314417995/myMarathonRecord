@@ -7,6 +7,8 @@ Page({
     expiringPoints: 0,
     expiringDays: 0,
     records: [],
+    rules: [],
+    showRules: false,
     userId: '',
   },
 
@@ -14,7 +16,7 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) return;
     this.setData({ userId: userInfo._id });
-    await Promise.all([this.loadBalance(), this.loadExpiring(), this.loadRecords()]);
+    await Promise.all([this.loadBalance(), this.loadExpiring(), this.loadRecords(), this.loadRules()]);
   },
 
   async loadBalance() {
@@ -23,7 +25,6 @@ Page({
   },
 
   async loadExpiring() {
-    // 30天内即将过期
     const res = await pointsUtil.getExpiringSoon(this.data.userId, 30);
     const points = res.data.reduce((s, r) => s + r.points, 0);
     const days = res.data.length > 0
@@ -37,11 +38,16 @@ Page({
     this.setData({ records: res.data });
   },
 
-  onApply() {
-    wx.navigateTo({ url: '/pages/points/apply' });
+  async loadRules() {
+    const res = await pointsUtil.getRules();
+    this.setData({ rules: res.data.filter(r => r.status === 'active') });
   },
 
-  onAdmin() {
-    wx.navigateTo({ url: '/pages/points/admin' });
+  onToggleRules() {
+    this.setData({ showRules: !this.data.showRules });
+  },
+
+  onApply() {
+    wx.navigateTo({ url: '/pages/points/apply' });
   },
 });

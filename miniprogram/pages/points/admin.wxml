@@ -5,6 +5,7 @@
     <view class="tab {{tab === 'rules' ? 'active' : ''}}" data-tab="rules" bindtap="onTabChange">规则</view>
     <view class="tab {{tab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="onTabChange">审批</view>
     <view class="tab {{tab === 'record' ? 'active' : ''}}" data-tab="record" bindtap="onTabChange">录入/扣减</view>
+    <view class="tab" bindtap="onGoApply">+申请</view>
   </view>
 
   <!-- 规则管理 -->
@@ -15,9 +16,11 @@
           <text class="rule-name">{{item.name}}</text>
           <text class="rule-meta">+{{item.points}}分{{item.monthlyLimit ? '，月上限'+item.monthlyLimit : ''}}</text>
         </view>
-        <text class="rule-status {{item.status === 'active' ? 'on' : 'off'}}"
+        <text wx:if="{{isSuperAdmin}}"
+              class="rule-status {{item.status === 'active' ? 'on' : 'off'}}"
               data-id="{{item._id}}" data-status="{{item.status}}"
-              bindtap="onToggleRuleStatus">{{item.status === 'active' ? '启用' : '禁用'}}</text>
+              bindtap="onToggleRuleStatus">{{item.status === 'active' ? '已启用' : '已禁用'}}</text>
+        <text wx:else class="rule-status {{item.status === 'active' ? 'on' : 'off'}}">{{item.status === 'active' ? '已启用' : '已禁用'}}</text>
       </view>
     </view>
   </block>
@@ -48,7 +51,10 @@
 
   <!-- 录入/扣减 -->
   <block wx:if="{{tab === 'record'}}">
-    <view class="card">
+    <view wx:if="{{!isAdmin}}" class="empty-state">
+      <text>仅管理员可操作</text>
+    </view>
+    <view wx:else class="card">
       <view class="form-group">
         <text class="form-label">选择用户</text>
         <view class="form-input user-trigger" bindtap="showUserPicker">
@@ -57,7 +63,7 @@
       </view>
       <view class="form-group">
         <text class="form-label">积分数量（正=加，负=扣）</text>
-        <input class="form-input" type="number" placeholder="如：-30 表示扣减30分" value="{{deductPoints}}" bindinput="onPointsInput" />
+        <input class="form-input" placeholder="如：-30 扣减30分，30 增加30分" value="{{deductPoints}}" bindinput="onPointsInput" />
       </view>
       <view class="form-group">
         <text class="form-label">原因/说明</text>

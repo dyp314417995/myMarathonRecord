@@ -18,8 +18,8 @@ Page({
     if (!userInfo) return wx.redirectTo({ url: '/pages/login/login' });
     this.setData({ userId: userInfo._id });
     const res = await pointsUtil.getRules();
-    // 用户可申请的类别（排除集体活动）
-    const userRules = res.data.filter(r => r.category !== '集体活动');
+    // 用户可申请的类别（排除集体活动和已禁用的）
+    const userRules = res.data.filter(r => r.category !== '集体活动' && r.status === 'active');
     this.setData({ rules: userRules });
   },
 

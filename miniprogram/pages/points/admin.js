@@ -4,27 +4,37 @@ const dbUtil = require('../../utils/db');
 
 Page({
   data: {
-    tab: 'rules',       // rules | review | record | deduct
+    isSuperAdmin: false,
+    isAdmin: false,
+    tab: 'rules',
     rules: [],
     pendingList: [],
     users: [],
-    // 写入/扣减表单
     selectedUserId: '',
     selectedUserName: '',
     deductPoints: '',
     deductReason: '',
-    deductCat: '消耗',
     showUserPicker: false,
     userFilter: '',
   },
 
   async onShow() {
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    this.setData({
+      isSuperAdmin: userInfo.role === 'super_admin',
+      isAdmin: userInfo.role === 'super_admin' || userInfo.role === 'admin',
+    });
+    await pointsUtil.initDefaultRules();
     await Promise.all([this.loadRules(), this.loadPending(), this.loadUsers()]);
   },
 
   onTabChange(e) {
     this.setData({ tab: e.currentTarget.dataset.tab });
     if (e.currentTarget.dataset.tab === 'review') this.loadPending();
+  },
+
+  onGoApply() {
+    wx.navigateTo({ url: '/pages/points/apply' });
   },
 
   // ========== 规则 ==========
@@ -98,26 +108,30 @@ Page({
   hideUserPicker() { this.setData({ showUserPicker: false }); },
 
   async onSubmitDeduct() {
-    const { selectedUserId, deductPoints, deductReason, deductCat } = this.data;
+    const { selectedUserId, deductPoints, deductReason } = this.data;
     if (!selectedUserId) return wx.showToast({ title: '请选择用户', icon: 'none' });
     const pts = parseInt(deductPoints);
-    if (!pts || pts === 0) return wx.showToast({ title: '请输入积分数量', icon: 'none' });
+    if (isNaN(pts) || pts === 0) return wx.showToast({ title: '请输入积分数量', icon: 'none' });
     if (!deductReason.trim()) return wx.showToast({ title: '请输入原因', icon: 'none' });
 
-    // 获取当前余额
-    const balance = await pointsUtil.getBalance(selectedUserId);
-    if (pts > 0 && balance < pts) return wx.showToast({ title: '余额不足', icon: 'none' });
+    // 扣减时检查余额
+    if (pts < 0) {
+      const balance = await pointsUtil.getBalance(selectedUserId);
+      if (balance < Math.abs(pts)) return wx.showToast({ title: '余额不足', icon: 'none' });
+    }
 
+    // 正数=加积分，负数=扣积分
+    const isEarn = pts > 0;
     try {
       await pointsUtil.addRecord({
         userId: selectedUserId,
-        type: pts > 0 ? 'use' : 'earn',
-        category: pts > 0 ? deductCat : '集体活动',
-        points: pts > 0 ? -pts : Math.abs(pts),
+        type: isEarn ? 'earn' : 'use',
+        category: isEarn ? '集体活动' : '消耗',
+        points: pts,
         description: deductReason,
         images: [],
         earnDate: new Date(),
-        expireDate: new Date(Date.now() + 365 * 86400000),
+        expireDate: isEarn ? new Date(Date.now() + 365 * 86400000) : null,
         status: 'approved',
       });
       wx.showToast({ title: '操作成功', icon: 'success' });
@@ -127,6 +141,10 @@ Page({
     }
   },
 
-  onPointsInput(e) { this.setData({ deductPoints: e.detail.value }); },
+  onPointsInput(e) {
+    // 只允许数字和负号
+    const v = e.detail.value.replace(/[^-\d]/g, '');
+    this.setData({ deductPoints: v });
+  },
   onReasonInput(e) { this.setData({ deductReason: e.detail.value }); },
 });
