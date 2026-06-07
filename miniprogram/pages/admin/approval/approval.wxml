@@ -9,7 +9,7 @@
   <block wx:for="{{requests}}" wx:key="_id">
     <view class="card request-card">
       <view class="req-header">
-        <image class="req-avatar" src="{{item.userAvatar || '/imgs/back.svg'}}" mode="aspectFill" />
+        <image class="req-avatar" src="{{item.userAvatar || '/imgs/back.svg'}}" mode="aspectFill" data-id="{{item.userId}}" catchtap="onViewDetail" />
         <view class="req-info">
           <text class="req-name">{{item.userName}}</text>
           <text class="req-meta">{{item.userCity || '未知城市'}} · 申请加入 {{item.groupName}}</text>
@@ -23,4 +23,18 @@
       </view>
     </view>
   </block>
+</view>
+
+<!-- 用户详情弹窗 -->
+<view class="modal-mask" wx:if="{{showDetail}}" catchtap="onHideDetail"></view>
+<view class="modal-box" wx:if="{{showDetail}}" catchtap="">
+  <view class="detail-header">
+    <image class="detail-avatar" src="{{detailUser.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+    <text class="detail-name">{{detailUser.nickName || '未知'}}</text>
+  </view>
+  <view class="info-row"><text class="info-label">城市</text><text class="info-value">{{detailUser.city || '-'}}</text></view>
+  <view class="info-row"><text class="info-label">10K PB</text><text class="info-value">{{detailUser.pb10k || '-'}}</text></view>
+  <view class="info-row"><text class="info-label">半马 PB</text><text class="info-value">{{detailUser.pbHalf || '-'}}</text></view>
+  <view class="info-row"><text class="info-label">全马 PB</text><text class="info-value">{{detailUser.pbFull || '-'}}</text></view>
+  <button class="btn-outline" bindtap="onHideDetail" style="margin-top:24rpx;">关闭</button>
 </view>

@@ -6,6 +6,8 @@ Page({
     requests: [],
     loading: true,
     currentUserId: '',
+    showDetail: false,
+    detailUser: {},
   },
 
   async onShow() {
@@ -69,6 +71,16 @@ Page({
       }
     });
   },
+
+  // 查看用户详情
+  async onViewDetail(e) {
+    const userId = e.currentTarget.dataset.id;
+    const userRes = await dbUtil.db.collection('users').doc(userId).get();
+    if (userRes.data) {
+      this.setData({ showDetail: true, detailUser: userRes.data });
+    }
+  },
+  onHideDetail() { this.setData({ showDetail: false }); },
 
   fmt(d) {
     if (!d) return '';

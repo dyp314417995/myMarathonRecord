@@ -60,7 +60,6 @@
     <text class="detail-name">{{detailUser.nickName || '未知'}}</text>
   </view>
   <view class="detail-body">
-    <view class="info-row"><text class="info-label">手机号</text><text class="info-value">{{detailUser.phoneNumber || '-'}}</text></view>
     <view class="info-row"><text class="info-label">城市</text><text class="info-value">{{detailUser.city || '-'}}</text></view>
     <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{detailGroups}}</text></view>
     <view class="info-row"><text class="info-label">10K PB</text><text class="info-value">{{detailUser.pb10k || '-'}}</text></view>
