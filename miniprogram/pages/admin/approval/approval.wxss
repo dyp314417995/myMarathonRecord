@@ -1,0 +1,21 @@
+/* pages/admin/approval/approval.wxss */
+.request-card { padding: 28rpx 32rpx; }
+.req-header { display: flex; align-items: center; }
+.req-avatar {
+  width: 80rpx; height: 80rpx; border-radius: 50%;
+  background: #f0f0f0; flex-shrink: 0;
+}
+.req-info { flex: 1; margin-left: 20rpx; }
+.req-name { font-size: 30rpx; font-weight: 600; display: block; }
+.req-meta { font-size: 24rpx; color: #999; margin-top: 4rpx; display: block; }
+.req-time { font-size: 24rpx; color: #bbb; margin-top: 16rpx; }
+
+.req-actions { display: flex; gap: 16rpx; margin-top: 20rpx; justify-content: flex-end; }
+.btn-approve {
+  background: #1aad19; color: #fff; border: none;
+  border-radius: 10rpx; padding: 14rpx 32rpx; font-size: 26rpx;
+}
+.btn-reject {
+  background: #fff; color: #ff4d4f; border: 2rpx solid #ff4d4f;
+  border-radius: 10rpx; padding: 14rpx 32rpx; font-size: 26rpx;
+}

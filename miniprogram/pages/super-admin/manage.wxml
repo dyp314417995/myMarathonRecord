@@ -1,0 +1,74 @@
+<!-- pages/super-admin/manage.wxml - 管理员配置 -->
+<view class="sadmin-page">
+  <!-- 管理员列表 -->
+  <view class="section-title">当前管理员</view>
+  <block wx:for="{{admins}}" wx:key="_id">
+    <view class="card admin-card">
+      <view class="admin-header">
+        <image class="admin-avatar" src="{{item.userAvatar || '/imgs/back.svg'}}" mode="aspectFill" />
+        <view class="admin-info">
+          <text class="admin-name">{{item.userName}}</text>
+          <text class="admin-date">有效期：{{item.validFrom}} ~ {{item.validTo}}</text>
+          <view class="admin-perms">
+            <text class="tag tag-blue" wx:for="{{item.permissions}}" wx:key="*this" wx:for-item="p">{{permName(p)}}</text>
+          </view>
+        </view>
+        <view class="admin-status">
+          <text class="tag tag-green" wx:if="{{item.status === 'active' && !item.isExpired}}">有效</text>
+          <text class="tag tag-red" wx:else>已过期</text>
+        </view>
+      </view>
+      <view class="admin-actions" wx:if="{{item.status === 'active'}}">
+        <button class="btn-revoke" data-id="{{item._id}}" data-user-id="{{item.userId}}" bindtap="onRevokeAdmin">撤销管理员</button>
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{!loading && admins.length === 0}}" class="empty-state">
+    <text>暂无管理员，请添加</text>
+  </view>
+
+  <view class="btn-area">
+    <button class="btn-primary" bindtap="onShowAdd">+ 添加管理员</button>
+  </view>
+
+  <!-- 添加管理员弹窗 -->
+  <view class="modal-mask" wx:if="{{showAdd}}" bindtap="onHideAdd"></view>
+  <view class="modal-box" wx:if="{{showAdd}}">
+    <text class="modal-title">添加管理员</text>
+
+    <!-- 选择用户 -->
+    <text class="form-label">选择用户</text>
+    <scroll-view scroll-y class="user-picker" wx:if="{{users.length > 0}}">
+      <view wx:for="{{users}}" wx:key="_id"
+            class="picker-item {{selectedUserId === item._id ? 'active' : ''}}"
+            data-id="{{item._id}}" data-name="{{item.realName || item.nickName}}"
+            bindtap="onSelectUser">
+        <text>{{item.realName || item.nickName}}（{{item.city || '未知'}}）</text>
+      </view>
+    </scroll-view>
+    <text wx:if="{{selectedUserName}}" style="color:#1aad19;font-size:26rpx;margin-top:12rpx;">已选：{{selectedUserName}}</text>
+
+    <!-- 有效期 -->
+    <text class="form-label" style="margin-top:24rpx;">有效开始日期</text>
+    <input class="form-input" type="date" value="{{validFrom}}" data-field="validFrom" bindinput="onDateInput" />
+    <text class="form-label" style="margin-top:16rpx;">有效结束日期</text>
+    <input class="form-input" type="date" value="{{validTo}}" data-field="validTo" bindinput="onDateInput" />
+
+    <!-- 权限范围 -->
+    <text class="form-label" style="margin-top:24rpx;">权限范围</text>
+    <view class="perm-options">
+      <view class="perm-option {{permissions.approve_join ? 'active' : ''}}" data-key="approve_join" bindtap="onTogglePermission">
+        <text>✅ 审批加入</text>
+      </view>
+      <view class="perm-option {{permissions.remove_user ? 'active' : ''}}" data-key="remove_user" bindtap="onTogglePermission">
+        <text>❌ 移除用户</text>
+      </view>
+    </view>
+
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideAdd">取消</button>
+      <button class="btn-primary" style="flex:1;padding:20rpx;" bindtap="onAddAdmin">确认添加</button>
+    </view>
+  </view>
+</view>

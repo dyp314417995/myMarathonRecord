@@ -1,0 +1,30 @@
+<!-- pages/admin/users/users.wxml - 用户列表 -->
+<view class="users-page">
+  <view class="card" style="margin-bottom:0;">
+    <text style="font-size:26rpx;color:#999;">共 {{users.length}} 位用户</text>
+  </view>
+
+  <block wx:for="{{users}}" wx:key="_id">
+    <view class="card user-card-item" data-id="{{item._id}}" bindtap="onViewUser">
+      <view class="user-row">
+        <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+        <view class="u-info">
+          <text class="u-name">{{item.realName || item.nickName || '未知用户'}}</text>
+          <text class="u-meta">{{item.city || '未知'}} · {{item.groupName}}</text>
+        </view>
+        <view class="u-tags">
+          <text class="tag tag-green" wx:if="{{item.role === 'super_admin'}}">超管</text>
+          <text class="tag tag-blue" wx:elif="{{item.role === 'admin'}}">管理员</text>
+          <text class="tag tag-orange" wx:if="{{item.status === 'pending'}}">待审批</text>
+        </view>
+      </view>
+      <view class="u-actions" wx:if="{{item.role !== 'super_admin'}}">
+        <button class="btn-remove" data-id="{{item._id}}" data-name="{{item.realName || item.nickName}}" catchtap="onRemoveUser">移出群组</button>
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{!loading && users.length === 0}}" class="empty-state">
+    <text>暂无用户</text>
+  </view>
+</view>

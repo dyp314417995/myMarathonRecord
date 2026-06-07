@@ -1,0 +1,32 @@
+<!-- pages/admin/groups/groups.wxml - 群组管理 -->
+<view class="groups-page">
+  <view class="card group-list">
+    <block wx:for="{{groups}}" wx:key="_id">
+      <view class="list-item">
+        <view>
+          <text class="group-name">{{item.name}}</text>
+          <text class="group-count">成员 {{item.memberCount || 0}} 人</text>
+        </view>
+        <button class="btn-delete-sm" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onDeleteGroup">删除</button>
+      </view>
+    </block>
+    <view wx:if="{{groups.length === 0}}" style="text-align:center;padding:40rpx 0;color:#999;">
+      暂无群组，请添加
+    </view>
+  </view>
+
+  <view class="btn-area">
+    <button class="btn-outline" bindtap="onShowAdd">+ 添加群组</button>
+  </view>
+
+  <!-- 添加群组弹窗 -->
+  <view class="modal-mask" wx:if="{{showAdd}}" bindtap="onHideAdd"></view>
+  <view class="modal-box" wx:if="{{showAdd}}">
+    <text class="modal-title">添加新群组</text>
+    <input class="form-input" placeholder="请输入群名称" value="{{newGroupName}}" bindinput="onNameInput" focus />
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideAdd">取消</button>
+      <button class="btn-primary" style="flex:1;padding:20rpx;" bindtap="onAddGroup">确认添加</button>
+    </view>
+  </view>
+</view>

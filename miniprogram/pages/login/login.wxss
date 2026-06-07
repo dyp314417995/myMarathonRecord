@@ -1,0 +1,57 @@
+/* pages/login/login.wxss */
+.login-page { padding-bottom: 60rpx; }
+
+.header {
+  background: linear-gradient(135deg, #1aad19, #0d8c0d);
+  padding: 64rpx 32rpx;
+  text-align: center;
+}
+.header-title { font-size: 44rpx; font-weight: 700; color: #fff; display: block; }
+.header-sub { font-size: 26rpx; color: rgba(255,255,255,0.8); margin-top: 12rpx; display: block; }
+
+.card-title {
+  font-size: 30rpx; font-weight: 600; color: #333;
+  display: block; margin-bottom: 24rpx;
+  padding-bottom: 16rpx; border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 头像 */
+.avatar-row { display: flex; justify-content: center; margin-bottom: 32rpx; }
+.avatar-btn {
+  background: none; border: none; padding: 0; line-height: 1;
+  display: flex; flex-direction: column; align-items: center;
+}
+.avatar-btn::after { border: none; }
+.avatar {
+  width: 140rpx; height: 140rpx; border-radius: 50%;
+  background: #f0f0f0; border: 4rpx solid #e0e0e0;
+}
+.avatar-tip { font-size: 24rpx; color: #999; margin-top: 12rpx; }
+
+/* 手机号 */
+.phone-row { display: flex; gap: 16rpx; align-items: center; }
+.phone-input { flex: 1; }
+.phone-btn {
+  width: 160rpx; height: 88rpx; line-height: 88rpx;
+  background: #fff; color: #1aad19; border: 2rpx solid #1aad19;
+  border-radius: 12rpx; font-size: 24rpx; padding: 0; text-align: center;
+  flex-shrink: 0;
+}
+.phone-btn::after { border: none; }
+
+/* 群组选择 */
+.group-options { display: flex; flex-wrap: wrap; gap: 20rpx; }
+.group-option {
+  padding: 20rpx 40rpx; border-radius: 12rpx;
+  background: #f7f7f7; border: 2rpx solid #f7f7f7;
+  font-size: 28rpx; color: #666; text-align: center;
+  transition: all 0.2s;
+}
+.group-option.active {
+  background: #e8f5e9; border-color: #1aad19; color: #1aad19;
+  font-weight: 600;
+}
+
+/* 底部 */
+.btn-area { padding: 32rpx 24rpx 0; }
+.skip-link { text-align: center; color: #999; font-size: 26rpx; margin-top: 24rpx; }

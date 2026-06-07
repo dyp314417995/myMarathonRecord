@@ -1,0 +1,26 @@
+<!-- pages/admin/approval/approval.wxml - 审批列表 -->
+<view class="approval-page">
+  <block wx:if="{{!loading && requests.length === 0}}">
+    <view class="empty-state">
+      <text>暂无待审批申请</text>
+    </view>
+  </block>
+
+  <block wx:for="{{requests}}" wx:key="_id">
+    <view class="card request-card">
+      <view class="req-header">
+        <image class="req-avatar" src="{{item.userAvatar || '/imgs/back.svg'}}" mode="aspectFill" />
+        <view class="req-info">
+          <text class="req-name">{{item.userName}}</text>
+          <text class="req-meta">{{item.userCity || '未知城市'}} · 申请加入 {{item.groupName}}</text>
+        </view>
+        <text class="tag tag-orange">待审批</text>
+      </view>
+      <view class="req-time">申请时间：{{item.createTime}}</view>
+      <view class="req-actions">
+        <button class="btn-reject" data-id="{{item._id}}" data-user-id="{{item.userId}}" bindtap="onReject">拒绝</button>
+        <button class="btn-approve" data-id="{{item._id}}" data-user-id="{{item.userId}}" data-group-id="{{item.groupId}}" bindtap="onApprove">通过</button>
+      </view>
+    </view>
+  </block>
+</view>

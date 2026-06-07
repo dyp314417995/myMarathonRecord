@@ -1,0 +1,96 @@
+<!-- pages/home/home.wxml - 首页面板 -->
+<view class="home-page">
+  <!-- 用户信息卡片 -->
+  <view class="user-card card">
+    <view class="user-info" bindtap="onProfile">
+      <image class="user-avatar" src="{{userInfo.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+      <view class="user-detail">
+        <text class="user-name">{{userInfo.realName || userInfo.nickName || '未设置'}}</text>
+        <view class="user-meta">
+          <text class="tag tag-green" wx:if="{{role === 'super_admin'}}">超级管理员</text>
+          <text class="tag tag-blue" wx:elif="{{role === 'admin'}}">管理员</text>
+          <text class="tag tag-gray" wx:else>普通用户</text>
+          <text class="tag tag-orange" wx:if="{{status === 'pending'}}">待审批</text>
+        </view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+    <!-- 统计 -->
+    <view class="stats-row">
+      <view class="stat-item">
+        <text class="stat-num">{{groupName}}</text>
+        <text class="stat-label">所属群</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{userInfo.city || '未设置'}}</text>
+        <text class="stat-label">城市</text>
+      </view>
+      <view class="stat-item" wx:if="{{role === 'admin' || role === 'super_admin'}}">
+        <text class="stat-num highlight">{{pendingCount}}</text>
+        <text class="stat-label">待审批</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 超管面板 -->
+  <block wx:if="{{role === 'super_admin'}}">
+    <view class="section-title">超级管理</view>
+    <view class="menu-grid">
+      <view class="menu-item card" bindtap="onManageAdmins">
+        <text class="menu-icon">👤</text>
+        <text class="menu-text">管理员配置</text>
+        <text class="menu-desc">配置/管理管理员</text>
+      </view>
+      <view class="menu-item card" bindtap="onApproval">
+        <text class="menu-icon">✅</text>
+        <text class="menu-text">审批加入</text>
+        <text class="menu-desc">{{pendingCount}}条待审批</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageUsers">
+        <text class="menu-icon">👥</text>
+        <text class="menu-text">用户管理</text>
+        <text class="menu-desc">查看/移除用户</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">群组管理</text>
+        <text class="menu-desc">配置跑马群</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 管理员面板 -->
+  <block wx:elif="{{role === 'admin'}}">
+    <view class="section-title">管理功能</view>
+    <view class="menu-grid">
+      <view class="menu-item card" bindtap="onApproval">
+        <text class="menu-icon">✅</text>
+        <text class="menu-text">审批加入</text>
+        <text class="menu-desc">{{pendingCount}}条待审批</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageUsers">
+        <text class="menu-icon">👥</text>
+        <text class="menu-text">用户管理</text>
+        <text class="menu-desc">查看/移除用户</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">群组管理</text>
+        <text class="menu-desc">配置跑马群</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 普通用户面板 -->
+  <block wx:else>
+    <view class="section-title">我的跑马</view>
+    <view class="card" style="text-align:center; padding: 64rpx;">
+      <text style="font-size:60rpx;">🏃</text>
+      <view style="margin-top:24rpx;">
+        <text style="font-size:28rpx;color:#999;">
+          {{status === 'pending' ? '加群申请审核中，请耐心等待...' : '更多功能即将上线，敬请期待！'}}
+        </text>
+      </view>
+    </view>
+  </block>
+</view>
