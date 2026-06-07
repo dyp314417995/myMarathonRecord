@@ -32,9 +32,18 @@ Page({
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
 
-      const users = res.data.map(u => ({
-        ...u,
-        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
+      const users = await Promise.all(res.data.map(async (u) => {
+        let avatar = u.avatarUrl || '';
+        if (avatar && avatar.startsWith('cloud://')) {
+          try {
+            const urlRes = await wx.cloud.getTempFileURL({ fileList: [avatar] });
+            avatar = urlRes.fileList[0].tempFileURL;
+          } catch {}
+        }
+        return {
+          ...u, avatarUrl: avatar,
+          groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
+        };
       }));
       this.setData({ allUsers: users });
       this.applyFilter();

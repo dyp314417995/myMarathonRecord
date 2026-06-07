@@ -21,8 +21,12 @@ Page({
 
   async loadGroups() {
     const res = await dbUtil.getGroups();
-    // 显示二维码缩略图用的临时链接
     const enriched = await Promise.all(res.data.map(async (g) => {
+      // 修正负数和空值
+      if (g.memberCount == null || g.memberCount < 0) {
+        dbUtil.db.collection('groups').doc(g._id).update({ data: { memberCount: 0 } }).catch(() => {});
+        g.memberCount = 0;
+      }
       if (g.qrCode) {
         try {
           const urlRes = await wx.cloud.getTempFileURL({ fileList: [g.qrCode] });

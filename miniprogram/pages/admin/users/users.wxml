@@ -26,7 +26,7 @@
   <block wx:for="{{users}}" wx:key="_id">
     <view class="card user-card-item" data-id="{{item._id}}" bindtap="onViewUser">
       <view class="user-row">
-        <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+        <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" binderror="onAvatarError" data-idx="{{index}}" />
         <view class="u-info">
           <text class="u-name">{{item.nickName || '未知用户'}}</text>
           <text class="u-meta">{{item.city || '未知'}} · {{item.groupName}}</text>
