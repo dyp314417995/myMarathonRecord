@@ -47,6 +47,20 @@
     <view wx:if="{{pendingList.length === 0}}" class="empty-state">
       <text>暂无待审批</text>
     </view>
+
+    <!-- 已审核 -->
+    <view wx:if="{{reviewedList.length > 0}}" class="section-title" style="padding:24rpx 24rpx 8rpx;">已审核</view>
+    <block wx:for="{{reviewedList}}" wx:key="_id">
+      <view class="card review-card">
+        <view class="req-header">
+          <text class="req-name">{{item.userName}}</text>
+          <text class="tag tag-green" wx:if="{{item.status === 'approved'}}">已通过</text>
+          <text class="tag tag-red" wx:else>已拒绝</text>
+        </view>
+        <text class="req-cat">{{item.category}} +{{item.points}}分</text>
+        <text class="req-desc">{{item.description || '无说明'}}</text>
+      </view>
+    </block>
   </block>
 
   <!-- 录入/扣减 -->

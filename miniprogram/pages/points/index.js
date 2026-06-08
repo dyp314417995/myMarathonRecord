@@ -35,7 +35,21 @@ Page({
 
   async loadRecords() {
     const res = await pointsUtil.getRecords(this.data.userId);
-    this.setData({ records: res.data });
+    const records = res.data.map(r => ({
+      ...r,
+      fmtTime: this.fmtDate(r.createTime),
+    }));
+    this.setData({ records });
+  },
+
+  fmtDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    const M = String(dt.getMonth() + 1).padStart(2, '0');
+    const D = String(dt.getDate()).padStart(2, '0');
+    const h = String(dt.getHours()).padStart(2, '0');
+    const m = String(dt.getMinutes()).padStart(2, '0');
+    return `${M}-${D} ${h}:${m}`;
   },
 
   async loadRules() {

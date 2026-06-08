@@ -22,11 +22,13 @@ Page({
   async loadGroups() {
     const res = await dbUtil.getGroups();
     const enriched = await Promise.all(res.data.map(async (g) => {
-      // 修正负数和空值
+      // 修正负数、空值，补默认字段
       if (g.memberCount == null || g.memberCount < 0) {
         dbUtil.db.collection('groups').doc(g._id).update({ data: { memberCount: 0 } }).catch(() => {});
         g.memberCount = 0;
       }
+      if (!g.description) g.description = '';
+      if (!g.remark) g.remark = '群已满，请联系管理员邀请加入';
       if (g.qrCode) {
         try {
           const urlRes = await wx.cloud.getTempFileURL({ fileList: [g.qrCode] });
@@ -44,14 +46,16 @@ Page({
   },
 
   onEdit(e) {
-    const { id, name, qr } = e.currentTarget.dataset;
-    this.setData({ showModal: true, modalTitle: '编辑群组', editId: id, groupName: name, qrCode: qr || '', qrCodeTemp: '', qrCodeNew: '' });
+    const { id, name, desc, remark, qr } = e.currentTarget.dataset;
+    this.setData({ showModal: true, modalTitle: '编辑群组', editId: id, groupName: name, groupDesc: desc || '', groupRemark: remark || '', qrCode: qr || '', qrCodeTemp: '', qrCodeNew: '' });
   },
 
   // ========== 弹窗关闭 ==========
   onHideModal() { this.setData({ showModal: false }); },
 
   onNameInput(e) { this.setData({ groupName: e.detail.value }); },
+  onDescInput(e) { this.setData({ groupDesc: e.detail.value }); },
+  onRemarkInput(e) { this.setData({ groupRemark: e.detail.value }); },
 
   // ========== 上传二维码 ==========
   onChooseQRCode() {

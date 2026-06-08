@@ -103,14 +103,16 @@ Page({
 
     wx.showLoading({ title: '保存中...' });
     try {
-      // 上传新头像
+      // 上传新头像（本地路径就上传，永久URL不过）
       let avatarUrl = userInfo.avatarUrl || '';
-      if (avatarUrl && (avatarUrl.startsWith('http://tmp') || avatarUrl.startsWith('wxfile://'))) {
-        const upRes = await wx.cloud.uploadFile({
-          cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
-          filePath: avatarUrl,
-        });
-        avatarUrl = upRes.fileID;
+      if (avatarUrl && !avatarUrl.startsWith('cloud://') && !avatarUrl.startsWith('https://')) {
+        try {
+          const upRes = await wx.cloud.uploadFile({
+            cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
+            filePath: avatarUrl,
+          });
+          avatarUrl = upRes.fileID;
+        } catch {}
       }
 
       const updateData = {
@@ -121,7 +123,6 @@ Page({
         pbHalf: userInfo.pbHalf || '',
         pbFull: userInfo.pbFull || '',
         nickName: userInfo.nickName,
-        avatarUrl: userInfo.avatarUrl,
         groupIds: selectedGroupIds,
       };
       await dbUtil.updateUser(userInfo._id, updateData);

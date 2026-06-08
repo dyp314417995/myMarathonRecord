@@ -125,9 +125,9 @@ Page({
     wx.showLoading({ title: '注册中...' });
 
     try {
-      // 上传头像到云存储（如果是临时路径）
+      // 上传头像到云存储（本地路径就上传）
       let finalAvatar = avatarUrl;
-      if (avatarUrl && (avatarUrl.startsWith('http://tmp') || avatarUrl.startsWith('wxfile://'))) {
+      if (avatarUrl && !avatarUrl.startsWith('cloud://') && !avatarUrl.startsWith('https://')) {
         try {
           const upRes = await wx.cloud.uploadFile({
             cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,

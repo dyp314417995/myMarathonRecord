@@ -2,7 +2,9 @@
 .groups-page { padding: 12rpx 0 40rpx; }
 
 .group-card { padding: 28rpx 32rpx; margin: 12rpx 12rpx; }
-.group-name { font-size: 32rpx; font-weight: 700; display: block; color: #333; }
+.group-name { font-size: 32rpx; font-weight: 700; color: #333; }
+.group-summary { display: flex; justify-content: space-between; align-items: center; }
+.group-arrow { font-size: 24rpx; color: #999; }
 .group-desc { font-size: 26rpx; color: #666; display: block; margin-top: 8rpx; line-height: 1.6; }
 
 .qr-section { display: flex; flex-direction: column; align-items: center; margin-top: 20rpx; }
@@ -13,4 +15,8 @@
   margin-top: 20rpx; padding: 20rpx; border-radius: 12rpx;
   background: #fff3e0; font-size: 26rpx; color: #ff9800;
   text-align: center;
+}
+.remark-text {
+  margin-top: 16rpx; font-size: 24rpx; color: #999;
+  display: block; text-align: center;
 }

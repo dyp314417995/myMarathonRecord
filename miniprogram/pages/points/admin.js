@@ -9,6 +9,7 @@ Page({
     tab: 'rules',
     rules: [],
     pendingList: [],
+    reviewedList: [],
     users: [],
     selectedUserId: '',
     selectedUserName: '',
@@ -52,20 +53,28 @@ Page({
 
   // ========== 审批 ==========
   async loadPending() {
+    // 待审批
     const res = await pointsUtil.getPendingRecords();
-    const enriched = await Promise.all(res.data.map(async (r) => {
-      try {
-        const u = await dbUtil.db.collection('users').doc(r.userId).get();
-        // 转换图片为临时 URL
-        let imgUrls = [];
-        if (r.images && r.images.length > 0) {
-          const urlRes = await wx.cloud.getTempFileURL({ fileList: r.images });
-          imgUrls = urlRes.fileList.map(f => f.tempFileURL);
-        }
-        return { ...r, userName: u.data.nickName || '未知', images: imgUrls };
-      } catch { return r; }
-    }));
-    this.setData({ pendingList: enriched });
+    const enriched = (await Promise.all(res.data.map(async (r) => this.enrichRecord(r)))).filter(Boolean);
+    // 已审核（最近20条）
+    const reviewedRes = await dbUtil.db.collection('points_records')
+      .where({ status: dbUtil._.neq('pending') })
+      .orderBy('createTime', 'desc').limit(20).get();
+    const enrichedReviewed = (await Promise.all(reviewedRes.data.map(async (r) => this.enrichRecord(r)))).filter(Boolean);
+    this.setData({ pendingList: enriched, reviewedList: enrichedReviewed });
+  },
+
+  async enrichRecord(r) {
+    try {
+      const u = await dbUtil.db.collection('users').doc(r.userId).get();
+      if (!u.data) return null; // 用户已删除
+      let imgUrls = [];
+      if (r.images && r.images.length > 0) {
+        const urlRes = await wx.cloud.getTempFileURL({ fileList: r.images });
+        imgUrls = urlRes.fileList.map(f => f.tempFileURL);
+      }
+      return { ...r, userName: u.data.nickName || '未知', images: imgUrls };
+    } catch { return null; }
   },
 
   async onApprove(e) {

@@ -15,7 +15,7 @@
   <view class="action-row">
     <button class="btn-primary" bindtap="onApply">提交积分申请</button>
     <view class="admin-entry" bindtap="onToggleRules">
-      <text>积分规则</text>
+      <text>积分规则 {{showRules ? '▲' : '▼'}}</text>
     </view>
   </view>
 
@@ -38,7 +38,7 @@
         <view class="record-info">
           <text class="record-cat">{{item.category}}</text>
           <text class="record-desc">{{item.description || '无说明'}}</text>
-          <text class="record-date">{{item.createTime}}</text>
+          <text class="record-date">{{item.fmtTime}}</text>
         </view>
         <view class="record-points">
           <text class="{{item.points > 0 ? 'earn' : 'use'}}">{{item.points > 0 ? '+' : ''}}{{item.points}}</text>

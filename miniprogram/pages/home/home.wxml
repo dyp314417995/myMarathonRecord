@@ -53,6 +53,16 @@
         <text class="menu-text">积分管理</text>
         <text class="menu-desc">审批/录入/消耗</text>
       </view>
+      <view class="menu-item card" bindtap="onPoints">
+        <text class="menu-icon">🏃</text>
+        <text class="menu-text">我的积分</text>
+        <text class="menu-desc">积分明细</text>
+      </view>
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
+        <text class="menu-desc">查看/扫码进群</text>
+      </view>
     </view>
   </block>
 
@@ -74,6 +84,16 @@
         <text class="menu-icon">⭐</text>
         <text class="menu-text">积分管理</text>
         <text class="menu-desc">审批/录入/消耗</text>
+      </view>
+      <view class="menu-item card" bindtap="onPoints">
+        <text class="menu-icon">🏃</text>
+        <text class="menu-text">我的积分</text>
+        <text class="menu-desc">积分明细</text>
+      </view>
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
+        <text class="menu-desc">查看/扫码进群</text>
       </view>
     </view>
   </block>

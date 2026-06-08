@@ -1,16 +1,22 @@
 <!-- pages/groups/index.wxml -->
 <view class="groups-page">
   <block wx:for="{{groups}}" wx:key="_id">
-    <view class="card group-card">
-      <text class="group-name">{{item.name}}</text>
-      <text wx:if="{{item.description}}" class="group-desc">{{item.description}}</text>
-      <view wx:if="{{item.qrCodeUrl}}" class="qr-section" data-url="{{item.qrCodeUrl}}" bindtap="onPreviewQR">
-        <image class="qr-img" src="{{item.qrCodeUrl}}" mode="aspectFit" />
-        <text class="qr-tip">点击查看大图并长按识别</text>
+    <view class="card group-card" data-id="{{item._id}}" bindtap="onToggleGroup">
+      <view class="group-summary">
+        <text class="group-name">{{item.name}}</text>
+        <text class="group-arrow">{{expandedId === item._id ? '▲' : '▼'}}</text>
       </view>
-      <view wx:else class="remark-box">
-        <text>{{item.remark || '群已满，请联系管理员邀请加入'}}</text>
-      </view>
+      <block wx:if="{{expandedId === item._id}}">
+        <text wx:if="{{item.description}}" class="group-desc">{{item.description}}</text>
+        <view wx:if="{{item.qrCodeUrl}}" class="qr-section" data-url="{{item.qrCodeUrl}}" catchtap="onPreviewQR">
+          <image class="qr-img" src="{{item.qrCodeUrl}}" mode="aspectFit" />
+          <text class="qr-tip">点击查看大图并长按识别</text>
+        </view>
+        <view wx:if="{{!item.qrCodeUrl}}" class="remark-box">
+          <text>{{item.remark || '群已满，请联系管理员邀请加入'}}</text>
+        </view>
+        <text wx:if="{{item.qrCodeUrl && item.remark}}" class="remark-text">{{item.remark}}</text>
+      </block>
     </view>
   </block>
 

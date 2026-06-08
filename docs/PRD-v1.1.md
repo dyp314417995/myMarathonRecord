@@ -140,6 +140,11 @@ pages/points/admin      → 积分管理后台（规则/审批/录入）
 | 7 | 群不能多选 | groupId → groupIds 数组 |
 | 8 | 老用户无积分 | 首次登录自动补发 50 积分 |
 | 9 | 群成员数始终为 0 | 加入/退出/移出时维护 memberCount |
+| 10 | 头像仅自己可见 | profile.js 重复 avatarUrl 字段覆盖上传结果 |
+| 11 | 头像列表不显示 | 批量 getTempFileURL + 单独重试 + 过期路径清理 |
+| 12 | 管理员状态误显过期 | revoked 状态单独判断 |
+| 13 | 群介绍/备注不保存 | onDescInput/onRemarkInput 丢失，补回方法 |
+| 14 | 已删除用户审批残留 | enrichRecord 查不到用户返回 null 过滤 |
 
 ---
 

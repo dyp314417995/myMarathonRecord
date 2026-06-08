@@ -29,12 +29,13 @@ Page({
       try {
         const userRes = await dbUtil.db.collection('users').doc(admin.userId).get();
         let avatar = userRes.data.avatarUrl || '';
-        // 如果是 cloud fileID，转临时 URL
         if (avatar && avatar.startsWith('cloud://')) {
           try {
             const urlRes = await wx.cloud.getTempFileURL({ fileList: [avatar] });
             avatar = urlRes.fileList[0].tempFileURL;
-          } catch {}
+          } catch { avatar = ''; }
+        } else if (avatar && !avatar.startsWith('https://') && !avatar.startsWith('http://')) {
+          avatar = ''; // 过期临时路径
         }
         return {
           ...admin,

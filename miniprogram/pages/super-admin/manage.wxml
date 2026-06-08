@@ -15,6 +15,7 @@
         </view>
         <view class="admin-status">
           <text class="tag tag-green" wx:if="{{item.status === 'active' && !item.isExpired}}">有效</text>
+          <text class="tag tag-gray" wx:elif="{{item.status === 'revoked'}}">已撤销</text>
           <text class="tag tag-red" wx:else>已过期</text>
         </view>
       </view>
