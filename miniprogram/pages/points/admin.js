@@ -45,6 +45,11 @@ Page({
     wx.navigateTo({ url: '/pages/points/apply' });
   },
 
+  onPreviewImg(e) {
+    const { src } = e.currentTarget.dataset;
+    wx.previewImage({ urls: [src], current: src });
+  },
+
   // ========== 规则 ==========
   async loadRules() {
     const res = await pointsUtil.getRules();
@@ -86,16 +91,32 @@ Page({
 
   async onApprove(e) {
     const { id } = e.currentTarget.dataset;
-    await pointsUtil.reviewRecord(id, 'approved', '');
+    const reviewer = wx.getStorageSync('userInfo');
+    await dbUtil.db.collection('points_records').doc(id).update({
+      data: { status: 'approved', reviewerId: reviewer?._id, reviewTime: new Date() }
+    });
     wx.showToast({ title: '已通过', icon: 'success' });
     this.loadPending();
   },
 
   async onReject(e) {
     const { id } = e.currentTarget.dataset;
-    await pointsUtil.reviewRecord(id, 'rejected', '');
-    wx.showToast({ title: '已拒绝', icon: 'success' });
-    this.loadPending();
+    wx.showModal({
+      title: '驳回原因',
+      editable: true,
+      placeholderText: '请填写驳回原因',
+      confirmText: '驳回',
+      success: async (res) => {
+        if (!res.confirm) return;
+        const reason = res.content || '';
+        const reviewer = wx.getStorageSync('userInfo');
+        await dbUtil.db.collection('points_records').doc(id).update({
+          data: { status: 'rejected', rejectReason: reason, reviewerId: reviewer?._id, reviewTime: new Date() }
+        });
+        wx.showToast({ title: '已驳回', icon: 'success' });
+        this.loadPending();
+      }
+    });
   },
 
   // ========== 手动录入/扣减 ==========

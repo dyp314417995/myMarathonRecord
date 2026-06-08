@@ -36,7 +36,7 @@
         <text class="req-cat">{{item.category}} +{{item.points}}分</text>
         <text class="req-desc">{{item.description || '无说明'}}</text>
         <view wx:if="{{item.images.length > 0}}" class="req-imgs">
-          <image wx:for="{{item.images}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="req-img" />
+          <image wx:for="{{item.images}}" wx:key="*this" wx:for-item="img" src="{{img}}" mode="aspectFill" class="req-img" bindtap="onPreviewImg" data-src="{{img}}" />
         </view>
         <view class="req-actions">
           <button class="btn-reject" data-id="{{item._id}}" bindtap="onReject">拒绝</button>

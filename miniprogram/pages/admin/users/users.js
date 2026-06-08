@@ -32,12 +32,23 @@ Page({
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
 
+      // 批量转换 cloud:// 头像
+      const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+      let urlMap = {};
+      if (cloudIds.length) {
+        try {
+          const r = await wx.cloud.getTempFileURL({ fileList: cloudIds });
+          r.fileList.forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+        } catch {}
+      }
+
       const users = res.data.map(u => {
         const raw = u.avatarUrl || '';
-        const valid = raw.startsWith('cloud://') || raw.startsWith('https://');
+        let avatar = '';
+        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+        else if (raw.startsWith('https://')) avatar = raw;
         return {
-          ...u,
-          avatarUrl: valid ? raw : '',
+          ...u, avatarUrl: avatar,
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
         };
       });

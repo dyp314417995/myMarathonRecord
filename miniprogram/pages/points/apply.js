@@ -47,7 +47,7 @@ Page({
 
   onChooseImage() {
     wx.chooseMedia({
-      count: 4, mediaType: ['image'], sourceType: ['album', 'camera'],
+      count: 9, mediaType: ['image'], sourceType: ['album', 'camera'],
       success: (res) => {
         const newImgs = res.tempFiles.map(f => f.tempFilePath);
         this.setData({ images: [...this.data.images, ...newImgs] });
