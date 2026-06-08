@@ -11,15 +11,21 @@ Page({
     monthlyLimit: 0,
     submitting: false,
     userId: '',
+    isAdmin: false,
   },
 
   async onLoad() {
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) return wx.redirectTo({ url: '/pages/login/login' });
-    this.setData({ userId: userInfo._id });
+    const role = userInfo.role || 'user';
+    const isAdmin = role === 'super_admin' || role === 'admin';
+    this.setData({ userId: userInfo._id, isAdmin });
     const res = await pointsUtil.getRules();
-    // 用户可申请的类别（排除集体活动和已禁用的）
-    const userRules = res.data.filter(r => r.category !== '集体活动' && r.status === 'active');
+    const userRules = res.data.filter(r => {
+      if (r.status !== 'active') return false;
+      if (!isAdmin && r.category === '集体活动') return false;
+      return true;
+    });
     this.setData({ rules: userRules });
   },
 
@@ -90,11 +96,11 @@ Page({
         monthlyIndex: monthlyCount + 1,
         earnDate: new Date(),
         expireDate: new Date(Date.now() + 365 * 86400000),
-        status: 'pending',
+        status: this.data.isAdmin ? 'approved' : 'pending',
       });
 
       wx.hideLoading();
-      wx.showToast({ title: '提交成功，等待审批', icon: 'success' });
+      wx.showToast({ title: this.data.isAdmin ? '录入成功' : '提交成功，等待审批', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();
