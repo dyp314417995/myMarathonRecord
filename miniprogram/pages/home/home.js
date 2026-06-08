@@ -20,10 +20,8 @@ Page({
       // 始终从数据库拉最新数据
       let user = await dbUtil.getCurrentUser();
       if (!user) {
-        // 数据库没有，试试本地缓存
-        user = wx.getStorageSync('userInfo');
-      }
-      if (!user) {
+        // 用户已被删除或不存在，清除缓存并重新注册
+        wx.removeStorageSync('userInfo');
         wx.redirectTo({ url: '/pages/login/login' });
         return;
       }
