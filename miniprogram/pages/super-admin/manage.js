@@ -28,19 +28,10 @@ Page({
     const enriched = await Promise.all(res.data.map(async (admin) => {
       try {
         const userRes = await dbUtil.db.collection('users').doc(admin.userId).get();
-        let avatar = userRes.data.avatarUrl || '';
-        if (avatar && avatar.startsWith('cloud://')) {
-          try {
-            const urlRes = await wx.cloud.getTempFileURL({ fileList: [avatar] });
-            avatar = urlRes.fileList[0].tempFileURL;
-          } catch { avatar = ''; }
-        } else if (avatar && !avatar.startsWith('https://') && !avatar.startsWith('http://')) {
-          avatar = ''; // 过期临时路径
-        }
         return {
           ...admin,
           userName: userRes.data.nickName || '未知',
-          userAvatar: avatar,
+          userAvatar: userRes.data.avatarUrl || '',
           isExpired: new Date(admin.validTo) < new Date(),
           validFrom: this.formatDate(new Date(admin.validFrom)),
           validTo: this.formatDate(new Date(admin.validTo)),

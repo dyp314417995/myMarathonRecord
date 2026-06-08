@@ -32,36 +32,12 @@ Page({
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
 
-      // 批量转换云存储头像，失败的单独重试
-      const needConvert = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://'));
-      let urlMap = {};
-      if (needConvert.length > 0) {
-        const cloudIds = [...new Set(needConvert.map(u => u.avatarUrl))];
-        try {
-          const urlRes = await wx.cloud.getTempFileURL({ fileList: cloudIds });
-          urlRes.fileList.forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        } catch {}
-        // 个别失败的单独重试
-        for (const id of cloudIds) {
-          if (!urlMap[id]) {
-            try {
-              const r = await wx.cloud.getTempFileURL({ fileList: [id] });
-              if (r.fileList[0].tempFileURL) urlMap[id] = r.fileList[0].tempFileURL;
-            } catch {}
-          }
-        }
-      }
-
       const users = res.data.map(u => {
-        let avatar = u.avatarUrl || '';
-        if (avatar && avatar.startsWith('cloud://')) {
-          const converted = urlMap[avatar];
-          avatar = converted || ''; // 转换失败则用默认
-        } else if (avatar && !avatar.startsWith('https://') && !avatar.startsWith('http://')) {
-          avatar = '';
-        }
+        const raw = u.avatarUrl || '';
+        const valid = raw.startsWith('cloud://') || raw.startsWith('https://');
         return {
-          ...u, avatarUrl: avatar,
+          ...u,
+          avatarUrl: valid ? raw : '',
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
         };
       });
