@@ -12,12 +12,16 @@
 .rule-status.off { background: #f5f5f5; color: #999; }
 
 .review-card { padding: 20rpx 28rpx; margin: 12rpx; }
+.empty-tight { padding: 24rpx; text-align: center; font-size: 26rpx; color: #bbb; }
 .req-header { display: flex; justify-content: space-between; align-items: center; }
 .req-name { font-size: 28rpx; font-weight: 600; }
 .req-cat { font-size: 26rpx; color: #1aad19; margin-top: 8rpx; display: block; }
 .req-desc { font-size: 24rpx; color: #999; margin-top: 4rpx; display: block; }
-.req-imgs { display: flex; gap: 12rpx; margin-top: 12rpx; }
-.req-img { width: 100rpx; height: 100rpx; border-radius: 8rpx; }
+.req-id { font-size: 22rpx; color: #ccc; display: block; }
+.req-debug { font-size: 18rpx; color: #1aad19; display: block; word-break: break-all; }
+.req-time { font-size: 22rpx; color: #bbb; margin-top: 2rpx; display: block; }
+.req-imgs { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 12rpx; }
+.req-img { width: 160rpx; height: 160rpx; border-radius: 8rpx; border: 2rpx solid #eee; }
 .req-actions { display: flex; gap: 16rpx; margin-top: 16rpx; justify-content: flex-end; }
 .btn-approve { background: #1aad19; color: #fff; border: none; border-radius: 10rpx; padding: 14rpx 32rpx; font-size: 26rpx; }
 .btn-reject { background: #fff; color: #ff4d4f; border: 2rpx solid #ff4d4f; border-radius: 10rpx; padding: 14rpx 32rpx; font-size: 26rpx; }
@@ -36,6 +40,6 @@
 
 .img-grid { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 8rpx; }
 .img-item { width: 120rpx; height: 120rpx; border-radius: 12rpx; overflow: hidden; position: relative; background: #f7f7f7; }
-.img-item image { width: 100%; height: 100%; }
+.img-pic { width: 100%; height: 100%; }
 .img-remove { position: absolute; top: 4rpx; right: 4rpx; width: 36rpx; height: 36rpx; background: rgba(0,0,0,0.5); border-radius: 50%; color: #fff; text-align: center; line-height: 36rpx; font-size: 24rpx; }
 .img-add { display: flex; align-items: center; justify-content: center; font-size: 48rpx; color: #ccc; border: 2rpx dashed #eee; }

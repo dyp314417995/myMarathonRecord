@@ -35,8 +35,10 @@
         </view>
         <text class="req-cat">{{item.category}} +{{item.points}}分</text>
         <text class="req-desc">{{item.description || '无说明'}}</text>
-        <view wx:if="{{item.images.length > 0}}" class="req-imgs">
-          <image wx:for="{{item.images}}" wx:key="*this" wx:for-item="img" src="{{img}}" mode="aspectFill" class="req-img" bindtap="onPreviewImg" data-src="{{img}}" />
+        <text class="req-id">单号 {{item.fmtId}}</text>
+        <text class="req-time">{{item.fmtTime}}</text>
+        <view wx:if="{{item.imgUrls.length > 0}}" class="req-imgs">
+          <image wx:for="{{item.imgUrls}}" wx:key="*this" src="{{item}}" mode="aspectFit" class="req-img" bindtap="onPreviewImg" data-src="{{item}}" />
         </view>
         <view class="req-actions">
           <button class="btn-reject" data-id="{{item._id}}" bindtap="onReject">拒绝</button>
@@ -44,10 +46,6 @@
         </view>
       </view>
     </block>
-    <view wx:if="{{pendingList.length === 0}}" class="empty-state">
-      <text>暂无待审批</text>
-    </view>
-
     <!-- 已审核 -->
     <view wx:if="{{reviewedList.length > 0}}" class="section-title" style="padding:24rpx 24rpx 8rpx;">已审核</view>
     <block wx:for="{{reviewedList}}" wx:key="_id">
@@ -59,6 +57,11 @@
         </view>
         <text class="req-cat">{{item.category}} +{{item.points}}分</text>
         <text class="req-desc">{{item.description || '无说明'}}</text>
+        <text class="req-id">单号 {{item.fmtId}}</text>
+        <text class="req-time">{{item.fmtTime}}</text>
+        <view wx:if="{{item.imgUrls.length > 0}}" class="req-imgs">
+          <image wx:for="{{item.imgUrls}}" wx:key="*this" src="{{item}}" mode="aspectFit" class="req-img" bindtap="onPreviewImg" data-src="{{item}}" />
+        </view>
       </view>
     </block>
   </block>
@@ -90,7 +93,7 @@
         <view class="img-grid">
           <block wx:for="{{deductImages}}" wx:key="index">
             <view class="img-item">
-              <image src="{{item}}" mode="aspectFill" />
+              <image class="img-pic" src="{{item}}" mode="aspectFill" />
               <text class="img-remove" data-idx="{{index}}" bindtap="onRemoveDeductImage">✕</text>
             </view>
           </block>

@@ -236,3 +236,11 @@ pages/points/admin      → 积分管理后台（规则/审批/录入）
 - 驳回时管理员填写原因(rejectReason)
 - 审批图片可点击放大预览
 - 申请页图片上限 9 张
+
+### 9.14 云函数 getImageUrls
+
+- 解决免费套餐存储权限限制（STORAGE_EXCEED_AUTHORITY）
+- 管理员查看他人上传的图片/头像改用云函数中转
+- 审批图片、用户列表头像、管理员列表头像全部修复
+- 驳回记录显示拒因（rejectReason）
+

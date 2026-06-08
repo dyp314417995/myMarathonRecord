@@ -81,12 +81,26 @@ Page({
       const u = await dbUtil.db.collection('users').doc(r.userId).get();
       if (!u.data) return null; // 用户已删除
       let imgUrls = [];
-      if (r.images && r.images.length > 0) {
-        const urlRes = await wx.cloud.getTempFileURL({ fileList: r.images });
-        imgUrls = urlRes.fileList.map(f => f.tempFileURL);
+      let imgs = r.images;
+      if (imgs && typeof imgs === 'string') imgs = [imgs];
+      if (imgs && imgs.length > 0) {
+        try {
+          const urlRes = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: imgs } });
+          imgUrls = (urlRes.result || []).filter(f => f.tempFileURL).map(f => f.tempFileURL);
+        } catch {}
       }
-      return { ...r, userName: u.data.nickName || '未知', images: imgUrls };
+      return { ...r, userName: u.data.nickName || '未知', imgUrls, fmtTime: this.fmtDate(r.createTime), fmtId: r._id.slice(-8) };
     } catch { return null; }
+  },
+
+  fmtDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    const M = String(dt.getMonth() + 1).padStart(2, '0');
+    const D = String(dt.getDate()).padStart(2, '0');
+    const h = String(dt.getHours()).padStart(2, '0');
+    const m = String(dt.getMinutes()).padStart(2, '0');
+    return `${M}-${D} ${h}:${m}`;
   },
 
   async onApprove(e) {

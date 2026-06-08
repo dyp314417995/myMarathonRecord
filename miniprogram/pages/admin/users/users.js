@@ -32,13 +32,13 @@ Page({
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
 
-      // 批量转换 cloud:// 头像
+      // 批量转换 cloud:// 头像（云函数绕过权限）
       const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
       let urlMap = {};
       if (cloudIds.length) {
         try {
-          const r = await wx.cloud.getTempFileURL({ fileList: cloudIds });
-          r.fileList.forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
+          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
         } catch {}
       }
 

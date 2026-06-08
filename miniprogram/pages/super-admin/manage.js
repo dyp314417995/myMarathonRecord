@@ -25,21 +25,30 @@ Page({
   // 加载管理员列表
   async loadAdmins() {
     const res = await dbUtil.getAdminList();
-    const enriched = await Promise.all(res.data.map(async (admin) => {
+    // 批量转换云头像
+    const allUsers = await Promise.all(res.data.map(a => dbUtil.db.collection('users').doc(a.userId).get().then(r => r.data).catch(() => null)));
+    const cloudIds = allUsers.filter(u => u && u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+    let urlMap = {};
+    if (cloudIds.length) {
       try {
-        const userRes = await dbUtil.db.collection('users').doc(admin.userId).get();
-        return {
-          ...admin,
-          userName: userRes.data.nickName || '未知',
-          userAvatar: userRes.data.avatarUrl || '',
-          isExpired: new Date(admin.validTo) < new Date(),
-          validFrom: this.formatDate(new Date(admin.validFrom)),
-          validTo: this.formatDate(new Date(admin.validTo)),
-        };
-      } catch {
-        return null; // 用户已删除，过滤掉
-      }
-    }));
+        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
+        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+      } catch {}
+    }
+    const enriched = res.data.map((admin, i) => {
+      const u = allUsers[i];
+      if (!u) return null;
+      let avatar = u.avatarUrl || '';
+      if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
+      return {
+        ...admin,
+        userName: u.nickName || '未知',
+        userAvatar: avatar,
+        isExpired: new Date(admin.validTo) < new Date(),
+        validFrom: this.formatDate(new Date(admin.validFrom)),
+        validTo: this.formatDate(new Date(admin.validTo)),
+      };
+    }).filter(Boolean);
     // 同一用户只保留最新记录
     const seen = {};
     const deduped = enriched.filter(Boolean).filter(a => {
