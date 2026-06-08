@@ -118,4 +118,7 @@ Page({
   onGroups() {
     wx.navigateTo({ url: '/pages/groups/index' });
   },
+  onMemberList() {
+    wx.navigateTo({ url: '/pages/admin/members/members' });
+  },
 });

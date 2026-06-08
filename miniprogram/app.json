@@ -10,7 +10,8 @@
     "pages/points/index",
     "pages/points/apply",
     "pages/points/admin",
-    "pages/groups/index"
+    "pages/groups/index",
+    "pages/admin/members/members"
   ],
   "usingComponents": {},
   "window": {

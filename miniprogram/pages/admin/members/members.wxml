@@ -1,0 +1,65 @@
+<!-- pages/admin/members/members.wxml - 跑友名录 -->
+<view class="users-page">
+  <view class="toolbar">
+    <input class="search-input" placeholder="搜索姓名/城市/群..." value="{{searchKey}}" bindinput="onSearchInput" />
+    <view class="sort-row">
+      <view class="sort-item {{sortBy === 'time' ? 'active' : ''}}" data-by="time" bindtap="onSortBy">
+        <text>时间{{sortBy === 'time' ? (sortAsc ? '↑' : '↓') : ''}}</text>
+      </view>
+      <view class="sort-item {{sortBy === 'name' ? 'active' : ''}}" data-by="name" bindtap="onSortBy">
+        <text>姓名{{sortBy === 'name' ? (sortAsc ? '↑' : '↓') : ''}}</text>
+      </view>
+      <view class="sort-item {{sortBy === 'pb10k' ? 'active' : ''}}" data-by="pb10k" bindtap="onSortBy">
+        <text>10K{{sortBy === 'pb10k' ? (sortAsc ? '↑' : '↓') : ''}}</text>
+      </view>
+      <view class="sort-item {{sortBy === 'pbHalf' ? 'active' : ''}}" data-by="pbHalf" bindtap="onSortBy">
+        <text>半马{{sortBy === 'pbHalf' ? (sortAsc ? '↑' : '↓') : ''}}</text>
+      </view>
+      <view class="sort-item {{sortBy === 'pbFull' ? 'active' : ''}}" data-by="pbFull" bindtap="onSortBy">
+        <text>全马{{sortBy === 'pbFull' ? (sortAsc ? '↑' : '↓') : ''}}</text>
+      </view>
+    </view>
+    <text class="total-count">共 {{users.length}} 位跑友</text>
+  </view>
+
+  <block wx:for="{{users}}" wx:key="_id">
+    <view class="card user-card-item" data-id="{{item._id}}" bindtap="onViewUser">
+      <view class="user-row">
+        <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+        <view class="u-info">
+          <text class="u-name">{{item.nickName || '未知'}}</text>
+          <text class="u-meta">{{item.city || '未知'}} · {{item.groupName}}</text>
+          <view class="u-pb" wx:if="{{item.pb10k || item.pbHalf || item.pbFull}}">
+            <text wx:if="{{item.pb10k}}">10K:{{item.pb10k}} </text>
+            <text wx:if="{{item.pbHalf}}">半:{{item.pbHalf}} </text>
+            <text wx:if="{{item.pbFull}}">全:{{item.pbFull}}</text>
+          </view>
+        </view>
+        <view class="u-tags">
+          <text class="tag tag-green" wx:if="{{item.role === 'super_admin'}}">超管</text>
+          <text class="tag tag-blue" wx:elif="{{item.role === 'admin'}}">管理员</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{!loading && users.length === 0}}" class="empty-state">
+    <text>暂无跑友</text>
+  </view>
+</view>
+
+<view class="modal-mask" wx:if="{{showDetail}}" catchtap="onHideDetail"></view>
+<view class="modal-box" wx:if="{{showDetail}}" catchtap="">
+  <view class="detail-header">
+    <image class="detail-avatar" src="{{detailUser.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+    <text class="detail-name">{{detailUser.nickName || '未知'}}</text>
+  </view>
+  <view class="detail-body">
+    <view class="info-row"><text class="info-label">城市</text><text class="info-value">{{detailUser.city || '-'}}</text></view>
+    <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{detailGroups}}</text></view>
+    <view class="info-row"><text class="info-label">10K PB</text><text class="info-value">{{detailUser.pb10k || '-'}}</text></view>
+    <view class="info-row"><text class="info-label">半马 PB</text><text class="info-value">{{detailUser.pbHalf || '-'}}</text></view>
+    <view class="info-row"><text class="info-label">全马 PB</text><text class="info-value">{{detailUser.pbFull || '-'}}</text></view>
+  </view>
+  <button class="btn-outline" bindtap="onHideDetail" style="margin-top:24rpx;">关闭</button>
+</view>

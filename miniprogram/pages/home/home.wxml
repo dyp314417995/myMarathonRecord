@@ -31,92 +31,91 @@
 
   <!-- 超管面板 -->
   <block wx:if="{{role === 'super_admin'}}">
-    <view class="section-title">超级管理</view>
-    <view class="menu-grid">
+    <view class="section-title">管理</view>
+    <view class="menu-grid col2">
       <view class="menu-item card" bindtap="onManageAdmins">
         <text class="menu-icon">👤</text>
         <text class="menu-text">管理员配置</text>
-        <text class="menu-desc">配置/管理管理员</text>
       </view>
       <view class="menu-item card" bindtap="onManageUsers">
         <text class="menu-icon">👥</text>
         <text class="menu-text">用户管理</text>
-        <text class="menu-desc">查看/移除用户</text>
       </view>
       <view class="menu-item card" bindtap="onManageGroups">
-        <text class="menu-icon">📋</text>
+        <text class="menu-icon">🔧</text>
         <text class="menu-text">群组管理</text>
-        <text class="menu-desc">配置跑马群</text>
-      </view>
-      <view class="menu-item card" bindtap="onPointsAdmin">
-        <text class="menu-icon">⭐</text>
-        <text class="menu-text">积分管理</text>
-        <text class="menu-desc">审批/录入/消耗</text>
-      </view>
-      <view class="menu-item card" bindtap="onPoints">
-        <text class="menu-icon">🏃</text>
-        <text class="menu-text">我的积分</text>
-        <text class="menu-desc">积分明细</text>
       </view>
       <view class="menu-item card" bindtap="onGroups">
         <text class="menu-icon">📋</text>
         <text class="menu-text">跑群列表</text>
-        <text class="menu-desc">查看/扫码进群</text>
+      </view>
+      <view class="menu-item card" bindtap="onPointsAdmin">
+        <text class="menu-icon">⭐</text>
+        <text class="menu-text">积分管理</text>
+      </view>
+      <view class="menu-item card" bindtap="onPoints">
+        <text class="menu-icon">🏃</text>
+        <text class="menu-text">我的积分</text>
+      </view>
+      <view class="menu-item card" bindtap="onMemberList">
+        <text class="menu-icon">🏅</text>
+        <text class="menu-text">跑友名录</text>
       </view>
     </view>
   </block>
 
   <!-- 管理员面板 -->
   <block wx:elif="{{role === 'admin'}}">
-    <view class="section-title">管理功能</view>
-    <view class="menu-grid">
+    <view class="section-title">管理</view>
+    <view class="menu-grid col2">
       <view class="menu-item card" bindtap="onManageUsers">
         <text class="menu-icon">👥</text>
         <text class="menu-text">用户管理</text>
-        <text class="menu-desc">查看/移除用户</text>
-      </view>
-      <view class="menu-item card" bindtap="onManageGroups">
-        <text class="menu-icon">📋</text>
-        <text class="menu-text">群组管理</text>
-        <text class="menu-desc">配置跑马群</text>
       </view>
       <view class="menu-item card" bindtap="onPointsAdmin">
         <text class="menu-icon">⭐</text>
         <text class="menu-text">积分管理</text>
-        <text class="menu-desc">审批/录入/消耗</text>
       </view>
       <view class="menu-item card" bindtap="onPoints">
         <text class="menu-icon">🏃</text>
         <text class="menu-text">我的积分</text>
-        <text class="menu-desc">积分明细</text>
       </view>
-      <view class="menu-item card" bindtap="onGroups">
-        <text class="menu-icon">📋</text>
-        <text class="menu-text">跑群列表</text>
-        <text class="menu-desc">查看/扫码进群</text>
+      <view class="menu-item card" bindtap="onMemberList">
+        <text class="menu-icon">🏅</text>
+        <text class="menu-text">跑友名录</text>
       </view>
     </view>
   </block>
 
   <!-- 普通用户面板 -->
   <block wx:else>
-    <view class="section-title">我的跑马</view>
-    <view class="menu-grid">
+    <view class="section-title">我的</view>
+    <view class="menu-grid col2">
       <view class="menu-item card" bindtap="onPoints">
-        <text class="menu-icon">⭐</text>
+        <text class="menu-icon">🏃</text>
         <text class="menu-text">我的积分</text>
-        <text class="menu-desc">赚积分/查记录</text>
       </view>
-      <view class="menu-item card" bindtap="onProfile">
-        <text class="menu-icon">👤</text>
-        <text class="menu-text">个人资料</text>
-        <text class="menu-desc">编辑信息</text>
-      </view>
-      <view class="menu-item card" bindtap="onGroups">
-        <text class="menu-icon">📋</text>
-        <text class="menu-text">跑群列表</text>
-        <text class="menu-desc">查看/扫码进群</text>
+      <view class="menu-item card" bindtap="onMemberList">
+        <text class="menu-icon">🏅</text>
+        <text class="menu-text">跑友名录</text>
       </view>
     </view>
   </block>
+
+  <!-- 小工具 -->
+  <view class="section-title">小工具 <text class="beta-tag">开发中</text></view>
+  <view class="menu-grid col2">
+    <view class="menu-item card disabled">
+      <text class="menu-icon">📅</text>
+      <text class="menu-text">赛事日历</text>
+    </view>
+    <view class="menu-item card disabled">
+      <text class="menu-icon">🤖</text>
+      <text class="menu-text">AI教练</text>
+    </view>
+    <view class="menu-item card disabled">
+      <text class="menu-icon">⏱️</text>
+      <text class="menu-text">配速计算器</text>
+    </view>
+  </view>
 </view>
