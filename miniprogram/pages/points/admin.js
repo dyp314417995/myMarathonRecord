@@ -11,10 +11,17 @@ Page({
     pendingList: [],
     reviewedList: [],
     users: [],
-    selectedUserId: '',
-    selectedUserName: '',
+    selectedUserIds: {},
+    selectedUserNames: {},
+    selectedNamesText: '',
+    selectedNamesMore: '',
+    selectedNamesAll: '',
+    showAllNames: false,
     deductPoints: '',
     deductReason: '',
+    deductImages: [],
+    selectedCount: 0,
+    isMulti: false,
     showUserPicker: false,
     userFilter: '',
   },
@@ -111,49 +118,110 @@ Page({
 
   onSelectUser(e) {
     const { id, name } = e.currentTarget.dataset;
-    this.setData({ selectedUserId: id, selectedUserName: name, showUserPicker: false });
+    const ids = { ...this.data.selectedUserIds };
+    const namesObj = { ...(this.data.selectedUserNames || {}) };
+    if (ids[id]) { delete ids[id]; delete namesObj[id]; }
+    else { ids[id] = true; namesObj[id] = name || ''; }
+    const vals = Object.values(namesObj).filter(Boolean);
+    const count = vals.length;
+    const max = 5;
+    let text = vals.slice(0, max).join('、');
+    let more = '';
+    if (count > max) {
+      text += ' ...';
+      more = `等${count}人`;
+    }
+    const all = vals.join('、');
+    this.setData({ selectedUserIds: ids, selectedUserNames: namesObj, selectedCount: count, selectedNamesText: text, selectedNamesMore: more, selectedNamesAll: all, showAllNames: false });
   },
 
   hideUserPicker() { this.setData({ showUserPicker: false }); },
 
+  onToggleShowAll() {
+    this.setData({ showAllNames: !this.data.showAllNames });
+  },
+
   async onSubmitDeduct() {
-    const { selectedUserId, deductPoints, deductReason } = this.data;
-    if (!selectedUserId) return wx.showToast({ title: '请选择用户', icon: 'none' });
+    const { selectedUserIds, deductPoints, deductReason } = this.data;
+    const userIds = Object.keys(selectedUserIds);
+    if (userIds.length === 0) return wx.showToast({ title: '请选择用户', icon: 'none' });
     const pts = parseInt(deductPoints);
     if (isNaN(pts) || pts === 0) return wx.showToast({ title: '请输入积分数量', icon: 'none' });
     if (!deductReason.trim()) return wx.showToast({ title: '请输入原因', icon: 'none' });
 
     // 扣减时检查余额
     if (pts < 0) {
-      const balance = await pointsUtil.getBalance(selectedUserId);
-      if (balance < Math.abs(pts)) return wx.showToast({ title: '余额不足', icon: 'none' });
+      for (const uid of userIds) {
+        const balance = await pointsUtil.getBalance(uid);
+        if (balance < Math.abs(pts)) return wx.showToast({ title: `${this.data.allUsers.find(u => u._id === uid)?.nickName || uid} 余额不足`, icon: 'none' });
+      }
     }
 
-    // 正数=加积分，负数=扣积分
     const isEarn = pts > 0;
+    wx.showLoading({ title: '处理中...' });
     try {
-      await pointsUtil.addRecord({
-        userId: selectedUserId,
-        type: isEarn ? 'earn' : 'use',
-        category: isEarn ? '集体活动' : '消耗',
-        points: pts,
-        description: deductReason,
-        images: [],
-        earnDate: new Date(),
-        expireDate: isEarn ? new Date(Date.now() + 365 * 86400000) : null,
-        status: 'approved',
-      });
-      wx.showToast({ title: '操作成功', icon: 'success' });
-      this.setData({ deductPoints: '', deductReason: '' });
+      // 上传图片
+      let fileIDs = [];
+      const { deductImages } = this.data;
+      for (const img of deductImages) {
+        const up = await wx.cloud.uploadFile({
+          cloudPath: `points/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
+          filePath: img,
+        });
+        fileIDs.push(up.fileID);
+      }
+      for (const uid of userIds) {
+        await pointsUtil.addRecord({
+          userId: uid,
+          type: isEarn ? 'earn' : 'use',
+          category: isEarn ? '集体活动' : '消耗',
+          points: pts,
+          description: deductReason,
+          images: fileIDs,
+          earnDate: new Date(),
+          expireDate: isEarn ? new Date(Date.now() + 365 * 86400000) : null,
+          status: 'approved',
+        });
+      }
+      wx.hideLoading();
+      wx.showToast({ title: `已为 ${userIds.length} 人操作成功`, icon: 'success' });
+      this.setData({ deductPoints: '', deductReason: '', deductImages: [], selectedUserIds: {}, selectedUserNames: {}, selectedCount: 0, selectedNamesText: '' });
     } catch (err) {
+      wx.hideLoading();
       wx.showToast({ title: '操作失败', icon: 'none' });
     }
   },
 
   onPointsInput(e) {
-    // 只允许数字和负号
-    const v = e.detail.value.replace(/[^-\d]/g, '');
+    const v = String(e.detail.value || '').replace(/[^-\d]/g, '');
+    const isNum = v !== '' && parseInt(v) !== 0;
+    if (!isNum) {
+      this.setData({ deductPoints: v, selectedUserIds: {}, selectedUserNames: {}, selectedCount: 0, selectedNamesText: '' });
+    } else {
+      this.setData({ deductPoints: v });
+    }
+  },
+  onPointsBlur(e) {
+    const v = String(e.detail.value || '').replace(/[^-\d]/g, '');
     this.setData({ deductPoints: v });
   },
   onReasonInput(e) { this.setData({ deductReason: e.detail.value }); },
+
+  onChooseDeductImage() {
+    wx.chooseMedia({
+      count: 4 - this.data.deductImages.length, mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const imgs = [...this.data.deductImages, ...res.tempFiles.map(f => f.tempFilePath)];
+        this.setData({ deductImages: imgs });
+      },
+    });
+  },
+
+  onRemoveDeductImage(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const imgs = [...this.data.deductImages];
+    imgs.splice(idx, 1);
+    this.setData({ deductImages: imgs });
+  },
 });

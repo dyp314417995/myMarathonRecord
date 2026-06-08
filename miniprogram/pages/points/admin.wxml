@@ -70,18 +70,39 @@
     </view>
     <view wx:else class="card">
       <view class="form-group">
+        <text class="form-label">积分数量（正=加，负=扣）</text>
+        <input class="form-input" type="number" placeholder="正数=集体活动加分(填3)，负=扣分(填-3)" bindinput="onPointsInput" bindblur="onPointsBlur" />
+      </view>
+      <view class="form-group">
         <text class="form-label">选择用户</text>
-        <view class="form-input user-trigger" bindtap="showUserPicker">
-          <text class="{{selectedUserName ? '' : 'placeholder'}}">{{selectedUserName || '点击选择用户'}}</text>
+        <view class="form-input user-trigger" wx:if="{{selectedCount === 0}}" bindtap="showUserPicker">
+          <text class="placeholder">点击选择用户</text>
+        </view>
+        <view class="form-input user-trigger selected-box" wx:else bindtap="showUserPicker">
+          <text class="selected-names" wx:if="{{!showAllNames}}">{{selectedNamesText}}</text>
+          <text class="selected-names" wx:else>{{selectedNamesAll}}</text>
+          <text wx:if="{{selectedNamesMore && !showAllNames}}" class="selected-more" catchtap="onToggleShowAll">展开</text>
+          <text wx:if="{{showAllNames}}" class="selected-more" catchtap="onToggleShowAll">收起</text>
         </view>
       </view>
       <view class="form-group">
-        <text class="form-label">积分数量（正=加，负=扣）</text>
-        <input class="form-input" placeholder="如：-30 扣减30分，30 增加30分" value="{{deductPoints}}" bindinput="onPointsInput" />
+        <text class="form-label">上传图片</text>
+        <view class="img-grid">
+          <block wx:for="{{deductImages}}" wx:key="index">
+            <view class="img-item">
+              <image src="{{item}}" mode="aspectFill" />
+              <text class="img-remove" data-idx="{{index}}" bindtap="onRemoveDeductImage">✕</text>
+            </view>
+          </block>
+          <view wx:if="{{deductImages.length < 4}}" class="img-item img-add" bindtap="onChooseDeductImage">
+            <text>+</text>
+          </view>
+        </view>
       </view>
+
       <view class="form-group">
         <text class="form-label">原因/说明</text>
-        <input class="form-input" placeholder="如：购买迈胜能量胶3盒" value="{{deductReason}}" bindinput="onReasonInput" />
+        <input class="form-input" placeholder="如：周末LSD集体训练" value="{{deductReason}}" bindinput="onReasonInput" />
       </view>
       <button class="btn-primary" bindtap="onSubmitDeduct">确认提交</button>
     </view>
@@ -92,10 +113,12 @@
       <text class="modal-title">选择用户</text>
       <input class="form-input" placeholder="搜索昵称" value="{{userFilter}}" bindinput="onSearchUser" focus />
         <scroll-view scroll-y class="user-list">
-        <view wx:for="{{filteredUsers}}" wx:key="_id"
-              class="picker-item" data-id="{{item._id}}" data-name="{{item.nickName}}" bindtap="onSelectUser">
-          <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
-        </view>
+        <block wx:for="{{filteredUsers}}" wx:key="_id">
+          <view class="picker-item" data-id="{{item._id}}" data-name="{{item.nickName}}" bindtap="onSelectUser">
+            <text class="picker-check">{{selectedUserIds[item._id] ? '☑' : '☐'}}</text>
+            <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
+          </view>
+        </block>
       </scroll-view>
       <button class="btn-outline" bindtap="hideUserPicker" style="margin-top:24rpx;">取消</button>
     </view>

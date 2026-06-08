@@ -23,7 +23,7 @@ Page({
     const res = await pointsUtil.getRules();
     const userRules = res.data.filter(r => {
       if (r.status !== 'active') return false;
-      if (!isAdmin && r.category === '集体活动') return false;
+      if (r.category === '集体活动') return false;
       return true;
     });
     this.setData({ rules: userRules });
