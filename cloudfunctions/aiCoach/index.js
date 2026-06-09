@@ -1,54 +1,32 @@
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
-const API_KEY = process.env.DEEPSEEK_KEY || '';
+const QWEN_KEY = process.env.QWEN_KEY || '';
 
 exports.main = async (event) => {
   const q = event.question || '';
   const hasImage = !!event.image;
   const deepMode = !!event.deepMode;
 
-  if ((deepMode || hasImage) && API_KEY) {
-    return hasImage ? await visionReply(q, event.image) : await deepReply(q);
-  }
-  if ((deepMode || hasImage) && !API_KEY) {
-    return { reply: '需要 API Key，请在云函数环境变量中设置 DEEPSEEK_KEY' };
+  // 图片 → 千问视觉
+  if (hasImage && QWEN_KEY) {
+    return await visionReply(q, event.image);
   }
 
-  return { reply: kbReply(q), hasDeep: true };
+  // 深度思考 → 千问免费模型
+  if (deepMode && QWEN_KEY) {
+    return await deepReply(q);
+  }
+
+  // 纯图片无Key → 引导
+  if (hasImage && !QWEN_KEY) {
+    return { reply: '📸 收到图片！请用文字描述图片内容，我来给你建议。' };
+  }
+
+  return { reply: kbReply(q), hasDeep: !!QWEN_KEY };
 };
 
-// ========== DeepSeek 深度回答 ==========
-async function deepReply(q) {
-  try {
-    const fetch = require('node-fetch');
-    const resp = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: '你是资深马拉松教练，10年执教经验。回答专业、具体、实操。用中文，必要时列表。' },
-          { role: 'user', content: q },
-        ],
-        max_tokens: 1000,
-      }),
-    });
-    if (resp.status !== 200) {
-      const errText = await resp.text();
-      return { reply: 'API错误' + resp.status + ': ' + errText.slice(0, 150), hasDeep: true };
-    }
-    const data = await resp.json();
-    if (!data.choices || !data.choices[0]) {
-      return { reply: 'API返回异常: ' + JSON.stringify(data).slice(0, 200), hasDeep: true };
-    }
-    return { reply: data.choices[0].message.content };
-  } catch (e) {
-    return { reply: '调用失败: ' + e.message, hasDeep: true };
-  }
-}
-
-// ========== DeepSeek 视觉 ==========
+// ========== 千问视觉 ==========
 async function visionReply(q, fileID) {
   try {
     const tempRes = await cloud.getTempFileURL({ fileList: [fileID] });
@@ -56,29 +34,54 @@ async function visionReply(q, fileID) {
     if (!imgUrl) return { reply: '图片加载失败' };
 
     const fetch = require('node-fetch');
-    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    const resp = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + QWEN_KEY },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'qwen-vl-plus',
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: '你是资深跑步教练。根据图片给专业建议。' + (q ? '用户问：' + q : '') },
+            { type: 'text', text: '你是资深跑步教练。请根据这张图片给出专业跑步分析和建议。' + (q ? '用户问：' + q : '') },
             { type: 'image_url', image_url: { url: imgUrl } },
           ],
         }],
-        max_tokens: 800,
       }),
     });
     if (resp.status !== 200) {
-      const errText = await resp.text();
-      return { reply: 'API错误' + resp.status + ': ' + errText.slice(0, 150) };
+      const err = await resp.text();
+      return { reply: '千问错误' + resp.status + ': ' + err.slice(0, 150) };
     }
     const data = await resp.json();
     return { reply: data.choices[0].message.content };
   } catch (e) {
-    return { reply: '分析失败: ' + e.message };
+    return { reply: '视觉分析失败: ' + e.message };
+  }
+}
+
+// ========== 千问深度回答 ==========
+async function deepReply(q) {
+  try {
+    const fetch = require('node-fetch');
+    const resp = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + QWEN_KEY },
+      body: JSON.stringify({
+        model: 'qwen-plus',
+        messages: [
+          { role: 'system', content: '你是资深马拉松教练，10年执教经验。回答专业、具体、实操。用中文，必要时列表。' },
+          { role: 'user', content: q },
+        ],
+      }),
+    });
+    if (resp.status !== 200) {
+      const errText = await resp.text();
+      return { reply: 'API错误' + resp.status + ': ' + errText.slice(0, 150), hasDeep: true };
+    }
+    const data = await resp.json();
+    return { reply: data.choices[0].message.content };
+  } catch (e) {
+    return { reply: '调用失败: ' + e.message, hasDeep: true };
   }
 }
 
@@ -96,7 +99,7 @@ function kbReply(q) {
     { kw: ['全马','马拉松','42','首马'], r: '首次全马备赛（16周）：\n1. 前提：轻松跑完半马\n2. 每周长距离从15K加到32K\n3. 赛前3周减量（30K→20K→10K）\n4. 全程配速比半马慢30-40秒/K\n5. 30K后才是真正的比赛\n⚠️ 前慢后快比前快后慢好太多！' },
     { kw: ['计划','训练计划','每周','日常'], r: '一周训练参考：\n📅 周一：休息或轻松5K\n📅 周二：间歇（8x400米）\n📅 周三：轻松8K\n📅 周四：节奏跑6K\n📅 周五：休息\n📅 周六：长距离15K\n📅 周日：交叉训练（游泳/骑车）\n新手去掉高强度，全换轻松跑。' },
   ];
-  let best = { r: '问点训练、配速、饮食、伤病相关的吧！🏃‍♂️', score: 0 };
+  let best = { r: '这个问题我需要更深入的思考 🤔\n\n点右下角的「深度思考」让我用 AI 帮你详细分析！', score: 0 };
   for (const item of kb) {
     let score = 0;
     for (const k of item.kw) if (q.includes(k)) score++;
