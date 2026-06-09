@@ -109,9 +109,7 @@ Page({
     const user = this.data.allUsers.find(u => u._id === id);
     if (!user) return;
 
-    // 获取积分余额
-    let detailPoints = 0;
-    try { detailPoints = await pointsUtil.getBalance(id); } catch {}
+    let detailPoints = user.points || 0;
 
     // 格式化时间
     const created = user.createTime ? this.fmtDate(user.createTime) : '未知';
