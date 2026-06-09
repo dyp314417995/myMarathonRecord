@@ -5,7 +5,6 @@
         <view class="msg-bubble">
           <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="msg-img" bindtap="onPreviewMsgImg" data-src="{{item.image}}" />
           <text wx:if="{{item.content}}">{{item.content}}</text>
-          <text wx:if="{{item.hasDeep}}" class="deep-ask" data-idx="{{index}}" catchtap="onDeepAsk">不满意？🤖 深度思考 · qwen-plus</text>
         </view>
       </view>
     </block>
