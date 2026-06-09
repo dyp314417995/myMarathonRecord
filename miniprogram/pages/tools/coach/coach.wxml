@@ -1,12 +1,16 @@
 <view class="coach-page">
-  <scroll-view class="chat-body" scroll-y scroll-into-view="msg-{{messages.length - 1}}" scroll-top="{{scrollTop}}">
+  <scroll-view class="chat-body" scroll-y scroll-into-view="msg-{{messages.length - 1}}">
     <block wx:for="{{messages}}" wx:key="index">
       <view id="msg-{{index}}" class="msg-row {{item.role === 'user' ? 'user' : 'bot'}}">
-        <view class="msg-bubble"><text>{{item.content}}</text></view>
+        <view class="msg-bubble">
+          <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="msg-img" bindtap="onPreviewMsgImg" data-src="{{item.image}}" />
+          <text wx:if="{{item.content}}">{{item.content}}</text>
+          <text wx:if="{{item.hasDeep}}" class="deep-ask" data-idx="{{index}}" catchtap="onDeepAsk">不满意？🤖 深度思考</text>
+        </view>
       </view>
     </block>
     <view wx:if="{{loading}}" class="msg-row bot">
-      <view class="msg-bubble typing"><text>...</text></view>
+      <view class="msg-bubble"><text>...</text></view>
     </view>
   </scroll-view>
 
@@ -18,7 +22,8 @@
   </view>
 
   <view class="chat-input">
-    <input class="msg-input" placeholder="你想了解什么？" value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
+    <view class="img-btn" bindtap="onChooseImage">📷</view>
+    <input class="msg-input" placeholder="说点什么..." value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
     <button class="send-btn" bindtap="onSend" disabled="{{!input}}">发送</button>
   </view>
 </view>
