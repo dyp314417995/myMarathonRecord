@@ -11,7 +11,8 @@
     "pages/points/apply",
     "pages/points/admin",
     "pages/groups/index",
-    "pages/admin/members/members"
+    "pages/admin/members/members",
+    "pages/tools/coach/coach"
   ],
   "usingComponents": {},
   "window": {

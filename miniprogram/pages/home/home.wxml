@@ -84,6 +84,10 @@
         <text class="menu-icon">🏅</text>
         <text class="menu-text">跑友名录</text>
       </view>
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
+      </view>
     </view>
   </block>
 
@@ -99,6 +103,10 @@
         <text class="menu-icon">🏅</text>
         <text class="menu-text">跑友名录</text>
       </view>
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
+      </view>
     </view>
   </block>
 
@@ -109,7 +117,7 @@
       <text class="menu-icon">📅</text>
       <text class="menu-text">赛事日历</text>
     </view>
-    <view class="menu-item card disabled">
+    <view class="menu-item card" bindtap="onAiCoach">
       <text class="menu-icon">🤖</text>
       <text class="menu-text">AI教练</text>
     </view>

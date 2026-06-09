@@ -121,4 +121,7 @@ Page({
   onMemberList() {
     wx.navigateTo({ url: '/pages/admin/members/members' });
   },
+  onAiCoach() {
+    wx.navigateTo({ url: '/pages/tools/coach/coach' });
+  },
 });

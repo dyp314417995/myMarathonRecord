@@ -1,0 +1,24 @@
+<view class="coach-page">
+  <scroll-view class="chat-body" scroll-y scroll-into-view="msg-{{messages.length - 1}}" scroll-top="{{scrollTop}}">
+    <block wx:for="{{messages}}" wx:key="index">
+      <view id="msg-{{index}}" class="msg-row {{item.role === 'user' ? 'user' : 'bot'}}">
+        <view class="msg-bubble"><text>{{item.content}}</text></view>
+      </view>
+    </block>
+    <view wx:if="{{loading}}" class="msg-row bot">
+      <view class="msg-bubble typing"><text>...</text></view>
+    </view>
+  </scroll-view>
+
+  <view class="quick-asks">
+    <text class="quick-title">试试这些：</text>
+    <view class="quick-tags">
+      <text class="quick-tag" wx:for="{{presets}}" wx:key="*this" bindtap="onQuickAsk" data-q="{{item}}">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="chat-input">
+    <input class="msg-input" placeholder="你想了解什么？" value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
+    <button class="send-btn" bindtap="onSend" disabled="{{!input}}">发送</button>
+  </view>
+</view>
