@@ -45,7 +45,7 @@ Component({
               const ci = cityList.indexOf(parts[1]);
               if (ci >= 0) {
                 pickerValue[1] = ci;
-                const districtList = cityData[pi].children[ci].children.map(d => d.name);
+                const districtList = (cityData[pi].children[ci].children || []).map(d => d.name);
                 if (parts.length >= 3) {
                   const di = districtList.indexOf(parts[2]);
                   if (di >= 0) pickerValue[2] = di;
@@ -61,7 +61,7 @@ Component({
       const ci = pickerValue[1];
       const di = pickerValue[2];
       const cityList = cityData[pi].children.map(c => c.name);
-      const districtList = cityData[pi].children[ci].children.map(d => d.name);
+      const districtList = (cityData[pi].children[ci].children || []).map(d => d.name);
 
       const result = provinces[pi] + '-' + cityList[ci] + '-' + (districtList[di] || '');
 
@@ -89,13 +89,13 @@ Component({
         pickerValue[1] = 0;
         pickerValue[2] = 0;
         const cityList = cityData[newValues[0]].children.map(c => c.name);
-        const districtList = cityData[newValues[0]].children[0].children.map(d => d.name);
+        const districtList = (cityData[newValues[0]].children[0].children || []).map(d => d.name);
         const result = this.data.provinces[newValues[0]] + '-' + cityList[0] + '-' + (districtList[0] || '');
         this.setData({ cities: cityList, districts: districtList, pickerValue, result });
       } else if (col === 1) {
         pickerValue[2] = 0;
         const pi = pickerValue[0];
-        const districtList = cityData[pi].children[newValues[1]].children.map(d => d.name);
+        const districtList = (cityData[pi].children[newValues[1]].children || []).map(d => d.name);
         const result = this.data.provinces[pi] + '-' + this.data.cities[newValues[1]] + '-' + (districtList[0] || '');
         this.setData({ districts: districtList, pickerValue, result });
       } else {
