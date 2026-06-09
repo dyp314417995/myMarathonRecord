@@ -16,6 +16,7 @@ Page({
     detailUser: null,
     detailGroups: '',
     detailPoints: 0,
+    hasMore: false,
   },
 
   async onShow() {
@@ -27,7 +28,7 @@ Page({
   async loadUsers() {
     this.setData({ loading: true });
     try {
-      const res = await dbUtil.getUserList();
+      const res = await dbUtil.getUserList({}, 0, 20);
       const groupsRes = await dbUtil.getGroups();
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
@@ -52,11 +53,44 @@ Page({
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
         };
       });
-      this.setData({ allUsers: users });
+      const hasMore = res.data.length >= 20;
+      this.setData({ allUsers: users, hasMore });
       this.applyFilter();
     } catch (err) {
       this.setData({ loading: false });
     }
+  },
+
+  async loadMore() {
+    const skip = this.data.allUsers.length;
+    const res = await dbUtil.getUserList({}, skip, 20);
+    if (res.data.length === 0) return this.setData({ hasMore: false });
+
+    const groupsRes = await dbUtil.getGroups();
+    const groupMap = {};
+    groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
+
+    const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+    let urlMap = {};
+    if (cloudIds.length) {
+      try {
+        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
+        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+      } catch {}
+    }
+    const newUsers = res.data.map(u => {
+      let avatar = u.avatarUrl || '';
+      if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
+      else if (!avatar.startsWith('https://')) avatar = '';
+      return {
+        ...u, avatarUrl: avatar,
+        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
+      };
+    });
+    const all = [...this.data.allUsers, ...newUsers];
+    const hasMore = res.data.length >= 20;
+    this.setData({ allUsers: all, hasMore });
+    this.applyFilter();
   },
 
   // 搜索
@@ -124,6 +158,10 @@ Page({
   },
 
   onHideDetail() { this.setData({ showDetail: false }); },
+
+  onReachBottom() {
+    if (this.data.hasMore) this.loadMore();
+  },
 
   async onDemoteAdmin(e) {
     const { id, name } = e.currentTarget.dataset;

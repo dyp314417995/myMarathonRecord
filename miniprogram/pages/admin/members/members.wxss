@@ -35,3 +35,5 @@
 .info-value { font-size:26rpx; color:#333; }
 
 .empty-state { text-align: center; padding: 80rpx 0; color: #ccc; font-size: 28rpx; }
+
+.load-more { text-align: center; padding: 32rpx; color: #1aad19; font-size: 28rpx; }

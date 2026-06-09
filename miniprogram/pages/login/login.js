@@ -154,7 +154,7 @@ Page({
         const userData = {
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
-          groupIds: selectedGroupIds,
+          groupIds: selectedGroupIds, points: 50,
         };
         const addRes = await dbUtil.createUser(userData);
         user = { _id: addRes._id, ...userData, role: 'user', status: 'approved' };

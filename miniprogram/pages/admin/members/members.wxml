@@ -46,6 +46,10 @@
   <view wx:if="{{!loading && users.length === 0}}" class="empty-state">
     <text>暂无跑友</text>
   </view>
+
+  <view wx:if="{{hasMore}}" class="load-more" bindtap="loadMore">
+    <text>加载更多</text>
+  </view>
 </view>
 
 <view class="modal-mask" wx:if="{{showDetail}}" catchtap="onHideDetail"></view>

@@ -6,6 +6,7 @@ Page({
     allUsers: [], users: [], loading: true,
     searchKey: '', sortBy: 'time', sortAsc: false,
     showDetail: false, detailUser: {}, detailGroups: '',
+    hasMore: false,
   },
 
   async onShow() { this.loadUsers(); },
@@ -13,7 +14,7 @@ Page({
   async loadUsers() {
     this.setData({ loading: true });
     try {
-      const [usersRes, groupsRes] = await Promise.all([dbUtil.getUserList(), dbUtil.getGroups()]);
+      const [usersRes, groupsRes] = await Promise.all([dbUtil.getUserList({}, 0, 20), dbUtil.getGroups()]);
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
 
@@ -35,7 +36,7 @@ Page({
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
         };
       });
-      this.setData({ allUsers, loading: false });
+      this.setData({ allUsers, loading: false, hasMore: usersRes.data.length >= 20 });
       this.applyFilter();
     } catch { this.setData({ loading: false }); }
   },
@@ -88,4 +89,37 @@ Page({
   },
 
   onHideDetail() { this.setData({ showDetail: false }); },
+
+  onReachBottom() {
+    if (this.data.hasMore) this.loadMore();
+  },
+
+  async loadMore() {
+    const skip = this.data.allUsers.length;
+    const res = await dbUtil.getUserList({}, skip, 20);
+    if (res.data.length === 0) return this.setData({ hasMore: false });
+    const groupsRes = await dbUtil.getGroups();
+    const groupMap = {};
+    groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
+    const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+    let urlMap = {};
+    if (cloudIds.length) {
+      try {
+        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
+        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+      } catch {}
+    }
+    const newUsers = res.data.map(u => {
+      let avatar = u.avatarUrl || '';
+      if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
+      else if (!avatar.startsWith('https://')) avatar = '';
+      return {
+        ...u, avatarUrl: avatar,
+        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
+      };
+    });
+    const all = [...this.data.allUsers, ...newUsers];
+    this.setData({ allUsers: all, hasMore: res.data.length >= 20 });
+    this.applyFilter();
+  },
 });
