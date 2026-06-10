@@ -106,9 +106,20 @@ Page({
   async onApprove(e) {
     const { id } = e.currentTarget.dataset;
     const reviewer = wx.getStorageSync('userInfo');
+    // 获取工单信息
+    const recordRes = await dbUtil.db.collection('points_records').doc(id).get();
+    const record = recordRes.data;
+    // 更新工单状态
     await dbUtil.db.collection('points_records').doc(id).update({
       data: { status: 'approved', reviewerId: reviewer?._id, reviewTime: new Date() }
     });
+    // 给用户加分
+    if (record && record.userId && record.points) {
+      const inc = record.type === 'earn' ? record.points : -record.points;
+      await dbUtil.db.collection('users').doc(record.userId).update({
+        data: { points: dbUtil._.inc(inc) }
+      });
+    }
     wx.showToast({ title: '已通过', icon: 'success' });
     this.loadPending();
   },
