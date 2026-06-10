@@ -27,6 +27,7 @@ Page({
 
   async loadUsers() {
     this.setData({ loading: true });
+    this.setData({ loading: true });
     try {
       const res = await dbUtil.getUserList({}, 0, 20);
       const groupsRes = await dbUtil.getGroups();
@@ -98,8 +99,11 @@ Page({
     const kw = e.detail.value || '';
     this.setData({ searchKey: kw });
     if (kw) {
-      clearTimeout(this._searchTimer);
-      this._searchTimer = setTimeout(() => this.loadAllUsers().then(() => this.applyFilter()), 300);
+      if (this.data.allUsers.length > 20) {
+        this.applyFilter();
+      } else {
+        this.loadAllUsers().then(() => this.applyFilter());
+      }
     } else {
       this.applyFilter();
     }
@@ -107,31 +111,34 @@ Page({
 
   async loadAllUsers() {
     this.setData({ loading: true });
+    // 先拉群组（一次）
+    const groupsRes = await dbUtil.getGroups();
+    const groupMap = {};
+    groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
     let all = [];
     while (true) {
       const res = await dbUtil.getUserList({}, all.length, 20);
       if (res.data.length === 0) break;
-      const groupsRes = await dbUtil.getGroups();
-      const groupMap = {};
-      groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-      const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-      let urlMap = {};
-      if (cloudIds.length) {
-        try {
-          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        } catch {}
-      }
-      const mapped = res.data.map(u => {
-        let avatar = u.avatarUrl || '';
-        if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
-        else if (!avatar.startsWith('https://')) avatar = '';
-        return {
-          ...u, avatarUrl: avatar,
-          groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-        };
-      });
+      const mapped = res.data.map(u => ({
+        ...u,
+        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
+      }));
       all = all.concat(mapped);
+    }
+    // 批量转换头像（一次）
+    const allCloudIds = all.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+    if (allCloudIds.length) {
+      try {
+        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: allCloudIds } });
+        const urlMap = {};
+        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+        all = all.map(u => {
+          if (u.avatarUrl && u.avatarUrl.startsWith('cloud://')) {
+            return { ...u, avatarUrl: urlMap[u.avatarUrl] || '' };
+          }
+          return u;
+        });
+      } catch {}
     }
     this.setData({ allUsers: all, hasMore: false });
   },

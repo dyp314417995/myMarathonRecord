@@ -1,7 +1,7 @@
 <!-- pages/admin/members/members.wxml - 跑友名录 -->
 <view class="users-page">
   <view class="toolbar">
-    <input class="search-input" placeholder="搜索姓名/城市/群..." value="{{searchKey}}" bindinput="onSearchInput" />
+    <input class="search-input" placeholder="搜索姓名/城市/群..." value="{{searchKey}}" bindinput="onSearchInput" bindblur="onSearchBlur" confirm-type="search" bindconfirm="onSearchBlur" />
     <view class="sort-row">
       <view class="sort-item {{sortBy === 'time' ? 'active' : ''}}" data-by="time" bindtap="onSortBy">
         <text>时间{{sortBy === 'time' ? (sortAsc ? '↑' : '↓') : ''}}</text>
