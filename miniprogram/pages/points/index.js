@@ -8,7 +8,7 @@ Page({
     expiringDays: 0,
     records: [],
     rules: [],
-    showRules: false,
+    showRules: true,
     userId: '',
   },
 

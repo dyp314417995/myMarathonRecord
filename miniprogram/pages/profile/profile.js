@@ -56,6 +56,9 @@ Page({
     const ids = [...(this.data.userInfo.groupIds || [])];
     this.setData({ editing: true, selectedGroupIds: ids, selectedGroupMap: this.buildMap(ids) });
   },
+  onPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/index' });
+  },
   onCancel() {
     const userInfo = wx.getStorageSync('userInfo');
     const ids = userInfo.groupIds || [];

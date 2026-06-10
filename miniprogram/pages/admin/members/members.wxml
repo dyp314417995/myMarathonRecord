@@ -61,9 +61,17 @@
   <view class="detail-body">
     <view class="info-row"><text class="info-label">城市</text><text class="info-value">{{detailUser.city || '-'}}</text></view>
     <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{detailGroups}}</text></view>
-    <view class="info-row"><text class="info-label">10K PB</text><text class="info-value">{{detailUser.pb10k || '-'}}</text></view>
-    <view class="info-row"><text class="info-label">半马 PB</text><text class="info-value">{{detailUser.pbHalf || '-'}}</text></view>
-    <view class="info-row"><text class="info-label">全马 PB</text><text class="info-value">{{detailUser.pbFull || '-'}}</text></view>
+    <view class="info-row"><text class="info-label">10K PB</text><text class="info-value">{{detailUser.privacy_pb !== false ? (detailUser.pb10k || '-') : '未公开'}}</text></view>
+    <view class="info-row"><text class="info-label">半马 PB</text><text class="info-value">{{detailUser.privacy_pb !== false ? (detailUser.pbHalf || '-') : '未公开'}}</text></view>
+    <view class="info-row"><text class="info-label">全马 PB</text><text class="info-value">{{detailUser.privacy_pb !== false ? (detailUser.pbFull || '-') : '未公开'}}</text></view>
+    <block wx:if="{{detailRaces.length > 0}}">
+      <view class="info-divider">🏁 跑马记录</view>
+      <view wx:for="{{detailRaces}}" wx:key="_id" class="race-item">
+        <text class="race-type">{{item.typeName}} · {{item.statusName}}</text>
+        <text class="race-meta">{{item.city || '未知'}} · {{item.date}}</text>
+        <text wx:if="{{item.result}}" class="race-result">🏆 {{item.result}}</text>
+      </view>
+    </block>
   </view>
   <button class="btn-outline" bindtap="onHideDetail" style="margin-top:24rpx;">关闭</button>
 </view>

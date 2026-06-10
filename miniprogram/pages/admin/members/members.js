@@ -5,7 +5,7 @@ Page({
   data: {
     allUsers: [], users: [], loading: true,
     searchKey: '', sortBy: 'time', sortAsc: false,
-    showDetail: false, detailUser: {}, detailGroups: '',
+    showDetail: false, detailUser: {}, detailGroups: '', detailRaces: [],
     hasMore: false,
     _allLoaded: false,
   },
@@ -120,14 +120,25 @@ Page({
     this.applyFilter();
   },
 
-  onViewUser(e) {
+  async onViewUser(e) {
     const { id } = e.currentTarget.dataset;
     const user = this.data.allUsers.find(u => u._id === id);
     if (!user) return;
+    // 拉公开的跑马记录
+    let raceRecords = [];
+    try {
+      const rr = await dbUtil.db.collection('race_records').where({ userId: id, isPublic: true }).orderBy('date', 'desc').limit(3).get();
+      raceRecords = rr.data.map(r => ({
+        ...r,
+        typeName: r.raceType === '10k' ? '10K' : r.raceType === 'half' ? '半马' : '全马',
+        statusName: r.status === 'finished' ? '已完赛' : r.status === 'dnf' ? '未完赛' : r.status === 'dns' ? '弃赛' : r.status === 'won' ? '已中签' : '已报名',
+      }));
+    } catch {}
     this.setData({
       showDetail: true,
       detailUser: user,
       detailGroups: user.groupName,
+      detailRaces: raceRecords,
     });
   },
 

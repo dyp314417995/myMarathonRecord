@@ -1,0 +1,72 @@
+.records-page { min-height: 100vh; background: #f5f5f5; padding-bottom: 120rpx; }
+
+.tabs { display: flex; background: #fff; position: sticky; top: 0; z-index: 10; }
+.tab { flex: 1; text-align: center; padding: 24rpx; font-size: 28rpx; color: #666; border-bottom: 4rpx solid transparent; }
+.tab.active { color: #1aad19; border-color: #1aad19; font-weight: bold; }
+
+.chart-bar { margin: 20rpx 24rpx; padding: 20rpx 24rpx; background: #e8f5e9; border-radius: 12rpx; }
+.chart-text { font-size: 26rpx; color: #2e7d32; }
+
+.list { padding: 0 24rpx; }
+.card { background: #fff; border-radius: 12rpx; padding: 24rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,.04); }
+
+.card-header { display: flex; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
+.level-tag { font-size: 24rpx; }
+.level-tag.A { color: #ff6b00; }
+.level-tag.B { color: #1aad19; }
+.level-tag.C { color: #999; }
+.type-text { font-size: 26rpx; color: #333; font-weight: 500; flex: 1; }
+.status-tag { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 8rpx; }
+.status-tag.finished { background: #e8f5e9; color: #2e7d32; }
+.status-tag.dnf, .status-tag.dns { background: #fce4ec; color: #c62828; }
+.status-tag.won { background: #e3f2fd; color: #1565c0; }
+.status-tag.registered { background: #f5f5f5; color: #666; }
+
+.card-body { padding: 8rpx 0; }
+.card-row { display: flex; gap: 16rpx; padding: 4rpx 0; }
+.label { font-size: 24rpx; color: #999; width: 80rpx; }
+.value { font-size: 26rpx; color: #333; }
+.result { color: #ff6b00; font-weight: bold; }
+.pb-badge { font-size: 22rpx; background: #ff6b00; color: #fff; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: 8rpx; }
+.note { font-style: italic; color: #666; }
+
+.card-imgs { display: flex; gap: 12rpx; margin-top: 16rpx; flex-wrap: wrap; }
+.card-img { width: 160rpx; height: 160rpx; border-radius: 8rpx; }
+
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 12rpx; border-top: 1rpx solid #f0f0f0; }
+.pub-tag { font-size: 22rpx; color: #999; }
+.card-actions { display: flex; gap: 24rpx; }
+.act { font-size: 32rpx; padding: 8rpx; }
+.act.del { color: #ff4d4f; }
+
+.empty { text-align: center; padding: 120rpx 0; }
+.empty-text { font-size: 28rpx; color: #ccc; }
+
+.add-btn { position: fixed; bottom: 40rpx; left: 50%; transform: translateX(-50%); background: #1aad19; color: #fff; padding: 24rpx 80rpx; border-radius: 48rpx; font-size: 30rpx; box-shadow: 0 6rpx 20rpx rgba(26,173,25,.3); z-index: 5; }
+
+/* 弹窗 */
+.modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); z-index: 100; }
+.modal-box { position: fixed; top: 10%; left: 24rpx; right: 24rpx; bottom: 10%; background: #fff; border-radius: 16rpx; padding: 32rpx 24rpx; z-index: 101; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; font-size: 32rpx; font-weight: bold; margin-bottom: 24rpx; }
+.modal-close { color: #999; padding: 8rpx; }
+
+.form-label { font-size: 26rpx; color: #666; margin-top: 24rpx; margin-bottom: 12rpx; display: block; }
+.btn-row { display: flex; gap: 16rpx; flex-wrap: wrap; }
+.opt-btn { padding: 12rpx 24rpx; border-radius: 20rpx; font-size: 24rpx; color: #666; background: #f5f5f5; }
+.opt-btn.on { color: #fff; background: #1aad19; }
+
+.date-input { background: #f5f5f5 !important; }
+
+.img-row { display: flex; gap: 12rpx; flex-wrap: wrap; }
+.preview-img { width: 120rpx; height: 120rpx; border-radius: 8rpx; }
+.img-add { width: 120rpx; height: 120rpx; border-radius: 8rpx; background: #f5f5f5; display: flex; align-items: center; justify-content: center; font-size: 48rpx; color: #ccc; }
+
+.form-textarea { width: 100%; height: 120rpx; background: #f5f5f5; border-radius: 8rpx; padding: 16rpx; font-size: 26rpx; }
+
+.pub-switch { display: flex; justify-content: space-between; align-items: center; margin: 24rpx 0; padding: 16rpx 0; border-top: 1rpx solid #f0f0f0; font-size: 26rpx; }
+
+.modal-actions { display: flex; gap: 24rpx; margin-top: 32rpx; }
+.btn-outline { flex: 1; background: #fff; color: #666; border: 1rpx solid #ddd; padding: 20rpx; border-radius: 12rpx; font-size: 28rpx; }
+.btn-primary { flex: 1; background: #1aad19; color: #fff; padding: 20rpx; border-radius: 12rpx; font-size: 28rpx; border: none; }
+
+.wrap { flex-wrap: wrap; }

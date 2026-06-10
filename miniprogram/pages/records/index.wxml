@@ -1,0 +1,125 @@
+<!-- pages/records/index.wxml -->
+<view class="records-page">
+  <!-- Tab -->
+  <view class="tabs">
+    <text class="tab {{tab === 'half' ? 'active' : ''}}" data-t="half" bindtap="onTab">半马</text>
+    <text class="tab {{tab === 'full' ? 'active' : ''}}" data-t="full" bindtap="onTab">全马</text>
+    <text class="tab {{tab === '10k' ? 'active' : ''}}" data-t="10k" bindtap="onTab">10K</text>
+  </view>
+
+  <!-- 成绩变化 -->
+  <view class="chart-bar" wx:if="{{showChart}}">
+    <text class="chart-text">📈 {{chartTips}}</text>
+  </view>
+
+  <!-- 记录列表 -->
+  <scroll-view scroll-y class="list" wx:if="{{filtered().length > 0}}">
+    <block wx:for="{{filtered()}}" wx:key="_id">
+      <view class="card">
+        <view class="card-header">
+          <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
+          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : '全程马拉松'}}</text>
+          <text class="status-tag {{item.status}}">{{item.status === 'finished' ? '已完赛' : item.status === 'dnf' ? '未完赛' : item.status === 'dns' ? '弃赛' : item.status === 'won' ? '已中签' : '已报名'}}</text>
+        </view>
+        <view class="card-body">
+          <view class="card-row"><text class="label">赛事</text><text class="value">{{item.city || '未知'}}{{item.date ? ' · ' + item.date : ''}}</text></view>
+          <view class="card-row" wx:if="{{item.status === 'finished' && item.result}}"><text class="label">成绩</text><text class="value result">{{item.result}} <text class="pb-badge" wx:if="{{item.isPB}}">🏆PB</text></text></view>
+          <view class="card-row" wx:if="{{item.note}}"><text class="value note">"{{item.note}}"</text></view>
+        </view>
+        <view wx:if="{{item.imgUrls.length > 0}}" class="card-imgs">
+          <image wx:for="{{item.imgUrls}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="card-img" bindtap="onImagePreview" data-src="{{item}}" />
+        </view>
+        <view class="card-footer">
+          <text class="pub-tag">{{item.isPublic !== false ? '🔓 公开' : '🔒 私密'}}</text>
+          <view class="card-actions">
+            <text class="act" data-id="{{item._id}}" bindtap="onEdit">✏️</text>
+            <text class="act del" data-id="{{item._id}}" bindtap="onDel">🗑</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </scroll-view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{filtered().length === 0}}">
+    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : '全马'}} 记录</text>
+  </view>
+
+  <!-- 添加按钮 -->
+  <view class="add-btn" bindtap="onAdd">+ 添加记录</view>
+
+  <!-- 编辑弹窗 -->
+  <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>
+  <view class="modal-box" wx:if="{{showForm}}">
+    <view class="modal-header">
+      <text>{{editingId ? '编辑' : '添加'}}记录</text>
+      <text class="modal-close" bindtap="onHideForm">✕</text>
+    </view>
+
+    <!-- 赛事类型（由当前 Tab 决定，不显式选择） -->
+    <text class="form-label">赛事类型：{{form.raceType === '10k' ? '10公里' : form.raceType === 'half' ? '半程马拉松' : '全程马拉松'}}</text>
+
+    <!-- 赛事等级 -->
+    <text class="form-label">赛事等级</text>
+    <view class="btn-row">
+      <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
+      <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
+      <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
+    </view>
+
+    <!-- 状态 -->
+    <text class="form-label">状态</text>
+    <view class="btn-row wrap">
+      <text class="opt-btn {{form.status === 'registered' ? 'on' : ''}}" data-v="registered" bindtap="onFormStatus">已报名</text>
+      <text class="opt-btn {{form.status === 'won' ? 'on' : ''}}" data-v="won" bindtap="onFormStatus">已中签</text>
+      <text class="opt-btn {{form.status === 'finished' ? 'on' : ''}}" data-v="finished" bindtap="onFormStatus">已完赛</text>
+      <text class="opt-btn {{form.status === 'dnf' ? 'on' : ''}}" data-v="dnf" bindtap="onFormStatus">未完赛</text>
+      <text class="opt-btn {{form.status === 'dns' ? 'on' : ''}}" data-v="dns" bindtap="onFormStatus">弃赛</text>
+    </view>
+
+    <!-- 日期 -->
+    <text class="form-label">日期</text>
+    <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
+      <view class="form-input date-input">
+        <text class="{{form.date ? '' : 'placeholder'}}">{{form.date || '选择日期'}}</text>
+      </view>
+    </picker>
+
+    <!-- 城市 -->
+    <text class="form-label">城市</text>
+    <input class="form-input" placeholder="如：北京" value="{{form.city}}" data-k="city" bindinput="onFormInput" />
+
+    <!-- 成绩（仅已完赛） -->
+    <block wx:if="{{form.status === 'finished'}}">
+      <text class="form-label">完赛成绩</text>
+      <view class="form-input time-trigger" bindtap="onPickTime">
+        <text class="{{form.result ? '' : 'placeholder'}}">{{form.result || '点此选择'}}</text>
+        <text class="city-arrow">▾</text>
+      </view>
+    </block>
+
+    <!-- 图片 -->
+    <text class="form-label">图片（选填）</text>
+    <view class="img-row">
+      <image wx:for="{{formImages}}" wx:key="index" src="{{item.local || item.cloudID}}" mode="aspectFill" class="preview-img" data-idx="{{index}}" data-src="{{item.local || item.cloudID}}" bindtap="onImageDel" bindlongpress="onImagePreview" />
+      <view class="img-add" wx:if="{{formImages.length < 9}}" bindtap="onImageAdd">+</view>
+    </view>
+
+    <!-- 感言 -->
+    <text class="form-label">参赛感言（选填）</text>
+    <textarea class="form-textarea" placeholder="记录一下心得..." value="{{form.note}}" data-k="note" bindinput="onFormInput" maxlength="200" />
+
+    <!-- 公开开关 -->
+    <view class="pub-switch">
+      <text>公开（可在跑友名录查看）</text>
+      <switch checked="{{form.isPublic}}" bindchange="onFormPublic" color="#1aad19" />
+    </view>
+
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideForm">取消</button>
+      <button class="btn-primary" bindtap="onSave">保存</button>
+    </view>
+  </view>
+
+  <time-picker value="{{form.result}}" show="{{showTimePicker}}" label="完赛成绩" default-value="{{form.raceType === '10k' ? '0:50:30' : form.raceType === 'half' ? '2:00:00' : '3:30:00'}}" bind:confirm="onTimeChange" bind:cancel="onHideTime"></time-picker>
+</view>

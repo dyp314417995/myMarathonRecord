@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "我的跑马记录",
+  "usingComponents": {
+    "time-picker": "/components/time-picker/index"
+  }
+}

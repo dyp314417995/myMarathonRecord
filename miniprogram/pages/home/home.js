@@ -130,4 +130,7 @@ Page({
   onAiCoach() {
     wx.navigateTo({ url: '/pages/tools/coach/coach' });
   },
+  onRecords() {
+    wx.navigateTo({ url: '/pages/records/index' });
+  },
 });

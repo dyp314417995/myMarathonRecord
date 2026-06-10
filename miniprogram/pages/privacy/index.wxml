@@ -1,0 +1,23 @@
+<!-- pages/privacy/index.wxml -->
+<view class="privacy-page">
+  <view class="section-title">个人信息</view>
+  <view class="card">
+    <view class="row">
+      <view class="row-left">
+        <text class="row-title">PB 成绩对外可见</text>
+        <text class="row-desc">关闭后其他跑友看不到你的 10K/半马/全马 最好成绩</text>
+      </view>
+      <switch checked="{{pbPublic}}" bindchange="onTogglePB" color="#1aad19" />
+    </view>
+  </view>
+
+  <view class="section-title" style="margin-top:40rpx;">跑马记录</view>
+  <view class="card">
+    <text class="desc">每条跑马记录可单独设置「公开/私密」，在添加或编辑时选择。</text>
+  </view>
+
+  <view class="section-title" style="margin-top:40rpx;">更多</view>
+  <view class="card">
+    <text class="desc" style="color:#ccc;">更多隐私设置将在未来版本开放...</text>
+  </view>
+</view>

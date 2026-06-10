@@ -37,3 +37,9 @@
 .empty-state { text-align: center; padding: 80rpx 0; color: #ccc; font-size: 28rpx; }
 
 .load-more { text-align: center; padding: 32rpx; color: #1aad19; font-size: 28rpx; }
+
+.info-divider { padding: 24rpx 0 12rpx; font-size: 26rpx; color: #1aad19; font-weight: 500; text-align: center; }
+.race-item { padding: 12rpx 0; border-bottom: 1rpx solid #f7f7f7; }
+.race-type { font-size: 24rpx; color: #333; display: block; }
+.race-meta { font-size: 22rpx; color: #999; display: block; margin-top: 2rpx; }
+.race-result { font-size: 26rpx; color: #ff6b00; font-weight: bold; display: block; margin-top: 4rpx; }

@@ -12,7 +12,9 @@
     "pages/points/admin",
     "pages/groups/index",
     "pages/admin/members/members",
-    "pages/tools/coach/coach"
+    "pages/tools/coach/coach",
+    "pages/records/index",
+    "pages/privacy/index"
   ],
   "usingComponents": {},
   "window": {

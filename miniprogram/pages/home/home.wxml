@@ -15,7 +15,6 @@
       </view>
       <text class="arrow">›</text>
     </view>
-    <!-- 统计 -->
     <view class="stats-row">
       <view class="stat-item">
         <text class="stat-num">{{groupName}}</text>
@@ -25,11 +24,10 @@
         <text class="stat-num">{{userInfo.city || '未设置'}}</text>
         <text class="stat-label">城市</text>
       </view>
-
     </view>
   </view>
 
-  <!-- 超管面板 -->
+  <!-- ========== 超管 ========== -->
   <block wx:if="{{role === 'super_admin'}}">
     <view class="section-title">管理</view>
     <view class="menu-grid col2">
@@ -45,26 +43,34 @@
         <text class="menu-icon">🔧</text>
         <text class="menu-text">群组管理</text>
       </view>
-      <view class="menu-item card" bindtap="onGroups">
-        <text class="menu-icon">📋</text>
-        <text class="menu-text">跑群列表</text>
-      </view>
       <view class="menu-item card" bindtap="onPointsAdmin">
         <text class="menu-icon">⭐</text>
         <text class="menu-text">积分管理</text>
       </view>
-      <view class="menu-item card" bindtap="onPoints">
-        <text class="menu-icon">🏃</text>
-        <text class="menu-text">我的积分</text>
+    </view>
+
+    <view class="section-title">我的</view>
+    <view class="menu-grid col2">
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
       </view>
       <view class="menu-item card" bindtap="onMemberList">
         <text class="menu-icon">🏅</text>
         <text class="menu-text">跑友名录</text>
       </view>
+      <view class="menu-item card" bindtap="onPoints">
+        <text class="menu-icon">🏃</text>
+        <text class="menu-text">我的积分</text>
+      </view>
+      <view class="menu-item card" bindtap="onRecords">
+        <text class="menu-icon">🏁</text>
+        <text class="menu-text">跑马记录</text>
+      </view>
     </view>
   </block>
 
-  <!-- 管理员面板 -->
+  <!-- ========== 管理员 ========== -->
   <block wx:elif="{{role === 'admin'}}">
     <view class="section-title">管理</view>
     <view class="menu-grid col2">
@@ -76,42 +82,54 @@
         <text class="menu-icon">⭐</text>
         <text class="menu-text">积分管理</text>
       </view>
-      <view class="menu-item card" bindtap="onPoints">
-        <text class="menu-icon">🏃</text>
-        <text class="menu-text">我的积分</text>
+    </view>
+
+    <view class="section-title">我的</view>
+    <view class="menu-grid col2">
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
       </view>
       <view class="menu-item card" bindtap="onMemberList">
         <text class="menu-icon">🏅</text>
         <text class="menu-text">跑友名录</text>
       </view>
-      <view class="menu-item card" bindtap="onGroups">
-        <text class="menu-icon">📋</text>
-        <text class="menu-text">跑群列表</text>
+      <view class="menu-item card" bindtap="onPoints">
+        <text class="menu-icon">🏃</text>
+        <text class="menu-text">我的积分</text>
+      </view>
+      <view class="menu-item card" bindtap="onRecords">
+        <text class="menu-icon">🏁</text>
+        <text class="menu-text">跑马记录</text>
       </view>
     </view>
   </block>
 
-  <!-- 普通用户面板 -->
+  <!-- ========== 普通用户 ========== -->
   <block wx:else>
     <view class="section-title">我的</view>
     <view class="menu-grid col2">
-      <view class="menu-item card" bindtap="onPoints">
-        <text class="menu-icon">🏃</text>
-        <text class="menu-text">我的积分</text>
+      <view class="menu-item card" bindtap="onGroups">
+        <text class="menu-icon">📋</text>
+        <text class="menu-text">跑群列表</text>
       </view>
       <view class="menu-item card" bindtap="onMemberList">
         <text class="menu-icon">🏅</text>
         <text class="menu-text">跑友名录</text>
       </view>
-      <view class="menu-item card" bindtap="onGroups">
-        <text class="menu-icon">📋</text>
-        <text class="menu-text">跑群列表</text>
+      <view class="menu-item card" bindtap="onPoints">
+        <text class="menu-icon">🏃</text>
+        <text class="menu-text">我的积分</text>
+      </view>
+      <view class="menu-item card" bindtap="onRecords">
+        <text class="menu-icon">🏁</text>
+        <text class="menu-text">跑马记录</text>
       </view>
     </view>
   </block>
 
-  <!-- 小工具 -->
-  <view class="section-title">小工具 <text class="beta-tag">开发中</text></view>
+  <!-- ========== 小工具 ========== -->
+  <view class="section-title">小工具</view>
   <view class="menu-grid col2">
     <view class="menu-item card disabled">
       <text class="menu-icon">📅</text>

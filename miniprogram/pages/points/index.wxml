@@ -15,7 +15,7 @@
   <view class="action-row">
     <button class="btn-primary" bindtap="onApply">提交积分申请</button>
     <view class="admin-entry" bindtap="onToggleRules">
-      <text>积分规则 {{showRules ? '▲' : '▼'}}</text>
+      <text>积分规则 {{showRules ? '▲ 收起' : '▼ 展开'}}</text>
     </view>
   </view>
 

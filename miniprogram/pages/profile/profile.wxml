@@ -28,6 +28,7 @@
     </view>
     <view class="btn-area">
       <button class="btn-primary" bindtap="onEdit">编辑资料</button>
+      <button class="btn-outline" bindtap="onPrivacy" style="margin-top:20rpx;">隐私设置</button>
     </view>
   </block>
 

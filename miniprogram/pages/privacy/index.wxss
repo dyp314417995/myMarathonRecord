@@ -1,0 +1,9 @@
+.privacy-page { min-height: 100vh; background: #f5f5f5; padding: 24rpx; }
+
+.section-title { font-size: 26rpx; color: #999; margin: 0 0 16rpx 8rpx; }
+.card { background: #fff; border-radius: 12rpx; padding: 24rpx; }
+.row { display: flex; justify-content: space-between; align-items: center; }
+.row-left { flex: 1; margin-right: 24rpx; }
+.row-title { font-size: 30rpx; color: #333; display: block; }
+.row-desc { font-size: 24rpx; color: #999; margin-top: 8rpx; display: block; }
+.desc { font-size: 26rpx; color: #666; line-height: 1.6; }
