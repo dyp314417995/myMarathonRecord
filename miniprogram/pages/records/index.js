@@ -4,8 +4,9 @@ const db = dbUtil.db;
 
 Page({
   data: {
-    tab: 'full', // '10k' | 'half' | 'full'
+    tab: 'full',
     records: [],
+    filteredRecords: [],
     showForm: false,
     editingId: '',
     // 表单数据
@@ -28,7 +29,7 @@ Page({
       imgUrls: [],
     }));
     // 转换图片
-    const allCloudIds = records.filter(r => r.images && r.images.length).flatMap(r => r.images);
+    const allCloudIds = records.reduce((arr, r) => arr.concat(r.images || []), []);
     const urlMap = {};
     for (let i = 0; i < allCloudIds.length; i += 50) {
       try {
@@ -45,27 +46,30 @@ Page({
       r.isPB = r.status === 'finished' && r.result && toSec(r.result) <= toSec(pbFields[r.raceType]) && r.result === pbFields[r.raceType];
     });
     this.setData({ records });
+    this.updateFiltered();
     this.updateChart();
   },
 
   // 切换 Tab
   onTab(e) {
     this.setData({ tab: e.currentTarget.dataset.t, showForm: false });
+    this.updateFiltered();
     this.updateChart();
   },
 
-  // 筛选当前 Tab 的记录
-  filtered() {
-    return this.data.records.filter(r => {
-      if (this.data.tab === '10k') return r.raceType === '10k';
-      if (this.data.tab === 'half') return r.raceType === 'half';
+  updateFiltered() {
+    const tab = this.data.tab;
+    const filtered = this.data.records.filter(r => {
+      if (tab === '10k') return r.raceType === '10k';
+      if (tab === 'half') return r.raceType === 'half';
       return r.raceType === 'full';
     });
+    this.setData({ filteredRecords: filtered });
   },
 
   // 成绩变化
   updateChart() {
-    const finished = this.filtered().filter(r => r.status === 'finished' && r.result).reverse();
+    const finished = this.data.filteredRecords.filter(r => r.status === 'finished' && r.result).reverse();
     if (finished.length < 2) {
       this.setData({ showChart: false, chartTips: '' });
       return;
@@ -146,6 +150,7 @@ Page({
   // 保存
   async onSave() {
     const f = this.data.form;
+
     if (!f.date) return wx.showToast({ title: '请选日期', icon: 'none' });
     if (f.status === 'finished' && !f.result) return wx.showToast({ title: '请填写成绩', icon: 'none' });
     wx.showLoading({ title: '保存中' });

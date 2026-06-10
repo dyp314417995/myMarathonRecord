@@ -13,8 +13,8 @@
   </view>
 
   <!-- 记录列表 -->
-  <scroll-view scroll-y class="list" wx:if="{{filtered().length > 0}}">
-    <block wx:for="{{filtered()}}" wx:key="_id">
+  <scroll-view scroll-y class="list" wx:if="{{filteredRecords.length > 0}}">
+    <block wx:for="{{filteredRecords}}" wx:key="_id">
       <view class="card">
         <view class="card-header">
           <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
@@ -41,7 +41,7 @@
   </scroll-view>
 
   <!-- 空状态 -->
-  <view class="empty" wx:if="{{filtered().length === 0}}">
+  <view class="empty" wx:if="{{filteredRecords.length === 0}}">
     <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : '全马'}} 记录</text>
   </view>
 
