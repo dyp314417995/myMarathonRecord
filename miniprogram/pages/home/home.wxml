@@ -118,8 +118,8 @@
       <text class="menu-text">赛事日历</text>
     </view>
     <view class="menu-item card" bindtap="onAiCoach">
-      <text class="menu-icon">🤖</text>
-      <text class="menu-text">AI教练</text>
+      <text class="menu-icon">💬</text>
+      <text class="menu-text">跑步问答</text>
     </view>
     <view class="menu-item card disabled">
       <text class="menu-icon">⏱️</text>

@@ -1,8 +1,6 @@
 .coach-page { display: flex; flex-direction: column; height: 100vh; background: #f5f5f5; }
 
-.model-bar { display: flex; justify-content: center; padding: 12rpx 24rpx; background: #fff; gap: 16rpx; }
-.model-tab { padding: 8rpx 32rpx; border-radius: 24rpx; font-size: 24rpx; color: #999; background: #f5f5f5; }
-.model-tab.active { color: #fff; background: #1aad19; }
+
 
 .chat-body { flex: 1; padding: 24rpx; }
 
@@ -39,6 +37,6 @@
 }
 .send-btn[disabled] { background: #ccc; }
 
-.model-tag { font-size: 22rpx; color: #999; margin-top: 8rpx; display: block; text-align: right; }
+
 
 .deep-ask { font-size: 24rpx; color: #1aad19; margin-top: 12rpx; display: block; text-align: right; }
