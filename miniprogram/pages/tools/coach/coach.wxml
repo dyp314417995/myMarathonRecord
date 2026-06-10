@@ -1,4 +1,8 @@
 <view class="coach-page">
+  <view class="model-bar">
+    <text class="model-tab {{model === 'qwen' ? 'active' : ''}}" data-m="qwen" bindtap="onSwitchModel">千问</text>
+    <text class="model-tab {{model === 'ds' ? 'active' : ''}}" data-m="ds" bindtap="onSwitchModel">DeepSeek</text>
+  </view>
   <scroll-view class="chat-body" scroll-y scroll-into-view="msg-{{messages.length - 1}}">
     <block wx:for="{{messages}}" wx:key="index">
       <view id="msg-{{index}}" class="msg-row {{item.role === 'user' ? 'user' : 'bot'}}">
@@ -22,6 +26,7 @@
   </view>
 
   <view class="chat-input">
+    <view wx:if="{{model === 'qwen'}}" class="img-btn" bindtap="onChooseImage">📷</view>
     <input class="msg-input" placeholder="输入跑步问题..." value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
     <button class="send-btn" bindtap="onSend" disabled="{{!input}}">发送</button>
   </view>
