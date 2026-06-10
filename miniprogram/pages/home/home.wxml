@@ -119,7 +119,7 @@
     </view>
     <view class="menu-item card" bindtap="onAiCoach">
       <text class="menu-icon">💬</text>
-      <text class="menu-text">跑步问答</text>
+      <text class="menu-text">跑步教练</text>
     </view>
     <view class="menu-item card disabled">
       <text class="menu-icon">⏱️</text>
