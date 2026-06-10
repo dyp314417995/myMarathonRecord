@@ -61,8 +61,21 @@ Page({
 
   // 加载普通用户列表（用于选择）
   async loadUsers() {
-    const res = await dbUtil.getUserList({ role: 'user' });
+    const res = await dbUtil.getUserList({ role: 'user' }, 0, 20);
     this.setData({ users: res.data });
+  },
+
+  onSearchAdminUser(e) {
+    const kw = e.detail.value || '';
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(async () => {
+      if (kw) {
+        const res = await dbUtil.getUserList({ nickName: dbUtil.db.RegExp({ regexp: kw, options: 'i' }) }, 0, 20);
+        this.setData({ filteredUsers: res.data });
+      } else {
+        this.setData({ filteredUsers: this.data.users });
+      }
+    }, 200);
   },
 
   // 显示添加弹窗

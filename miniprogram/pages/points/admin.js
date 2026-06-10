@@ -146,20 +146,26 @@ Page({
 
   // ========== 手动录入/扣减 ==========
   async loadUsers() {
-    const res = await dbUtil.getUserList();
-    this.setData({ allUsers: res.data });
+    const res = await dbUtil.getUserList({}, 0, 20);
+    this.setData({ users: res.data });
   },
 
   onSearchUser(e) {
-    const kw = e.detail.value;
-    const filteredUsers = kw
-      ? (this.data.allUsers || []).filter(u => (u.nickName || '').indexOf(kw) >= 0)
-      : (this.data.allUsers || []);
-    this.setData({ userFilter: kw, filteredUsers, showUserPicker: true });
+    const kw = e.detail.value || '';
+    this.setData({ userFilter: kw });
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(async () => {
+      if (kw) {
+        const res = await dbUtil.getUserList({ nickName: dbUtil.db.RegExp({ regexp: kw, options: 'i' }) }, 0, 20);
+        this.setData({ filteredUsers: res.data });
+      } else {
+        this.setData({ filteredUsers: this.data.users });
+      }
+    }, 200);
   },
 
   showUserPicker() {
-    this.setData({ showUserPicker: true, filteredUsers: this.data.allUsers || [] });
+    this.setData({ showUserPicker: true, userFilter: '', filteredUsers: this.data.users || [] });
   },
 
   onSelectUser(e) {

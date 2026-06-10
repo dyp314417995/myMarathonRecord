@@ -96,13 +96,16 @@ Page({
       })));
     }
     const allCloudIds = all.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-    if (allCloudIds.length) {
+    const urlMap = {};
+    for (let i = 0; i < allCloudIds.length; i += 50) {
       try {
-        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: allCloudIds } });
-        const urlMap = {};
+        const batch = allCloudIds.slice(i, i + 50);
+        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: batch } });
         (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        all = all.map(u => (u.avatarUrl && u.avatarUrl.startsWith('cloud://') ? { ...u, avatarUrl: urlMap[u.avatarUrl] || '' } : u));
       } catch {}
+    }
+    if (Object.keys(urlMap).length > 0) {
+      all = all.map(u => (u.avatarUrl && u.avatarUrl.startsWith('cloud://') ? { ...u, avatarUrl: urlMap[u.avatarUrl] || '' } : u));
     }
     this.setData({ allUsers: all, hasMore: false, loading: false, _allLoaded: true });
   },
