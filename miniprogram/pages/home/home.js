@@ -30,9 +30,15 @@ Page({
       // 转换头像 cloud:// → 临时 URL
       if (user.avatarUrl && user.avatarUrl.startsWith('cloud://')) {
         try {
-          const urlRes = await wx.cloud.getTempFileURL({ fileList: [user.avatarUrl] });
-          user.avatarUrl = urlRes.fileList[0].tempFileURL;
-        } catch {}
+          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [user.avatarUrl] } });
+          const tempUrl = r.result[0] && r.result[0].tempFileURL;
+          if (tempUrl) user.avatarUrl = tempUrl;
+        } catch {
+          try {
+            const r2 = await wx.cloud.getTempFileURL({ fileList: [user.avatarUrl] });
+            if (r2.fileList[0].tempFileURL) user.avatarUrl = r2.fileList[0].tempFileURL;
+          } catch {}
+        }
       }
 
       // V1.0 老用户补发 50 积分

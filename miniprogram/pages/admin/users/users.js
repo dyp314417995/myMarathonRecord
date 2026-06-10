@@ -17,6 +17,7 @@ Page({
     detailGroups: '',
     detailPoints: 0,
     hasMore: false,
+    _allLoaded: false,
   },
 
   async onShow() {
@@ -99,7 +100,7 @@ Page({
     const kw = e.detail.value || '';
     this.setData({ searchKey: kw });
     if (kw) {
-      if (this.data.allUsers.length > 20) {
+      if (this.data._allLoaded) {
         this.applyFilter();
       } else {
         this.loadAllUsers().then(() => this.applyFilter());
@@ -111,19 +112,18 @@ Page({
 
   async loadAllUsers() {
     this.setData({ loading: true });
-    // 先拉群组（一次）
     const groupsRes = await dbUtil.getGroups();
     const groupMap = {};
     groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
     let all = [];
-    while (true) {
-      const res = await dbUtil.getUserList({}, all.length, 20);
+    // 最多加载 100 条（5 页），再多就走分页
+    for (let p = 0; p < 5; p++) {
+      const res = await dbUtil.getUserList({}, p * 20, 20);
       if (res.data.length === 0) break;
-      const mapped = res.data.map(u => ({
+      all = all.concat(res.data.map(u => ({
         ...u,
         groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-      }));
-      all = all.concat(mapped);
+      })));
     }
     // 批量转换头像（一次）
     const allCloudIds = all.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
@@ -140,7 +140,7 @@ Page({
         });
       } catch {}
     }
-    this.setData({ allUsers: all, hasMore: false });
+    this.setData({ allUsers: all, hasMore: false, _allLoaded: true });
   },
 
   // 排序

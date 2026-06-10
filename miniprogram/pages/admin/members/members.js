@@ -7,6 +7,7 @@ Page({
     searchKey: '', sortBy: 'time', sortAsc: false,
     showDetail: false, detailUser: {}, detailGroups: '',
     hasMore: false,
+    _allLoaded: false,
   },
 
   async onShow() { this.loadUsers(); },
@@ -70,7 +71,7 @@ Page({
     const kw = e.detail.value || '';
     this.setData({ searchKey: kw });
     if (kw) {
-      if (this.data.allUsers.length > 20) {
+      if (this.data._allLoaded) {
         this.applyFilter();
       } else {
         this.loadAllUsers().then(() => this.applyFilter());
@@ -86,8 +87,8 @@ Page({
     const groupMap = {};
     groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
     let all = [];
-    while (true) {
-      const res = await dbUtil.getUserList({}, all.length, 20);
+    for (let p = 0; p < 5; p++) {
+      const res = await dbUtil.getUserList({}, p * 20, 20);
       if (res.data.length === 0) break;
       all = all.concat(res.data.map(u => ({
         ...u,
@@ -103,7 +104,7 @@ Page({
         all = all.map(u => (u.avatarUrl && u.avatarUrl.startsWith('cloud://') ? { ...u, avatarUrl: urlMap[u.avatarUrl] || '' } : u));
       } catch {}
     }
-    this.setData({ allUsers: all, hasMore: false, loading: false });
+    this.setData({ allUsers: all, hasMore: false, loading: false, _allLoaded: true });
   },
 
   onSortBy(e) {
