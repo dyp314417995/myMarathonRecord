@@ -4,7 +4,7 @@ Page({
     messages: [
       { role: 'bot', content: '你好！我是你的跑步教练 🏃\n\n可以问我训练计划、配速策略、比赛准备等问题。\n也可以发跑步截图帮你看看~' }
     ],
-    input: '', loading: false,
+    model: 'qwen', input: '', loading: false,
     presets: [
       '我是新手，怎么开始跑步？',
       '一周训练计划怎么安排？',
