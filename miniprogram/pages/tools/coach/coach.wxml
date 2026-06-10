@@ -21,7 +21,7 @@
   </view>
 
   <view class="chat-input">
-    <view wx:if="{{model === 'qwen'}}" class="img-btn" bindtap="onChooseImage">📷</view>
+    <view class="img-btn" bindtap="onChooseImage">📷</view>
     <input class="msg-input" placeholder="输入跑步问题..." value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
     <button class="send-btn" bindtap="onSend" disabled="{{!input}}">发送</button>
   </view>
