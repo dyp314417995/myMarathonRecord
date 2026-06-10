@@ -5,6 +5,7 @@
         <view class="msg-bubble">
           <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="msg-img" bindtap="onPreviewMsgImg" data-src="{{item.image}}" />
           <text wx:if="{{item.content}}">{{item.content}}</text>
+          <text wx:if="{{item.model}}" class="model-tag">{{item.model}}</text>
         </view>
       </view>
     </block>
@@ -21,8 +22,7 @@
   </view>
 
   <view class="chat-input">
-    <view class="img-btn" bindtap="onChooseImage">📷</view>
-    <input class="msg-input" placeholder="说点什么..." value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
+    <input class="msg-input" placeholder="输入跑步问题..." value="{{input}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
     <button class="send-btn" bindtap="onSend" disabled="{{!input}}">发送</button>
   </view>
 </view>

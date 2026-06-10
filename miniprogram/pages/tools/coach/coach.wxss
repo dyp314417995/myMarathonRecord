@@ -35,4 +35,6 @@
 }
 .send-btn[disabled] { background: #ccc; }
 
+.model-tag { font-size: 22rpx; color: #999; margin-top: 8rpx; display: block; text-align: right; }
+
 .deep-ask { font-size: 24rpx; color: #1aad19; margin-top: 12rpx; display: block; text-align: right; }

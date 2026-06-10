@@ -2,7 +2,7 @@
 Page({
   data: {
     messages: [
-      { role: 'bot', content: '你好！我是你的跑步教练 🏃\n\n可以问我训练计划、配速策略、比赛准备等问题。\n也可以发跑步截图让我分析~' }
+      { role: 'bot', content: '你好！我是你的跑步教练 🏃\n\n可以问我训练计划、配速策略、比赛准备等问题。' }
     ],
     input: '', loading: false,
     presets: [
@@ -31,7 +31,7 @@ Page({
         try {
           const up = await wx.cloud.uploadFile({ cloudPath: 'coach/' + Date.now() + '.png', filePath: img });
           const result = await wx.cloud.callFunction({ name: 'aiCoach', data: { question: this.data.input || '帮我看看这张图', image: up.fileID } });
-          msgs.push({ role: 'bot', content: result.result.reply });
+          msgs.push({ role: 'bot', content: result.result.reply, model: result.result.model });
         } catch {
           msgs.push({ role: 'bot', content: '图片发送失败了' });
         }
@@ -47,7 +47,7 @@ Page({
     this.setData({ messages: msgs, input: '', loading: true });
     try {
       const res = await wx.cloud.callFunction({ name: 'aiCoach', data: { question: q } });
-      msgs.push({ role: 'bot', content: res.result.reply });
+      msgs.push({ role: 'bot', content: res.result.reply, model: res.result.model });
     } catch {
       msgs.push({ role: 'bot', content: '网络开小差了，再问一次？' });
     }
