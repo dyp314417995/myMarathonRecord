@@ -111,7 +111,7 @@ Page({
         const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
         const urlMap = {};
         (res.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        images.forEach(img => { if (urlMap[img.cloudID]) img.local = urlMap[img.cloudID]; });
+        images.forEach(img => { if (urlMap[img.cloudID]) img.previewUrl = urlMap[img.cloudID]; });
       } catch {}
     }
     this.setData({
@@ -159,7 +159,7 @@ Page({
     this.setData({ formImages: imgs });
   },
   onImagePreview(e) {
-    wx.previewImage({ urls: this.data.formImages.map(f => f.local || f.cloudID), current: e.currentTarget.dataset.src });
+    wx.previewImage({ urls: this.data.formImages.map(f => f.previewUrl || f.local || f.cloudID), current: e.currentTarget.dataset.src });
   },
 
   onHideForm() { this.setData({ showForm: false }); },
