@@ -124,7 +124,7 @@ Page({
     const { id } = e.currentTarget.dataset;
     const user = this.data.allUsers.find(u => u._id === id);
     if (!user) return;
-    // 拉公开的跑马记录
+    // 拉最近的 3 条公开记录预览
     let raceRecords = [];
     try {
       const rr = await dbUtil.db.collection('race_records').where({ userId: id, isPublic: true }).orderBy('date', 'desc').limit(3).get();
@@ -140,6 +140,11 @@ Page({
       detailGroups: user.groupName,
       detailRaces: raceRecords,
     });
+  },
+
+  onViewAllRaces() {
+    const u = this.data.detailUser;
+    wx.navigateTo({ url: '/pages/records/public?userId=' + u._id + '&userName=' + (u.nickName || '') });
   },
 
   onHideDetail() { this.setData({ showDetail: false }); },

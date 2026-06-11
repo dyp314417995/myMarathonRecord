@@ -71,6 +71,7 @@
         <text class="race-meta">{{item.city || '未知'}} · {{item.date}}</text>
         <text wx:if="{{item.result}}" class="race-result">🏆 {{item.result}}</text>
       </view>
+      <button class="btn-outline" bindtap="onViewAllRaces" style="margin-top:16rpx;">查看全部跑马记录 ›</button>
     </block>
   </view>
   <button class="btn-outline" bindtap="onHideDetail" style="margin-top:24rpx;">关闭</button>

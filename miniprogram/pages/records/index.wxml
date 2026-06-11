@@ -152,7 +152,10 @@
     <!-- 图片 -->
     <text class="form-label">图片（选填）</text>
     <view class="img-row">
-      <image wx:for="{{formImages}}" wx:key="index" src="{{item.local || item.cloudID}}" mode="aspectFill" class="preview-img" data-idx="{{index}}" data-src="{{item.local || item.cloudID}}" bindtap="onImageDel" bindlongpress="onImagePreview" />
+      <view wx:for="{{formImages}}" wx:key="index" class="preview-wrap">
+        <image src="{{item.local || item.cloudID}}" mode="aspectFill" class="preview-img" data-idx="{{index}}" data-src="{{item.local || item.cloudID}}" bindtap="onImagePreview" />
+        <text class="img-remove" data-idx="{{index}}" catchtap="onImageDel">✕</text>
+      </view>
       <view class="img-add" wx:if="{{formImages.length < 9}}" bindtap="onImageAdd">+</view>
     </view>
 

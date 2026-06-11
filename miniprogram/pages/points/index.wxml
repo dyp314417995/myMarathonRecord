@@ -30,6 +30,15 @@
     </view>
   </block>
 
+  <!-- 积分使用规则 -->
+  <block wx:if="{{showRules}}">
+    <view class="card" style="margin-top:20rpx;">
+      <text class="rule-desc" style="font-weight:600;color:#333;">积分抵扣规则</text>
+      <text class="rule-desc" style="margin-top:12rpx;">a. 积分有效期 1 个自然年，逾期自动失效（提前 1 个月通知）</text>
+      <text class="rule-desc" style="margin-top:8rpx;">b. 购买必迈/迈胜等产品，1 分可抵扣 1 元，抵扣情况视具体活动而定</text>
+    </view>
+  </block>
+
   <!-- 记录列表 -->
   <view class="section-title">积分明细</view>
   <block wx:for="{{records}}" wx:key="_id">

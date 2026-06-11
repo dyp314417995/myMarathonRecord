@@ -100,13 +100,24 @@ Page({
   },
 
   // 编辑
-  onEdit(e) {
+  async onEdit(e) {
     const r = this.data.records.find(x => x._id === e.currentTarget.dataset.id);
     if (!r) return;
+    // 转换已有图片为临时链接
+    const images = (r.images || []).map(id => ({ cloudID: id, local: '' }));
+    const cloudIds = r.images || [];
+    if (cloudIds.length) {
+      try {
+        const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
+        const urlMap = {};
+        (res.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+        images.forEach(img => { if (urlMap[img.cloudID]) img.local = urlMap[img.cloudID]; });
+      } catch {}
+    }
     this.setData({
       showForm: true, editingId: r._id,
       form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', distance: r.distance || '', elevation: r.elevation || '', itra: r.itra || '', certs: r.certs || { itra: false, utmb: false, utmbws: false }, note: r.note || '', isPublic: r.isPublic !== false },
-      formImages: (r.images || []).map(id => ({ cloudID: id, local: '' })),
+      formImages: images,
     });
   },
 
@@ -153,6 +164,9 @@ Page({
 
   onHideForm() { this.setData({ showForm: false }); },
   onHideTime() { this.setData({ showTimePicker: false }); },
+  onImagePreview(e) {
+    wx.previewImage({ urls: [e.currentTarget.dataset.src], current: e.currentTarget.dataset.src });
+  },
 
   // 保存
   async onSave() {

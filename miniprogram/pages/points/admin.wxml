@@ -74,7 +74,7 @@
     <view wx:else class="card">
       <view class="form-group">
         <text class="form-label">积分数量（正=加，负=扣）</text>
-        <input class="form-input" type="number" placeholder="正数=集体活动加分(填3)，负=扣分(填-3)" bindinput="onPointsInput" bindblur="onPointsBlur" />
+        <input class="form-input" type="text" placeholder="正数=加分(填3)，负=扣分(填-3)" bindinput="onPointsInput" bindblur="onPointsBlur" />
       </view>
       <view class="form-group">
         <text class="form-label">选择用户</text>
