@@ -16,6 +16,7 @@ async function initDefaultRules() {
     { category: '拉新', name: '邀请跑友加入', points: 3, monthlyLimit: null, status: 'active' },
     { category: '团服参赛', name: '穿团服参加赛事', points: 5, monthlyLimit: null, status: 'active' },
     { category: '自媒体', name: '带话题并@九州战马联盟', points: 3, monthlyLimit: 4, status: 'active' },
+    { category: '天天跑完赛', name: '天天跑完赛', points: 10, monthlyLimit: null, status: 'active' },
     { category: '集体活动', name: '集体活动', points: 3, monthlyLimit: null, status: 'active' },
   ];
   const count = await db.collection('points_rules').count();
@@ -25,10 +26,15 @@ async function initDefaultRules() {
     }
     return;
   }
-  // 更新已有规则的名称，并确保启用
+  // 更新已有规则，插入缺失规则
   for (const d of defaults) {
-    await db.collection('points_rules').where({ category: d.category })
-      .update({ data: { name: d.name, points: d.points, monthlyLimit: d.monthlyLimit, status: 'active' } });
+    const exist = await db.collection('points_rules').where({ category: d.category }).get();
+    if (exist.data.length > 0) {
+      await db.collection('points_rules').where({ category: d.category })
+        .update({ data: { name: d.name, points: d.points, monthlyLimit: d.monthlyLimit, status: 'active' } });
+    } else {
+      await db.collection('points_rules').add({ data: d });
+    }
   }
 }
 
