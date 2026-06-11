@@ -66,6 +66,9 @@ async function getRecords(userId, skip = 0, limit = 20) {
 /** 添加积分记录 */
 async function addRecord(data) {
   const idRes = await db.collection('points_records').add({ data: { ...data, createTime: new Date() } });
+  // 同步更新用户积分余额
+  const balance = await getBalance(data.userId);
+  await db.collection('users').doc(data.userId).update({ data: { points: balance } });
   return idRes._id;
 }
 
@@ -83,9 +86,15 @@ async function getMonthlyCount(userId, category) {
 
 /** 审批积分记录 */
 async function reviewRecord(recordId, status, reviewerId) {
-  return await db.collection('points_records').doc(recordId).update({
+  await db.collection('points_records').doc(recordId).update({
     data: { status, reviewerId, reviewTime: new Date() },
   });
+  // 审批通过后同步更新用户积分
+  if (status === 'approved') {
+    const rec = await db.collection('points_records').doc(recordId).get();
+    const balance = await getBalance(rec.data.userId);
+    await db.collection('users').doc(rec.data.userId).update({ data: { points: balance } });
+  }
 }
 
 /** 获取待审批的积分申请 */

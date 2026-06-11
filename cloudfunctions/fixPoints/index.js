@@ -3,13 +3,15 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 exports.main = async () => {
-  const r = await db.collection('users').get();
-  let n = 0;
-  for (const u of r.data) {
-    if (u.points === undefined) {
-      await db.collection('users').doc(u._id).update({ data: { points: 50 } });
-      n++;
+  const users = await db.collection('users').get();
+  let fixed = 0;
+  for (const u of users.data) {
+    const res = await db.collection('points_records').where({ userId: u._id, status: 'approved' }).get();
+    const balance = res.data.reduce((sum, r) => sum + r.points, 0);
+    if (u.points !== balance) {
+      await db.collection('users').doc(u._id).update({ data: { points: balance } });
+      fixed++;
     }
   }
-  return { fixed: n, total: r.data.length };
+  return { fixed, total: users.data.length };
 };
