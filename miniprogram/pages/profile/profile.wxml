@@ -19,6 +19,7 @@
       <view class="info-row"><text class="info-label">10公里PB</text><text class="info-value">{{userInfo.pb10k || '-'}}</text></view>
       <view class="info-row"><text class="info-label">半马PB</text><text class="info-value">{{userInfo.pbHalf || '-'}}</text></view>
       <view class="info-row"><text class="info-label">全马PB</text><text class="info-value">{{userInfo.pbFull || '-'}}</text></view>
+      <view class="info-row"><text class="info-label">积分</text><text class="info-value" style="color:#ff6b00;font-weight:600;">{{userInfo.points || 0}} 分</text></view>
       <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{groupNames}}</text></view>
       <view class="info-row"><text class="info-label">状态</text>
         <text class="tag tag-green" wx:if="{{userInfo.status === 'approved'}}">已通过</text>
