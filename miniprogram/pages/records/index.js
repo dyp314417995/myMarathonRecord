@@ -10,7 +10,7 @@ Page({
     showForm: false,
     editingId: '',
     // 表单数据
-    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', note: '', isPublic: true },
+    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', distance: '', elevation: '', itra: '', certs: { itra: false, utmb: false, utmbws: false }, note: '', isPublic: true },
     formImages: [],
     showTimePicker: false,
     showChart: false,
@@ -62,6 +62,7 @@ Page({
     const filtered = this.data.records.filter(r => {
       if (tab === '10k') return r.raceType === '10k';
       if (tab === 'half') return r.raceType === 'half';
+      if (tab === 'trail') return r.raceType === 'trail';
       return r.raceType === 'full';
     });
     this.setData({ filteredRecords: filtered });
@@ -69,30 +70,31 @@ Page({
 
   // 成绩变化
   updateChart() {
-    const finished = this.data.filteredRecords.filter(r => r.status === 'finished' && r.result).reverse();
+    const finished = this.data.filteredRecords.filter(r => r.status === 'finished' && r.result);
     if (finished.length < 2) {
-      this.setData({ showChart: false, chartTips: '' });
+      this.setData({ showChart: false, chartData: [] });
       return;
     }
-    const first = finished[0].result;
-    const last = finished[finished.length - 1].result;
     const toSec = (t) => { const p = t.split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
-    const diff = toSec(last) - toSec(first);
-    const arrow = diff < 0 ? '↓ 提升' : diff > 0 ? '↑ 变慢' : '→ 持平';
-    const abs = Math.abs(diff);
-    const m = Math.floor(abs/60), s = abs%60;
-    this.setData({
-      showChart: true,
-      chartTips: `从 ${first} 到 ${last} ，${arrow} ${m}分${s}秒`,
-    });
+    const pb = finished.reduce((best, r) => toSec(r.result) < toSec(best.result) ? r : best, finished[0]);
+    const maxSec = Math.max(...finished.map(r => toSec(r.result)));
+    const entries = finished
+      .slice(0, 10) // 最多10条
+      .reverse()
+      .map(r => ({
+        date: r.date, city: r.city, result: r.result,
+        isPB: r._id === pb._id,
+        width: Math.max(((toSec(r.result) / maxSec) * 100), 30),
+      }));
+    this.setData({ showChart: true, chartData: entries });
   },
 
   // 添加
   onAdd() {
-    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00' };
+    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00', trail: '5:00:00' };
     this.setData({
       showForm: true, editingId: '',
-      form: { raceType: this.data.tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[this.data.tab] || '3:30:00', note: '', isPublic: true },
+      form: { raceType: this.data.tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[this.data.tab] || '3:30:00', distance: '', elevation: '', itra: '', certs: { itra: false, utmb: false, utmbws: false }, note: '', isPublic: true },
       formImages: [],
     });
   },
@@ -103,7 +105,7 @@ Page({
     if (!r) return;
     this.setData({
       showForm: true, editingId: r._id,
-      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', note: r.note || '', isPublic: r.isPublic !== false },
+      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', distance: r.distance || '', elevation: r.elevation || '', itra: r.itra || '', certs: r.certs || { itra: false, utmb: false, utmbws: false }, note: r.note || '', isPublic: r.isPublic !== false },
       formImages: (r.images || []).map(id => ({ cloudID: id, local: '' })),
     });
   },
@@ -122,6 +124,11 @@ Page({
   // 表单变更
   onFormType(e) { this.setData({ 'form.raceType': e.currentTarget.dataset.v }); },
   onFormLevel(e) { this.setData({ 'form.raceLevel': e.currentTarget.dataset.v }); },
+  onToggleCert(e) {
+    const k = e.currentTarget.dataset.k;
+    const certs = { ...this.data.form.certs, [k]: !this.data.form.certs[k] };
+    this.setData({ 'form.certs': certs });
+  },
   onFormStatus(e) { this.setData({ 'form.status': e.currentTarget.dataset.v }); },
   onFormInput(e) { this.setData({ [`form.${e.currentTarget.dataset.k}`]: e.detail.value }); },
   onFormPublic() { this.setData({ 'form.isPublic': !this.data.form.isPublic }); },
@@ -167,6 +174,7 @@ Page({
     const data = {
       raceType: f.raceType, raceLevel: f.raceLevel, status: f.status,
       date: f.date, city: f.city.trim(), result: f.status === 'finished' ? f.result : '',
+      distance: f.raceType === 'trail' ? f.distance : '', elevation: f.raceType === 'trail' ? f.elevation : '', itra: f.raceType === 'trail' && f.status === 'finished' ? f.itra : '', certs: f.raceType === 'trail' ? f.certs : undefined,
       note: f.note.trim(), isPublic: f.isPublic, images,
     };
     if (this.data.editingId) {

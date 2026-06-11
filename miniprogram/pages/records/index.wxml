@@ -5,11 +5,26 @@
     <text class="tab {{tab === 'half' ? 'active' : ''}}" data-t="half" bindtap="onTab">半马</text>
     <text class="tab {{tab === 'full' ? 'active' : ''}}" data-t="full" bindtap="onTab">全马</text>
     <text class="tab {{tab === '10k' ? 'active' : ''}}" data-t="10k" bindtap="onTab">10K</text>
+    <text class="tab {{tab === 'trail' ? 'active' : ''}}" data-t="trail" bindtap="onTab">越野</text>
   </view>
 
   <!-- 成绩变化 -->
-  <view class="chart-bar" wx:if="{{showChart}}">
-    <text class="chart-text">📈 {{chartTips}}</text>
+  <view wx:if="{{showChart}}" class="chart-panel">
+    <text class="chart-title">📈 成绩变化</text>
+    <view class="chart-box">
+      <view wx:for="{{chartData}}" wx:key="date" class="chart-row">
+        <view class="chart-label">
+          <text class="chart-date">{{item.date}}</text>
+          <text class="chart-city">{{item.city}}</text>
+        </view>
+        <view class="chart-bar-wrap">
+          <view class="chart-bar {{item.isPB ? 'pb' : ''}}" style="width: {{item.width}}%">
+            <text class="chart-bar-text">{{item.result}}</text>
+          </view>
+        </view>
+        <text class="chart-badge" wx:if="{{item.isPB}}">🏆PB</text>
+      </view>
+    </view>
   </view>
 
   <!-- 记录列表 -->
@@ -17,12 +32,25 @@
     <block wx:for="{{filteredRecords}}" wx:key="_id">
       <view class="card">
         <view class="card-header">
-          <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
-          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : '全程马拉松'}}</text>
-          <text class="status-tag {{item.status}}">{{item.status === 'finished' ? '已完赛' : item.status === 'dnf' ? '未完赛' : item.status === 'dns' ? '弃赛' : item.status === 'won' ? '已中签' : '已报名'}}</text>
+          <view wx:if="{{item.raceType === 'trail' && item.certs}}" class="cert-tags">
+            <text class="tag cert-tag" wx:for="{{item.certs.itra ? ['ITRA'] : []}}" wx:key="*this">ITRA</text>
+            <text class="tag cert-tag" wx:for="{{item.certs.utmb ? ['UTMB'] : []}}" wx:key="*this">UTMB</text>
+            <text class="tag cert-tag" wx:for="{{item.certs.utmbws ? ['UTMB WS'] : []}}" wx:key="*this">UTMB WS</text>
+          </view>
+          <text wx:else class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
+          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : item.raceType === 'trail' ? '越野跑' : '全程马拉松'}}</text>
+          <text class="status-tag {{item.status}}">{{item.status === 'planned' ? '计划报名' : item.status === 'finished' ? '已完赛' : item.status === 'dnf' ? '未完赛' : item.status === 'dns' ? '弃赛' : item.status === 'won' ? '已中签' : '已报名'}}</text>
         </view>
         <view class="card-body">
           <view class="card-row"><text class="label">赛事</text><text class="value">{{item.city || '未知'}}{{item.date ? ' · ' + item.date : ''}}</text></view>
+          <view class="card-row" wx:if="{{item.raceType === 'trail' && (item.distance || item.elevation)}}">
+            <text class="label">路线</text>
+            <text class="value">{{item.distance ? item.distance + 'km' : ''}}{{item.distance && item.elevation ? ' · 爬升' + item.elevation + 'm' : ''}}{{item.elevation && !item.distance ? '爬升' + item.elevation + 'm' : ''}}</text>
+          </view>
+          <view class="card-row" wx:if="{{item.raceType === 'trail' && item.status === 'finished' && item.itra}}">
+            <text class="label">ITRA</text>
+            <text class="value itra-score">{{item.itra}}分</text>
+          </view>
           <view class="card-row" wx:if="{{item.status === 'finished' && item.result}}"><text class="label">成绩</text><text class="value result">{{item.result}} <text class="pb-badge" wx:if="{{item.isPB}}">🏆PB</text></text></view>
           <view class="card-row" wx:if="{{item.note}}"><text class="value note">"{{item.note}}"</text></view>
         </view>
@@ -42,7 +70,7 @@
 
   <!-- 空状态 -->
   <view class="empty" wx:if="{{filteredRecords.length === 0}}">
-    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : '全马'}} 记录</text>
+    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : tab === 'trail' ? '越野跑' : '全马'}} 记录</text>
   </view>
 
   <!-- 添加按钮 -->
@@ -57,19 +85,30 @@
     </view>
 
     <!-- 赛事类型（由当前 Tab 决定，不显式选择） -->
-    <text class="form-label">赛事类型：{{form.raceType === '10k' ? '10公里' : form.raceType === 'half' ? '半程马拉松' : '全程马拉松'}}</text>
+    <text class="form-label">赛事类型：{{form.raceType === '10k' ? '10公里' : form.raceType === 'half' ? '半程马拉松' : form.raceType === 'trail' ? '越野跑' : '全程马拉松'}}</text>
 
     <!-- 赛事等级 -->
-    <text class="form-label">赛事等级</text>
-    <view class="btn-row">
-      <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
-      <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
-      <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
-    </view>
+    <block wx:if="{{form.raceType === 'trail'}}">
+      <text class="form-label">赛事认证（可多选）</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.certs.itra ? 'on' : ''}}" data-k="itra" bindtap="onToggleCert">ITRA认证</text>
+        <text class="opt-btn {{form.certs.utmb ? 'on' : ''}}" data-k="utmb" bindtap="onToggleCert">UTMB认证</text>
+        <text class="opt-btn {{form.certs.utmbws ? 'on' : ''}}" data-k="utmbws" bindtap="onToggleCert">UTMB世界系列赛</text>
+      </view>
+    </block>
+    <block wx:else>
+      <text class="form-label">赛事等级</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
+        <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
+        <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
+      </view>
+    </block>
 
     <!-- 状态 -->
     <text class="form-label">状态</text>
     <view class="btn-row wrap">
+      <text class="opt-btn {{form.status === 'planned' ? 'on' : ''}}" data-v="planned" bindtap="onFormStatus">计划报名</text>
       <text class="opt-btn {{form.status === 'registered' ? 'on' : ''}}" data-v="registered" bindtap="onFormStatus">已报名</text>
       <text class="opt-btn {{form.status === 'won' ? 'on' : ''}}" data-v="won" bindtap="onFormStatus">已中签</text>
       <text class="opt-btn {{form.status === 'finished' ? 'on' : ''}}" data-v="finished" bindtap="onFormStatus">已完赛</text>
@@ -88,6 +127,18 @@
     <!-- 城市 -->
     <text class="form-label">城市</text>
     <input class="form-input" placeholder="如：北京" value="{{form.city}}" data-k="city" bindinput="onFormInput" />
+
+    <!-- 越野跑额外字段 -->
+    <block wx:if="{{form.raceType === 'trail'}}">
+      <text class="form-label">距离(km)</text>
+      <input class="form-input" type="digit" placeholder="如：50" value="{{form.distance}}" data-k="distance" bindinput="onFormInput" />
+      <text class="form-label">爬升(m)</text>
+      <input class="form-input" type="digit" placeholder="如：2500" value="{{form.elevation}}" data-k="elevation" bindinput="onFormInput" />
+      <block wx:if="{{form.status === 'finished'}}">
+        <text class="form-label">ITRA表现分</text>
+        <input class="form-input" type="number" placeholder="如：650" value="{{form.itra}}" data-k="itra" bindinput="onFormInput" />
+      </block>
+    </block>
 
     <!-- 成绩（仅已完赛） -->
     <block wx:if="{{form.status === 'finished'}}">

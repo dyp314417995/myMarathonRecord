@@ -4,8 +4,18 @@
 .tab { flex: 1; text-align: center; padding: 24rpx; font-size: 28rpx; color: #666; border-bottom: 4rpx solid transparent; }
 .tab.active { color: #1aad19; border-color: #1aad19; font-weight: bold; }
 
-.chart-bar { margin: 20rpx 24rpx; padding: 20rpx 24rpx; background: #e8f5e9; border-radius: 12rpx; }
-.chart-text { font-size: 26rpx; color: #2e7d32; }
+.chart-panel { margin: 16rpx 24rpx; padding: 24rpx; background: #fff; border-radius: 16rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,.04); }
+.chart-title { font-size: 28rpx; color: #333; font-weight: 600; display: block; margin-bottom: 20rpx; }
+.chart-box { display: flex; flex-direction: column; gap: 16rpx; }
+.chart-row { display: flex; align-items: center; gap: 12rpx; }
+.chart-label { width: 130rpx; flex-shrink: 0; }
+.chart-date { font-size: 22rpx; color: #999; display: block; }
+.chart-city { font-size: 20rpx; color: #ccc; display: block; margin-top: 2rpx; }
+.chart-bar-wrap { flex: 1; height: 40rpx; background: #f5f5f5; border-radius: 20rpx; overflow: hidden; position: relative; }
+.chart-bar { height: 100%; background: linear-gradient(90deg, #a5d6a7, #66bb6a); border-radius: 20rpx; display: flex; align-items: center; padding-left: 16rpx; min-width: 60rpx; }
+.chart-bar.pb { background: linear-gradient(90deg, #ffb74d, #ff9800); }
+.chart-bar-text { font-size: 22rpx; color: #fff; font-weight: 600; white-space: nowrap; }
+.chart-badge { font-size: 22rpx; color: #ff6b00; font-weight: 600; flex-shrink: 0; }
 
 .list { padding: 0 24rpx; }
 .card { background: #fff; border-radius: 12rpx; padding: 24rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,.04); }
@@ -21,12 +31,16 @@
 .status-tag.dnf, .status-tag.dns { background: #fce4ec; color: #c62828; }
 .status-tag.won { background: #e3f2fd; color: #1565c0; }
 .status-tag.registered { background: #f5f5f5; color: #666; }
+.status-tag.planned { background: #fff3e0; color: #e65100; }
+.cert-tags { display: flex; gap: 8rpx; flex-wrap: wrap; }
+.cert-tag { font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 6rpx; background: #e3f2fd; color: #1565c0; }
 
 .card-body { padding: 8rpx 0; }
 .card-row { display: flex; gap: 16rpx; padding: 4rpx 0; }
 .label { font-size: 24rpx; color: #999; width: 80rpx; }
 .value { font-size: 26rpx; color: #333; }
 .result { color: #ff6b00; font-weight: bold; }
+.itra-score { color: #1aad19; font-weight: 600; }
 .pb-badge { font-size: 22rpx; background: #ff6b00; color: #fff; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: 8rpx; }
 .note { font-style: italic; color: #666; }
 
