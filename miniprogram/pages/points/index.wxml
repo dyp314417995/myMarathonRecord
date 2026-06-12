@@ -50,7 +50,7 @@
           <text class="record-date">{{item.fmtTime}}</text>
         </view>
         <view class="record-points">
-          <text class="{{item.points > 0 ? 'earn' : 'use'}}">{{item.points > 0 ? '+' : ''}}{{item.points}}</text>
+          <text class="{{item.points > 0 ? 'earn' : 'use'}}">{{item.fmtPoints}}</text>
           <text class="tag tag-gray" wx:if="{{item.status === 'pending'}}">审核中</text>
           <text class="tag tag-green" wx:elif="{{item.status === 'approved'}}">已通过</text>
           <text class="tag tag-red" wx:elif="{{item.status === 'rejected'}}">已拒绝</text>

@@ -38,6 +38,7 @@ Page({
     const records = res.data.map(r => ({
       ...r,
       fmtTime: this.fmtDate(r.createTime),
+      fmtPoints: r.points > 0 ? `+${r.points}` : `${Math.abs(r.points)}`,
     }));
     this.setData({ records });
   },
