@@ -10,6 +10,10 @@ Page({
     rules: [],
     pendingList: [],
     reviewedList: [],
+    pendingSkip: 0,
+    reviewedSkip: 0,
+    hasMorePending: false,
+    hasMoreReviewed: false,
     users: [],
     selectedUserIds: {},
     selectedUserNames: {},
@@ -33,12 +37,12 @@ Page({
       isAdmin: userInfo.role === 'super_admin' || userInfo.role === 'admin',
     });
     await pointsUtil.initDefaultRules();
-    await Promise.all([this.loadRules(), this.loadPending(), this.loadUsers()]);
+    await Promise.all([this.loadRules(), this.loadPending(true), this.loadUsers()]);
   },
 
   onTabChange(e) {
     this.setData({ tab: e.currentTarget.dataset.tab });
-    if (e.currentTarget.dataset.tab === 'review') this.loadPending();
+    if (e.currentTarget.dataset.tab === 'review') this.loadPending(true);
   },
 
   onGoApply() {
@@ -64,16 +68,52 @@ Page({
   },
 
   // ========== 审批 ==========
-  async loadPending() {
-    // 待审批
-    const res = await pointsUtil.getPendingRecords();
-    const enriched = (await Promise.all(res.data.map(async (r) => this.enrichRecord(r)))).filter(Boolean);
-    // 已审核（最近20条）
+  async loadPending(reset) {
+    const pageSize = 20;
+    if (reset) {
+      this.setData({ pendingSkip: 0, reviewedSkip: 0, pendingList: [], reviewedList: [], hasMorePending: false, hasMoreReviewed: false });
+    }
+    const { pendingSkip, reviewedSkip } = this.data;
+    // 待审批：按 createTime 倒序分页
+    const pendingRes = await dbUtil.db.collection('points_records')
+      .where({ status: 'pending' })
+      .orderBy('createTime', 'desc').skip(pendingSkip).limit(pageSize).get();
+    const enriched = (await Promise.all(pendingRes.data.map(async (r) => this.enrichRecord(r)))).filter(Boolean);
+    const newPending = reset ? enriched : [...this.data.pendingList, ...enriched];
+    const hasMorePending = pendingRes.data.length >= pageSize;
+    // 已审核：仅首次加载最近20条
+    let newReviewed = this.data.reviewedList;
+    let hasMoreReviewed = this.data.hasMoreReviewed;
+    if (reset) {
+      const reviewedRes = await dbUtil.db.collection('points_records')
+        .where({ status: dbUtil._.neq('pending') })
+        .orderBy('createTime', 'desc').limit(pageSize).get();
+      const enrichedReviewed = (await Promise.all(reviewedRes.data.map(async (r) => this.enrichRecord(r)))).filter(Boolean);
+      newReviewed = enrichedReviewed;
+      hasMoreReviewed = reviewedRes.data.length >= pageSize;
+    }
+    this.setData({
+      pendingList: newPending, reviewedList: newReviewed,
+      pendingSkip: pendingSkip + pageSize,
+      hasMorePending, hasMoreReviewed,
+    });
+  },
+
+  async loadMorePending() {
+    await this.loadPending(false);
+  },
+
+  async loadMoreReviewed() {
+    const pageSize = 20;
+    const skip = this.data.reviewedSkip + this.data.reviewedList.length;
     const reviewedRes = await dbUtil.db.collection('points_records')
       .where({ status: dbUtil._.neq('pending') })
-      .orderBy('createTime', 'desc').limit(20).get();
+      .orderBy('createTime', 'desc').skip(skip).limit(pageSize).get();
     const enrichedReviewed = (await Promise.all(reviewedRes.data.map(async (r) => this.enrichRecord(r)))).filter(Boolean);
-    this.setData({ pendingList: enriched, reviewedList: enrichedReviewed });
+    this.setData({
+      reviewedList: [...this.data.reviewedList, ...enrichedReviewed],
+      hasMoreReviewed: reviewedRes.data.length >= pageSize,
+    });
   },
 
   async enrichRecord(r) {
@@ -121,7 +161,7 @@ Page({
       });
     }
     wx.showToast({ title: '已通过', icon: 'success' });
-    this.loadPending();
+    this.loadPending(true);
   },
 
   async onReject(e) {
@@ -139,7 +179,7 @@ Page({
           data: { status: 'rejected', rejectReason: reason, reviewerId: reviewer?._id, reviewTime: new Date() }
         });
         wx.showToast({ title: '已驳回', icon: 'success' });
-        this.loadPending();
+        this.loadPending(true);
       }
     });
   },

@@ -40,3 +40,8 @@
 .rule-cat { font-size: 28rpx; font-weight: 600; }
 .rule-detail { font-size: 26rpx; color: #1aad19; }
 .rule-desc { font-size: 24rpx; color: #999; margin-top: 6rpx; display: block; }
+
+.withdraw-btn {
+  font-size: 22rpx; color: #ff4d4f; padding: 4rpx 12rpx;
+  border: 1rpx solid #ff4d4f; border-radius: 6rpx; margin-top: 8rpx; display: inline-block;
+}

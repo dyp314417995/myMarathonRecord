@@ -27,6 +27,9 @@
 
   <!-- 审批 -->
   <block wx:if="{{tab === 'review'}}">
+    <view wx:if="{{pendingList.length === 0 && reviewedList.length === 0}}" class="empty-state">
+      <text>暂无审批记录</text>
+    </view>
     <block wx:for="{{pendingList}}" wx:key="_id">
       <view class="card review-card">
         <view class="req-header">
@@ -46,6 +49,9 @@
         </view>
       </view>
     </block>
+    <view wx:if="{{hasMorePending}}" class="load-more" bindtap="loadMorePending">
+      <text>查看更多待审批</text>
+    </view>
     <!-- 已审核 -->
     <view wx:if="{{reviewedList.length > 0}}" class="section-title" style="padding:24rpx 24rpx 8rpx;">已审核</view>
     <block wx:for="{{reviewedList}}" wx:key="_id">
@@ -64,6 +70,9 @@
         </view>
       </view>
     </block>
+    <view wx:if="{{hasMoreReviewed}}" class="load-more" bindtap="loadMoreReviewed">
+      <text>查看更多已审核</text>
+    </view>
   </block>
 
   <!-- 录入/扣减 -->

@@ -11,6 +11,7 @@
 .cat-desc { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
 
 .count-tip { margin-top: 16rpx; font-size: 26rpx; color: #ff9800; }
+.limit-tip { margin-top: 8rpx; font-size: 26rpx; color: #ff4d4f; font-weight: 600; }
 
 .img-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .img-item {

@@ -16,7 +16,7 @@ async function initDefaultRules() {
     { category: '拉新', name: '邀请跑友加入', points: 3, monthlyLimit: null, status: 'active' },
     { category: '团服参赛', name: '穿团服参加赛事', points: 5, monthlyLimit: null, status: 'active' },
     { category: '自媒体', name: '带话题并@九州战马联盟', points: 3, monthlyLimit: 4, status: 'active' },
-    { category: '天天跑完赛', name: '天天跑完赛', points: 10, monthlyLimit: null, status: 'active' },
+    { category: '天天跑完赛', name: '必迈天天跑完成10次打卡', points: 10, monthlyLimit: null, status: 'active' },
     { category: '集体活动', name: '集体活动', points: 3, monthlyLimit: null, status: 'active' },
   ];
   const count = await db.collection('points_rules').count();
@@ -103,6 +103,13 @@ async function reviewRecord(recordId, status, reviewerId) {
   }
 }
 
+/** 撤回积分申请（仅 pending 状态可撤） */
+async function withdrawRecord(recordId) {
+  return await db.collection('points_records').doc(recordId).update({
+    data: { status: 'withdrawn', reviewTime: new Date() },
+  });
+}
+
 /** 获取待审批的积分申请 */
 async function getPendingRecords() {
   return await db.collection('points_records').where({ status: 'pending' })
@@ -136,6 +143,6 @@ async function expireOverduePoints() {
 module.exports = {
   getRules, initDefaultRules, updateRule,
   getBalance, getExpiringSoon, getRecords, addRecord,
-  getMonthlyCount, reviewRecord, getPendingRecords,
+  getMonthlyCount, reviewRecord, getPendingRecords, withdrawRecord,
   expireOverduePoints,
 };

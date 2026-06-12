@@ -62,6 +62,24 @@ Page({
     this.setData({ showRules: !this.data.showRules });
   },
 
+  async onWithdraw(e) {
+    const id = e.currentTarget.dataset.id;
+    const r = this.data.records.find(x => x._id === id);
+    wx.showModal({
+      title: '撤回申请',
+      content: `确定撤回"${r ? r.category : ''}"的积分申请？`,
+      confirmText: '撤回',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        await pointsUtil.withdrawRecord(id);
+        wx.showToast({ title: '已撤回', icon: 'success' });
+        this.loadRecords();
+        this.loadBalance();
+      },
+    });
+  },
+
   onApply() {
     wx.navigateTo({ url: '/pages/points/apply' });
   },

@@ -20,7 +20,13 @@
       <view class="info-row"><text class="info-label">半马PB</text><text class="info-value">{{userInfo.pbHalf || '-'}}</text></view>
       <view class="info-row"><text class="info-label">全马PB</text><text class="info-value">{{userInfo.pbFull || '-'}}</text></view>
       <view class="info-row"><text class="info-label">积分</text><text class="info-value" style="color:#ff6b00;font-weight:600;">{{userInfo.points || 0}} 分</text></view>
-      <view class="info-row"><text class="info-label">所属群</text><text class="info-value">{{groupNames}}</text></view>
+      <view class="info-row info-row-col">
+        <text class="info-label">所属群</text>
+        <view class="info-value">
+          <text wx:for="{{groupNames}}" wx:key="*this" class="group-name-line">{{item}}</text>
+          <text wx:if="{{groupNames.length === 0}}" style="color:#999;">未加入</text>
+        </view>
+      </view>
       <view class="info-row"><text class="info-label">状态</text>
         <text class="tag tag-green" wx:if="{{userInfo.status === 'approved'}}">已通过</text>
         <text class="tag tag-orange" wx:elif="{{userInfo.status === 'pending'}}">待审批</text>
@@ -88,8 +94,8 @@
     <!-- 选择群组（可多选） -->
     <view class="card">
       <text class="card-title">选择所属群（可多选）</text>
-      <view class="group-options">
-        <view wx:for="{{groups}}" wx:key="_id" class="group-option {{selectedGroupMap[item._id] ? 'active' : ''}}" data-id="{{item._id}}" bindtap="onToggleGroup">
+      <view class="group-options group-options-col">
+        <view wx:for="{{groups}}" wx:key="_id" class="group-option group-option-line {{selectedGroupMap[item._id] ? 'active' : ''}}" data-id="{{item._id}}" bindtap="onToggleGroup">
           <text>{{selectedGroupMap[item._id] ? '☑' : '☐'}} {{item.name}}</text>
         </view>
       </view>

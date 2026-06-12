@@ -11,8 +11,12 @@
       </view>
     </view>
     <!-- 本月次数 -->
-    <view wx:if="{{selectedCat && monthlyLimit}}" class="count-tip">
-      <text>本月已提交 {{monthlyCount}}/{{monthlyLimit}} 次</text>
+    <view wx:if="{{selectedCat && monthlyCount > 0}}" class="count-tip">
+      <text wx:if="{{monthlyLimit}}">本月已提交 {{monthlyCount}}/{{monthlyLimit}} 次</text>
+      <text wx:else>本月已提交 {{monthlyCount}} 次</text>
+    </view>
+    <view wx:if="{{selectedCat && monthlyCount >= monthlyLimit && monthlyLimit > 0}}" class="limit-tip">
+      <text>本月已达上限，无法提交</text>
     </view>
   </view>
 

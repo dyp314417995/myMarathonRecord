@@ -351,7 +351,7 @@ module.exports = [
     { name: '商洛市', children: [ { name: '商州区' } ] },
   ]},
   { name: '甘肃省', children: [
-    { name: '兰州市', children: [ { name: '城关区' }, { name: '七里河区' }, { name: '安宁区' } ] },
+    { name: '兰州市', children: [ { name: '城关区' }, { name: '七里河区' }, { name: '安宁区' }, { name: '红古区' }, { name: '兰州新区' }, { name: '永登县' }, { name: '皋兰县' }, { name: '榆中县' } ] },
     { name: '嘉峪关市' },
     { name: '金昌市', children: [ { name: '金川区' } ] },
     { name: '白银市', children: [ { name: '白银区' } ] },

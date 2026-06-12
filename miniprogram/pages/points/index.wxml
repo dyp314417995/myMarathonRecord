@@ -55,6 +55,8 @@
           <text class="tag tag-green" wx:elif="{{item.status === 'approved'}}">已通过</text>
           <text class="tag tag-red" wx:elif="{{item.status === 'rejected'}}">已拒绝</text>
           <text class="tag tag-orange" wx:elif="{{item.status === 'expired'}}">已过期</text>
+          <text class="tag tag-gray" wx:elif="{{item.status === 'withdrawn'}}">已撤回</text>
+          <text wx:if="{{item.status === 'pending'}}" class="withdraw-btn" data-id="{{item._id}}" catchtap="onWithdraw">撤回</text>
         </view>
       </view>
     </view>

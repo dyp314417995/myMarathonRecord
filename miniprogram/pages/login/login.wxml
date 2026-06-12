@@ -65,9 +65,9 @@
   <!-- 选择所属群（可多选） -->
   <view class="card">
     <text class="card-title">选择所属群（可多选）</text>
-    <view class="group-options">
+    <view class="group-options group-options-col">
       <view wx:for="{{groups}}" wx:key="_id"
-            class="group-option {{selectedGroupMap[item._id] ? 'active' : ''}}"
+            class="group-option group-option-line {{selectedGroupMap[item._id] ? 'active' : ''}}"
             data-id="{{item._id}}" bindtap="onToggleGroup">
         <text class="group-check">{{selectedGroupMap[item._id] ? '☑' : '☐'}} {{item.name}}</text>
         <text wx:if="{{item.qrCodeUrl}}" class="qr-icon" data-url="{{item.qrCodeUrl}}" catchtap="onPreviewQR">📱扫码</text>

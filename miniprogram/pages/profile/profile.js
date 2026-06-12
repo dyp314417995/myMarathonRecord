@@ -39,11 +39,11 @@ Page({
 
     const gRes = await dbUtil.getGroups();
     const ids = userInfo.groupIds;
-    const names = ids.map(id => {
+    const nameList = ids.map(id => {
       const g = gRes.data.find(item => item._id === id);
       return g ? g.name : '';
-    }).filter(Boolean).join('、') || '未加入';
-    this.setData({ userInfo, groups: gRes.data, groupNames: names, selectedGroupIds: [...ids], selectedGroupMap: this.buildMap(ids) });
+    }).filter(Boolean);
+    this.setData({ userInfo, groups: gRes.data, groupNames: nameList, selectedGroupIds: [...ids], selectedGroupMap: this.buildMap(ids) });
   },
 
   buildMap(ids) {
@@ -62,11 +62,11 @@ Page({
   onCancel() {
     const userInfo = wx.getStorageSync('userInfo');
     const ids = userInfo.groupIds || [];
-    const names = ids.map(id => {
+    const nameList = ids.map(id => {
       const g = this.data.groups.find(item => item._id === id);
       return g ? g.name : '';
-    }).filter(Boolean).join('、') || '未加入';
-    this.setData({ editing: false, userInfo, selectedGroupIds: ids, selectedGroupMap: this.buildMap(ids), groupNames: names });
+    }).filter(Boolean);
+    this.setData({ editing: false, userInfo, selectedGroupIds: ids, selectedGroupMap: this.buildMap(ids), groupNames: nameList });
   },
 
   onChooseAvatar(e) {
@@ -152,11 +152,11 @@ Page({
       }
       wx.setStorageSync('userInfo', updatedUser);
       // 重新计算群名
-      const names = selectedGroupIds.map(id => {
+      const nameList = selectedGroupIds.map(id => {
         const g = this.data.groups.find(item => item._id === id);
         return g ? g.name : '';
-      }).filter(Boolean).join('、') || '未加入';
-      this.setData({ userInfo: updatedUser, editing: false, groupNames: names, selectedGroupIds: [...selectedGroupIds], selectedGroupMap: this.buildMap(selectedGroupIds) });
+      }).filter(Boolean);
+      this.setData({ userInfo: updatedUser, editing: false, groupNames: nameList, selectedGroupIds: [...selectedGroupIds], selectedGroupMap: this.buildMap(selectedGroupIds) });
       wx.hideLoading();
       wx.showToast({ title: '保存成功', icon: 'success' });
     } catch (err) {
