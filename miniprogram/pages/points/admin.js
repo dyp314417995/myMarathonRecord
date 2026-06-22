@@ -129,7 +129,7 @@ Page({
           imgUrls = (urlRes.result || []).filter(f => f.tempFileURL).map(f => f.tempFileURL);
         } catch {}
       }
-      return { ...r, userName: u.data.nickName || '未知', imgUrls, fmtTime: this.fmtDate(r.createTime), fmtId: r._id.slice(-8) };
+      return { ...r, userName: u.data.nickName || '未知', imgUrls, fmtTime: this.fmtDate(r.createTime), fmtId: r._id.slice(-8), fmtPoints: r.points > 0 ? `+${r.points}` : `${Math.abs(r.points)}` };
     } catch { return null; }
   },
 

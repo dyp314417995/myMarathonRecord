@@ -36,7 +36,7 @@
           <text class="req-name">{{item.userName}}</text>
           <text class="tag tag-orange">待审批</text>
         </view>
-        <text class="req-cat">{{item.category}} +{{item.points}}分</text>
+        <text class="req-cat">{{item.category}} {{item.fmtPoints}}分</text>
         <text class="req-desc">{{item.description || '无说明'}}</text>
         <text class="req-id">单号 {{item.fmtId}}</text>
         <text class="req-time">{{item.fmtTime}}</text>
@@ -61,7 +61,7 @@
           <text class="tag tag-green" wx:if="{{item.status === 'approved'}}">已通过</text>
           <text class="tag tag-red" wx:else>已拒绝</text>
         </view>
-        <text class="req-cat">{{item.category}} +{{item.points}}分</text>
+        <text class="req-cat">{{item.category}} {{item.fmtPoints}}分</text>
         <text class="req-desc">{{item.description || '无说明'}}</text>
         <text class="req-id">单号 {{item.fmtId}}</text>
         <text class="req-time">{{item.fmtTime}}</text>
