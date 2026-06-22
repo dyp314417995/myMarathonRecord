@@ -20,7 +20,7 @@ module.exports = [
     { name: '衡水市', children: [ { name: '桃城区' }, { name: '冀州区' } ] },
   ]},
   { name: '山西省', children: [
-    { name: '太原市', children: [ { name: '小店区' }, { name: '迎泽区' }, { name: '杏花岭区' } ] },
+    { name: '太原市', children: [ { name: '小店区' }, { name: '迎泽区' }, { name: '杏花岭区' }, { name: '尖草坪区' }, { name: '万柏林区' }, { name: '晋源区' } ] },
     { name: '大同市', children: [ { name: '平城区' }, { name: '云冈区' } ] },
     { name: '阳泉市', children: [ { name: '城区' }, { name: '矿区' } ] },
     { name: '长治市', children: [ { name: '潞州区' } ] },
@@ -47,8 +47,8 @@ module.exports = [
     { name: '阿拉善盟', children: [ { name: '阿拉善左旗' } ] },
   ]},
   { name: '辽宁省', children: [
-    { name: '沈阳市', children: [ { name: '和平区' }, { name: '沈河区' }, { name: '皇姑区' }, { name: '铁西区' } ] },
-    { name: '大连市', children: [ { name: '中山区' }, { name: '西岗区' }, { name: '沙河口区' }, { name: '甘井子区' } ] },
+    { name: '沈阳市', children: [ { name: '和平区' }, { name: '沈河区' }, { name: '皇姑区' }, { name: '铁西区' }, { name: '大东区' }, { name: '浑南区' }, { name: '于洪区' }, { name: '沈北新区' } ] },
+    { name: '大连市', children: [ { name: '中山区' }, { name: '西岗区' }, { name: '沙河口区' }, { name: '甘井子区' }, { name: '旅顺口区' }, { name: '金州区' } ] },
     { name: '鞍山市', children: [ { name: '铁东区' }, { name: '铁西区' } ] },
     { name: '抚顺市', children: [ { name: '新抚区' }, { name: '顺城区' } ] },
     { name: '本溪市', children: [ { name: '平山区' } ] },
@@ -63,7 +63,7 @@ module.exports = [
     { name: '葫芦岛市', children: [ { name: '连山区' } ] },
   ]},
   { name: '吉林省', children: [
-    { name: '长春市', children: [ { name: '南关区' }, { name: '朝阳区' }, { name: '绿园区' } ] },
+    { name: '长春市', children: [ { name: '南关区' }, { name: '朝阳区' }, { name: '绿园区' }, { name: '宽城区' }, { name: '二道区' } ] },
     { name: '吉林市', children: [ { name: '船营区' }, { name: '昌邑区' } ] },
     { name: '四平市', children: [ { name: '铁西区' } ] },
     { name: '辽源市', children: [ { name: '龙山区' } ] },
@@ -74,7 +74,7 @@ module.exports = [
     { name: '延边州', children: [ { name: '延吉市' } ] },
   ]},
   { name: '黑龙江省', children: [
-    { name: '哈尔滨市', children: [ { name: '道里区' }, { name: '南岗区' }, { name: '松北区' } ] },
+    { name: '哈尔滨市', children: [ { name: '道里区' }, { name: '南岗区' }, { name: '松北区' }, { name: '道外区' }, { name: '香坊区' }, { name: '平房区' }, { name: '呼兰区' } ] },
     { name: '齐齐哈尔市', children: [ { name: '龙沙区' }, { name: '建华区' } ] },
     { name: '鸡西市', children: [ { name: '鸡冠区' } ] },
     { name: '鹤岗市', children: [ { name: '向阳区' } ] },
@@ -89,7 +89,7 @@ module.exports = [
     { name: '大兴安岭', children: [ { name: '加格达奇区' } ] },
   ]},
   { name: '江苏省', children: [
-    { name: '南京市', children: [ { name: '玄武区' }, { name: '秦淮区' }, { name: '鼓楼区' }, { name: '建邺区' }, { name: '江宁区' } ] },
+    { name: '南京市', children: [ { name: '玄武区' }, { name: '秦淮区' }, { name: '鼓楼区' }, { name: '建邺区' }, { name: '江宁区' }, { name: '栖霞区' }, { name: '浦口区' }, { name: '雨花台区' } ] },
     { name: '无锡市', children: [ { name: '梁溪区' }, { name: '滨湖区' } ] },
     { name: '徐州市', children: [ { name: '云龙区' }, { name: '泉山区' } ] },
     { name: '常州市', children: [ { name: '天宁区' }, { name: '新北区' } ] },
@@ -104,7 +104,7 @@ module.exports = [
     { name: '宿迁市', children: [ { name: '宿城区' } ] },
   ]},
   { name: '浙江省', children: [
-    { name: '杭州市', children: [ { name: '上城区' }, { name: '拱墅区' }, { name: '西湖区' }, { name: '滨江区' }, { name: '萧山区' } ] },
+    { name: '杭州市', children: [ { name: '上城区' }, { name: '拱墅区' }, { name: '西湖区' }, { name: '滨江区' }, { name: '萧山区' }, { name: '余杭区' }, { name: '临平区' }, { name: '钱塘区' } ] },
     { name: '宁波市', children: [ { name: '海曙区' }, { name: '鄞州区' }, { name: '江北区' } ] },
     { name: '温州市', children: [ { name: '鹿城区' }, { name: '龙湾区' } ] },
     { name: '嘉兴市', children: [ { name: '南湖区' } ] },
@@ -117,7 +117,7 @@ module.exports = [
     { name: '丽水市', children: [ { name: '莲都区' } ] },
   ]},
   { name: '安徽省', children: [
-    { name: '合肥市', children: [ { name: '蜀山区' }, { name: '包河区' }, { name: '庐阳区' } ] },
+    { name: '合肥市', children: [ { name: '蜀山区' }, { name: '包河区' }, { name: '庐阳区' }, { name: '瑶海区' } ] },
     { name: '芜湖市', children: [ { name: '镜湖区' }, { name: '鸠江区' } ] },
     { name: '蚌埠市', children: [ { name: '蚌山区' } ] },
     { name: '淮南市', children: [ { name: '田家庵区' } ] },
@@ -135,8 +135,8 @@ module.exports = [
     { name: '宣城市', children: [ { name: '宣州区' } ] },
   ]},
   { name: '福建省', children: [
-    { name: '福州市', children: [ { name: '鼓楼区' }, { name: '台江区' }, { name: '仓山区' } ] },
-    { name: '厦门市', children: [ { name: '思明区' }, { name: '湖里区' }, { name: '集美区' } ] },
+    { name: '福州市', children: [ { name: '鼓楼区' }, { name: '台江区' }, { name: '仓山区' }, { name: '晋安区' }, { name: '马尾区' } ] },
+    { name: '厦门市', children: [ { name: '思明区' }, { name: '湖里区' }, { name: '集美区' }, { name: '海沧区' }, { name: '同安区' }, { name: '翔安区' } ] },
     { name: '莆田市', children: [ { name: '城厢区' } ] },
     { name: '三明市', children: [ { name: '三元区' } ] },
     { name: '泉州市', children: [ { name: '丰泽区' }, { name: '鲤城区' } ] },
@@ -146,7 +146,7 @@ module.exports = [
     { name: '宁德市', children: [ { name: '蕉城区' } ] },
   ]},
   { name: '江西省', children: [
-    { name: '南昌市', children: [ { name: '东湖区' }, { name: '西湖区' }, { name: '青山湖区' } ] },
+    { name: '南昌市', children: [ { name: '东湖区' }, { name: '西湖区' }, { name: '青山湖区' }, { name: '青云谱区' }, { name: '新建区' } ] },
     { name: '景德镇市', children: [ { name: '珠山区' } ] },
     { name: '萍乡市', children: [ { name: '安源区' } ] },
     { name: '九江市', children: [ { name: '浔阳区' }, { name: '濂溪区' } ] },
@@ -159,8 +159,8 @@ module.exports = [
     { name: '上饶市', children: [ { name: '信州区' } ] },
   ]},
   { name: '山东省', children: [
-    { name: '济南市', children: [ { name: '历下区' }, { name: '市中区' }, { name: '槐荫区' } ] },
-    { name: '青岛市', children: [ { name: '市南区' }, { name: '市北区' }, { name: '崂山区' } ] },
+    { name: '济南市', children: [ { name: '历下区' }, { name: '市中区' }, { name: '槐荫区' }, { name: '天桥区' }, { name: '历城区' }, { name: '章丘区' } ] },
+    { name: '青岛市', children: [ { name: '市南区' }, { name: '市北区' }, { name: '崂山区' }, { name: '黄岛区' }, { name: '城阳区' }, { name: '即墨区' }, { name: '李沧区' } ] },
     { name: '淄博市', children: [ { name: '张店区' } ] },
     { name: '枣庄市', children: [ { name: '薛城区' } ] },
     { name: '东营市', children: [ { name: '东营区' } ] },
@@ -177,7 +177,7 @@ module.exports = [
     { name: '菏泽市', children: [ { name: '牡丹区' } ] },
   ]},
   { name: '河南省', children: [
-    { name: '郑州市', children: [ { name: '中原区' }, { name: '金水区' }, { name: '二七区' } ] },
+    { name: '郑州市', children: [ { name: '中原区' }, { name: '金水区' }, { name: '二七区' }, { name: '管城回族区' }, { name: '惠济区' } ] },
     { name: '开封市', children: [ { name: '龙亭区' }, { name: '鼓楼区' } ] },
     { name: '洛阳市', children: [ { name: '洛龙区' }, { name: '西工区' } ] },
     { name: '平顶山市', children: [ { name: '新华区' } ] },
@@ -217,7 +217,7 @@ module.exports = [
     { name: '神农架林区' },
   ]},
   { name: '湖南省', children: [
-    { name: '长沙市', children: [ { name: '芙蓉区' }, { name: '天心区' }, { name: '岳麓区' }, { name: '开福区' } ] },
+    { name: '长沙市', children: [ { name: '芙蓉区' }, { name: '天心区' }, { name: '岳麓区' }, { name: '开福区' }, { name: '雨花区' }, { name: '望城区' } ] },
     { name: '株洲市', children: [ { name: '天元区' }, { name: '芦淞区' } ] },
     { name: '湘潭市', children: [ { name: '岳塘区' } ] },
     { name: '衡阳市', children: [ { name: '蒸湘区' } ] },
@@ -233,9 +233,9 @@ module.exports = [
     { name: '湘西州', children: [ { name: '吉首市' } ] },
   ]},
   { name: '广东省', children: [
-    { name: '广州市', children: [ { name: '越秀区' }, { name: '天河区' }, { name: '海珠区' }, { name: '白云区' }, { name: '番禺区' } ] },
+    { name: '广州市', children: [ { name: '越秀区' }, { name: '天河区' }, { name: '海珠区' }, { name: '白云区' }, { name: '番禺区' }, { name: '荔湾区' }, { name: '黄埔区' }, { name: '花都区' }, { name: '南沙区' } ] },
     { name: '韶关市', children: [ { name: '浈江区' } ] },
-    { name: '深圳市', children: [ { name: '福田区' }, { name: '南山区' }, { name: '罗湖区' }, { name: '宝安区' }, { name: '龙岗区' } ] },
+    { name: '深圳市', children: [ { name: '福田区' }, { name: '南山区' }, { name: '罗湖区' }, { name: '宝安区' }, { name: '龙岗区' }, { name: '龙华区' }, { name: '坪山区' }, { name: '光明区' } ] },
     { name: '珠海市', children: [ { name: '香洲区' }, { name: '金湾区' } ] },
     { name: '汕头市', children: [ { name: '金平区' }, { name: '龙湖区' } ] },
     { name: '佛山市', children: [ { name: '禅城区' }, { name: '南海区' }, { name: '顺德区' } ] },
@@ -256,7 +256,7 @@ module.exports = [
     { name: '云浮市', children: [ { name: '云城区' } ] },
   ]},
   { name: '广西', children: [
-    { name: '南宁市', children: [ { name: '青秀区' }, { name: '兴宁区' }, { name: '西乡塘区' } ] },
+    { name: '南宁市', children: [ { name: '青秀区' }, { name: '兴宁区' }, { name: '西乡塘区' }, { name: '江南区' }, { name: '良庆区' }, { name: '邕宁区' } ] },
     { name: '柳州市', children: [ { name: '城中区' }, { name: '鱼峰区' } ] },
     { name: '桂林市', children: [ { name: '秀峰区' }, { name: '象山区' } ] },
     { name: '梧州市', children: [ { name: '万秀区' } ] },
@@ -278,7 +278,7 @@ module.exports = [
     { name: '儋州市' },
   ]},
   { name: '四川省', children: [
-    { name: '成都市', children: [ { name: '锦江区' }, { name: '青羊区' }, { name: '金牛区' }, { name: '武侯区' }, { name: '成华区' } ] },
+    { name: '成都市', children: [ { name: '锦江区' }, { name: '青羊区' }, { name: '金牛区' }, { name: '武侯区' }, { name: '成华区' }, { name: '高新区' }, { name: '天府新区' }, { name: '龙泉驿区' }, { name: '双流区' }, { name: '温江区' }, { name: '郫都区' }, { name: '新都区' } ] },
     { name: '自贡市', children: [ { name: '自流井区' } ] },
     { name: '攀枝花市', children: [ { name: '东区' } ] },
     { name: '泸州市', children: [ { name: '江阳区' } ] },
@@ -301,7 +301,7 @@ module.exports = [
     { name: '凉山州', children: [ { name: '西昌市' } ] },
   ]},
   { name: '贵州省', children: [
-    { name: '贵阳市', children: [ { name: '南明区' }, { name: '云岩区' }, { name: '观山湖区' } ] },
+    { name: '贵阳市', children: [ { name: '南明区' }, { name: '云岩区' }, { name: '观山湖区' }, { name: '花溪区' }, { name: '白云区' }, { name: '乌当区' } ] },
     { name: '六盘水市', children: [ { name: '钟山区' } ] },
     { name: '遵义市', children: [ { name: '红花岗区' }, { name: '汇川区' } ] },
     { name: '安顺市', children: [ { name: '西秀区' } ] },
@@ -312,7 +312,7 @@ module.exports = [
     { name: '黔南州', children: [ { name: '都匀市' } ] },
   ]},
   { name: '云南省', children: [
-    { name: '昆明市', children: [ { name: '五华区' }, { name: '盘龙区' }, { name: '官渡区' }, { name: '西山区' } ] },
+    { name: '昆明市', children: [ { name: '五华区' }, { name: '盘龙区' }, { name: '官渡区' }, { name: '西山区' }, { name: '呈贡区' } ] },
     { name: '曲靖市', children: [ { name: '麒麟区' } ] },
     { name: '玉溪市', children: [ { name: '红塔区' } ] },
     { name: '保山市', children: [ { name: '隆阳区' } ] },
@@ -339,7 +339,7 @@ module.exports = [
     { name: '阿里地区', children: [ { name: '噶尔县' } ] },
   ]},
   { name: '陕西省', children: [
-    { name: '西安市', children: [ { name: '新城区' }, { name: '碑林区' }, { name: '莲湖区' }, { name: '雁塔区' }, { name: '未央区' } ] },
+    { name: '西安市', children: [ { name: '新城区' }, { name: '碑林区' }, { name: '莲湖区' }, { name: '雁塔区' }, { name: '未央区' }, { name: '灞桥区' }, { name: '长安区' }, { name: '临潼区' } ] },
     { name: '铜川市', children: [ { name: '耀州区' } ] },
     { name: '宝鸡市', children: [ { name: '渭滨区' } ] },
     { name: '咸阳市', children: [ { name: '秦都区' } ] },
