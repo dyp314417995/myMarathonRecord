@@ -34,17 +34,39 @@ Page({
     const res = await raceUtil.getList();
     this.setData({ raceList: res.data.map(r => ({
       ...r, fmtDate: this.fmtDate(r.date),
-      countdown: this.calcCountdown(r.date, r.status),
+      countdown: this.calcCountdown(r.date, r.status, r.timeline),
     })) });
   },
 
-  calcCountdown(d, status) {
-    if (!d) return '';
+  calcCountdown(d, status, timeline) {
     const today = new Date(); today.setHours(0,0,0,0);
-    const diff = Math.ceil((new Date(d) - today) / 86400000);
-    if (diff > 0) return `距开赛 ${diff} 天`;
-    if (diff === 0) return '今天开赛';
-    return `已举办 ${Math.abs(diff)} 天`;
+
+    // 找最近一个未过期的 timeline 节点
+    let nearestLabel = '';
+    let nearestDiff = Infinity;
+    if (timeline && timeline.length) {
+      timeline.forEach(t => {
+        if (!t.date) return;
+        const diff = Math.ceil((new Date(t.date) - today) / 86400000);
+        if (diff >= 0 && diff < nearestDiff) {
+          nearestDiff = diff;
+          nearestLabel = t.label;
+        }
+      });
+    }
+
+    // 没有 timeline，用比赛日期
+    if (!nearestLabel && d) {
+      const diff = Math.ceil((new Date(d) - today) / 86400000);
+      if (diff > 0) return `距开赛 ${diff} 天`;
+      if (diff === 0) return '今天开赛';
+      return `已举办 ${Math.abs(diff)} 天`;
+    }
+
+    if (nearestLabel && nearestDiff > 0) return `距${nearestLabel} ${nearestDiff} 天`;
+    if (nearestLabel && nearestDiff === 0) return `今天是${nearestLabel}`;
+    if (d) return `已举办 ${Math.abs(Math.ceil((new Date(d) - today) / 86400000))} 天`;
+    return '';
   },
 
   fmtDate(d) {

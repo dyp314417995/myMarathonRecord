@@ -53,7 +53,7 @@ Page({
         event: {
           ...event,
           fmtDate: this.fmtDate(event.date),
-          countdown: this.calcCountdown(event.date),
+          countdown: this.calcCountdown(event.date, event.timeline),
           raceTypeName: event.raceType === 'full' ? '全程马拉松' : event.raceType === 'half' ? '半程马拉松' : event.raceType === '10k' ? '10公里' : '越野跑',
         },
         reviewStats: stats,
@@ -71,8 +71,19 @@ Page({
     return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   },
 
-  calcCountdown(d) {
+  calcCountdown(d, timeline) {
     const today = new Date(); today.setHours(0,0,0,0);
+    let nearestLabel = ''; let nearestDiff = Infinity;
+    if (timeline && timeline.length) {
+      timeline.forEach(t => {
+        if (!t.date) return;
+        const diff = Math.ceil((new Date(t.date) - today) / 86400000);
+        if (diff >= 0 && diff < nearestDiff) { nearestDiff = diff; nearestLabel = t.label; }
+      });
+    }
+    if (nearestLabel && nearestDiff > 0) return `距${nearestLabel} ${nearestDiff} 天`;
+    if (nearestLabel && nearestDiff === 0) return `今天是${nearestLabel}`;
+    if (!d) return '';
     const diff = Math.ceil((new Date(d) - today) / 86400000);
     if (diff > 0) return `距开赛 ${diff} 天`;
     if (diff === 0) return '今天开赛';

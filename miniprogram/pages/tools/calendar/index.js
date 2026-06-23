@@ -77,7 +77,7 @@ Page({
 
       races = races.map(r => ({
         ...r,
-        countdown: this.calcCountdown(r.date),
+        countdown: this.calcCountdown(r.date, r.timeline),
         isMine: !!this.data.myMarkers[r._id],
         myStatus: this.data.myMarkers[r._id] || '',
         avgScore: reviewMap[r._id] ? reviewMap[r._id].avgScore : (r.avgScore || 0),
@@ -93,10 +93,28 @@ Page({
     }
   },
 
-  calcCountdown(dateStr) {
+  calcCountdown(dateStr, timeline) {
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    // 找最近未过期的 timeline 节点
+    let nearestLabel = '';
+    let nearestDiff = Infinity;
+    if (timeline && timeline.length) {
+      timeline.forEach(t => {
+        if (!t.date) return;
+        const diff = Math.ceil((new Date(t.date) - today) / 86400000);
+        if (diff >= 0 && diff < nearestDiff) {
+          nearestDiff = diff;
+          nearestLabel = t.label;
+        }
+      });
+    }
+
+    if (nearestLabel && nearestDiff > 0) return `距${nearestLabel} ${nearestDiff} 天`;
+    if (nearestLabel && nearestDiff === 0) return `今天是${nearestLabel}`;
+
     if (!dateStr) return '';
     const d = new Date(dateStr);
-    const today = new Date(); today.setHours(0,0,0,0);
     const diff = Math.ceil((d - today) / 86400000);
     if (diff > 0) return `距开赛 ${diff} 天`;
     if (diff === 0) return '今天开赛';
