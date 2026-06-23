@@ -7,6 +7,7 @@ Page({
     isSuperAdmin: false,
     isAdmin: false,
     tab: 'rules',
+    reviewSub: 'pending',    // pending | done
     rules: [],
     pendingList: [],
     reviewedList: [],
@@ -47,9 +48,14 @@ Page({
   onTabChange(e) {
     this.setData({ tab: e.currentTarget.dataset.tab });
     if (e.currentTarget.dataset.tab === 'review') {
+      this.setData({ reviewSub: 'pending' });
       this.loadPending(true);
       this.loadReviews(true);
     }
+  },
+
+  onReviewSub(e) {
+    this.setData({ reviewSub: e.currentTarget.dataset.v });
   },
 
   onGoApply() {
