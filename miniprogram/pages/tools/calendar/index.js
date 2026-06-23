@@ -3,11 +3,12 @@ const raceUtil = require('../../../utils/raceEvents');
 
 Page({
   data: {
-    tab: 'all',           // all | mine
+    tab: 'all',           // all | mine | review
     races: [],
     allRaces: [],
     allTags: [],           // 所有可用标签
     myMarkers: {},         // eventId -> markerStatus
+    myReviewIds: {},       // eventId -> true (用户评价过的赛事)
     sortBy: 'date',        // date | score | difficulty | atmosphere | supply | transport | scenery | org | medal | value
     sortAsc: false,
     tagFilter: '',
@@ -65,6 +66,13 @@ Page({
         const mMap = {};
         mkRes.data.forEach(m => { mMap[m.eventId] = m.status; });
         this.setData({ myMarkers: mMap });
+
+        // 加载用户评价过的赛事
+        const db = require('../../../utils/db').db;
+        const rvRes = await db.collection('race_reviews').where({ userId }).get();
+        const rvMap = {};
+        rvRes.data.forEach(r => { rvMap[r.eventId] = true; });
+        this.setData({ myReviewIds: rvMap });
       }
 
       races = races.map(r => ({
@@ -100,6 +108,9 @@ Page({
     // Tab
     if (this.data.tab === 'mine') {
       races = races.filter(r => r.isMine);
+    }
+    if (this.data.tab === 'review') {
+      races = races.filter(r => this.data.myReviewIds[r._id]);
     }
     // 搜索
     if (this.data.searchKey) {

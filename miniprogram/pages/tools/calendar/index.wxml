@@ -3,7 +3,8 @@
   <!-- Tab 切换 -->
   <view class="tabs">
     <view class="tab {{tab === 'all' ? 'active' : ''}}" data-t="all" bindtap="onTab">所有赛事</view>
-    <view class="tab {{tab === 'mine' ? 'active' : ''}}" data-t="mine" bindtap="onTab">我的赛事({{races.length}})</view>
+    <view class="tab {{tab === 'mine' ? 'active' : ''}}" data-t="mine" bindtap="onTab">我的赛事</view>
+    <view class="tab {{tab === 'review' ? 'active' : ''}}" data-t="review" bindtap="onTab">我的评价</view>
   </view>
 
   <!-- 搜索 + 日期筛选 -->
@@ -44,7 +45,8 @@
   <!-- 赛事列表 -->
   <view wx:if="{{races.length === 0}}" class="empty-state">
     <text wx:if="{{tab === 'all'}}">暂无赛事</text>
-    <text wx:else>你还没有标记任何赛事</text>
+    <text wx:elif="{{tab === 'mine'}}">你还没有标记任何赛事</text>
+    <text wx:else>你还没有评价任何赛事</text>
   </view>
   <scroll-view scroll-y class="race-list" wx:else>
     <view class="card race-item" wx:for="{{races}}" wx:key="_id" bindtap="onRaceDetail" data-id="{{item._id}}">
@@ -52,6 +54,7 @@
         <view class="race-name-row">
           <text class="race-name">{{item.name}}</text>
           <text class="tag tag-green" wx:if="{{item.isMine}}">我的</text>
+          <text class="tag tag-blue" wx:if="{{myReviewIds[item._id]}}">已评价</text>
         </view>
         <text class="countdown">{{item.countdown}}</text>
       </view>
