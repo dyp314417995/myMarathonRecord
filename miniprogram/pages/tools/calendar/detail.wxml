@@ -53,9 +53,42 @@
     </view>
   </view>
 
+  <!-- 我的评价 -->
+  <view class="card" wx:if="{{myReview}}">
+    <view class="section-title"><text>📝 我的评价</text></view>
+    <view class="my-review">
+      <text class="my-scores">综合 {{myReview.scores ? '' : ''}}</text>
+      <view class="my-dim-list">
+        <text class="my-dim" wx:for="{{['difficulty','atmosphere','supply','transport','scenery','org','medal','value']}}" wx:key="*this" wx:for-item="k">
+          {{k}} {{myReview.scores[k]}}
+        </text>
+      </view>
+      <view wx:if="{{myReview.tags && myReview.tags.length}}" class="req-tags">
+        <text class="race-tag" wx:for="{{myReview.tags}}" wx:key="*this">{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 管理员：所有评价管理 -->
+  <view class="card" wx:if="{{isAdmin}}">
+    <view class="section-title"><text>🛡 管理评价</text><text class="admin-load" bindtap="onLoadAllReviews">加载</text></view>
+    <view wx:if="{{allReviews.length === 0}}" class="empty-tight"><text>点击加载查看所有评价</text></view>
+    <view class="review-item" wx:for="{{allReviews}}" wx:key="_id">
+      <view class="review-user">
+        <text class="reviewer-name">{{item.userName}}</text>
+        <text class="review-time">{{item.fmtTime}}</text>
+      </view>
+      <text class="review-scores">{{item.fmtScores}}</text>
+      <view wx:if="{{item.tags && item.tags.length}}" class="req-tags">
+        <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <text class="del-review-btn" data-id="{{item._id}}" catchtap="onDelReview">🗑 删除</text>
+    </view>
+  </view>
+
   <!-- 操作按钮 -->
   <view class="btn-area">
-    <button class="btn-primary" bindtap="onReview">⭐ 参与评分</button>
+    <button class="btn-primary" bindtap="onReview">{{myReview ? '✏️ 修改评价' : '⭐ 参与评分'}}</button>
     <button class="btn-outline" bindtap="onMark">{{isMine ? '修改标记(' + (myStatus === 'finished' ? '已完赛' : myStatus === 'planned' ? '计划报名' : myStatus === 'registered' ? '已报名' : myStatus === 'won' ? '已中签' : myStatus === 'dnf' ? '未完赛' : '弃赛') + ')' : '标记我的赛事'}}</button>
   </view>
 </view>

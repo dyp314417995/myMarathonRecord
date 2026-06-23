@@ -1,5 +1,6 @@
 .review-page { padding-bottom: 40rpx; }
 .page-title { font-size: 32rpx; font-weight: 700; display: block; }
+.edit-badge { font-size: 24rpx; color: #ff9800; font-weight: 400; }
 .event-name { font-size: 26rpx; color: #666; margin-top: 8rpx; display: block; }
 
 .dim-header { margin-bottom: 8rpx; }

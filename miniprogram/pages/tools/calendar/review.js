@@ -11,6 +11,8 @@ Page({
     equipment: '',
     selectedTags: [],
     submitting: false,
+    existingId: '',     // 已有评价ID，用于修改
+    isEdit: false,      // 是否修改模式
   },
 
   dims: [
@@ -30,9 +32,28 @@ Page({
     '性价比高', '推荐参赛', '不推荐', '组织混乱',
   ],
 
-  onLoad(options) {
+  async onLoad(options) {
     if (!options.id) return;
     this.setData({ eventId: options.id, eventName: options.name || '' });
+
+    // 检查是否已有评价
+    const userInfo = wx.getStorageSync('userInfo');
+    if (userInfo) {
+      const db = require('../../../utils/db').db;
+      const exist = await db.collection('race_reviews').where({
+        eventId: options.id, userId: userInfo._id
+      }).get();
+      if (exist.data.length > 0) {
+        const r = exist.data[0];
+        this.setData({
+          isEdit: true, existingId: r._id,
+          scores: r.scores || this.data.scores,
+          elevation: r.elevation || '',
+          equipment: r.equipment || '',
+          selectedTags: r.tags || [],
+        });
+      }
+    }
   },
 
   onScoreTap(e) {
@@ -62,36 +83,39 @@ Page({
 
     try {
       const db = require('../../../utils/db').db;
+      const updateData = {
+        scores: this.data.scores,
+        elevation: this.data.elevation.trim(),
+        equipment: this.data.equipment.trim(),
+        tags: this.data.selectedTags,
+      };
 
-      // 创建评分记录（直接生效）
-      const reviewRes = await db.collection('race_reviews').add({
-        data: {
-          eventId: this.data.eventId,
+      if (this.data.isEdit) {
+        // 修改已有评价
+        await db.collection('race_reviews').doc(this.data.existingId).update({
+          data: { ...updateData, updateTime: new Date() }
+        });
+      } else {
+        // 首次评价
+        await db.collection('race_reviews').add({
+          data: { ...updateData, eventId: this.data.eventId, userId: userInfo._id, status: 'approved', createTime: new Date() }
+        });
+
+        // 首次评价发放 10 积分
+        await pointsUtil.addRecord({
           userId: userInfo._id,
-          scores: this.data.scores,
-          elevation: this.data.elevation.trim(),
-          equipment: this.data.equipment.trim(),
-          tags: this.data.selectedTags,
+          type: 'earn',
+          category: '赛事评分奖励',
+          points: 10,
+          description: `赛事"${this.data.eventName}"体验评分奖励`,
+          images: [],
+          earnDate: new Date(),
+          expireDate: new Date(Date.now() + 365 * 86400000),
           status: 'approved',
-          createTime: new Date(),
-        }
-      });
-
-      // 自动发放 10 积分
-      await pointsUtil.addRecord({
-        userId: userInfo._id,
-        type: 'earn',
-        category: '赛事评分奖励',
-        points: 10,
-        description: `赛事"${this.data.eventName}"体验评分奖励`,
-        images: [],
-        earnDate: new Date(),
-        expireDate: new Date(Date.now() + 365 * 86400000),
-        status: 'approved',
-      });
+        });
+      }
 
       // 更新赛事评分统计
-      const raceUtil = require('../../../utils/raceEvents');
       const stats = await raceUtil.getReviewStats(this.data.eventId);
       const tagStats = {};
       Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
@@ -100,7 +124,7 @@ Page({
       });
 
       wx.hideLoading();
-      wx.showToast({ title: '提交成功，+10积分', icon: 'success' });
+      wx.showToast({ title: this.data.isEdit ? '已更新' : '提交成功，+10积分', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();

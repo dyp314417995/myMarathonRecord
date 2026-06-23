@@ -1,7 +1,7 @@
 <!-- pages/tools/calendar/review.wxml -->
 <view class="review-page">
   <view class="card">
-    <text class="page-title">赛事体验评分</text>
+    <text class="page-title">赛事体验评分<text wx:if="{{isEdit}}" class="edit-badge">（修改）</text></text>
     <text class="event-name">{{eventName}}</text>
   </view>
 
@@ -33,6 +33,6 @@
   </view>
 
   <view class="btn-area">
-    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">提交评分</button>
+    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{isEdit ? '修改评价' : '提交评分'}}</button>
   </view>
 </view>
