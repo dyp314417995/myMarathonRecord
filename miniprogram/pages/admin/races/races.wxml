@@ -65,7 +65,6 @@
       <view class="btn-row">
         <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
         <text class="opt-btn {{form.mechanism === '先到先得' ? 'on' : ''}}" data-v="先到先得" bindtap="onFormMechanism">先到先得</text>
-        <text class="opt-btn {{form.mechanism === '成绩直通' ? 'on' : ''}}" data-v="成绩直通" bindtap="onFormMechanism">成绩直通</text>
       </view>
       <text class="form-label">赛事标牌</text>
       <view class="btn-row wrap" style="flex-wrap:wrap;">
