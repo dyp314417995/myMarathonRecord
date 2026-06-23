@@ -6,7 +6,7 @@
     <view class="card race-card" wx:for="{{raceList}}" wx:key="_id">
       <view class="race-info">
         <text class="race-name">{{item.name}}</text>
-        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}} · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · ' + item.scale : ''}}</text>
+        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}}<text wx:if="{{item.raceType !== 'trail'}}"> · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}</text>{{item.scale ? ' · ' + item.scale : ''}}</text>
         <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">即将举办</text>
         <text class="tag tag-gray" wx:else>已举办</text>
       </view>
@@ -43,19 +43,21 @@
         <text class="opt-btn {{form.raceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
         <text class="opt-btn {{form.raceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onFormType">越野</text>
       </view>
-      <text class="form-label">赛事等级</text>
-      <view class="btn-row">
-        <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
-        <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
-        <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
-      </view>
-      <text class="form-label">赛事标牌</text>
-      <view class="btn-row">
-        <text class="opt-btn {{form.label === '白金标' ? 'on' : ''}}" data-v="白金标" bindtap="onFormLabel">白金标</text>
-        <text class="opt-btn {{form.label === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onFormLabel">金标</text>
-        <text class="opt-btn {{form.label === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onFormLabel">精英标</text>
-        <text class="opt-btn {{form.label === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onFormLabel">普通标</text>
-      </view>
+      <block wx:if="{{form.raceType !== 'trail'}}">
+        <text class="form-label">赛事等级</text>
+        <view class="btn-row">
+          <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
+          <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
+          <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
+        </view>
+        <text class="form-label">赛事标牌</text>
+        <view class="btn-row">
+          <text class="opt-btn {{form.label === '白金标' ? 'on' : ''}}" data-v="白金标" bindtap="onFormLabel">白金标</text>
+          <text class="opt-btn {{form.label === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onFormLabel">金标</text>
+          <text class="opt-btn {{form.label === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onFormLabel">精英标</text>
+          <text class="opt-btn {{form.label === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onFormLabel">普通标</text>
+        </view>
+      </block>
       <block wx:if="{{form.raceType === 'trail'}}">
         <text class="form-label">赛事认证</text>
         <view class="btn-row">

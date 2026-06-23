@@ -7,7 +7,7 @@
       <text class="countdown">{{event.countdown}}</text>
     </view>
     <view class="meta-row">
-      <text>{{event.city || '未知'}} · {{event.raceTypeName}} · {{event.raceLevel}}级</text>
+      <text>{{event.city || '未知'}} · {{event.raceTypeName}}<text wx:if="{{event.raceType !== 'trail'}}"> · {{event.raceLevel}}级</text></text>
     </view>
     <view wx:if="{{event.distance}}" class="meta-row">
       <text>距离 {{event.distance}}km<text wx:if="{{event.elevation}}"> · 爬升 {{event.elevation}}m</text></text>
