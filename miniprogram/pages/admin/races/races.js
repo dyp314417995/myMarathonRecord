@@ -23,7 +23,19 @@ Page({
 
   async loadRaces() {
     const res = await raceUtil.getList();
-    this.setData({ raceList: res.data.map(r => ({ ...r, fmtDate: this.fmtDate(r.date) })) });
+    this.setData({ raceList: res.data.map(r => ({
+      ...r, fmtDate: this.fmtDate(r.date),
+      countdown: this.calcCountdown(r.date, r.status),
+    })) });
+  },
+
+  calcCountdown(d, status) {
+    if (!d) return '';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.ceil((new Date(d) - today) / 86400000);
+    if (diff > 0) return `距开赛 ${diff} 天`;
+    if (diff === 0) return '今天开赛';
+    return `已举办 ${Math.abs(diff)} 天`;
   },
 
   fmtDate(d) {

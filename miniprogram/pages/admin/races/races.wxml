@@ -7,8 +7,8 @@
       <view class="race-info">
         <text class="race-name">{{item.name}}</text>
         <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}}<text wx:if="{{item.raceType !== 'trail'}}"> · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}</text>{{item.scale ? ' · ' + item.scale : ''}}</text>
-        <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">即将举办</text>
-        <text class="tag tag-gray" wx:else>已举办</text>
+        <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
+        <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
       </view>
       <view class="race-actions">
         <text class="act" data-id="{{item._id}}" bindtap="onEdit">✏️</text>
