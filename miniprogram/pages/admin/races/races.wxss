@@ -9,10 +9,11 @@
 .act.del { color: #ff4d4f; }
 
 .form-label { font-size: 26rpx; color: #666; display: block; margin-top: 20rpx; }
-.btn-row { display: flex; gap: 12rpx; margin-top: 8rpx; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
 .opt-btn {
   padding: 12rpx 24rpx; border-radius: 8rpx; background: #f7f7f7;
   font-size: 26rpx; color: #666; border: 2rpx solid #f7f7f7;
+  flex-shrink: 0;
 }
 .opt-btn.on { background: #e8f5e9; border-color: #1aad19; color: #1aad19; font-weight: 600; }
 

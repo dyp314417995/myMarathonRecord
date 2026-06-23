@@ -7,11 +7,11 @@ Page({
     raceList: [],
     showForm: false,
     editingId: '',
-    form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '' },
+    form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通', poster: '' },
     posterTemp: '',  // 临时海报路径
   },
 
-  labels: ['白金标', '金标', '精英标', '普通标'],
+  labels: ['白金', '金标', '精英', '普通'],
   mechanisms: ['抽签', '先到先得'],
 
   onShow() {
@@ -44,7 +44,7 @@ Page({
     if (!r) return;
     this.setData({
       showForm: true, editingId: r._id, posterTemp: r.posterUrl || '',
-      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceType: r.raceType||'full', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', poster: r.poster||'' }
+      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceType: r.raceType||'full', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', mechanism: r.mechanism||'抽签', label: r.label||'普通', poster: r.poster||'' }
     });
   },
 
