@@ -1,0 +1,9 @@
+{
+  "name": "updateRaceStatus",
+  "version": "1.0.0",
+  "description": "每天凌晨自动更新赛事状态",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

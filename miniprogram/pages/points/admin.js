@@ -14,6 +14,10 @@ Page({
     reviewedSkip: 0,
     hasMorePending: false,
     hasMoreReviewed: false,
+    // 评分审批
+    reviewList: [],
+    reviewSkip: 0,
+    hasMoreReviews: false,
     users: [],
     selectedUserIds: {},
     selectedUserNames: {},
@@ -37,12 +41,13 @@ Page({
       isAdmin: userInfo.role === 'super_admin' || userInfo.role === 'admin',
     });
     await pointsUtil.initDefaultRules();
-    await Promise.all([this.loadRules(), this.loadPending(true), this.loadUsers()]);
+    await Promise.all([this.loadRules(), this.loadPending(true), this.loadUsers(), this.loadReviews(true)]);
   },
 
   onTabChange(e) {
     this.setData({ tab: e.currentTarget.dataset.tab });
     if (e.currentTarget.dataset.tab === 'review') this.loadPending(true);
+    if (e.currentTarget.dataset.tab === 'score-review') this.loadReviews(true);
   },
 
   onGoApply() {
@@ -316,4 +321,124 @@ Page({
     imgs.splice(idx, 1);
     this.setData({ deductImages: imgs });
   },
+
+  // ========== 评分审批 ==========
+  async loadReviews(reset) {
+    const pageSize = 20;
+    if (reset) this.setData({ reviewSkip: 0, reviewList: [], hasMoreReviews: false });
+    const skip = this.data.reviewSkip;
+    const res = await dbUtil.db.collection('race_reviews')
+      .orderBy('createTime', 'desc').skip(skip).limit(pageSize).get();
+
+    const enriched = [];
+    for (const r of res.data) {
+      try {
+        const u = await dbUtil.db.collection('users').doc(r.userId).get();
+        const event = await dbUtil.db.collection('race_events').doc(r.eventId).get();
+        enriched.push({
+          ...r,
+          userName: u.data ? (u.data.nickName || '未知') : '已删除',
+          eventName: event.data ? event.data.name : '未知赛事',
+          fmtTime: this.fmtDate(r.createTime),
+          fmtScores: this.fmtScores(r.scores),
+        });
+      } catch {}
+    }
+
+    const newList = reset ? enriched : [...this.data.reviewList, ...enriched];
+    this.setData({
+      reviewList: newList,
+      reviewSkip: skip + pageSize,
+      hasMoreReviews: res.data.length >= pageSize,
+    });
+  },
+
+  fmtScores(s) {
+    if (!s) return '';
+    const labels = { difficulty: '难度', atmosphere: '氛围', supply: '补给', transport: '交通', scenery: '风景', org: '组织', medal: '奖牌', value: '性价比' };
+    return Object.keys(s).map(k => `${labels[k]||k}${s[k]}`).join(' ');
+  },
+
+  async onApproveReview(e) {
+    const { id } = e.currentTarget.dataset;
+    const reviewer = wx.getStorageSync('userInfo');
+
+    // 获取评分记录
+    const reviewRes = await dbUtil.db.collection('race_reviews').doc(id).get();
+    const review = reviewRes.data;
+    if (!review) return;
+
+    // 更新评分状态
+    await dbUtil.db.collection('race_reviews').doc(id).update({
+      data: { status: 'approved', reviewerId: reviewer?._id, reviewTime: new Date() }
+    });
+
+    // 发放积分奖励
+    const pointsRes = await dbUtil.db.collection('points_records').where({
+      userId: review.userId,
+      category: '赛事评分奖励',
+      reviewRefId: id,
+      status: 'pending',
+    }).get();
+
+    if (pointsRes.data.length > 0) {
+      await dbUtil.db.collection('points_records').doc(pointsRes.data[0]._id).update({
+        data: { status: 'approved', reviewerId: reviewer?._id, reviewTime: new Date() }
+      });
+      await dbUtil.db.collection('users').doc(review.userId).update({
+        data: { points: dbUtil._.inc(10) }
+      });
+    }
+
+    // 更新赛事评分统计
+    await this.updateEventStats(review.eventId);
+
+    wx.showToast({ title: '已通过，积分已发放', icon: 'success' });
+    this.loadReviews(true);
+  },
+
+  async updateEventStats(eventId) {
+    const raceUtil = require('../../utils/raceEvents');
+    const stats = await raceUtil.getReviewStats(eventId);
+    const tagStats = {};
+    Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
+
+    await dbUtil.db.collection('race_events').doc(eventId).update({
+      data: {
+        avgScore: stats.avgScore,
+        reviewCount: stats.count,
+        tagStats,
+      }
+    });
+  },
+
+  async onRejectReview(e) {
+    const { id } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '驳回原因',
+      editable: true,
+      placeholderText: '填写驳回原因',
+      confirmText: '驳回',
+      success: async (res) => {
+        if (!res.confirm) return;
+        const reason = res.content || '';
+        const reviewer = wx.getStorageSync('userInfo');
+
+        // 驳回评分
+        await dbUtil.db.collection('race_reviews').doc(id).update({
+          data: { status: 'rejected', rejectReason: reason, reviewerId: reviewer?._id, reviewTime: new Date() }
+        });
+
+        // 驳回积分
+        await dbUtil.db.collection('points_records').where({
+          reviewRefId: id, category: '赛事评分奖励', status: 'pending',
+        }).update({ data: { status: 'rejected', reviewerId: reviewer?._id } });
+
+        wx.showToast({ title: '已驳回', icon: 'success' });
+        this.loadReviews(true);
+      }
+    });
+  },
+
+  onLoadMoreReviews() { this.loadReviews(false); },
 });

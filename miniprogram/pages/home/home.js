@@ -133,4 +133,10 @@ Page({
   onRecords() {
     wx.navigateTo({ url: '/pages/records/index' });
   },
+  onManageRaces() {
+    wx.navigateTo({ url: '/pages/admin/races/races' });
+  },
+  onCalendar() {
+    wx.navigateTo({ url: '/pages/tools/calendar/index' });
+  },
 });

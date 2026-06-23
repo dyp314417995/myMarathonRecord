@@ -1,0 +1,38 @@
+<!-- pages/tools/calendar/review.wxml -->
+<view class="review-page">
+  <view class="card">
+    <text class="page-title">赛事体验评分</text>
+    <text class="event-name">{{eventName}}</text>
+  </view>
+
+  <!-- 评分维度 -->
+  <view class="card" wx:for="{{dims}}" wx:key="key" wx:for-item="dim">
+    <view class="dim-header">
+      <text class="dim-title">{{dim.name}}</text>
+      <text class="dim-desc">{{dim.desc}}</text>
+    </view>
+    <view class="score-bar">
+      <text class="star {{scores[dim.key] >= n ? 'on' : ''}}" wx:for="{{[1,2,3,4,5,6,7,8,9,10]}}" wx:key="*this" wx:for-item="n" data-dim="{{dim.key}}" data-val="{{n}}" bindtap="onScoreTap">{{n}}</text>
+    </view>
+  </view>
+
+  <!-- 额外信息 -->
+  <view class="card">
+    <text class="form-label">爬升(m)（选填）</text>
+    <input class="form-input" type="number" placeholder="赛事实际爬升" value="{{elevation}}" bindinput="onElevInput" />
+    <text class="form-label">使用装备（选填）</text>
+    <input class="form-input" placeholder="如：Nike Vaporfly、Garmin 955" value="{{equipment}}" bindinput="onEquipInput" />
+  </view>
+
+  <!-- 标签选择 -->
+  <view class="card">
+    <text class="form-label">选择标签（多选）</text>
+    <view class="tag-grid">
+      <text class="tag-chip {{selectedTags.indexOf(item) >= 0 ? 'on' : ''}}" wx:for="{{allTags}}" wx:key="*this" data-tag="{{item}}" bindtap="onTagTap">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="btn-area">
+    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">提交评分</button>
+  </view>
+</view>

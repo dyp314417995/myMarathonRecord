@@ -47,6 +47,10 @@
         <text class="menu-icon">⭐</text>
         <text class="menu-text">积分管理</text>
       </view>
+      <view class="menu-item card" bindtap="onManageRaces">
+        <text class="menu-icon">🏁</text>
+        <text class="menu-text">赛事管理</text>
+      </view>
     </view>
 
     <view class="section-title">我的</view>
@@ -81,6 +85,10 @@
       <view class="menu-item card" bindtap="onPointsAdmin">
         <text class="menu-icon">⭐</text>
         <text class="menu-text">积分管理</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageRaces">
+        <text class="menu-icon">🏁</text>
+        <text class="menu-text">赛事管理</text>
       </view>
     </view>
 
@@ -131,7 +139,7 @@
   <!-- ========== 小工具 ========== -->
   <view class="section-title">小工具</view>
   <view class="menu-grid col2">
-    <view class="menu-item card disabled">
+    <view class="menu-item card" bindtap="onCalendar">
       <text class="menu-icon">📅</text>
       <text class="menu-text">赛事日历</text>
     </view>

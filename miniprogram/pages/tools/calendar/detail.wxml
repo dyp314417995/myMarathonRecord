@@ -1,0 +1,61 @@
+<!-- pages/tools/calendar/detail.wxml -->
+<view class="detail-page">
+  <!-- 基本信息 -->
+  <view class="card">
+    <view class="header-row">
+      <text class="event-name">{{event.name}}</text>
+      <text class="countdown">{{event.countdown}}</text>
+    </view>
+    <view class="meta-row">
+      <text>{{event.city || '未知'}} · {{event.raceTypeName}} · {{event.raceLevel}}级</text>
+    </view>
+    <view wx:if="{{event.distance}}" class="meta-row">
+      <text>距离 {{event.distance}}km<text wx:if="{{event.elevation}}"> · 爬升 {{event.elevation}}m</text></text>
+    </view>
+    <view wx:if="{{event.website}}" class="link-row" bindtap="onWebsite">
+      <text>📎 官网链接（点击复制）</text>
+    </view>
+  </view>
+
+  <!-- 评分概览 -->
+  <view class="card" wx:if="{{reviewStats && reviewStats.count > 0}}">
+    <view class="section-title" bindtap="onScoreDetail">
+      <text>赛事评分</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="score-overview">
+      <view class="overall-score">
+        <text class="score-num">{{reviewStats.avgScore}}</text>
+        <text class="score-label">综合评分</text>
+        <text class="score-count">{{reviewStats.count}}人参与</text>
+      </view>
+      <view class="dim-scores">
+        <view class="dim-row" wx:for="{{reviewStats.dimensions}}" wx:key="name">
+          <text class="dim-name">{{''}}</text>
+          <view class="dim-bar-wrap"><view class="dim-bar" style="width:{{item*10}}%"></view></view>
+          <text class="dim-val">{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view class="card" wx:else>
+    <text class="no-score">暂无评分</text>
+  </view>
+
+  <!-- 热门标签 -->
+  <view class="card" wx:if="{{topTags.length > 0}}">
+    <view class="section-title"><text>🏷 热门标签</text></view>
+    <view class="tag-list">
+      <view class="tag-item" wx:for="{{topTags}}" wx:key="0" wx:for-item="t">
+        <text class="tag-name">{{t[0]}}</text>
+        <text class="tag-count">×{{t[1]}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="btn-area">
+    <button class="btn-primary" bindtap="onReview">⭐ 参与评分</button>
+    <button class="btn-outline" bindtap="onMark">{{isMine ? '修改标记(' + (myStatus === 'finished' ? '已完赛' : myStatus === 'planned' ? '计划报名' : myStatus === 'registered' ? '已报名' : myStatus === 'won' ? '已中签' : myStatus === 'dnf' ? '未完赛' : '弃赛') + ')' : '标记我的赛事'}}</button>
+  </view>
+</view>

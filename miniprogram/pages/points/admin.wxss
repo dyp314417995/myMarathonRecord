@@ -45,3 +45,15 @@
 .img-add { display: flex; align-items: center; justify-content: center; font-size: 48rpx; color: #ccc; border: 2rpx dashed #eee; }
 
 .load-more { text-align: center; padding: 24rpx; font-size: 26rpx; color: #1aad19; }
+
+.req-tags { display: flex; flex-wrap: wrap; gap: 6rpx; margin-top: 4rpx; }
+.race-tag { font-size: 20rpx; color: #1aad19; background: #e8f5e9; padding: 2rpx 10rpx; border-radius: 6rpx; }
+
+/* 赛事管理 */
+.race-card { padding: 20rpx 28rpx; margin: 8rpx 12rpx; display: flex; justify-content: space-between; align-items: center; }
+.race-info { flex: 1; }
+.race-name { font-size: 28rpx; font-weight: 600; display: block; }
+.race-meta { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }
+.race-actions { display: flex; gap: 16rpx; }
+.act { font-size: 32rpx; padding: 8rpx; }
+.act.del { color: #ff4d4f; }

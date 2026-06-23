@@ -1,0 +1,32 @@
+/* pages/admin/races/races.wxss */
+.races-page { padding-bottom: 40rpx; }
+.race-card { padding: 20rpx 28rpx; margin: 8rpx 12rpx; display: flex; justify-content: space-between; align-items: center; }
+.race-info { flex: 1; }
+.race-name { font-size: 28rpx; font-weight: 600; display: block; }
+.race-meta { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }
+.race-actions { display: flex; gap: 16rpx; }
+.act { font-size: 32rpx; padding: 8rpx; }
+.act.del { color: #ff4d4f; }
+
+.form-label { font-size: 26rpx; color: #666; display: block; margin-top: 20rpx; }
+.btn-row { display: flex; gap: 12rpx; margin-top: 8rpx; }
+.opt-btn {
+  padding: 12rpx 24rpx; border-radius: 8rpx; background: #f7f7f7;
+  font-size: 26rpx; color: #666; border: 2rpx solid #f7f7f7;
+}
+.opt-btn.on { background: #e8f5e9; border-color: #1aad19; color: #1aad19; font-weight: 600; }
+
+.modal-mask { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:100; }
+.modal-box { position: fixed; top: 10%; left: 32rpx; right: 32rpx; bottom: 10%; background: #fff; border-radius: 20rpx; padding: 32rpx; z-index:101; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; font-size: 32rpx; font-weight: 600; margin-bottom: 16rpx; }
+.modal-close { font-size: 36rpx; color: #999; padding: 8rpx; }
+.modal-actions { display: flex; gap: 16rpx; }
+.modal-actions .btn-primary { flex: 1; }
+.modal-actions .btn-outline { flex: 1; }
+
+.form-input { background: #f7f7f7; border-radius: 12rpx; padding: 20rpx; font-size: 28rpx; margin-top: 8rpx; }
+.date-input { display: flex; align-items: center; }
+.placeholder { color: #bbb; }
+
+.empty-state { padding: 80rpx 0; text-align: center; font-size: 28rpx; color: #bbb; }
+.btn-area { padding: 24rpx; }

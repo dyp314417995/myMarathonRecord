@@ -1,0 +1,18 @@
+.review-list-page { padding-bottom: 40rpx; }
+.page-title { font-size: 30rpx; font-weight: 700; display: block; }
+.page-sub { font-size: 26rpx; color: #ff9800; margin-top: 8rpx; display: block; }
+
+.section-title { font-size: 28rpx; font-weight: 600; margin-bottom: 16rpx; }
+
+.dim-row { display: flex; align-items: center; gap: 12rpx; margin-bottom: 12rpx; }
+.dim-label { font-size: 24rpx; color: #666; width: 110rpx; flex-shrink: 0; text-align: right; }
+.dim-bar-wrap { flex: 1; height: 16rpx; background: #f0f0f0; border-radius: 8rpx; overflow: hidden; }
+.dim-bar { height: 100%; background: linear-gradient(90deg, #1aad19, #8bc34a); border-radius: 8rpx; transition: width 0.3s; }
+.dim-val { font-size: 24rpx; color: #1aad19; font-weight: 600; width: 48rpx; }
+
+.tag-row { display: flex; align-items: center; gap: 10rpx; margin-bottom: 10rpx; }
+.tag-rank { font-size: 24rpx; color: #1aad19; font-weight: 600; width: 36rpx; }
+.tag-name { font-size: 24rpx; color: #333; width: 120rpx; flex-shrink: 0; }
+.tag-bar-wrap { flex: 1; height: 14rpx; background: #f0f0f0; border-radius: 7rpx; overflow: hidden; }
+.tag-bar { height: 100%; background: linear-gradient(90deg, #1a73e8, #64b5f6); border-radius: 7rpx; }
+.tag-count { font-size: 22rpx; color: #999; width: 48rpx; text-align: right; }

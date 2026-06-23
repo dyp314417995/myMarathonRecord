@@ -24,6 +24,7 @@ Page({
     const userRules = res.data.filter(r => {
       if (r.status !== 'active') return false;
       if (r.category === '集体活动') return false;
+      if (r.category === '赛事评分奖励') return false;
       return true;
     });
     this.setData({ rules: userRules });

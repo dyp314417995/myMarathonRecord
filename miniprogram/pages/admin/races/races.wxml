@@ -1,0 +1,66 @@
+<!-- pages/admin/races/races.wxml -->
+<view class="races-page">
+  <view wx:if="{{!isAdmin}}" class="empty-state"><text>仅管理员可操作</text></view>
+  <view wx:else>
+    <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
+    <view class="card race-card" wx:for="{{raceList}}" wx:key="_id">
+      <view class="race-info">
+        <text class="race-name">{{item.name}}</text>
+        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}} · {{item.raceLevel}}级</text>
+        <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">即将举办</text>
+        <text class="tag tag-gray" wx:else>已举办</text>
+      </view>
+      <view class="race-actions">
+        <text class="act" data-id="{{item._id}}" bindtap="onEdit">✏️</text>
+        <text class="act del" data-id="{{item._id}}" bindtap="onDel">🗑</text>
+      </view>
+    </view>
+    <view class="btn-area" style="padding:24rpx;">
+      <button class="btn-primary" bindtap="onAdd">+ 添加赛事</button>
+    </view>
+
+    <!-- 赛事表单弹窗 -->
+    <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>
+    <view class="modal-box" wx:if="{{showForm}}">
+      <view class="modal-header">
+        <text>{{editingId ? '编辑' : '添加'}}赛事</text>
+        <text class="modal-close" bindtap="onHideForm">✕</text>
+      </view>
+      <text class="form-label">赛事名称 *</text>
+      <input class="form-input" placeholder="如：北京马拉松" value="{{form.name}}" data-k="name" bindinput="onInput" />
+      <text class="form-label">举办日期 *</text>
+      <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
+        <view class="form-input date-input"><text class="{{form.date ? '' : 'placeholder'}}">{{form.date || '选择日期'}}</text></view>
+      </picker>
+      <text class="form-label">省份</text>
+      <input class="form-input" placeholder="如：北京市" value="{{form.province}}" data-k="province" bindinput="onInput" />
+      <text class="form-label">城市</text>
+      <input class="form-input" placeholder="如：北京" value="{{form.city}}" data-k="city" bindinput="onInput" />
+      <text class="form-label">赛事类型</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.raceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
+        <text class="opt-btn {{form.raceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
+        <text class="opt-btn {{form.raceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
+        <text class="opt-btn {{form.raceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onFormType">越野</text>
+      </view>
+      <text class="form-label">赛事等级</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
+        <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
+        <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
+      </view>
+      <block wx:if="{{form.raceType === 'trail'}}">
+        <text class="form-label">距离(km)</text>
+        <input class="form-input" type="digit" placeholder="如：50" value="{{form.distance}}" data-k="distance" bindinput="onInput" />
+        <text class="form-label">爬升(m)</text>
+        <input class="form-input" type="number" placeholder="如：2500" value="{{form.elevation}}" data-k="elevation" bindinput="onInput" />
+      </block>
+      <text class="form-label">官网链接</text>
+      <input class="form-input" placeholder="https://" value="{{form.website}}" data-k="website" bindinput="onInput" />
+      <view class="modal-actions" style="margin-top:24rpx;">
+        <button class="btn-outline" bindtap="onHideForm">取消</button>
+        <button class="btn-primary" bindtap="onSave">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

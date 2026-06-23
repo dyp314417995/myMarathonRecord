@@ -1,0 +1,110 @@
+<!-- pages/tools/calendar/index.wxml -->
+<view class="calendar-page">
+  <!-- Tab 切换 -->
+  <view class="tabs">
+    <view class="tab {{tab === 'all' ? 'active' : ''}}" data-t="all" bindtap="onTab">所有赛事</view>
+    <view class="tab {{tab === 'mine' ? 'active' : ''}}" data-t="mine" bindtap="onTab">我的赛事({{races.length}})</view>
+  </view>
+
+  <!-- 搜索 + 日期筛选 -->
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜索赛事名称/城市" value="{{searchKey}}" bindinput="onSearch" />
+    <text class="date-toggle" bindtap="onToggleDate">📅</text>
+  </view>
+  <view class="date-picker" wx:if="{{showDatePicker}}">
+    <text class="form-label">开始日期</text>
+    <picker mode="date" value="{{dateFrom}}" bindchange="onDateFrom">
+      <view class="date-input">{{dateFrom || '选择'}}</view>
+    </picker>
+    <text class="form-label">结束日期</text>
+    <picker mode="date" value="{{dateTo}}" bindchange="onDateTo">
+      <view class="date-input">{{dateTo || '选择'}}</view>
+    </picker>
+    <button class="btn-primary btn-sm" bindtap="onApplyDate" style="margin-top:12rpx;">查询</button>
+  </view>
+
+  <!-- 标签筛选 -->
+  <view class="tag-bar" wx:if="{{allTags.length > 0}}">
+    <text class="tag-chip {{tagFilter === '' ? 'on' : ''}}" data-tag="" bindtap="onTagFilter">全部</text>
+    <text class="tag-chip {{tagFilter === item ? 'on' : ''}}" wx:for="{{allTags}}" wx:key="*this" data-tag="{{item}}" bindtap="onTagFilter">{{item}}</text>
+  </view>
+
+  <!-- 排序 -->
+  <view class="sort-bar">
+    <scroll-view scroll-x class="sort-scroll">
+      <text class="sort-item {{sortBy === 'date' ? 'on' : ''}}" data-v="date" bindtap="onSort">日期{{sortAsc?'↑':'↓'}}</text>
+      <text class="sort-item {{sortBy === 'score' ? 'on' : ''}}" data-v="score" bindtap="onSort">综合评分</text>
+      <text class="sort-item {{sortBy === 'difficulty' ? 'on' : ''}}" data-v="difficulty" bindtap="onSort">赛道难度</text>
+      <text class="sort-item {{sortBy === 'atmosphere' ? 'on' : ''}}" data-v="atmosphere" bindtap="onSort">赛道氛围</text>
+      <text class="sort-item {{sortBy === 'supply' ? 'on' : ''}}" data-v="supply" bindtap="onSort">补给</text>
+      <text class="sort-item {{sortBy === 'transport' ? 'on' : ''}}" data-v="transport" bindtap="onSort">交通</text>
+    </scroll-view>
+  </view>
+
+  <!-- 赛事列表 -->
+  <view wx:if="{{races.length === 0}}" class="empty-state">
+    <text wx:if="{{tab === 'all'}}">暂无赛事</text>
+    <text wx:else>你还没有标记任何赛事</text>
+  </view>
+  <scroll-view scroll-y class="race-list" wx:else>
+    <view class="card race-item" wx:for="{{races}}" wx:key="_id" bindtap="onRaceDetail" data-id="{{item._id}}">
+      <view class="race-top">
+        <view class="race-name-row">
+          <text class="race-name">{{item.name}}</text>
+          <text class="tag tag-green" wx:if="{{item.isMine}}">我的</text>
+        </view>
+        <text class="countdown">{{item.countdown}}</text>
+      </view>
+      <view class="race-meta">
+        <text>{{item.city || '待定'}}</text>
+        <text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>
+        <text> · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}}</text>
+      </view>
+      <view wx:if="{{item.avgScore}}" class="race-score">
+        <text>⭐ {{item.avgScore}} ({{item.reviewCount}}人评)</text>
+      </view>
+      <view class="race-tags" wx:if="{{item.tags && item.tags.length > 0}}">
+        <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="race-bottom">
+        <text class="my-status" wx:if="{{item.myStatus}}">
+          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
+        </text>
+        <text class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
+          {{item.isMine ? '修改状态' : '标记我的赛事'}}
+        </text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 标记弹窗 -->
+  <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>
+  <view class="modal-box" wx:if="{{showForm}}">
+    <view class="modal-header">
+      <text>标记赛事</text>
+      <text class="modal-close" bindtap="onHideForm">✕</text>
+    </view>
+    <text class="mark-title">{{markingEventName}}</text>
+    <text class="form-label">选择状态</text>
+    <view class="btn-row wrap">
+      <text class="opt-btn {{selectedStatus === 'planned' ? 'on' : ''}}" data-v="planned" bindtap="onStatusSel">计划报名</text>
+      <text class="opt-btn {{selectedStatus === 'registered' ? 'on' : ''}}" data-v="registered" bindtap="onStatusSel">已报名</text>
+      <text class="opt-btn {{selectedStatus === 'won' ? 'on' : ''}}" data-v="won" bindtap="onStatusSel">已中签</text>
+      <text class="opt-btn {{selectedStatus === 'finished' ? 'on' : ''}}" data-v="finished" bindtap="onStatusSel">已完赛</text>
+      <text class="opt-btn {{selectedStatus === 'dnf' ? 'on' : ''}}" data-v="dnf" bindtap="onStatusSel">未完赛</text>
+      <text class="opt-btn {{selectedStatus === 'dns' ? 'on' : ''}}" data-v="dns" bindtap="onStatusSel">弃赛</text>
+    </view>
+    <block wx:if="{{selectedStatus === 'finished'}}">
+      <text class="form-label">完赛成绩（如 3:30:00）</text>
+      <input class="form-input" placeholder="格式：3:30:00" value="{{raceResult}}" bindinput="onResultInput" />
+    </block>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideForm">取消</button>
+      <button wx:if="{{!myMarkers[markingEventId]}}" class="btn-primary" bindtap="onMark">确认标记</button>
+      <block wx:else>
+        <button class="btn-primary" bindtap="onMark">更新状态</button>
+        <button class="btn-reject" bindtap="onUnmark">取消标记</button>
+      </block>
+    </view>
+  </view>
+</view>

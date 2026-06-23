@@ -1,0 +1,31 @@
+.detail-page { padding-bottom: 40rpx; }
+
+.header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.event-name { font-size: 34rpx; font-weight: 700; color: #333; flex: 1; }
+.countdown { font-size: 28rpx; color: #ff6b00; font-weight: 600; white-space: nowrap; }
+.meta-row { font-size: 26rpx; color: #999; margin-top: 12rpx; }
+.link-row { font-size: 26rpx; color: #1aad19; margin-top: 12rpx; }
+
+.section-title { display: flex; justify-content: space-between; align-items: center; font-size: 30rpx; font-weight: 600; margin-bottom: 16rpx; }
+.arrow { font-size: 36rpx; color: #ccc; }
+
+.score-overview { display: flex; gap: 24rpx; }
+.overall-score { text-align: center; flex-shrink: 0; }
+.score-num { font-size: 64rpx; font-weight: 700; color: #ff9800; display: block; }
+.score-label { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
+.score-count { font-size: 22rpx; color: #bbb; display: block; }
+
+.dim-scores { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
+.dim-row { display: flex; align-items: center; gap: 8rpx; }
+.dim-name { font-size: 22rpx; color: #666; width: 80rpx; flex-shrink: 0; text-align: right; }
+.dim-bar-wrap { flex: 1; height: 12rpx; background: #f0f0f0; border-radius: 6rpx; overflow: hidden; }
+.dim-bar { height: 100%; background: linear-gradient(90deg, #ff9800, #ffc107); border-radius: 6rpx; }
+.dim-val { font-size: 22rpx; color: #ff9800; font-weight: 600; width: 48rpx; }
+.no-score { font-size: 26rpx; color: #bbb; text-align: center; display: block; padding: 24rpx 0; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.tag-item { display: flex; align-items: center; gap: 4rpx; padding: 8rpx 16rpx; border-radius: 20rpx; background: #f0f7ff; }
+.tag-name { font-size: 24rpx; color: #1a73e8; }
+.tag-count { font-size: 22rpx; color: #999; }
+
+.btn-area { padding: 24rpx; display: flex; flex-direction: column; gap: 16rpx; }
