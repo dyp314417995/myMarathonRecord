@@ -57,6 +57,12 @@
         <text class="opt-btn {{form.label === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onFormLabel">普通标</text>
       </view>
       <block wx:if="{{form.raceType === 'trail'}}">
+        <text class="form-label">赛事认证</text>
+        <view class="btn-row">
+          <text class="opt-btn {{form.certs.itra ? 'on' : ''}}" data-k="itra" bindtap="onToggleCert">ITRA认证</text>
+          <text class="opt-btn {{form.certs.utmb ? 'on' : ''}}" data-k="utmb" bindtap="onToggleCert">UTMB认证</text>
+          <text class="opt-btn {{form.certs.utmbws ? 'on' : ''}}" data-k="utmbws" bindtap="onToggleCert">UTMB世界系列赛</text>
+        </view>
         <text class="form-label">距离(km)</text>
         <input class="form-input" type="digit" placeholder="如：50" value="{{form.distance}}" data-k="distance" bindinput="onInput" />
         <text class="form-label">爬升(m)</text>

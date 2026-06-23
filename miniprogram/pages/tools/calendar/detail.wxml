@@ -12,6 +12,9 @@
     <view wx:if="{{event.distance}}" class="meta-row">
       <text>距离 {{event.distance}}km<text wx:if="{{event.elevation}}"> · 爬升 {{event.elevation}}m</text></text>
     </view>
+    <view wx:if="{{event.certs && (event.certs.itra || event.certs.utmb || event.certs.utmbws)}}" class="meta-row">
+      <text>认证：{{event.certs.itra ? 'ITRA ' : ''}}{{event.certs.utmb ? 'UTMB ' : ''}}{{event.certs.utmbws ? 'UTMB世界系列赛' : ''}}</text>
+    </view>
     <view wx:if="{{event.website}}" class="link-row" bindtap="onWebsite">
       <text>📎 官网链接（点击复制）</text>
     </view>

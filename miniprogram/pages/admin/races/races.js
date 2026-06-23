@@ -7,7 +7,7 @@ Page({
     raceList: [],
     showForm: false,
     editingId: '',
-    form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '' },
+    form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false } },
     posterTemp: '',  // 临时海报路径
   },
 
@@ -35,7 +35,7 @@ Page({
   onAdd() {
     this.setData({
       showForm: true, editingId: '', posterTemp: '',
-      form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: 'A类', poster: '' }
+      form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false } }
     });
   },
 
@@ -44,7 +44,7 @@ Page({
     if (!r) return;
     this.setData({
       showForm: true, editingId: r._id, posterTemp: r.posterUrl || '',
-      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceType: r.raceType||'full', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', poster: r.poster||'' }
+      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceType: r.raceType||'full', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', poster: r.poster||'', certs: r.certs || { itra: false, utmb: false, utmbws: false } }
     });
   },
 
@@ -63,6 +63,11 @@ Page({
   onFormLevel(e) { this.setData({ 'form.raceLevel': e.currentTarget.dataset.v }); },
   onFormMechanism(e) { this.setData({ 'form.mechanism': e.currentTarget.dataset.v }); },
   onFormLabel(e) { this.setData({ 'form.label': e.currentTarget.dataset.v }); },
+  onToggleCert(e) {
+    const k = e.currentTarget.dataset.k;
+    const certs = { ...this.data.form.certs, [k]: !this.data.form.certs[k] };
+    this.setData({ 'form.certs': certs });
+  },
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onHideForm() { this.setData({ showForm: false }); },
 
@@ -101,7 +106,8 @@ Page({
       scale: f.scale.trim(), fee: f.fee.trim(), mechanism: f.mechanism, label: f.label,
       poster,
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
-      certs: {}, tags: [], tagStats: {}, reviewCount: 0, avgScore: 0,
+      certs: f.raceType === 'trail' ? f.certs : {},
+      tags: [], tagStats: {}, reviewCount: 0, avgScore: 0,
     };
     if (this.data.editingId) {
       await raceUtil.update(this.data.editingId, data);
