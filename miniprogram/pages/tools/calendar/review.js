@@ -63,7 +63,7 @@ Page({
     try {
       const db = require('../../../utils/db').db;
 
-      // 创建评分记录（待审核）
+      // 创建评分记录（直接生效）
       const reviewRes = await db.collection('race_reviews').add({
         data: {
           eventId: this.data.eventId,
@@ -72,12 +72,12 @@ Page({
           elevation: this.data.elevation.trim(),
           equipment: this.data.equipment.trim(),
           tags: this.data.selectedTags,
-          status: 'pending',
+          status: 'approved',
           createTime: new Date(),
         }
       });
 
-      // 创建积分奖励记录（10积分，待审核）
+      // 自动发放 10 积分
       await pointsUtil.addRecord({
         userId: userInfo._id,
         type: 'earn',
@@ -87,12 +87,20 @@ Page({
         images: [],
         earnDate: new Date(),
         expireDate: new Date(Date.now() + 365 * 86400000),
-        status: 'pending',
-        reviewRefId: reviewRes._id,  // 关联评分记录
+        status: 'approved',
+      });
+
+      // 更新赛事评分统计
+      const raceUtil = require('../../../utils/raceEvents');
+      const stats = await raceUtil.getReviewStats(this.data.eventId);
+      const tagStats = {};
+      Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
+      await db.collection('race_events').doc(this.data.eventId).update({
+        data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
       });
 
       wx.hideLoading();
-      wx.showToast({ title: '提交成功，审核通过后发放10积分', icon: 'success' });
+      wx.showToast({ title: '提交成功，+10积分', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();
