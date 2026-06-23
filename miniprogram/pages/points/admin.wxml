@@ -5,7 +5,6 @@
     <view class="tab {{tab === 'rules' ? 'active' : ''}}" data-tab="rules" bindtap="onTabChange">规则</view>
     <view class="tab {{tab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="onTabChange">审批</view>
     <view class="tab {{tab === 'record' ? 'active' : ''}}" data-tab="record" bindtap="onTabChange">录入/扣减</view>
-    <view class="tab {{tab === 'score-review' ? 'active' : ''}}" data-tab="score-review" bindtap="onTabChange">评分审批</view>
     <view class="tab" bindtap="onGoApply">+申请</view>
   </view>
 
@@ -74,6 +73,34 @@
     <view wx:if="{{hasMoreReviewed}}" class="load-more" bindtap="loadMoreReviewed">
       <text>查看更多已审核</text>
     </view>
+
+    <!-- 评分审批 -->
+    <view wx:if="{{reviewList.length > 0}}" class="section-title" style="padding:24rpx 24rpx 8rpx;">赛事评分审批</view>
+    <block wx:for="{{reviewList}}" wx:key="_id">
+      <view class="card review-card">
+        <view class="req-header">
+          <text class="req-name">{{item.userName}}</text>
+          <text class="tag tag-orange" wx:if="{{item.status === 'pending'}}">待审批</text>
+          <text class="tag tag-green" wx:elif="{{item.status === 'approved'}}">已通过</text>
+          <text class="tag tag-red" wx:else>已拒绝</text>
+        </view>
+        <text class="req-cat">赛事：{{item.eventName}}</text>
+        <text class="req-desc">评分：{{item.fmtScores}}</text>
+        <text class="req-desc" wx:if="{{item.elevation}}">爬升：{{item.elevation}}m</text>
+        <text class="req-desc" wx:if="{{item.equipment}}">装备：{{item.equipment}}</text>
+        <view wx:if="{{item.tags && item.tags.length > 0}}" class="req-tags">
+          <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
+        </view>
+        <text class="req-time">{{item.fmtTime}}</text>
+        <view class="req-actions" wx:if="{{item.status === 'pending'}}">
+          <button class="btn-reject" data-id="{{item._id}}" bindtap="onRejectReview">拒绝</button>
+          <button class="btn-approve" data-id="{{item._id}}" bindtap="onApproveReview">通过</button>
+        </view>
+      </view>
+    </block>
+    <view wx:if="{{hasMoreReviews}}" class="load-more" bindtap="onLoadMoreReviews">
+      <text>查看更多评分</text>
+    </view>
   </block>
 
   <!-- 录入/扣减 -->
@@ -134,36 +161,6 @@
         </block>
       </scroll-view>
       <button class="btn-outline" bindtap="hideUserPicker" style="margin-top:24rpx;">取消</button>
-    </view>
-  </block>
-
-  <!-- 评分审批 -->
-  <block wx:if="{{tab === 'score-review'}}">
-    <view wx:if="{{reviewList.length === 0}}" class="empty-state"><text>暂无评分审批</text></view>
-    <block wx:for="{{reviewList}}" wx:key="_id">
-      <view class="card review-card">
-        <view class="req-header">
-          <text class="req-name">{{item.userName}}</text>
-          <text class="tag tag-orange" wx:if="{{item.status === 'pending'}}">待审批</text>
-          <text class="tag tag-green" wx:elif="{{item.status === 'approved'}}">已通过</text>
-          <text class="tag tag-red" wx:else>已拒绝</text>
-        </view>
-        <text class="req-cat">赛事：{{item.eventName}}</text>
-        <text class="req-desc">评分：{{item.fmtScores}}</text>
-        <text class="req-desc" wx:if="{{item.elevation}}">爬升：{{item.elevation}}m</text>
-        <text class="req-desc" wx:if="{{item.equipment}}">装备：{{item.equipment}}</text>
-        <view wx:if="{{item.tags && item.tags.length > 0}}" class="req-tags">
-          <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
-        </view>
-        <text class="req-time">{{item.fmtTime}}</text>
-        <view class="req-actions" wx:if="{{item.status === 'pending'}}">
-          <button class="btn-reject" data-id="{{item._id}}" bindtap="onRejectReview">拒绝</button>
-          <button class="btn-approve" data-id="{{item._id}}" bindtap="onApproveReview">通过</button>
-        </view>
-      </view>
-    </block>
-    <view wx:if="{{hasMoreReviews}}" class="load-more" bindtap="onLoadMoreReviews">
-      <text>查看更多</text>
     </view>
   </block>
 </view>

@@ -46,8 +46,10 @@ Page({
 
   onTabChange(e) {
     this.setData({ tab: e.currentTarget.dataset.tab });
-    if (e.currentTarget.dataset.tab === 'review') this.loadPending(true);
-    if (e.currentTarget.dataset.tab === 'score-review') this.loadReviews(true);
+    if (e.currentTarget.dataset.tab === 'review') {
+      this.loadPending(true);
+      this.loadReviews(true);
+    }
   },
 
   onGoApply() {
