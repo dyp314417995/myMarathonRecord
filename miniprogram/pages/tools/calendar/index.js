@@ -3,7 +3,7 @@ const raceUtil = require('../../../utils/raceEvents');
 
 Page({
   data: {
-    tab: 'all',           // all | mine | review
+    tab: 'mine',          // mine | all | review（默认我的赛事）
     races: [],
     allRaces: [],
     allTags: [],           // 所有可用标签

@@ -55,9 +55,11 @@
 
   <!-- 我的评价 -->
   <view class="card" wx:if="{{myReview}}">
-    <view class="section-title"><text>📝 我的评价</text></view>
+    <view class="section-title">
+      <text>📝 我的评价</text>
+      <text class="del-review-btn" data-id="{{myReview._id}}" catchtap="onDelMyReview">🗑 删除</text>
+    </view>
     <view class="my-review">
-      <text class="my-scores">综合 {{myReview.scores ? '' : ''}}</text>
       <view class="my-dim-list">
         <text class="my-dim" wx:for="{{['difficulty','atmosphere','supply','transport','scenery','org','medal','value']}}" wx:key="*this" wx:for-item="k">
           {{k}} {{myReview.scores[k]}}

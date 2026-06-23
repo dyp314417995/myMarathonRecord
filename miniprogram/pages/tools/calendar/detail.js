@@ -150,6 +150,51 @@ Page({
     return `${dt.getMonth()+1}-${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
   },
 
+  async onDelMyReview(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.showModal({ title: '删除评价', content: '将同时扣除10积分，之后重新评价可再次获得积分', confirmColor: '#ff4d4f', success: async (res) => {
+      if (!res.confirm) return;
+      const db = require('../../../utils/db').db;
+      const userInfo = wx.getStorageSync('userInfo');
+      const review = await db.collection('race_reviews').doc(id).get();
+
+      // 删除评价
+      await db.collection('race_reviews').doc(id).remove();
+
+      // 扣减积分
+      if (userInfo && review.data) {
+        const pointsUtil = require('../../../utils/points');
+        await pointsUtil.addRecord({
+          userId: userInfo._id,
+          type: 'use',
+          category: '消耗',
+          points: -10,
+          description: `删除"${this.data.event.name}"赛事评价，扣减10积分`,
+          images: [],
+          earnDate: new Date(),
+          expireDate: null,
+          status: 'approved',
+        });
+        // 更新用户积分余额
+        const balance = await pointsUtil.getBalance(userInfo._id);
+        await db.collection('users').doc(userInfo._id).update({ data: { points: balance } });
+      }
+
+      // 更新赛事评分统计
+      const raceUtil = require('../../../utils/raceEvents');
+      const stats = await raceUtil.getReviewStats(this.data.eventId);
+      const tagStats = {};
+      Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
+      await db.collection('race_events').doc(this.data.eventId).update({
+        data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
+      });
+
+      wx.showToast({ title: '已删除，-10积分', icon: 'success' });
+      this.setData({ myReview: null });
+      this.loadEvent();
+    }});
+  },
+
   async onDelReview(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({ title: '删除评价', content: '确定删除该评价？', confirmColor: '#ff4d4f', success: async (res) => {

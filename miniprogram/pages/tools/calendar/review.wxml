@@ -34,5 +34,6 @@
 
   <view class="btn-area">
     <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{isEdit ? '修改评价' : '提交评分'}}</button>
+    <button wx:if="{{isEdit}}" class="btn-reject" bindtap="onDelete" style="margin-top:16rpx;">🗑 删除评价（-10积分）</button>
   </view>
 </view>
