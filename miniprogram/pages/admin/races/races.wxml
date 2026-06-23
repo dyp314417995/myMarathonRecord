@@ -81,6 +81,18 @@
         <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
         <text class="opt-btn {{form.mechanism === '先到先得' ? 'on' : ''}}" data-v="先到先得" bindtap="onFormMechanism">先到先得</text>
       </view>
+      <text class="form-label">付费方式</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.payment === '先缴费' ? 'on' : ''}}" data-v="先缴费" bindtap="onFormPayment">先缴费</text>
+        <text class="opt-btn {{form.payment === '中签后缴费' ? 'on' : ''}}" data-v="中签后缴费" bindtap="onFormPayment">中签后缴费</text>
+      </view>
+      <text class="form-label">时间节点（选填）</text>
+      <view class="timeline-form" wx:for="{{timelineNodes}}" wx:key="label">
+        <text class="tl-label">{{item.label}}</text>
+        <picker mode="date" value="{{item.date}}" bindchange="onTimelineDate" data-idx="{{index}}">
+          <view class="tl-date-pick"><text class="{{item.date ? '' : 'placeholder'}}">{{item.date || '选择日期'}}</text></view>
+        </picker>
+      </view>
       <text class="form-label">海报图片（选填）</text>
       <view class="poster-upload" bindtap="onChoosePoster">
         <image wx:if="{{posterTemp}}" src="{{posterTemp}}" mode="aspectFill" class="poster-preview" />

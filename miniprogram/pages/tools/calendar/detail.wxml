@@ -18,8 +18,22 @@
     <view wx:if="{{event.website}}" class="link-row" bindtap="onWebsite">
       <text>📎 官网链接（点击复制）</text>
     </view>
-    <view wx:if="{{event.scale || event.fee || event.mechanism || event.label}}" class="meta-row">
-      <text>{{event.label ? event.label + ' · ' : ''}}{{event.scale ? event.scale + ' · ' : ''}}{{event.fee ? event.fee : ''}}{{event.mechanism ? ' · ' + event.mechanism : ''}}</text>
+    <view wx:if="{{event.scale || event.fee || event.mechanism || event.label || event.payment}}" class="meta-row">
+      <text>{{event.label ? event.label + ' · ' : ''}}{{event.scale ? event.scale + ' · ' : ''}}{{event.fee ? event.fee + ' · ' : ''}}{{event.mechanism ? event.mechanism + ' · ' : ''}}{{event.payment ? event.payment : ''}}</text>
+    </view>
+  </view>
+
+  <!-- 时间轴 -->
+  <view class="card" wx:if="{{event.timeline && event.timeline.length > 0}}">
+    <view class="section-title"><text>⏱ 赛事时间轴</text></view>
+    <view class="timeline">
+      <view class="tl-item" wx:for="{{event.timeline}}" wx:key="label" wx:for-item="t">
+        <view class="tl-dot">🚩</view>
+        <view class="tl-body">
+          <text class="tl-label">{{t.label}}</text>
+          <text class="tl-date">{{t.date}}</text>
+        </view>
+      </view>
     </view>
   </view>
 

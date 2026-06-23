@@ -37,3 +37,7 @@
 .poster-placeholder { font-size: 48rpx; color: #ccc; }
 
 .btn-row.wrap { flex-wrap: wrap; }
+
+.timeline-form { display: flex; align-items: center; margin-top: 8rpx; }
+.tl-label { font-size: 24rpx; color: #666; width: 120rpx; flex-shrink: 0; }
+.tl-date-pick { flex: 1; background: #f7f7f7; border-radius: 8rpx; padding: 12rpx 16rpx; font-size: 26rpx; }

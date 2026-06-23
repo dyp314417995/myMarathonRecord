@@ -7,12 +7,21 @@ Page({
     raceList: [],
     showForm: false,
     editingId: '',
-    form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false } },
-    posterTemp: '',  // 临时海报路径
+    form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', timeline: [] },
+    posterTemp: '',
+    timelineNodes: [
+      { label: '开启报名', date: '' },
+      { label: '截止报名', date: '' },
+      { label: '截止退费', date: '' },
+      { label: '出签时间', date: '' },
+      { label: '候补时间', date: '' },
+      { label: '二抽出签', date: '' },
+    ],
   },
 
   labels: ['白金标', '金标', '精英标', '普通标'],
   mechanisms: ['抽签', '先到先得'],
+  payments: ['先缴费', '中签后缴费'],
 
   onShow() {
     const userInfo = wx.getStorageSync('userInfo') || {};
@@ -47,16 +56,31 @@ Page({
   onAdd() {
     this.setData({
       showForm: true, editingId: '', posterTemp: '',
-      form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false } }
+      form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', timeline: [] },
+      timelineNodes: [
+        { label: '开启报名', date: '' }, { label: '截止报名', date: '' }, { label: '截止退费', date: '' },
+        { label: '出签时间', date: '' }, { label: '候补时间', date: '' }, { label: '二抽出签', date: '' },
+      ]
     });
   },
 
   onEdit(e) {
     const r = this.data.raceList.find(x => x._id === e.currentTarget.dataset.id);
     if (!r) return;
+    const existingTimeline = r.timeline || [];
+    const tNodes = [
+      { label: '开启报名', date: '' }, { label: '截止报名', date: '' }, { label: '截止退费', date: '' },
+      { label: '出签时间', date: '' }, { label: '候补时间', date: '' }, { label: '二抽出签', date: '' },
+    ];
+    tNodes.forEach(node => {
+      const found = existingTimeline.find(t => t.label === node.label);
+      if (found) node.date = found.date;
+    });
+
     this.setData({
       showForm: true, editingId: r._id, posterTemp: r.posterUrl || '',
-      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceType: r.raceType||'full', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', poster: r.poster||'', certs: r.certs || { itra: false, utmb: false, utmbws: false } }
+      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceType: r.raceType||'full', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', poster: r.poster||'', certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', timeline: existingTimeline },
+      timelineNodes: tNodes,
     });
   },
 
@@ -75,6 +99,13 @@ Page({
   onFormLevel(e) { this.setData({ 'form.raceLevel': e.currentTarget.dataset.v }); },
   onFormMechanism(e) { this.setData({ 'form.mechanism': e.currentTarget.dataset.v }); },
   onFormLabel(e) { this.setData({ 'form.label': e.currentTarget.dataset.v }); },
+  onFormPayment(e) { this.setData({ 'form.payment': e.currentTarget.dataset.v }); },
+  onTimelineDate(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const nodes = [...this.data.timelineNodes];
+    nodes[idx].date = e.detail.value;
+    this.setData({ timelineNodes: nodes });
+  },
   onToggleCert(e) {
     const k = e.currentTarget.dataset.k;
     const certs = { ...this.data.form.certs, [k]: !this.data.form.certs[k] };
@@ -116,6 +147,7 @@ Page({
       distance: f.raceType === 'trail' ? f.distance : '', elevation: f.raceType === 'trail' ? f.elevation : '',
       website: f.website.trim(),
       scale: f.scale.trim(), fee: f.fee.trim(), mechanism: f.mechanism, label: f.label,
+      payment: f.payment, timeline: this.data.timelineNodes.filter(n => n.date),
       poster,
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
       certs: f.raceType === 'trail' ? f.certs : {},
