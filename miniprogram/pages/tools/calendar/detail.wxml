@@ -15,6 +15,9 @@
     <view wx:if="{{event.website}}" class="link-row" bindtap="onWebsite">
       <text>📎 官网链接（点击复制）</text>
     </view>
+    <view wx:if="{{event.scale || event.fee || event.mechanism || event.label}}" class="meta-row">
+      <text>{{event.label ? event.label + ' · ' : ''}}{{event.scale ? event.scale + ' · ' : ''}}{{event.fee ? event.fee : ''}}{{event.mechanism ? ' · ' + event.mechanism : ''}}</text>
+    </view>
   </view>
 
   <!-- 评分概览 -->

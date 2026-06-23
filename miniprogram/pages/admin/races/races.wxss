@@ -30,3 +30,9 @@
 
 .empty-state { padding: 80rpx 0; text-align: center; font-size: 28rpx; color: #bbb; }
 .btn-area { padding: 24rpx; }
+
+.poster-upload { margin-top: 8rpx; width: 200rpx; height: 120rpx; border-radius: 12rpx; overflow: hidden; background: #f7f7f7; display: flex; align-items: center; justify-content: center; border: 2rpx dashed #ddd; }
+.poster-preview { width: 100%; height: 100%; }
+.poster-placeholder { font-size: 48rpx; color: #ccc; }
+
+.btn-row.wrap { flex-wrap: wrap; }

@@ -6,7 +6,7 @@
     <view class="card race-card" wx:for="{{raceList}}" wx:key="_id">
       <view class="race-info">
         <text class="race-name">{{item.name}}</text>
-        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}} · {{item.raceLevel}}级</text>
+        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}} · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · ' + item.scale : ''}}</text>
         <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">即将举办</text>
         <text class="tag tag-gray" wx:else>已举办</text>
       </view>
@@ -57,6 +57,25 @@
       </block>
       <text class="form-label">官网链接</text>
       <input class="form-input" placeholder="https://" value="{{form.website}}" data-k="website" bindinput="onInput" />
+      <text class="form-label">赛事规模</text>
+      <input class="form-input" placeholder="如：35000人" value="{{form.scale}}" data-k="scale" bindinput="onInput" />
+      <text class="form-label">报名费用</text>
+      <input class="form-input" placeholder="如：200元/人" value="{{form.fee}}" data-k="fee" bindinput="onInput" />
+      <text class="form-label">报名机制</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
+        <text class="opt-btn {{form.mechanism === '先到先得' ? 'on' : ''}}" data-v="先到先得" bindtap="onFormMechanism">先到先得</text>
+        <text class="opt-btn {{form.mechanism === '成绩直通' ? 'on' : ''}}" data-v="成绩直通" bindtap="onFormMechanism">成绩直通</text>
+      </view>
+      <text class="form-label">赛事标牌</text>
+      <view class="btn-row wrap" style="flex-wrap:wrap;">
+        <text class="opt-btn {{form.label === item ? 'on' : ''}}" wx:for="{{labels}}" wx:key="*this" data-v="{{item}}" bindtap="onFormLabel">{{item}}</text>
+      </view>
+      <text class="form-label">海报图片（选填）</text>
+      <view class="poster-upload" bindtap="onChoosePoster">
+        <image wx:if="{{posterTemp}}" src="{{posterTemp}}" mode="aspectFill" class="poster-preview" />
+        <text wx:else class="poster-placeholder">+ 点击上传</text>
+      </view>
       <view class="modal-actions" style="margin-top:24rpx;">
         <button class="btn-outline" bindtap="onHideForm">取消</button>
         <button class="btn-primary" bindtap="onSave">保存</button>
