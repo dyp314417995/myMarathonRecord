@@ -49,6 +49,10 @@
         <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
         <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
       </view>
+      <text class="form-label">赛事标牌</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.label === item ? 'on' : ''}}" wx:for="{{labels}}" wx:key="*this" data-v="{{item}}" bindtap="onFormLabel">{{item}}</text>
+      </view>
       <block wx:if="{{form.raceType === 'trail'}}">
         <text class="form-label">距离(km)</text>
         <input class="form-input" type="digit" placeholder="如：50" value="{{form.distance}}" data-k="distance" bindinput="onInput" />
@@ -65,10 +69,6 @@
       <view class="btn-row">
         <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
         <text class="opt-btn {{form.mechanism === '先到先得' ? 'on' : ''}}" data-v="先到先得" bindtap="onFormMechanism">先到先得</text>
-      </view>
-      <text class="form-label">赛事标牌</text>
-      <view class="btn-row wrap" style="flex-wrap:wrap;">
-        <text class="opt-btn {{form.label === item ? 'on' : ''}}" wx:for="{{labels}}" wx:key="*this" data-v="{{item}}" bindtap="onFormLabel">{{item}}</text>
       </view>
       <text class="form-label">海报图片（选填）</text>
       <view class="poster-upload" bindtap="onChoosePoster">
