@@ -51,7 +51,10 @@
       </view>
       <text class="form-label">赛事标牌</text>
       <view class="btn-row">
-        <text class="opt-btn {{form.label === item ? 'on' : ''}}" wx:for="{{labels}}" wx:key="*this" data-v="{{item}}" bindtap="onFormLabel">{{item}}</text>
+        <text class="opt-btn {{form.label === '白金' ? 'on' : ''}}" data-v="白金" bindtap="onFormLabel">白金</text>
+        <text class="opt-btn {{form.label === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onFormLabel">金标</text>
+        <text class="opt-btn {{form.label === '精英' ? 'on' : ''}}" data-v="精英" bindtap="onFormLabel">精英</text>
+        <text class="opt-btn {{form.label === '普通' ? 'on' : ''}}" data-v="普通" bindtap="onFormLabel">普通</text>
       </view>
       <block wx:if="{{form.raceType === 'trail'}}">
         <text class="form-label">距离(km)</text>
