@@ -10,8 +10,6 @@ Page({
     isMine: false,
     myStatus: '',
     myReview: null,       // 用户自己的评价
-    isAdmin: false,
-    allReviews: [],        // 管理员查看所有评价
   },
 
   async onLoad(options) {
@@ -34,9 +32,6 @@ Page({
 
       const userInfo = wx.getStorageSync('userInfo');
       let isMine = false, myStatus = '', myReview = null;
-      const role = (userInfo && userInfo.role) || 'user';
-      const isAdmin = role === 'super_admin' || role === 'admin';
-
       if (userInfo) {
         try {
           const mkRes = await raceUtil.getMyMarkers(userInfo._id);
@@ -59,7 +54,7 @@ Page({
         },
         reviewStats: stats,
         topTags: tagEntries,
-        isMine, myStatus, myReview, isAdmin,
+        isMine, myStatus, myReview,
       });
       wx.hideLoading();
     } catch (err) {
@@ -142,31 +137,6 @@ Page({
     wx.navigateTo({ url: `/pages/tools/calendar/review-list?id=${this.data.eventId}&name=${this.data.event.name}` });
   },
 
-  async onLoadAllReviews() {
-    const res = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', eventId: this.data.eventId } });
-    const enriched = [];
-    for (const r of (res.result || [])) {
-      try {
-        const db = require('../../../utils/db').db;
-        const u = await db.collection('users').doc(r.userId).get();
-        const labels = { difficulty: '难度', atmosphere: '氛围', supply: '补给', transport: '交通', scenery: '风景', org: '组织', medal: '奖牌', value: '性价比' };
-        enriched.push({
-          ...r,
-          userName: u.data ? (u.data.nickName || '未知') : '已删除',
-          fmtTime: this.fmtReviewDate(r.createTime),
-          fmtScores: Object.keys(r.scores||{}).map(k => `${labels[k]}${r.scores[k]}`).join(' '),
-        });
-      } catch {}
-    }
-    this.setData({ allReviews: enriched });
-  },
-
-  fmtReviewDate(d) {
-    if (!d) return '';
-    const dt = new Date(d);
-    return `${dt.getMonth()+1}-${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
-  },
-
   async onDelMyReview(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({ title: '删除评价', content: '将同时扣除10积分，之后重新评价可再次获得积分', confirmColor: '#ff4d4f', success: async (res) => {
@@ -212,14 +182,4 @@ Page({
     }});
   },
 
-  async onDelReview(e) {
-    const id = e.currentTarget.dataset.id;
-    wx.showModal({ title: '删除评价', content: '确定删除该评价？', confirmColor: '#ff4d4f', success: async (res) => {
-      if (!res.confirm) return;
-      const db = require('../../../utils/db').db;
-      await db.collection('race_reviews').doc(id).remove();
-      wx.showToast({ title: '已删除', icon: 'success' });
-      this.loadEvent();
-    }});
-  },
 });

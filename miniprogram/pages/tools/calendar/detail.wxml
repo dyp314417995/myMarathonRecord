@@ -91,23 +91,6 @@
     </view>
   </view>
 
-  <!-- 管理员：所有评价管理 -->
-  <view class="card" wx:if="{{isAdmin}}">
-    <view class="section-title"><text>🛡 管理评价</text><text class="admin-load" bindtap="onLoadAllReviews">加载</text></view>
-    <view wx:if="{{allReviews.length === 0}}" class="empty-tight"><text>点击加载查看所有评价</text></view>
-    <view class="review-item" wx:for="{{allReviews}}" wx:key="_id">
-      <view class="review-user">
-        <text class="reviewer-name">{{item.userName}}</text>
-        <text class="review-time">{{item.fmtTime}}</text>
-      </view>
-      <text class="review-scores">{{item.fmtScores}}</text>
-      <view wx:if="{{item.tags && item.tags.length}}" class="req-tags">
-        <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
-      </view>
-      <text class="del-review-btn" data-id="{{item._id}}" catchtap="onDelReview">🗑 删除</text>
-    </view>
-  </view>
-
   <!-- 操作按钮 -->
   <view class="btn-area">
     <button wx:if="{{myStatus === 'finished' || myReview}}" class="btn-primary" bindtap="onReview">{{myReview ? '✏️ 修改评价' : '⭐ 参与评分'}}</button>
