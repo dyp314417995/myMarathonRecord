@@ -29,6 +29,7 @@
 .tag-count { font-size: 22rpx; color: #999; }
 
 .btn-area { padding: 24rpx; display: flex; flex-direction: column; gap: 16rpx; }
+.btn-primary.disabled { opacity: 0.5; background: #ccc; }
 
 .my-review { padding: 8rpx 0; }
 .my-scores { font-size: 24rpx; color: #333; }

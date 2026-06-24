@@ -76,7 +76,7 @@
       </view>
       <view class="race-bottom">
         <text class="my-status" wx:if="{{item.myStatus}}">
-          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
+          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
         </text>
         <text class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
           {{item.isMine ? '修改状态' : '标记我的赛事'}}
@@ -98,6 +98,7 @@
       <text class="opt-btn {{selectedStatus === 'planned' ? 'on' : ''}}" data-v="planned" bindtap="onStatusSel">计划报名</text>
       <text class="opt-btn {{selectedStatus === 'registered' ? 'on' : ''}}" data-v="registered" bindtap="onStatusSel">已报名</text>
       <text class="opt-btn {{selectedStatus === 'won' ? 'on' : ''}}" data-v="won" bindtap="onStatusSel">已中签</text>
+      <text class="opt-btn {{selectedStatus === 'lost' ? 'on' : ''}}" data-v="lost" bindtap="onStatusSel">未中签</text>
       <text class="opt-btn {{selectedStatus === 'finished' ? 'on' : ''}}" data-v="finished" bindtap="onStatusSel">已完赛</text>
       <text class="opt-btn {{selectedStatus === 'dnf' ? 'on' : ''}}" data-v="dnf" bindtap="onStatusSel">未完赛</text>
       <text class="opt-btn {{selectedStatus === 'dns' ? 'on' : ''}}" data-v="dns" bindtap="onStatusSel">弃赛</text>

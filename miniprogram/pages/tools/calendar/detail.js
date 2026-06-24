@@ -119,8 +119,8 @@ Page({
   onMark() {
     // 复用日历页的标记逻辑，简化版
     const { eventId, event, myStatus } = this.data;
-    const statuses = ['planned', 'registered', 'won', 'finished', 'dnf', 'dns'];
-    const labels = ['计划报名', '已报名', '已中签', '已完赛', '未完赛', '弃赛'];
+    const statuses = ['planned', 'registered', 'won', 'lost', 'finished', 'dnf', 'dns'];
+    const labels = ['计划报名', '已报名', '已中签', '未中签', '已完赛', '未完赛', '弃赛'];
 
     wx.showActionSheet({
       itemList: labels,
