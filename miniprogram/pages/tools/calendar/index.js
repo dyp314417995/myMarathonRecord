@@ -48,7 +48,9 @@ Page({
       this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}` });
 
       let races = all.filter(r => {
-        const d = new Date(r.date);
+        if (!r.date) return false;
+        const d = r.date instanceof Date ? r.date : new Date(r.date);
+        if (isNaN(d.getTime())) return false;
         return d >= from && d <= to;
       });
 
@@ -100,27 +102,25 @@ Page({
 
   calcCountdown(dateStr, timeline) {
     const today = new Date(); today.setHours(0,0,0,0);
+    const toDate = (v) => v instanceof Date ? v : new Date(v);
 
-    // 找最近未过期的 timeline 节点
-    let nearestLabel = '';
-    let nearestDiff = Infinity;
+    let nearestLabel = ''; let nearestDiff = Infinity;
     if (timeline && timeline.length) {
       timeline.forEach(t => {
         if (!t.date) return;
-        const diff = Math.ceil((new Date(t.date) - today) / 86400000);
-        if (diff >= 0 && diff < nearestDiff) {
-          nearestDiff = diff;
-          nearestLabel = t.label;
-        }
+        const td = toDate(t.date);
+        if (isNaN(td.getTime())) return;
+        const diff = Math.ceil((td - today) / 86400000);
+        if (diff >= 0 && diff < nearestDiff) { nearestDiff = diff; nearestLabel = t.label; }
       });
     }
-
     if (nearestLabel && nearestDiff > 0) return `距${nearestLabel} ${nearestDiff} 天`;
     if (nearestLabel && nearestDiff === 0) return `今天是${nearestLabel}`;
 
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const diff = Math.ceil((d - today) / 86400000);
+    const rd = toDate(dateStr);
+    if (isNaN(rd.getTime())) return '';
+    const diff = Math.ceil((rd - today) / 86400000);
     if (diff > 0) return `距开赛 ${diff} 天`;
     if (diff === 0) return '今天开赛';
     return `已举办 ${Math.abs(diff)} 天`;
