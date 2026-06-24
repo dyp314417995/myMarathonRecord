@@ -37,40 +37,41 @@ Page({
       const userId = userInfo ? userInfo._id : null;
 
       const all = await raceUtil.getAll();
+      console.log('[CAL] getAll返回:', all.length, '条');
       if (all.length === 0) {
         wx.hideLoading();
         this.setData({ races: [], allRaces: [], allTags: [], dateRangeText: '' });
         return;
       }
+      console.log('[CAL] 第1条:', JSON.stringify(all[0]).substring(0, 200));
+
       const today = new Date(); today.setHours(0,0,0,0);
-      const yearEnd = new Date(today.getFullYear(), 11, 31); // 今年年底
+      const yearEnd = new Date(today.getFullYear(), 11, 31);
 
       const from = this.data.dateFrom ? new Date(this.data.dateFrom) : today;
       const to = this.data.dateTo ? new Date(this.data.dateTo) : yearEnd;
+      console.log('[CAL] 时间范围:', from, '~', to);
 
-      // 时间范围文本
       const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}` });
 
       let races = all.filter(r => {
-        if (!r.date) return false;
+        if (!r.date) { console.log('[CAL] 过滤:无日期', r.name); return false; }
         const d = r.date instanceof Date ? r.date : new Date(r.date);
-        if (isNaN(d.getTime())) return false;
-        return d >= from && d <= to;
+        if (isNaN(d.getTime())) { console.log('[CAL] 过滤:无效日期', r.name, r.date); return false; }
+        const ok = d >= from && d <= to;
+        if (!ok) console.log('[CAL] 过滤:超范围', r.name, d);
+        return ok;
       });
+      console.log('[CAL] 日期过滤后:', races.length, '条');
 
-      // 收集所有标签
       const tagSet = new Set();
       races.forEach(r => (r.tags || []).forEach(t => tagSet.add(t)));
       const allTags = [...tagSet];
 
-      // 批量加载评分统计
       const reviewMap = {};
       for (const r of races) {
-        try {
-          const stats = await raceUtil.getReviewStats(r._id);
-          reviewMap[r._id] = stats;
-        } catch {}
+        try { reviewMap[r._id] = await raceUtil.getReviewStats(r._id); } catch {}
       }
 
       if (userId) {
@@ -78,8 +79,6 @@ Page({
         const mMap = {};
         mkRes.data.forEach(m => { mMap[m.eventId] = m.status; });
         this.setData({ myMarkers: mMap });
-
-        // 加载用户评价过的赛事
         const db = require('../../../utils/db').db;
         const rvRes = await db.collection('race_reviews').where({ userId }).get();
         const rvMap = {};
@@ -96,9 +95,13 @@ Page({
         reviewCount: reviewMap[r._id] ? reviewMap[r._id].count : (r.reviewCount || 0),
         dimensions: reviewMap[r._id] ? reviewMap[r._id].dimensions : {},
       }));
+      console.log('[CAL] map后:', races.length, '条');
 
       this.setData({ allRaces: races, allTags });
+      console.log('[CAL] setData后 this.data.allRaces:', this.data.allRaces.length);
+
       this.applyFilter();
+      console.log('[CAL] applyFilter后 this.data.races:', this.data.races.length);
       wx.hideLoading();
     } catch (err) {
       wx.hideLoading();
@@ -133,33 +136,19 @@ Page({
 
   applyFilter() {
     let races = [...this.data.allRaces];
-    // Tab
-    if (this.data.tab === 'mine') {
-      races = races.filter(r => r.isMine);
-    }
-    if (this.data.tab === 'review') {
-      races = races.filter(r => this.data.myReviewIds[r._id]);
-    }
-    // 搜索
-    if (this.data.searchKey) {
-      const kw = this.data.searchKey.toLowerCase();
-      races = races.filter(r => (r.name||'').toLowerCase().includes(kw) || (r.city||'').toLowerCase().includes(kw));
-    }
-    // 标签
-    if (this.data.tagFilter) {
-      races = races.filter(r => (r.tags || []).includes(this.data.tagFilter));
-    }
-    // 排序
+    console.log('[FILTER] 输入 allRaces:', races.length, 'tab:', this.data.tab);
+    if (this.data.tab === 'mine') { races = races.filter(r => r.isMine); console.log('[FILTER] mine过滤后:', races.length); }
+    if (this.data.tab === 'review') { races = races.filter(r => this.data.myReviewIds[r._id]); console.log('[FILTER] review过滤后:', races.length); }
+    if (this.data.searchKey) { races = races.filter(r => (r.name||'').toLowerCase().includes(this.data.searchKey.toLowerCase()) || (r.city||'').toLowerCase().includes(this.data.searchKey.toLowerCase())); }
+    if (this.data.tagFilter) { races = races.filter(r => (r.tags || []).includes(this.data.tagFilter)); }
     const sb = this.data.sortBy;
     const dimKeys = ['difficulty','atmosphere','supply','transport','scenery','org','medal','value'];
-    if (sb === 'date') {
-      races.sort((a, b) => this.data.sortAsc ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date));
-    } else if (sb === 'score') {
-      races.sort((a, b) => (b.avgScore || 0) - (a.avgScore || 0));
-    } else if (dimKeys.includes(sb)) {
-      races.sort((a, b) => ((b.dimensions||{})[sb] || 0) - ((a.dimensions||{})[sb] || 0));
-    }
+    if (sb === 'date') { races.sort((a, b) => this.data.sortAsc ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date)); }
+    else if (sb === 'score') { races.sort((a, b) => (b.avgScore || 0) - (a.avgScore || 0)); }
+    else if (dimKeys.includes(sb)) { races.sort((a, b) => ((b.dimensions||{})[sb] || 0) - ((a.dimensions||{})[sb] || 0)); }
+    console.log('[FILTER] 最终setData races:', races.length);
     this.setData({ races });
+    console.log('[FILTER] setData后 this.data.races:', this.data.races.length);
   },
 
   onTab(e) {
