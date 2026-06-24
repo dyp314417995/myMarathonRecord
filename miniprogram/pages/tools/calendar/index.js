@@ -225,7 +225,8 @@ Page({
       this.loadData();
     } catch (err) {
       wx.hideLoading();
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      console.error('标记失败:', err);
+      wx.showToast({ title: '保存失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
     }
   },
 
