@@ -38,10 +38,11 @@
 .race-score { font-size: 24rpx; color: #ff9800; margin-top: 6rpx; }
 .race-tags { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 8rpx; }
 .race-tag { font-size: 22rpx; color: #1aad19; background: #e8f5e9; padding: 4rpx 12rpx; border-radius: 8rpx; }
-.race-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
-.my-status { font-size: 24rpx; color: #1aad19; }
-.status-badge { font-size: 28rpx; font-weight: 600; color: #1aad19; background: #e8f5e9; padding: 8rpx 20rpx; border-radius: 10rpx; }
-.mark-btn { font-size: 24rpx; color: #1aad19; padding: 8rpx 20rpx; border: 2rpx solid #1aad19; border-radius: 8rpx; }
+.race-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; gap: 12rpx; }
+.my-status { font-size: 22rpx; color: #999; }
+.status-badge { font-size: 26rpx; font-weight: 600; color: #fff; background: linear-gradient(135deg, #1aad19, #0d8c0d); padding: 10rpx 24rpx; border-radius: 20rpx; box-shadow: 0 2rpx 8rpx rgba(26,173,25,0.25); }
+.mark-btn { font-size: 22rpx; color: #1aad19; padding: 8rpx 18rpx; border: 2rpx solid #1aad19; border-radius: 20rpx; background: #fff; transition: all 0.2s; }
+.mark-btn:active { background: #e8f5e9; }
 
 .modal-mask { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:100; }
 .modal-box { position: fixed; top: 30%; left: 32rpx; right: 32rpx; background: #fff; border-radius: 20rpx; padding: 32rpx; z-index:101; }
