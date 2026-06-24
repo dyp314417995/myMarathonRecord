@@ -2,21 +2,18 @@
 const dbUtil = require('./db');
 const db = dbUtil.db;
 
-/** 获取赛事列表（管理员） */
+/** 获取赛事列表（管理员，使用云函数绕过权限） */
 async function getList(skip = 0, limit = 20) {
-  return await db.collection('race_events').orderBy('date', 'desc').skip(skip).limit(limit).get();
+  const res = await wx.cloud.callFunction({ name: 'getRaceEvents' });
+  const all = res.result || [];
+  all.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return { data: all.slice(skip, skip + limit) };
 }
 
-/** 获取所有赛事 */
+/** 获取所有赛事（通过云函数绕过权限限制） */
 async function getAll() {
-  const count = await db.collection('race_events').count();
-  const batchTimes = Math.ceil(count.total / 100);
-  const tasks = [];
-  for (let i = 0; i < batchTimes; i++) {
-    tasks.push(db.collection('race_events').orderBy('date', 'asc').skip(i * 100).limit(100).get());
-  }
-  const results = await Promise.all(tasks);
-  return results.reduce((arr, r) => arr.concat(r.data), []);
+  const res = await wx.cloud.callFunction({ name: 'getRaceEvents' });
+  return res.result || [];
 }
 
 /** 创建赛事 */
