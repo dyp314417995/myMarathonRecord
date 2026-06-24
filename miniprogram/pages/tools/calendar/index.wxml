@@ -61,9 +61,6 @@
           <text class="tag tag-green" wx:if="{{item.isMine}}">我的</text>
           <text class="tag tag-blue" wx:if="{{myReviewIds[item._id]}}">已评价</text>
         </view>
-        <text wx:if="{{tab === 'mine'}}" class="status-text" style="font-size:24rpx;font-weight:600;">
-          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
-        </text>
         <text class="countdown">{{item.countdown}}</text>
       </view>
       <view class="race-meta">
@@ -80,6 +77,9 @@
       <view class="race-bottom">
         <text class="my-status" wx:if="{{item.myStatus && tab !== 'mine'}}">
           {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
+        </text>
+        <text wx:if="{{tab === 'mine' && item.myStatus}}" class="status-badge">
+          {{item.myStatus === 'planned' ? '📋 计划报名' : item.myStatus === 'registered' ? '✅ 已报名' : item.myStatus === 'won' ? '🎉 已中签' : item.myStatus === 'lost' ? '❌ 未中签' : item.myStatus === 'finished' ? '🏁 已完赛' : item.myStatus === 'dnf' ? '💔 未完赛' : '🚫 弃赛'}}
         </text>
         <text class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
           {{item.isMine ? '修改状态' : '标记我的赛事'}}

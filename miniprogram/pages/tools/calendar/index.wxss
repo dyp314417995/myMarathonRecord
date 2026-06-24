@@ -40,6 +40,7 @@
 .race-tag { font-size: 22rpx; color: #1aad19; background: #e8f5e9; padding: 4rpx 12rpx; border-radius: 8rpx; }
 .race-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; }
 .my-status { font-size: 24rpx; color: #1aad19; }
+.status-badge { font-size: 28rpx; font-weight: 600; color: #1aad19; background: #e8f5e9; padding: 8rpx 20rpx; border-radius: 10rpx; }
 .mark-btn { font-size: 24rpx; color: #1aad19; padding: 8rpx 20rpx; border: 2rpx solid #1aad19; border-radius: 8rpx; }
 
 .modal-mask { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:100; }
