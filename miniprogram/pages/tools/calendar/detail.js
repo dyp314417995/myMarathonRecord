@@ -27,7 +27,8 @@ Page({
       const event = all.find(r => r._id === this.data.eventId);
       if (!event) { wx.showToast({ title: '赛事不存在', icon: 'none' }); return; }
 
-      const stats = await raceUtil.getReviewStats(this.data.eventId);
+      let stats = { count: 0, avgScore: 0, dimensions: {}, tagStats: {} };
+      try { stats = await raceUtil.getReviewStats(this.data.eventId); } catch {}
       const tagEntries = Object.entries(stats.tagStats || {})
         .sort((a, b) => b[1] - a[1]).slice(0, 10);
 
