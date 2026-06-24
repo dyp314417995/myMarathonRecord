@@ -112,6 +112,5 @@
   <view class="btn-area">
     <button wx:if="{{myStatus === 'finished' || myReview}}" class="btn-primary" bindtap="onReview">{{myReview ? '✏️ 修改评价' : '⭐ 参与评分'}}</button>
     <button wx:elif="{{isMine && myStatus !== 'finished'}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
-    <button class="btn-outline" bindtap="onMark">{{isMine ? '修改标记(' + (myStatus === 'finished' ? '已完赛' : myStatus === 'planned' ? '计划报名' : myStatus === 'registered' ? '已报名' : myStatus === 'won' ? '已中签' : myStatus === 'lost' ? '未中签' : myStatus === 'dnf' ? '未完赛' : '弃赛') + ')' : '标记我的赛事'}}</button>
   </view>
 </view>

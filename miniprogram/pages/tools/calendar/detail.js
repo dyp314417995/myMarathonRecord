@@ -37,16 +37,16 @@ Page({
       const isAdmin = role === 'super_admin' || role === 'admin';
 
       if (userInfo) {
-        const mkRes = await raceUtil.getMyMarkers(userInfo._id);
-        const mine = mkRes.data.find(m => m.eventId === this.data.eventId);
-        if (mine) { isMine = true; myStatus = mine.status; }
+        try {
+          const mkRes = await raceUtil.getMyMarkers(userInfo._id);
+          const mine = mkRes.data.find(m => m.eventId === this.data.eventId);
+          if (mine) { isMine = true; myStatus = mine.status; }
+        } catch {}
 
-        // 加载用户自己的评价
-        const db = require('../../../utils/db').db;
-        const rv = await db.collection('race_reviews').where({
-          eventId: this.data.eventId, userId: userInfo._id
-        }).get();
-        if (rv.data.length > 0) myReview = rv.data[0];
+        try {
+          const allRv = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', userId: userInfo._id } });
+          myReview = (allRv.result || []).find(r => r.eventId === this.data.eventId) || null;
+        } catch {}
       }
 
       this.setData({
