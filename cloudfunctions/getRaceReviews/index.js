@@ -6,6 +6,12 @@ exports.main = async (event) => {
   const { action, eventId } = event;
   const db = cloud.database();
 
+  if (action === 'all') {
+    const userId = event.userId;
+    const res = await db.collection('race_reviews').where({ userId }).get();
+    return res.data;
+  }
+
   if (action === 'stats') {
     const res = await db.collection('race_reviews').where({ eventId, status: 'approved' }).get();
     const count = res.data.length;

@@ -37,33 +37,26 @@ Page({
       const userId = userInfo ? userInfo._id : null;
 
       const all = await raceUtil.getAll();
-      console.log('[CAL] getAll返回:', all.length, '条');
       if (all.length === 0) {
         wx.hideLoading();
         this.setData({ races: [], allRaces: [], allTags: [], dateRangeText: '' });
         return;
       }
-      console.log('[CAL] 第1条:', JSON.stringify(all[0]).substring(0, 200));
-
       const today = new Date(); today.setHours(0,0,0,0);
       const yearEnd = new Date(today.getFullYear(), 11, 31);
 
       const from = this.data.dateFrom ? new Date(this.data.dateFrom) : today;
       const to = this.data.dateTo ? new Date(this.data.dateTo) : yearEnd;
-      console.log('[CAL] 时间范围:', from, '~', to);
 
       const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}` });
 
       let races = all.filter(r => {
-        if (!r.date) { console.log('[CAL] 过滤:无日期', r.name); return false; }
+        if (!r.date) return false;
         const d = r.date instanceof Date ? r.date : new Date(r.date);
-        if (isNaN(d.getTime())) { console.log('[CAL] 过滤:无效日期', r.name, r.date); return false; }
-        const ok = d >= from && d <= to;
-        if (!ok) console.log('[CAL] 过滤:超范围', r.name, d);
-        return ok;
+        if (isNaN(d.getTime())) return false;
+        return d >= from && d <= to;
       });
-      console.log('[CAL] 日期过滤后:', races.length, '条');
 
       const tagSet = new Set();
       races.forEach(r => (r.tags || []).forEach(t => tagSet.add(t)));
@@ -75,15 +68,8 @@ Page({
       }
 
       if (userId) {
-        const mkRes = await raceUtil.getMyMarkers(userId);
-        const mMap = {};
-        mkRes.data.forEach(m => { mMap[m.eventId] = m.status; });
-        this.setData({ myMarkers: mMap });
-        const db = require('../../../utils/db').db;
-        const rvRes = await db.collection('race_reviews').where({ userId }).get();
-        const rvMap = {};
-        rvRes.data.forEach(r => { rvMap[r.eventId] = true; });
-        this.setData({ myReviewIds: rvMap });
+        try { const mkRes = await raceUtil.getMyMarkers(userId); const mMap = {}; mkRes.data.forEach(m => { mMap[m.eventId] = m.status; }); this.setData({ myMarkers: mMap }); } catch {}
+        try { const rvMap = {}; const allRv = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', userId } }); (allRv.result||[]).forEach(r => { rvMap[r.eventId] = true; }); this.setData({ myReviewIds: rvMap }); } catch {}
       }
 
       races = races.map(r => ({
@@ -95,13 +81,9 @@ Page({
         reviewCount: reviewMap[r._id] ? reviewMap[r._id].count : (r.reviewCount || 0),
         dimensions: reviewMap[r._id] ? reviewMap[r._id].dimensions : {},
       }));
-      console.log('[CAL] map后:', races.length, '条');
 
       this.setData({ allRaces: races, allTags });
-      console.log('[CAL] setData后 this.data.allRaces:', this.data.allRaces.length);
-
       this.applyFilter();
-      console.log('[CAL] applyFilter后 this.data.races:', this.data.races.length);
       wx.hideLoading();
     } catch (err) {
       wx.hideLoading();
@@ -136,19 +118,16 @@ Page({
 
   applyFilter() {
     let races = [...this.data.allRaces];
-    console.log('[FILTER] 输入 allRaces:', races.length, 'tab:', this.data.tab);
-    if (this.data.tab === 'mine') { races = races.filter(r => r.isMine); console.log('[FILTER] mine过滤后:', races.length); }
-    if (this.data.tab === 'review') { races = races.filter(r => this.data.myReviewIds[r._id]); console.log('[FILTER] review过滤后:', races.length); }
-    if (this.data.searchKey) { races = races.filter(r => (r.name||'').toLowerCase().includes(this.data.searchKey.toLowerCase()) || (r.city||'').toLowerCase().includes(this.data.searchKey.toLowerCase())); }
-    if (this.data.tagFilter) { races = races.filter(r => (r.tags || []).includes(this.data.tagFilter)); }
+    if (this.data.tab === 'mine') races = races.filter(r => r.isMine);
+    if (this.data.tab === 'review') races = races.filter(r => this.data.myReviewIds[r._id]);
+    if (this.data.searchKey) races = races.filter(r => (r.name||'').toLowerCase().includes(this.data.searchKey.toLowerCase()) || (r.city||'').toLowerCase().includes(this.data.searchKey.toLowerCase()));
+    if (this.data.tagFilter) races = races.filter(r => (r.tags || []).includes(this.data.tagFilter));
     const sb = this.data.sortBy;
     const dimKeys = ['difficulty','atmosphere','supply','transport','scenery','org','medal','value'];
     if (sb === 'date') { races.sort((a, b) => this.data.sortAsc ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date)); }
     else if (sb === 'score') { races.sort((a, b) => (b.avgScore || 0) - (a.avgScore || 0)); }
     else if (dimKeys.includes(sb)) { races.sort((a, b) => ((b.dimensions||{})[sb] || 0) - ((a.dimensions||{})[sb] || 0)); }
-    console.log('[FILTER] 最终setData races:', races.length);
     this.setData({ races });
-    console.log('[FILTER] setData后 this.data.races:', this.data.races.length);
   },
 
   onTab(e) {
