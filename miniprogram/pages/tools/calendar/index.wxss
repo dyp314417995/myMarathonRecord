@@ -33,6 +33,7 @@
 .race-name-row { flex: 1; display: flex; align-items: center; gap: 12rpx; }
 .race-name { font-size: 30rpx; font-weight: 600; color: #333; }
 .countdown { font-size: 26rpx; color: #ff6b00; font-weight: 600; white-space: nowrap; }
+.status-text { color: #1aad19; }
 .race-meta { font-size: 24rpx; color: #999; margin-top: 8rpx; }
 .race-score { font-size: 24rpx; color: #ff9800; margin-top: 6rpx; }
 .race-tags { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 8rpx; }

@@ -61,7 +61,10 @@
           <text class="tag tag-green" wx:if="{{item.isMine}}">我的</text>
           <text class="tag tag-blue" wx:if="{{myReviewIds[item._id]}}">已评价</text>
         </view>
-        <text class="countdown">{{item.countdown}}</text>
+        <text wx:if="{{tab === 'mine'}}" class="countdown status-text">
+          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
+        </text>
+        <text wx:else class="countdown">{{item.countdown}}</text>
       </view>
       <view class="race-meta">
         <text>{{item.city || '待定'}}</text>
@@ -75,7 +78,7 @@
         <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
       </view>
       <view class="race-bottom">
-        <text class="my-status" wx:if="{{item.myStatus}}">
+        <text class="my-status" wx:if="{{item.myStatus && tab !== 'mine'}}">
           {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
         </text>
         <text class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
