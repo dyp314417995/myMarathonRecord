@@ -59,34 +59,13 @@ async function getMyMarkers(userId) {
     .where({ userId }).get();
 }
 
-/** 获取赛事评分统计 */
+/** 获取赛事评分统计（云函数绕过权限） */
 async function getReviewStats(eventId) {
-  const res = await db.collection('race_reviews')
-    .where({ eventId, status: 'approved' }).get();
-  const count = res.data.length;
-  if (count === 0) return { count: 0, avgScore: 0, dimensions: {}, tagStats: {} };
-
-  const dims = {};
-  const tags = {};
-  let total = 0;
-  res.data.forEach(r => {
-    const scores = r.scores || {};
-    let sum = 0;
-    let dimCount = 0;
-    Object.keys(scores).forEach(k => {
-      dims[k] = (dims[k] || 0) + scores[k];
-      sum += scores[k];
-      dimCount++;
-    });
-    total += sum / dimCount;
-    (r.tags || []).forEach(t => { tags[t] = (tags[t] || 0) + 1; });
+  const res = await wx.cloud.callFunction({
+    name: 'getRaceReviews',
+    data: { action: 'stats', eventId }
   });
-
-  const avgScore = Math.round(total / count * 10) / 10;
-  const dimensions = {};
-  Object.keys(dims).forEach(k => { dimensions[k] = Math.round(dims[k] / count * 10) / 10; });
-
-  return { count, avgScore, dimensions, tagStats: tags };
+  return res.result || { count: 0, avgScore: 0, dimensions: {}, tagStats: {} };
 }
 
 module.exports = {
