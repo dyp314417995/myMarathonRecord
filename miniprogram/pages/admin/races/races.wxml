@@ -12,6 +12,7 @@
       </view>
       <view class="race-actions">
         <text class="act" data-id="{{item._id}}" bindtap="onEdit">✏️</text>
+        <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onManageReviews">📝</text>
         <text class="act del" data-id="{{item._id}}" bindtap="onDel">🗑</text>
       </view>
     </view>
@@ -102,6 +103,29 @@
         <button class="btn-outline" bindtap="onHideForm">取消</button>
         <button class="btn-primary" bindtap="onSave">保存</button>
       </view>
+    </view>
+
+    <!-- 评价管理弹窗 -->
+    <view class="modal-mask" wx:if="{{showReviews}}" catchtap="onHideReviews"></view>
+    <view class="modal-box" wx:if="{{showReviews}}">
+      <view class="modal-header">
+        <text>评价管理 - {{reviewEventName}}</text>
+        <text class="modal-close" bindtap="onHideReviews">✕</text>
+      </view>
+      <view wx:if="{{reviewList.length === 0}}" class="empty-tight"><text>暂无评价</text></view>
+      <scroll-view scroll-y class="review-scroll">
+        <view class="rv-item" wx:for="{{reviewList}}" wx:key="_id">
+          <view class="rv-user">
+            <text class="rv-name">{{item.userName}}</text>
+            <text class="rv-time">{{item.fmtTime}}</text>
+          </view>
+          <text class="rv-scores">{{item.fmtScores}}</text>
+          <view wx:if="{{item.tags && item.tags.length}}" class="req-tags">
+            <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
+          </view>
+          <text class="rv-del" data-id="{{item._id}}" catchtap="onDelReview">🗑 删除</text>
+        </view>
+      </scroll-view>
     </view>
   </view>
 </view>

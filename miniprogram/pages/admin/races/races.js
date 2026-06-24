@@ -9,6 +9,11 @@ Page({
     editingId: '',
     form: { name: '', date: '', city: '', province: '', raceType: 'full', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', timeline: [] },
     posterTemp: '',
+    // 评价管理
+    showReviews: false,
+    reviewEventId: '',
+    reviewEventName: '',
+    reviewList: [],
     timelineNodes: [
       { label: '开启报名', date: '' },
       { label: '截止报名', date: '' },
@@ -115,6 +120,56 @@ Page({
       await raceUtil.remove(id);
       wx.showToast({ title: '已删除', icon: 'success' });
       this.loadRaces();
+    }});
+  },
+
+  async onManageReviews(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name || '';
+    this.setData({ showReviews: true, reviewEventId: id, reviewEventName: name, reviewList: [] });
+    const res = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', eventId: id } });
+    const enriched = [];
+    for (const r of (res.result || [])) {
+      try {
+        const db = require('../../../utils/db').db;
+        const u = await db.collection('users').doc(r.userId).get();
+        enriched.push({
+          ...r,
+          userName: u.data ? (u.data.nickName || '未知') : '已删除',
+          fmtTime: this.fmtReviewDate(r.createTime),
+          fmtScores: Object.keys(r.scores||{}).map(k => {
+            const lb = { difficulty:'难度',atmosphere:'氛围',supply:'补给',transport:'交通',scenery:'风景',org:'组织',medal:'奖牌',value:'性价比' };
+            return `${lb[k]}${r.scores[k]}`;
+          }).join(' '),
+        });
+      } catch {}
+    }
+    this.setData({ reviewList: enriched });
+  },
+
+  fmtReviewDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    return `${dt.getMonth()+1}-${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  },
+
+  onHideReviews() { this.setData({ showReviews: false }); },
+
+  async onDelReview(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.showModal({ title: '删除评价', content: '确定删除？', confirmColor: '#ff4d4f', success: async (res) => {
+      if (!res.confirm) return;
+      const db = require('../../../utils/db').db;
+      await db.collection('race_reviews').doc(id).remove();
+      // 更新统计
+      const stats = await raceUtil.getReviewStats(this.data.reviewEventId);
+      const tagStats = {};
+      Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
+      await db.collection('race_events').doc(this.data.reviewEventId).update({
+        data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
+      });
+      wx.showToast({ title: '已删除', icon: 'success' });
+      this.onManageReviews({ currentTarget: { dataset: { id: this.data.reviewEventId, name: this.data.reviewEventName } } });
     }});
   },
 

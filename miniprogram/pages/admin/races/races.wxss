@@ -8,6 +8,18 @@
 .act { font-size: 32rpx; padding: 8rpx; }
 .act.del { color: #ff4d4f; }
 
+.review-scroll { max-height: 600rpx; }
+.rv-item { padding: 16rpx 0; border-bottom: 1rpx solid #f7f7f7; position: relative; }
+.rv-item:last-child { border-bottom: none; }
+.rv-user { display: flex; justify-content: space-between; margin-bottom: 4rpx; }
+.rv-name { font-size: 26rpx; font-weight: 600; }
+.rv-time { font-size: 22rpx; color: #bbb; }
+.rv-scores { font-size: 22rpx; color: #666; display: block; }
+.rv-del { position: absolute; right: 0; top: 16rpx; font-size: 22rpx; color: #ff4d4f; padding: 4rpx 8rpx; }
+.empty-tight { padding: 24rpx; text-align: center; font-size: 24rpx; color: #bbb; }
+.req-tags { display: flex; flex-wrap: wrap; gap: 6rpx; margin-top: 4rpx; }
+.race-tag { font-size: 20rpx; color: #1aad19; background: #e8f5e9; padding: 2rpx 10rpx; border-radius: 6rpx; }
+
 .form-label { font-size: 26rpx; color: #666; display: block; margin-top: 20rpx; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
 .opt-btn {
