@@ -38,7 +38,7 @@
       <text class="sort-item {{sortBy === 'atmosphere' ? 'on' : ''}}" data-v="atmosphere" bindtap="onSort">赛道氛围</text>
       <text class="sort-item {{sortBy === 'supply' ? 'on' : ''}}" data-v="supply" bindtap="onSort">补给</text>
       <text class="sort-item {{sortBy === 'transport' ? 'on' : ''}}" data-v="transport" bindtap="onSort">交通</text>
-    </view>
+    </scroll-view>
   </view>
 
   <!-- 时间范围 -->
