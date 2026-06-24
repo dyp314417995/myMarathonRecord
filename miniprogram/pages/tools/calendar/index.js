@@ -37,10 +37,8 @@ Page({
       const userId = userInfo ? userInfo._id : null;
 
       const all = await raceUtil.getAll();
-      console.log('赛事数据:', all.length, '条');
       if (all.length === 0) {
         wx.hideLoading();
-        wx.showToast({ title: '暂无赛事数据', icon: 'none' });
         this.setData({ races: [], allRaces: [], allTags: [], dateRangeText: '' });
         return;
       }
@@ -55,14 +53,11 @@ Page({
       this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}` });
 
       let races = all.filter(r => {
-        if (!r.date) { console.log('filtered: 无日期', r.name); return false; }
+        if (!r.date) return false;
         const d = r.date instanceof Date ? r.date : new Date(r.date);
-        if (isNaN(d.getTime())) { console.log('filtered: 日期无效', r.name, r.date); return false; }
-        const inRange = d >= from && d <= to;
-        if (!inRange) console.log('filtered: 超出范围', r.name, d, 'from', from, 'to', to);
-        return inRange;
+        if (isNaN(d.getTime())) return false;
+        return d >= from && d <= to;
       });
-      console.log('filter后:', races.length, '条');
 
       // 收集所有标签
       const tagSet = new Set();
