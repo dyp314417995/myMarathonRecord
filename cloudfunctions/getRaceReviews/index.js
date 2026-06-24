@@ -7,8 +7,10 @@ exports.main = async (event) => {
   const db = cloud.database();
 
   if (action === 'all') {
-    const userId = event.userId;
-    const res = await db.collection('race_reviews').where({ userId }).get();
+    const cond = {};
+    if (event.userId) cond.userId = event.userId;
+    if (event.eventId) cond.eventId = event.eventId;
+    const res = await db.collection('race_reviews').where(cond).orderBy('createTime', 'desc').limit(50).get();
     return res.data;
   }
 

@@ -63,6 +63,8 @@ Page({
       wx.hideLoading();
     } catch (err) {
       wx.hideLoading();
+      console.error('详情加载失败:', err);
+      wx.showToast({ title: '加载失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
     }
   },
 
@@ -140,13 +142,11 @@ Page({
   },
 
   async onLoadAllReviews() {
-    const db = require('../../../utils/db').db;
-    const res = await db.collection('race_reviews')
-      .where({ eventId: this.data.eventId })
-      .orderBy('createTime', 'desc').limit(50).get();
+    const res = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', eventId: this.data.eventId } });
     const enriched = [];
-    for (const r of res.data) {
+    for (const r of (res.result || [])) {
       try {
+        const db = require('../../../utils/db').db;
         const u = await db.collection('users').doc(r.userId).get();
         const labels = { difficulty: '难度', atmosphere: '氛围', supply: '补给', transport: '交通', scenery: '风景', org: '组织', medal: '奖牌', value: '性价比' };
         enriched.push({
