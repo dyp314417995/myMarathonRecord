@@ -10,7 +10,6 @@
   <!-- 搜索 + 日期筛选 -->
   <view class="search-bar">
     <input class="search-input" placeholder="搜索赛事名称/城市" value="{{searchKey}}" bindinput="onSearch" />
-    <text class="date-toggle" bindtap="onToggleDate">📅</text>
   </view>
   <view class="date-picker" wx:if="{{showDatePicker}}">
     <text class="form-label">开始日期</text>
@@ -40,6 +39,12 @@
       <text class="sort-item {{sortBy === 'supply' ? 'on' : ''}}" data-v="supply" bindtap="onSort">补给</text>
       <text class="sort-item {{sortBy === 'transport' ? 'on' : ''}}" data-v="transport" bindtap="onSort">交通</text>
     </scroll-view>
+  </view>
+
+  <!-- 时间范围 -->
+  <view class="range-bar">
+    <text>📅 {{dateRangeText}} · {{races.length}}场</text>
+    <text class="date-toggle" bindtap="onToggleDate">筛选</text>
   </view>
 
   <!-- 赛事列表 -->

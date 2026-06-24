@@ -22,6 +22,7 @@ Page({
     // 时间范围
     dateFrom: '',
     dateTo: '',
+    dateRangeText: '',
     showDatePicker: false,
   },
 
@@ -37,10 +38,14 @@ Page({
 
       const all = await raceUtil.getAll();
       const today = new Date(); today.setHours(0,0,0,0);
-      const threeMonthLater = new Date(today); threeMonthLater.setMonth(threeMonthLater.getMonth() + 3);
+      const yearEnd = new Date(today.getFullYear(), 11, 31); // 今年年底
 
       const from = this.data.dateFrom ? new Date(this.data.dateFrom) : today;
-      const to = this.data.dateTo ? new Date(this.data.dateTo) : threeMonthLater;
+      const to = this.data.dateTo ? new Date(this.data.dateTo) : yearEnd;
+
+      // 时间范围文本
+      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}` });
 
       let races = all.filter(r => {
         const d = new Date(r.date);
