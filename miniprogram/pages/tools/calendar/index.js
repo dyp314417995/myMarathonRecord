@@ -37,6 +37,13 @@ Page({
       const userId = userInfo ? userInfo._id : null;
 
       const all = await raceUtil.getAll();
+      console.log('赛事数据:', all.length, '条');
+      if (all.length === 0) {
+        wx.hideLoading();
+        wx.showToast({ title: '暂无赛事数据', icon: 'none' });
+        this.setData({ races: [], allRaces: [], allTags: [], dateRangeText: '' });
+        return;
+      }
       const today = new Date(); today.setHours(0,0,0,0);
       const yearEnd = new Date(today.getFullYear(), 11, 31); // 今年年底
 

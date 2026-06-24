@@ -32,5 +32,13 @@ exports.main = async (event) => {
     return { count, avgScore, dimensions, tagStats: tags };
   }
 
+  if (action === 'updateStats') {
+    const { tagStats, avgScore, reviewCount } = event;
+    await db.collection('race_events').doc(eventId).update({
+      data: { avgScore, reviewCount, tagStats }
+    });
+    return { ok: true };
+  }
+
   return {};
 };

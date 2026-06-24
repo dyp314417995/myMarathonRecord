@@ -115,12 +115,13 @@ Page({
         });
       }
 
-      // 更新赛事评分统计
+      // 更新赛事评分统计（通过云函数）
       const stats = await raceUtil.getReviewStats(this.data.eventId);
       const tagStats = {};
       Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
-      await db.collection('race_events').doc(this.data.eventId).update({
-        data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
+      await wx.cloud.callFunction({
+        name: 'getRaceReviews',
+        data: { action: 'updateStats', eventId: this.data.eventId, avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
       });
 
       wx.hideLoading();
@@ -163,12 +164,13 @@ Page({
           await db.collection('users').doc(userInfo._id).update({ data: { points: balance } });
         }
 
-        // 更新赛事统计
+        // 更新赛事统计（云函数）
         const stats = await raceUtil.getReviewStats(this.data.eventId);
         const tagStats = {};
         Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
-        await db.collection('race_events').doc(this.data.eventId).update({
-          data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
+        await wx.cloud.callFunction({
+          name: 'getRaceReviews',
+          data: { action: 'updateStats', eventId: this.data.eventId, avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
         });
 
         wx.showToast({ title: '已删除，-10积分', icon: 'success' });
