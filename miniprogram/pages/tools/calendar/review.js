@@ -6,64 +6,98 @@ Page({
   data: {
     eventId: '',
     eventName: '',
-    scores: { difficulty: 5, atmosphere: 5, supply: 5, transport: 5, scenery: 5, org: 5, medal: 5, value: 5 },
-    elevation: '',
-    equipment: '',
+    scores: { difficulty: 5, atmosphere: 5, supply: 5, transport: 5 },
     selectedTags: [],
+    hotTags: [],         // 已有标签及次数 [{name, count}]
+    customTag: '',
+    description: '',
     submitting: false,
-    existingId: '',     // 已有评价ID，用于修改
-    isEdit: false,      // 是否修改模式
+    existingId: '',
+    isEdit: false,
+    eventTypes: ['full'],   // 赛事支持的项目类型
+    reviewRaceType: 'full', // 本次评价的项目类型
+    hasFull: true,          // 是否支持全马
+    hasHalf: false,         // 是否支持半马
+    hasBoth: false,         // 同时有全马和半马
+    raceGroup: '',          // 赛事组
+    reviewYear: new Date().getFullYear(),
+    dims: [
+      { key: 'difficulty', name: '赛道', desc: '赛道越好，评分越高' },
+      { key: 'atmosphere', name: '氛围', desc: '观众热情、加油氛围' },
+      { key: 'supply', name: '补给', desc: '补给站数量与质量' },
+      { key: 'transport', name: '交通', desc: '到达赛场的便利性' },
+    ],
   },
-
-  dims: [
-    { key: 'difficulty', name: '赛道难度', desc: '1=轻松 10=极难' },
-    { key: 'atmosphere', name: '赛道氛围', desc: '观众热情、加油氛围' },
-    { key: 'supply', name: '补给', desc: '补给站数量与质量' },
-    { key: 'transport', name: '交通', desc: '到达赛场的便利性' },
-    { key: 'scenery', name: '赛道风景', desc: '沿途风景质量' },
-    { key: 'org', name: '组织水平', desc: '赛事组织、引导、存包' },
-    { key: 'medal', name: '完赛奖牌', desc: '奖牌设计与质量' },
-    { key: 'value', name: '性价比', desc: '报名费与体验匹配度' },
-  ],
-
-  allTags: [
-    'PB赛道', '新手友好', '坡多', '风景好',
-    '值得一游', '美食多', '补给丰富', '住宿方便',
-    '性价比高', '推荐参赛', '不推荐', '组织混乱',
-  ],
 
   async onLoad(options) {
     if (!options.id) return;
     this.setData({ eventId: options.id, eventName: options.name || '' });
 
-    // 检查是否已有评价
+    // 加载赛事项目类型
+    let raceGroup = '';
+    try {
+      const res = await raceUtil.getAll({ limit: 200 });
+      const event = (res.list || []).find(r => r._id === options.id);
+      if (event) {
+        const types = event.raceTypes || [event.raceType || 'full'];
+        raceGroup = event.raceGroup || '';
+        this.setData({
+          eventTypes: types, reviewRaceType: types[0] || 'full', raceGroup,
+          hasFull: types.includes('full'), hasHalf: types.includes('half'),
+          hasBoth: types.includes('full') && types.includes('half'),
+        });
+      }
+    } catch {}
+    // 年份取赛事日期年份
+    const year = event ? new Date(event.date).getFullYear() : new Date().getFullYear();
+    this.setData({ reviewYear: year });
+
+    await this.loadHotTags();
+    await this.loadMyReview();
+  },
+
+  onShow() {
+    if (this.data.eventId) this.loadHotTags();
+  },
+
+  onTypeSel(e) { this.setData({ reviewRaceType: e.currentTarget.dataset.v }); },
+  onYearSel(e) { this.setData({ yearIdx: e.detail.value }); },
+
+  async loadMyReview() {
     const userInfo = wx.getStorageSync('userInfo');
     if (userInfo) {
       const db = require('../../../utils/db').db;
       const exist = await db.collection('race_reviews').where({
-        eventId: options.id, userId: userInfo._id
+        eventId: this.data.eventId, userId: userInfo._id
       }).get();
       if (exist.data.length > 0) {
         const r = exist.data[0];
         this.setData({
           isEdit: true, existingId: r._id,
           scores: r.scores || this.data.scores,
-          elevation: r.elevation || '',
-          equipment: r.equipment || '',
           selectedTags: r.tags || [],
+          description: r.description || '',
         });
       }
     }
   },
 
-  onScoreTap(e) {
-    const { dim, val } = e.currentTarget.dataset;
-    const scores = { ...this.data.scores, [dim]: parseInt(val) };
-    this.setData({ scores });
+  async loadHotTags() {
+    try {
+      const stats = await raceUtil.getReviewStats(this.data.eventId);
+      const tagStats = stats.tagStats || {};
+      const tags = Object.entries(tagStats)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([name, count]) => ({ name, count }));
+      this.setData({ hotTags: tags });
+    } catch {}
   },
 
-  onElevInput(e) { this.setData({ elevation: e.detail.value }); },
-  onEquipInput(e) { this.setData({ equipment: e.detail.value }); },
+  onScoreTap(e) {
+    const { dim, val } = e.currentTarget.dataset;
+    this.setData({ [`scores.${dim}`]: parseInt(val) });
+  },
 
   onTagTap(e) {
     const tag = e.currentTarget.dataset.tag;
@@ -72,6 +106,23 @@ Page({
     if (idx >= 0) tags.splice(idx, 1); else tags.push(tag);
     this.setData({ selectedTags: tags });
   },
+
+  onCustomTagInput(e) { this.setData({ customTag: e.detail.value }); },
+
+  onCustomTag() {
+    const tag = this.data.customTag.trim();
+    if (!tag) return;
+    if (this.data.selectedTags.includes(tag)) {
+      wx.showToast({ title: '标签已存在', icon: 'none' });
+      return;
+    }
+    this.setData({
+      selectedTags: [...this.data.selectedTags, tag],
+      customTag: '',
+    });
+  },
+
+  onDescInput(e) { this.setData({ description: e.detail.value }); },
 
   async onSubmit() {
     if (this.data.submitting) return;
@@ -83,25 +134,24 @@ Page({
 
     try {
       const db = require('../../../utils/db').db;
+      const year = this.data.reviewYear || new Date().getFullYear();
       const updateData = {
         scores: this.data.scores,
-        elevation: this.data.elevation.trim(),
-        equipment: this.data.equipment.trim(),
         tags: this.data.selectedTags,
+        description: this.data.description.trim(),
+        raceType: this.data.reviewRaceType,
+        year,
       };
 
       if (this.data.isEdit) {
-        // 修改已有评价
         await db.collection('race_reviews').doc(this.data.existingId).update({
           data: { ...updateData, updateTime: new Date() }
         });
       } else {
-        // 首次评价
         await db.collection('race_reviews').add({
-          data: { ...updateData, eventId: this.data.eventId, userId: userInfo._id, status: 'approved', createTime: new Date() }
+          data: { ...updateData, eventId: this.data.eventId, userId: userInfo._id, raceGroup: this.data.raceGroup, status: 'approved', createTime: new Date() }
         });
 
-        // 首次评价发放 10 积分
         await pointsUtil.addRecord({
           userId: userInfo._id,
           type: 'earn',
@@ -115,21 +165,23 @@ Page({
         });
       }
 
-      // 更新赛事评分统计（通过云函数）
+      // 更新统计
       const stats = await raceUtil.getReviewStats(this.data.eventId);
       const tagStats = {};
       Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
-      await wx.cloud.callFunction({
-        name: 'getRaceReviews',
-        data: { action: 'updateStats', eventId: this.data.eventId, avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
+      await db.collection('race_events').doc(this.data.eventId).update({
+        data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
       });
+
+      // 触发 AI 总结（异步，不阻塞）
+      wx.cloud.callFunction({ name: 'reviewSummary', data: { eventId: this.data.eventId } }).catch(() => {});
 
       wx.hideLoading();
       wx.showToast({ title: this.data.isEdit ? '已更新' : '提交成功，+10积分', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();
-      wx.showToast({ title: '提交失败', icon: 'none' });
+      wx.showToast({ title: '提交失败: ' + err.message, icon: 'none' });
     } finally {
       this.setData({ submitting: false });
     }
@@ -147,30 +199,21 @@ Page({
 
         await db.collection('race_reviews').doc(this.data.existingId).remove();
 
-        // 扣减积分
         if (userInfo) {
           await pointsUtil.addRecord({
-            userId: userInfo._id,
-            type: 'use',
-            category: '消耗',
-            points: -10,
+            userId: userInfo._id, type: 'use', category: '消耗', points: -10,
             description: `删除"${this.data.eventName}"评价，扣减10积分`,
-            images: [],
-            earnDate: new Date(),
-            expireDate: null,
-            status: 'approved',
+            images: [], earnDate: new Date(), expireDate: null, status: 'approved',
           });
           const balance = await pointsUtil.getBalance(userInfo._id);
           await db.collection('users').doc(userInfo._id).update({ data: { points: balance } });
         }
 
-        // 更新赛事统计（云函数）
         const stats = await raceUtil.getReviewStats(this.data.eventId);
         const tagStats = {};
         Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
-        await wx.cloud.callFunction({
-          name: 'getRaceReviews',
-          data: { action: 'updateStats', eventId: this.data.eventId, avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
+        await db.collection('race_events').doc(this.data.eventId).update({
+          data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
         });
 
         wx.showToast({ title: '已删除，-10积分', icon: 'success' });

@@ -10,12 +10,22 @@
         <text class="cat-desc">+{{item.points}}分 {{item.monthlyLimit ? '(月上限'+item.monthlyLimit+'次)' : ''}}</text>
       </view>
     </view>
+    <!-- 数量选择（拉新/自媒体） -->
+    <view wx:if="{{selectedCat && (selectedCat === '拉新' || selectedCat === '自媒体')}}" class="qty-row">
+      <text class="qty-label">数量</text>
+      <view class="qty-stepper">
+        <text class="qty-btn" bindtap="onQtyDown">−</text>
+        <text class="qty-val">{{quantity}}</text>
+        <text class="qty-btn" bindtap="onQtyUp">+</text>
+      </view>
+      <text class="qty-total">= +{{quantity * selectedPoints}}分</text>
+    </view>
     <!-- 本月次数 -->
-    <view wx:if="{{selectedCat && monthlyCount > 0}}" class="count-tip">
+    <view wx:if="{{selectedCat && monthlyCount > 0 && selectedCat !== '拉新' && selectedCat !== '自媒体'}}" class="count-tip">
       <text wx:if="{{monthlyLimit}}">本月已提交 {{monthlyCount}}/{{monthlyLimit}} 次</text>
       <text wx:else>本月已提交 {{monthlyCount}} 次</text>
     </view>
-    <view wx:if="{{selectedCat && monthlyCount >= monthlyLimit && monthlyLimit > 0}}" class="limit-tip">
+    <view wx:if="{{selectedCat && monthlyCount >= monthlyLimit && monthlyLimit > 0 && selectedCat !== '拉新' && selectedCat !== '自媒体'}}" class="limit-tip">
       <text>本月已达上限，无法提交</text>
     </view>
   </view>

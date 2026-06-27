@@ -15,10 +15,10 @@ async function initDefaultRules() {
   const defaults = [
     { category: '拉新', name: '邀请跑友加入', points: 3, monthlyLimit: null, status: 'active' },
     { category: '团服参赛', name: '穿团服参加赛事', points: 5, monthlyLimit: null, status: 'active' },
-    { category: '自媒体', name: '带话题并@九州战马联盟', points: 3, monthlyLimit: 4, status: 'active' },
+    { category: '自媒体', name: '带话题并@九州战马联盟', points: 3, monthlyLimit: null, status: 'active' },
     { category: '天天跑完赛', name: '必迈天天跑完成10次打卡', points: 10, monthlyLimit: null, status: 'active' },
     { category: '赛事评分奖励', name: '完成赛事体验评分（审核通过后自动发放）', points: 10, monthlyLimit: null, status: 'active' },
-    { category: '集体活动', name: '赛前聚餐、赛前合影、线下集体活动（由管理员或者组织者统一录入）', points: 3, monthlyLimit: null, status: 'active' },
+    { category: '集体活动', name: '赛前聚餐、赛前合影、线下集体活动（管理员录入）', points: 3, monthlyLimit: null, status: 'active' },
   ];
   const count = await db.collection('points_rules').count();
   if (count.total === 0) {

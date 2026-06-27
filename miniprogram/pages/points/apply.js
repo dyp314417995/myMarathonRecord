@@ -5,8 +5,10 @@ Page({
   data: {
     rules: [],
     selectedCat: '',
+    selectedPoints: 0,
     description: '',
     images: [],
+    quantity: 1,
     monthlyCount: 0,
     monthlyLimit: 0,
     submitting: false,
@@ -32,8 +34,21 @@ Page({
 
   onSelectCat(e) {
     const cat = e.currentTarget.dataset.cat;
-    this.setData({ selectedCat: cat });
-    this.loadMonthlyCount(cat);
+    const rule = this.data.rules.find(r => r.category === cat);
+    this.setData({ selectedCat: cat, quantity: 1, selectedPoints: rule ? rule.points : 3 });
+    if (cat !== '拉新' && cat !== '自媒体') this.loadMonthlyCount(cat);
+  },
+
+  onQtyDown() {
+    const { quantity } = this.data;
+    if (quantity <= 1) return;
+    this.setData({ quantity: quantity - 1 });
+  },
+  onQtyUp() {
+    const { quantity, selectedCat } = this.data;
+    const max = selectedCat === '拉新' ? 10 : 4;
+    if (quantity >= max) return;
+    this.setData({ quantity: quantity + 1 });
   },
 
   async loadMonthlyCount(cat) {
@@ -64,10 +79,10 @@ Page({
   },
 
   async onSubmit() {
-    const { selectedCat, description, images, submitting, monthlyCount, monthlyLimit } = this.data;
+    const { selectedCat, description, images, submitting, monthlyCount, monthlyLimit, quantity } = this.data;
     if (submitting) return;
     if (!selectedCat) return wx.showToast({ title: '请选择类型', icon: 'none' });
-    if (monthlyLimit && monthlyCount >= monthlyLimit) return wx.showToast({ title: '本月已达上限', icon: 'none' });
+    if (selectedCat !== '拉新' && selectedCat !== '自媒体' && monthlyLimit && monthlyCount >= monthlyLimit) return wx.showToast({ title: '本月已达上限', icon: 'none' });
     if (images.length === 0) return wx.showToast({ title: '请上传图片', icon: 'none' });
 
     this.setData({ submitting: true });
@@ -84,17 +99,20 @@ Page({
         fileIDs.push(res.fileID);
       }
 
-      // 获取规则积分值
+      // 获取规则积分值，拉新/自媒体 × 数量
       const rule = this.data.rules.find(r => r.category === selectedCat);
-      const points = rule ? rule.points : 3;
+      const perPoint = rule ? rule.points : 3;
+      const isMulti = selectedCat === '拉新' || selectedCat === '自媒体';
+      const points = isMulti ? perPoint * quantity : perPoint;
 
       await pointsUtil.addRecord({
         userId: this.data.userId,
         type: 'earn', category: selectedCat,
-        points: points,
-        description: description || selectedCat,
+        points,
+        qty: isMulti ? quantity : 1,
+        description: isMulti ? `${selectedCat} ×${quantity}（${description || ''}）`.trim() : (description || selectedCat),
         images: fileIDs,
-        monthlyIndex: monthlyCount + 1,
+        monthlyIndex: monthlyCount + quantity,
         earnDate: new Date(),
         expireDate: new Date(Date.now() + 365 * 86400000),
         status: this.data.isAdmin ? 'approved' : 'pending',

@@ -10,10 +10,23 @@
 .star { width: 56rpx; height: 56rpx; line-height: 56rpx; text-align: center; font-size: 24rpx; color: #999; background: #f5f5f5; border-radius: 8rpx; }
 .star.on { background: #1aad19; color: #fff; font-weight: 600; }
 
-.tag-grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.tag-chip { font-size: 24rpx; padding: 10rpx 20rpx; border-radius: 20rpx; background: #f5f5f5; color: #666; }
+.tag-selected { display: flex; flex-wrap: wrap; gap: 8rpx; margin-bottom: 8rpx; }
+.tag-grid { display: flex; flex-wrap: wrap; gap: 8rpx; }
+.tag-chip { font-size: 24rpx; padding: 8rpx 18rpx; border-radius: 20rpx; background: #f5f5f5; color: #666; }
 .tag-chip.on { background: #e8f5e9; color: #1aad19; font-weight: 600; border: 2rpx solid #1aad19; }
+.tag-count { font-size: 20rpx; color: #999; }
+
+.custom-tag-row { display: flex; gap: 8rpx; align-items: center; margin-top: 12rpx; }
+.custom-tag-input { flex: 1; background: #f7f7f7; border-radius: 8rpx; padding: 12rpx 16rpx; font-size: 24rpx; }
+.custom-tag-btn { width: 56rpx; height: 56rpx; line-height: 56rpx; text-align: center; background: #1aad19; color: #fff; border-radius: 8rpx; font-size: 32rpx; }
+
+.desc-input { width: 100%; min-height: 120rpx; background: #f7f7f7; border-radius: 12rpx; padding: 16rpx; font-size: 26rpx; box-sizing: border-box; }
+
+.btn-row { display: flex; gap: 12rpx; flex-wrap: wrap; }
+.type-select-row { display: flex; align-items: center; gap: 12rpx; }
+.opt-btn { font-size: 26rpx; padding: 12rpx 28rpx; border-radius: 12rpx; background: #f5f5f5; color: #666; }
+.opt-btn.on { background: #e8f5e9; color: #1aad19; font-weight: 600; border: 2rpx solid #1aad19; }
 
 .form-label { font-size: 26rpx; color: #666; display: block; margin-top: 16rpx; margin-bottom: 8rpx; }
-.form-input { background: #f7f7f7; border-radius: 12rpx; padding: 20rpx; font-size: 28rpx; }
 .btn-area { padding: 24rpx; }
+.btn-reject { background: #fff; border: 2rpx solid #ff4d4f; color: #ff4d4f; border-radius: 12rpx; font-size: 28rpx; }

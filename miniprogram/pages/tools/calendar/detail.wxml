@@ -27,39 +27,85 @@
   <view class="card" wx:if="{{event.timeline && event.timeline.length > 0}}">
     <view class="section-title"><text>⏱ 赛事时间轴</text></view>
     <view class="timeline">
-      <view class="tl-item" wx:for="{{event.timeline}}" wx:key="label" wx:for-item="t">
-        <view class="tl-dot">🚩</view>
+      <view class="tl-item {{t.status}}" wx:for="{{event.timeline}}" wx:key="label" wx:for-item="t" wx:if="{{index < 5 || showAllTimeline}}">
+        <view class="tl-dot">
+          <text wx:if="{{t.status === 'past'}}">🚩</text>
+          <view wx:elif="{{t.status === 'next'}}" class="tl-flag"></view>
+          <view wx:else class="tl-gray-dot"></view>
+        </view>
         <view class="tl-body">
           <text class="tl-label">{{t.label}}</text>
-          <text class="tl-date">{{t.date}}</text>
+          <text class="tl-date">{{t.fmtDate}}</text>
+          <!-- 发枪分区 -->
+          <view wx:if="{{t.label === '鸣枪开跑' && event.gunTimes && event.gunTimes.length}}" class="gun-subs">
+            <text class="gun-sub" wx:for="{{event.gunTimes}}" wx:key="index" wx:for-item="g">{{g.zone}}区 {{g.time}}</text>
+          </view>
         </view>
+      </view>
+      <view wx:if="{{event.timeline && event.timeline.length > 5}}" class="tl-toggle" bindtap="onToggleTimeline">
+        <text>{{showAllTimeline ? '收起时间轴 ▲' : '展开全部 (' + event.timeline.length + '项) ▼'}}</text>
       </view>
     </view>
   </view>
 
   <!-- 评分概览 -->
   <view class="card" wx:if="{{reviewStats && reviewStats.count > 0}}">
-    <view class="section-title" bindtap="onScoreDetail">
-      <text>赛事评分</text>
-      <text class="arrow">›</text>
+    <view class="section-title"><text>赛事评分 ({{reviewStats.count}}人)</text></view>
+    <!-- 类型Tab切换 -->
+    <view class="score-tabs" wx:if="{{reviewStats.fullStats && reviewStats.halfStats}}">
+      <text class="score-tab {{scoreTab === 'all' ? 'on' : ''}}" bindtap="onScoreTab" data-t="all">综合</text>
+      <text class="score-tab {{scoreTab === 'full' ? 'on' : ''}}" bindtap="onScoreTab" data-t="full">全马</text>
+      <text class="score-tab {{scoreTab === 'half' ? 'on' : ''}}" bindtap="onScoreTab" data-t="half">半马</text>
     </view>
-    <view class="score-overview">
-      <view class="overall-score">
-        <text class="score-num">{{reviewStats.avgScore}}</text>
-        <text class="score-label">综合评分</text>
-        <text class="score-count">{{reviewStats.count}}人参与</text>
+    <!-- 全马/半马并排 -->
+    <view class="type-scores" wx:if="{{scoreTab === 'all' && (reviewStats.fullStats || reviewStats.halfStats)}}">
+      <view class="type-score-item" wx:if="{{reviewStats.fullStats}}">
+        <text class="type-label">🏃 全马</text>
+        <text class="type-num">{{reviewStats.fullStats.avgScore}}</text>
+        <text class="type-count">{{reviewStats.fullStats.count}}人</text>
       </view>
-      <view class="dim-scores">
-        <view class="dim-row" wx:for="{{reviewStats.dimensions}}" wx:key="name">
-          <text class="dim-name">{{''}}</text>
-          <view class="dim-bar-wrap"><view class="dim-bar" style="width:{{item*10}}%"></view></view>
-          <text class="dim-val">{{item}}</text>
+      <view class="type-score-item" wx:if="{{reviewStats.halfStats}}">
+        <text class="type-label">🏃 半马</text>
+        <text class="type-num">{{reviewStats.halfStats.avgScore}}</text>
+        <text class="type-count">{{reviewStats.halfStats.count}}人</text>
+      </view>
+    </view>
+    <!-- 综合 -->
+    <view class="overall-score" style="margin-top:12rpx;">
+      <text class="score-num">{{reviewStats.avgScore}}</text>
+      <text class="score-label">综合</text>
+    </view>
+    <view class="dim-scores">
+        <view class="dim-row">
+          <text class="dim-name">赛道</text>
+          <view class="dim-bar-wrap"><view class="dim-bar" style="width:{{(reviewStats.dimensions.difficulty||0)*10}}%"></view></view>
+          <text class="dim-val">{{reviewStats.dimensions.difficulty || 0}}</text>
+        </view>
+        <view class="dim-row">
+          <text class="dim-name">氛围</text>
+          <view class="dim-bar-wrap"><view class="dim-bar" style="width:{{(reviewStats.dimensions.atmosphere||0)*10}}%"></view></view>
+          <text class="dim-val">{{reviewStats.dimensions.atmosphere || 0}}</text>
+        </view>
+        <view class="dim-row">
+          <text class="dim-name">补给</text>
+          <view class="dim-bar-wrap"><view class="dim-bar" style="width:{{(reviewStats.dimensions.supply||0)*10}}%"></view></view>
+          <text class="dim-val">{{reviewStats.dimensions.supply || 0}}</text>
+        </view>
+        <view class="dim-row">
+          <text class="dim-name">交通</text>
+          <view class="dim-bar-wrap"><view class="dim-bar" style="width:{{(reviewStats.dimensions.transport||0)*10}}%"></view></view>
+          <text class="dim-val">{{reviewStats.dimensions.transport || 0}}</text>
         </view>
       </view>
-    </view>
   </view>
   <view class="card" wx:else>
     <text class="no-score">暂无评分</text>
+  </view>
+
+  <!-- 跑友评价总结 -->
+  <view class="card" wx:if="{{event.aiSummary}}">
+    <view class="section-title"><text>📊 赛事总评</text></view>
+    <text class="summary-text">{{event.aiSummary}}</text>
   </view>
 
   <!-- 热门标签 -->
@@ -74,26 +120,77 @@
   </view>
 
   <!-- 我的评价 -->
-  <view class="card" wx:if="{{myReview}}">
+  <view class="card" wx:if="{{myReview._id}}">
     <view class="section-title">
       <text>📝 我的评价</text>
-      <text class="del-review-btn" data-id="{{myReview._id}}" catchtap="onDelMyReview">🗑 删除</text>
+      <view style="display:flex;gap:12rpx;">
+        <text class="del-review-btn" bindtap="onReview">✏️ 编辑</text>
+        <text class="del-review-btn" catchtap="onDelMyReview">🗑 删除</text>
+      </view>
     </view>
     <view class="my-review">
+      <text class="my-section-label">⭐ 评分（{{myReview.myAvg}}）</text>
       <view class="my-dim-list">
-        <text class="my-dim" wx:for="{{['difficulty','atmosphere','supply','transport','scenery','org','medal','value']}}" wx:key="*this" wx:for-item="k">
-          {{k}} {{myReview.scores[k]}}
-        </text>
+        <text class="my-dim">赛道 {{myReview.scores.difficulty}}</text>
+        <text class="my-dim">氛围 {{myReview.scores.atmosphere}}</text>
+        <text class="my-dim">补给 {{myReview.scores.supply}}</text>
+        <text class="my-dim">交通 {{myReview.scores.transport}}</text>
       </view>
-      <view wx:if="{{myReview.tags && myReview.tags.length}}" class="req-tags">
-        <text class="race-tag" wx:for="{{myReview.tags}}" wx:key="*this">{{item}}</text>
+      <view wx:if="{{myReviewTags}}">
+        <text class="my-section-label">🏷 标签</text>
+        <text class="my-tags-text">{{myReviewTags}}</text>
       </view>
+      <view wx:if="{{myReview.description}}">
+        <text class="my-section-label">💬 感受</text>
+        <view class="my-desc">
+          <text>{{myReview.description}}</text>
+        </view>
+      </view>
+      <view wx:if="{{event.timeline && event.timeline.length > 5}}" class="tl-toggle" bindtap="onToggleTimeline">
+        <text>{{showAllTimeline ? '收起时间轴 ▲' : '展开全部 (' + event.timeline.length + '项) ▼'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 他人评价 -->
+  <view class="card" wx:if="{{otherReviews.length > 0}}">
+    <view class="section-title">
+      <text>💬 跑友评价 ({{reviewTotal}}条)</text>
+      <view class="review-type-filter" wx:if="{{reviewStats.fullStats || reviewStats.halfStats}}">
+        <text class="filter-chip {{reviewTypeFilter === '' ? 'on' : ''}}" bindtap="onReviewTypeFilter" data-v="">全部</text>
+        <text class="filter-chip {{reviewTypeFilter === 'full' ? 'on' : ''}}" bindtap="onReviewTypeFilter" data-v="full">全马</text>
+        <text class="filter-chip {{reviewTypeFilter === 'half' ? 'on' : ''}}" bindtap="onReviewTypeFilter" data-v="half">半马</text>
+      </view>
+    </view>
+    <view class="other-review" wx:for="{{otherReviews}}" wx:key="_id" wx:if="{{!reviewTypeFilter || item.raceType === reviewTypeFilter}}">
+      <view class="or-header">
+        <text class="or-user">{{item.userName}}</text>
+        <text class="or-info">{{item.year}}年{{item.raceTypeName}}</text>
+      </view>
+      <text class="my-section-label">⭐ 评分（{{item.myAvg}}）</text>
+      <view class="my-dim-list">
+        <text class="my-dim">赛道 {{item.scores.difficulty}}</text>
+        <text class="my-dim">氛围 {{item.scores.atmosphere}}</text>
+        <text class="my-dim">补给 {{item.scores.supply}}</text>
+        <text class="my-dim">交通 {{item.scores.transport}}</text>
+      </view>
+      <view wx:if="{{item.tags && item.tags.length}}">
+        <text class="my-section-label">🏷 标签</text>
+        <text class="my-tags-text">{{item.tagStr}}</text>
+      </view>
+      <view wx:if="{{item.description}}">
+        <text class="my-section-label">💬 感受</text>
+        <view class="my-desc"><text>{{item.description}}</text></view>
+      </view>
+    </view>
+    <view wx:if="{{reviewHasMore}}" class="load-more" bindtap="loadMoreReviews">
+      <text>查看更多</text>
     </view>
   </view>
 
   <!-- 操作按钮 -->
   <view class="btn-area">
-    <button wx:if="{{myStatus === 'finished' || myReview}}" class="btn-primary" bindtap="onReview">{{myReview ? '✏️ 修改评价' : '⭐ 参与评分'}}</button>
+    <button wx:if="{{myStatus === 'finished' || myReview._id}}" class="btn-primary" bindtap="onReview">{{myReview._id ? '✏️ 修改评价' : '⭐ 参与评分'}}</button>
     <button wx:elif="{{isMine && myStatus !== 'finished'}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
   </view>
 </view>

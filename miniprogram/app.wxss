@@ -61,10 +61,10 @@ page {
 }
 .form-input {
   width: 100%;
-  height: 88rpx;
+  height: auto;
+  padding: 24rpx 20rpx;
   background: #f7f7f7;
   border-radius: 12rpx;
-  padding: 0 24rpx;
   font-size: 28rpx;
   box-sizing: border-box;
 }

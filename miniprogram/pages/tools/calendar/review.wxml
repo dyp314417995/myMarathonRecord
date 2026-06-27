@@ -5,6 +5,15 @@
     <text class="event-name">{{eventName}}</text>
   </view>
 
+  <!-- 参赛信息：仅多项目赛事需选择 -->
+  <view class="card" wx:if="{{!isEdit && hasBoth}}">
+    <view class="type-select-row">
+      <text class="form-label" style="margin:0;">项目</text>
+      <text class="opt-btn {{reviewRaceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onTypeSel">全马</text>
+      <text class="opt-btn {{reviewRaceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onTypeSel">半马</text>
+    </view>
+  </view>
+
   <!-- 评分维度 -->
   <view class="card" wx:for="{{dims}}" wx:key="key" wx:for-item="dim">
     <view class="dim-header">
@@ -16,24 +25,33 @@
     </view>
   </view>
 
-  <!-- 额外信息 -->
-  <view class="card">
-    <text class="form-label">爬升(m)（选填）</text>
-    <input class="form-input" type="number" placeholder="赛事实际爬升" value="{{elevation}}" bindinput="onElevInput" />
-    <text class="form-label">使用装备（选填）</text>
-    <input class="form-input" placeholder="如：Nike Vaporfly、Garmin 955" value="{{equipment}}" bindinput="onEquipInput" />
-  </view>
-
   <!-- 标签选择 -->
   <view class="card">
     <text class="form-label">选择标签（多选）</text>
+    <!-- 已选标签 -->
+    <view class="tag-selected" wx:if="{{selectedTags.length > 0}}">
+      <text class="tag-chip on" wx:for="{{selectedTags}}" wx:key="*this" data-tag="{{item}}" bindtap="onTagTap">✕ {{item}}</text>
+    </view>
+    <!-- 热门标签 -->
+    <text class="form-label" style="font-size:22rpx;color:#999;margin-top:12rpx;">热门标签</text>
     <view class="tag-grid">
-      <text class="tag-chip {{selectedTags.indexOf(item) >= 0 ? 'on' : ''}}" wx:for="{{allTags}}" wx:key="*this" data-tag="{{item}}" bindtap="onTagTap">{{item}}</text>
+      <text class="tag-chip {{selectedTags.indexOf(item.name) >= 0 ? 'on' : ''}}" wx:for="{{hotTags}}" wx:key="name" data-tag="{{item.name}}" bindtap="onTagTap">{{item.name}}<text class="tag-count" wx:if="{{item.count > 0}}"> ×{{item.count}}</text></text>
+    </view>
+    <!-- 自定义标签 -->
+    <view class="custom-tag-row">
+      <input class="custom-tag-input" placeholder="自定义标签（输入后点+" bindconfirm="onCustomTag" value="{{customTag}}" bindinput="onCustomTagInput" />
+      <text class="custom-tag-btn" bindtap="onCustomTag">+</text>
     </view>
   </view>
 
+  <!-- 文字描述 -->
+  <view class="card">
+    <text class="form-label">赛事体验描述</text>
+    <textarea class="desc-input" placeholder="说说你的参赛感受（200字以内）..." value="{{description}}" bindinput="onDescInput" maxlength="200" auto-height />
+  </view>
+
   <view class="btn-area">
-    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{isEdit ? '修改评价' : '提交评分'}}</button>
+    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{isEdit ? '修改评价' : '提交评分（+10积分）'}}</button>
     <button wx:if="{{isEdit}}" class="btn-reject" bindtap="onDelete" style="margin-top:16rpx;">🗑 删除评价（-10积分）</button>
   </view>
 </view>

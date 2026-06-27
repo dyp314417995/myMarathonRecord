@@ -16,6 +16,7 @@ Page({
     detailUser: null,
     detailGroups: '',
     detailPoints: 0,
+    totalCount: 0,
     hasMore: false,
     _allLoaded: false,
   },
@@ -49,17 +50,31 @@ Page({
         const raw = u.avatarUrl || '';
         let avatar = '';
         if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://')) avatar = raw;
+        else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
+        // 其他格式（wxfile://、temp https等）都是临时路径，清空走默认头像
         return {
           ...u, avatarUrl: avatar,
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
         };
       });
+      const totalCount = await dbUtil.getUserCount();
       const hasMore = res.data.length >= 20;
-      this.setData({ allUsers: users, hasMore });
+      this.setData({ allUsers: users, hasMore, totalCount, loading: false });
       this.applyFilter();
     } catch (err) {
       this.setData({ loading: false });
+    }
+  },
+
+  // 头像加载失败时回退到默认图
+  onAvatarError(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) {
+      const idx = this.data.allUsers.findIndex(u => u._id === id);
+      if (idx !== -1) {
+        this.setData({ [`allUsers[${idx}].avatarUrl`]: '/imgs/back.svg' });
+        this.applyFilter();
+      }
     }
   },
 

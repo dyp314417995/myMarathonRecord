@@ -5,6 +5,7 @@ Page({
   data: {
     allUsers: [], users: [], loading: true,
     searchKey: '', sortBy: 'time', sortAsc: false,
+    totalCount: 0,
     showDetail: false, detailUser: {}, detailGroups: '', detailRaces: [],
     hasMore: false,
     _allLoaded: false,
@@ -30,17 +31,31 @@ Page({
       }
 
       const allUsers = usersRes.data.map(u => {
-        let avatar = u.avatarUrl || '';
-        if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
-        else if (!avatar.startsWith('https://')) avatar = '';
+        const raw = u.avatarUrl || '';
+        let avatar = '';
+        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+        else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
+        // 其他格式（临时路径等）清空走默认头像
         return {
           ...u, avatarUrl: avatar,
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
         };
       });
-      this.setData({ allUsers, loading: false, hasMore: usersRes.data.length >= 20 });
+      const totalCount = await dbUtil.getUserCount();
+      this.setData({ allUsers, totalCount, loading: false, hasMore: usersRes.data.length >= 20 });
       this.applyFilter();
     } catch { this.setData({ loading: false }); }
+  },
+
+  onAvatarError(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) {
+      const idx = this.data.allUsers.findIndex(u => u._id === id);
+      if (idx !== -1) {
+        this.setData({ [`allUsers[${idx}].avatarUrl`]: '/imgs/back.svg' });
+        this.applyFilter();
+      }
+    }
   },
 
   applyFilter() {
@@ -104,9 +119,13 @@ Page({
         (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
       } catch {}
     }
-    if (Object.keys(urlMap).length > 0) {
-      all = all.map(u => (u.avatarUrl && u.avatarUrl.startsWith('cloud://') ? { ...u, avatarUrl: urlMap[u.avatarUrl] || '' } : u));
-    }
+    // 处理头像：cloud:// → tempURL，其他非 https 格式清空
+    all = all.map(u => {
+      const raw = u.avatarUrl || '';
+      if (raw.startsWith('cloud://')) return { ...u, avatarUrl: urlMap[raw] || '' };
+      if (raw.startsWith('https://') && !raw.includes('tmp')) return u;
+      return { ...u, avatarUrl: '' };
+    });
     this.setData({ allUsers: all, hasMore: false, loading: false, _allLoaded: true });
   },
 
@@ -169,9 +188,10 @@ Page({
       } catch {}
     }
     const newUsers = res.data.map(u => {
-      let avatar = u.avatarUrl || '';
-      if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
-      else if (!avatar.startsWith('https://')) avatar = '';
+      const raw = u.avatarUrl || '';
+      let avatar = '';
+      if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+      else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
       return {
         ...u, avatarUrl: avatar,
         groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',

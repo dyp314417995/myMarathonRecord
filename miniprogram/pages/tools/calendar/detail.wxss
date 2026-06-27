@@ -10,6 +10,19 @@
 .arrow { font-size: 36rpx; color: #ccc; }
 
 .score-overview { display: flex; gap: 24rpx; }
+.type-scores { display: flex; gap: 16rpx; }
+.type-score-item { flex: 1; background: #f5f5f5; border-radius: 12rpx; padding: 16rpx; text-align: center; }
+.type-label { font-size: 24rpx; color: #666; display: block; }
+.type-num { font-size: 40rpx; font-weight: 700; color: #ff9800; display: block; margin: 4rpx 0; }
+.type-count { font-size: 22rpx; color: #999; }
+
+.score-tabs { display: flex; gap: 8rpx; margin-bottom: 12rpx; }
+.score-tab { font-size: 24rpx; padding: 8rpx 20rpx; border-radius: 20rpx; background: #f5f5f5; color: #666; }
+.score-tab.on { background: #e8f5e9; color: #1aad19; font-weight: 600; }
+
+.review-type-filter { display: flex; gap: 6rpx; }
+.review-type-filter .filter-chip { font-size: 20rpx; padding: 4rpx 12rpx; border-radius: 10rpx; background: #f5f5f5; color: #666; }
+.review-type-filter .filter-chip.on { background: #e8f5e9; color: #1aad19; }
 .overall-score { text-align: center; flex-shrink: 0; }
 .score-num { font-size: 64rpx; font-weight: 700; color: #ff9800; display: block; }
 .score-label { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
@@ -22,6 +35,7 @@
 .dim-bar { height: 100%; background: linear-gradient(90deg, #ff9800, #ffc107); border-radius: 6rpx; }
 .dim-val { font-size: 22rpx; color: #ff9800; font-weight: 600; width: 48rpx; }
 .no-score { font-size: 26rpx; color: #bbb; text-align: center; display: block; padding: 24rpx 0; }
+.summary-text { font-size: 26rpx; color: #444; line-height: 1.7; }
 
 .tag-list { display: flex; flex-wrap: wrap; gap: 12rpx; }
 .tag-item { display: flex; align-items: center; gap: 4rpx; padding: 8rpx 16rpx; border-radius: 20rpx; background: #f0f7ff; }
@@ -35,13 +49,44 @@
 .my-scores { font-size: 24rpx; color: #333; }
 .my-dim-list { display: flex; flex-wrap: wrap; gap: 6rpx; margin-top: 6rpx; }
 .my-dim { font-size: 22rpx; color: #666; background: #f5f5f5; padding: 4rpx 10rpx; border-radius: 6rpx; }
+.my-section-label { font-size: 26rpx; color: #333; font-weight: 600; display: block; margin-top: 16rpx; margin-bottom: 8rpx; }
+.my-tags-text { font-size: 24rpx; color: #1aad19; }
+
+.other-review { padding: 16rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.other-review:last-child { border-bottom: none; }
+.or-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rpx; }
+.or-user { font-size: 26rpx; color: #333; font-weight: 500; }
+.or-avg { font-size: 28rpx; color: #ff9800; font-weight: 700; }
+.or-info { font-size: 22rpx; color: #999; }
+.load-more { text-align: center; padding: 16rpx; font-size: 24rpx; color: #1aad19; }
+.my-desc { font-size: 24rpx; color: #555; line-height: 1.6; background: #fafafa; padding: 12rpx; border-radius: 8rpx; }
 
 .del-review-btn { font-size: 22rpx; color: #ff4d4f; padding: 4rpx 8rpx; }
 
 .timeline { padding-left: 16rpx; }
 .tl-item { display: flex; gap: 12rpx; padding: 12rpx 0; border-left: 3rpx solid #e0e0e0; padding-left: 20rpx; position: relative; }
 .tl-item:last-child { border-left-color: transparent; }
-.tl-dot { font-size: 20rpx; position: absolute; left: -11rpx; top: 16rpx; }
+.tl-dot { position: absolute; display: flex; align-items: center; justify-content: center; }
 .tl-body { display: flex; flex-direction: column; }
 .tl-label { font-size: 26rpx; color: #333; font-weight: 500; }
 .tl-date { font-size: 24rpx; color: #999; margin-top: 2rpx; }
+
+/* past: 已过节点 - 红旗 */
+.tl-item.past .tl-dot { left: -12rpx; top: 14rpx; font-size: 24rpx; }
+.tl-item.past .tl-dot text { line-height: 1; }
+
+/* next: 下一个节点 - 绿色旗子, 放大 */
+.tl-item.next { border-left-color: #1aad19; }
+.tl-item.next .tl-dot { left: -17rpx; top: 12rpx; }
+.tl-flag { width: 28rpx; height: 28rpx; background: #1aad19; border-radius: 50%; box-shadow: 0 0 0 4rpx rgba(26,173,25,0.2); }
+.tl-item.next .tl-label { color: #1aad19; font-weight: 700; font-size: 28rpx; }
+.tl-item.next .tl-date { color: #1aad19; }
+
+/* future: 将来节点 - 灰色 */
+.tl-item.future .tl-dot { left: -7rpx; top: 18rpx; }
+.tl-gray-dot { width: 12rpx; height: 12rpx; background: #d0d0d0; border-radius: 50%; }
+.tl-item.future .tl-label { color: #bbb; }
+.tl-item.future .tl-date { color: #ccc; }
+
+.gun-subs { margin-top: 8rpx; display: flex; flex-wrap: wrap; gap: 6rpx; }
+.gun-sub { font-size: 20rpx; color: #888; background: #f5f5f5; padding: 4rpx 12rpx; border-radius: 8rpx; }

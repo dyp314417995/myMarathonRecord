@@ -125,16 +125,19 @@ Page({
     wx.showLoading({ title: '注册中...' });
 
     try {
-      // 上传头像到云存储（本地路径就上传）
+      // 上传头像到云存储（只要不是 cloud:// 都上传，避免临时路径过期）
       let finalAvatar = avatarUrl;
-      if (avatarUrl && !avatarUrl.startsWith('cloud://') && !avatarUrl.startsWith('https://')) {
+      if (avatarUrl && !avatarUrl.startsWith('cloud://')) {
         try {
           const upRes = await wx.cloud.uploadFile({
             cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
             filePath: avatarUrl,
           });
           finalAvatar = upRes.fileID;
-        } catch {}
+        } catch (err) {
+          console.error('头像上传失败:', err);
+          finalAvatar = ''; // 上传失败就清空，用默认头像
+        }
       }
 
       // 检查是否已注册

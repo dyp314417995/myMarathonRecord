@@ -11,16 +11,16 @@
   <view class="search-bar">
     <input class="search-input" placeholder="搜索赛事名称/城市" value="{{searchKey}}" bindinput="onSearch" />
   </view>
-  <view class="date-picker" wx:if="{{showDatePicker}}">
-    <text class="form-label">开始日期</text>
-    <picker mode="date" value="{{dateFrom}}" bindchange="onDateFrom">
-      <view class="date-input">{{dateFrom || '选择'}}</view>
-    </picker>
-    <text class="form-label">结束日期</text>
-    <picker mode="date" value="{{dateTo}}" bindchange="onDateTo">
-      <view class="date-input">{{dateTo || '选择'}}</view>
-    </picker>
-    <button class="btn-primary btn-sm" bindtap="onApplyDate" style="margin-top:12rpx;">查询</button>
+  <view class="date-picker">
+    <view class="date-row">
+      <picker mode="date" value="{{dateFrom}}" bindchange="onDateFrom">
+        <view class="date-input">{{dateFrom || '开始'}}</view>
+      </picker>
+      <text style="color:#999;flex-shrink:0">至</text>
+      <picker mode="date" value="{{dateTo}}" bindchange="onDateTo">
+        <view class="date-input">{{dateTo || '结束'}}</view>
+      </picker>
+    </view>
   </view>
 
   <!-- 标签筛选 -->
@@ -33,18 +33,36 @@
   <view class="sort-bar">
     <scroll-view scroll-x class="sort-scroll">
       <text class="sort-item {{sortBy === 'date' ? 'on' : ''}}" data-v="date" bindtap="onSort">日期{{sortAsc?'↑':'↓'}}</text>
-      <text class="sort-item {{sortBy === 'score' ? 'on' : ''}}" data-v="score" bindtap="onSort">综合评分</text>
-      <text class="sort-item {{sortBy === 'difficulty' ? 'on' : ''}}" data-v="difficulty" bindtap="onSort">赛道难度</text>
-      <text class="sort-item {{sortBy === 'atmosphere' ? 'on' : ''}}" data-v="atmosphere" bindtap="onSort">赛道氛围</text>
-      <text class="sort-item {{sortBy === 'supply' ? 'on' : ''}}" data-v="supply" bindtap="onSort">补给</text>
-      <text class="sort-item {{sortBy === 'transport' ? 'on' : ''}}" data-v="transport" bindtap="onSort">交通</text>
+      <text class="sort-item {{sortBy === 'score' ? 'on' : ''}}" data-v="score" bindtap="onSort">评分{{sortBy==='score'?(sortAsc?'↑':'↓'):''}}</text>
+      <text class="sort-item {{sortBy === 'difficulty' ? 'on' : ''}}" data-v="difficulty" bindtap="onSort">难度{{sortBy==='difficulty'?(sortAsc?'↑':'↓'):''}}</text>
+      <text class="sort-item {{sortBy === 'atmosphere' ? 'on' : ''}}" data-v="atmosphere" bindtap="onSort">氛围{{sortBy==='atmosphere'?(sortAsc?'↑':'↓'):''}}</text>
+      <text class="sort-item {{sortBy === 'supply' ? 'on' : ''}}" data-v="supply" bindtap="onSort">补给{{sortBy==='supply'?(sortAsc?'↑':'↓'):''}}</text>
+      <text class="sort-item {{sortBy === 'transport' ? 'on' : ''}}" data-v="transport" bindtap="onSort">交通{{sortBy==='transport'?(sortAsc?'↑':'↓'):''}}</text>
     </scroll-view>
   </view>
 
-  <!-- 时间范围 -->
-  <view class="range-bar">
-    <text>📅 {{dateRangeText}} · {{races.length}}场</text>
-    <text class="date-toggle" bindtap="onToggleDate">筛选</text>
+  <!-- 类型等级标牌筛选 -->
+  <view wx:if="{{tab !== 'review'}}" class="admin-filter">
+    <view class="filter-row">
+      <text class="filter-chip {{raceTypeFilter === '' ? 'on' : ''}}" data-v="" bindtap="onRaceTypeFilter">全部</text>
+      <text class="filter-chip {{raceTypeFilter === 'full' ? 'on' : ''}}" data-v="full" bindtap="onRaceTypeFilter">全马</text>
+      <text class="filter-chip {{raceTypeFilter === 'half' ? 'on' : ''}}" data-v="half" bindtap="onRaceTypeFilter">半马</text>
+      <text class="filter-chip {{raceTypeFilter === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onRaceTypeFilter">10K</text>
+      <text class="filter-chip {{raceTypeFilter === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onRaceTypeFilter">越野</text>
+    </view>
+    <view class="filter-row">
+      <text class="filter-chip {{raceLevelFilter === '' ? 'on' : ''}}" data-v="" bindtap="onRaceLevelFilter">全部</text>
+      <text class="filter-chip {{raceLevelFilter === 'A' ? 'on' : ''}}" data-v="A" bindtap="onRaceLevelFilter">A级</text>
+      <text class="filter-chip {{raceLevelFilter === 'B' ? 'on' : ''}}" data-v="B" bindtap="onRaceLevelFilter">B级</text>
+      <text class="filter-chip {{raceLevelFilter === 'C' ? 'on' : ''}}" data-v="C" bindtap="onRaceLevelFilter">C级</text>
+    </view>
+    <view class="filter-row">
+      <text class="filter-chip {{raceLabelFilter === '' ? 'on' : ''}}" data-v="" bindtap="onRaceLabelFilter">全部</text>
+      <text class="filter-chip {{raceLabelFilter === '白金标' ? 'on' : ''}}" data-v="白金标" bindtap="onRaceLabelFilter">白金标</text>
+      <text class="filter-chip {{raceLabelFilter === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onRaceLabelFilter">金标</text>
+      <text class="filter-chip {{raceLabelFilter === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onRaceLabelFilter">精英标</text>
+      <text class="filter-chip {{raceLabelFilter === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onRaceLabelFilter">普通标</text>
+    </view>
   </view>
 
   <!-- 赛事列表 -->
@@ -60,16 +78,17 @@
           <text class="race-name">{{item.name}}</text>
           <text class="tag tag-green" wx:if="{{item.isMine && tab !== 'mine'}}">我的</text>
           <text class="tag tag-blue" wx:if="{{myReviewIds[item._id]}}">已评价</text>
+          <text class="tag tag-orange" wx:if="{{item.regNotOpen}}">未开启报名</text>
         </view>
         <text class="countdown">{{item.countdown}}</text>
       </view>
       <view class="race-meta">
         <text>{{item.city || '待定'}}</text>
         <text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>
-        <text> · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}}</text>
+        <text wx:if="{{item.raceTypeName}}"> · {{item.raceTypeName}}</text>
       </view>
       <view wx:if="{{item.avgScore}}" class="race-score">
-        <text>⭐ {{item.avgScore}} ({{item.reviewCount}}人评)</text>
+        <text>⭐ {{item.avgScore}} ({{item.reviewCount}}人评){{item.markerCount ? ' · ' + item.markerCount + '人已标记' : ''}}</text>
       </view>
       <view class="race-tags" wx:if="{{item.tags && item.tags.length > 0}}">
         <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
@@ -78,12 +97,13 @@
         <text class="my-status" wx:if="{{item.myStatus && tab === 'review'}}">
           {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
         </text>
-        <text wx:if="{{tab === 'mine' && item.myStatus}}" class="status-badge">
+        <view wx:if="{{tab === 'mine' && item.myStatus}}" class="status-badge">
           {{item.myStatus === 'planned' ? '📋 计划报名' : item.myStatus === 'registered' ? '✅ 已报名' : item.myStatus === 'won' ? '🎉 已中签' : item.myStatus === 'lost' ? '❌ 未中签' : item.myStatus === 'finished' ? '🏁 已完赛' : item.myStatus === 'dnf' ? '💔 未完赛' : '🚫 弃赛'}}
-        </text>
-        <text class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
+        </view>
+        <view class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
           {{item.isMine ? '修改状态' : '标记我的赛事'}}
-        </text>
+        </view>
+        <text class="notify-icon" wx:if="{{item.isMine && tab === 'mine'}}">{{item.myNotify ? '🔔' : '🔕'}}</text>
       </view>
     </view>
   </scroll-view>
@@ -106,10 +126,35 @@
       <text class="opt-btn {{selectedStatus === 'dnf' ? 'on' : ''}}" data-v="dnf" bindtap="onStatusSel">未完赛</text>
       <text class="opt-btn {{selectedStatus === 'dns' ? 'on' : ''}}" data-v="dns" bindtap="onStatusSel">弃赛</text>
     </view>
-    <block wx:if="{{selectedStatus === 'finished'}}">
-      <text class="form-label">完赛成绩（如 3:30:00）</text>
-      <input class="form-input" placeholder="格式：3:30:00" value="{{raceResult}}" bindinput="onResultInput" />
+    <!-- 混合赛事选项目 -->
+    <block wx:if="{{markingEvent && markingEvent.raceTypes && markingEvent.raceTypes.length > 1}}">
+      <text class="form-label">参加项目</text>
+      <view class="btn-row">
+        <text class="opt-btn {{markRaceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onMarkRaceType">全马</text>
+        <text class="opt-btn {{markRaceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onMarkRaceType">半马</text>
+      </view>
     </block>
+    <block wx:if="{{selectedStatus === 'finished'}}">
+      <text class="form-label">完赛成绩</text>
+      <view class="result-row">
+        <picker mode="selector" range="{{hours}}" value="{{raceHIdx}}" bindchange="onResultPick" data-field="h">
+          <view class="form-input result-pick">{{raceHIdx >= 0 ? hours[raceHIdx] : '时'}}</view>
+        </picker>
+        <text class="result-sep">:</text>
+        <picker mode="selector" range="{{minutes}}" value="{{raceMIdx}}" bindchange="onResultPick" data-field="m">
+          <view class="form-input result-pick">{{raceMIdx >= 0 ? minutes[raceMIdx] : '分'}}</view>
+        </picker>
+        <text class="result-sep">:</text>
+        <picker mode="selector" range="{{seconds}}" value="{{raceSIdx}}" bindchange="onResultPick" data-field="s">
+          <view class="form-input result-pick">{{raceSIdx >= 0 ? seconds[raceSIdx] : '秒'}}</view>
+        </picker>
+      </view>
+    </block>
+    <view class="notify-row">
+      <text class="notify-label">🔔 倒计时提醒</text>
+      <switch checked="{{notifyEnabled}}" bindchange="onNotifyToggle" color="#1aad19" />
+    </view>
+    <text class="notify-hint" wx:if="{{notifyEnabled}}">将在每个时间节点前一天推送通知</text>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideForm">取消</button>
       <button wx:if="{{!myMarkers[markingEventId]}}" class="btn-primary" bindtap="onMark">确认标记</button>

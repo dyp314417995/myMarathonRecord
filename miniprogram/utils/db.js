@@ -111,6 +111,12 @@ async function getUserList(condition = {}, skip = 0, limit = 100) {
   return await db.collection('users').where(condition).orderBy('createTime', 'desc').skip(skip).limit(limit).get();
 }
 
+/** 获取用户总数 */
+async function getUserCount(condition = {}) {
+  const res = await db.collection('users').where(condition).count();
+  return res.total;
+}
+
 // ============ 群组操作 ============
 
 /** 获取所有群组 */
@@ -202,7 +208,7 @@ async function reviewRequest(requestId, status, reviewerId) {
 
 module.exports = {
   db, _,
-  getCurrentUser, createUser, updateUser, getUserList,
+  getCurrentUser, createUser, updateUser, getUserList, getUserCount,
   getGroups, createGroup, updateGroup, deleteGroup,
   getAdminList, createAdmin, updateAdmin, checkIsAdmin, checkIsSuperAdmin,
   createJoinRequest, getPendingRequests, reviewRequest,

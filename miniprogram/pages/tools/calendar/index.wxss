@@ -5,16 +5,15 @@
 .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #999; }
 .tab.active { color: #1aad19; font-weight: 600; border-bottom: 4rpx solid #1aad19; }
 .tag-blue { background: #e3f2fd; color: #1a73e8; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 6rpx; }
+.tag-orange { background: #fff3e0; color: #e65100; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 6rpx; }
 .tab.active { color: #1aad19; font-weight: 600; border-bottom: 4rpx solid #1aad19; }
 
-.search-bar { padding: 12rpx 24rpx; display: flex; align-items: center; gap: 12rpx; }
-.search-input { flex: 1; background: #f5f5f5; border-radius: 12rpx; padding: 16rpx 20rpx; font-size: 26rpx; }
-.date-toggle { font-size: 26rpx; color: #1aad19; padding: 8rpx 0; }
+.search-bar { padding: 8rpx 24rpx; display: flex; align-items: center; gap: 8rpx; }
+.search-input { flex: 1; background: #f5f5f5; border-radius: 12rpx; padding: 14rpx 18rpx; font-size: 26rpx; }
 
-.range-bar { padding: 12rpx 24rpx; display: flex; justify-content: space-between; align-items: center; font-size: 24rpx; color: #666; background: #fff; }
-.date-picker { padding: 0 24rpx 16rpx; }
-.date-picker .form-label { font-size: 24rpx; color: #999; margin-top: 8rpx; }
-.date-picker .date-input { background: #f5f5f5; border-radius: 8rpx; padding: 12rpx 16rpx; font-size: 26rpx; margin-top: 4rpx; }
+.date-picker { padding: 4rpx 24rpx 8rpx; }
+.date-row { display: flex; align-items: center; gap: 8rpx; }
+.date-picker .date-input { background: #f5f5f5; border-radius: 8rpx; padding: 10rpx 12rpx; font-size: 24rpx; flex: 1; white-space: nowrap; }
 .btn-sm { font-size: 26rpx; padding: 12rpx 32rpx; height: auto; line-height: 1.4; }
 
 .tag-bar { padding: 8rpx 24rpx; display: flex; flex-wrap: wrap; gap: 8rpx; }
@@ -25,6 +24,12 @@
 .sort-scroll { white-space: nowrap; padding: 8rpx 24rpx; display: flex; gap: 10rpx; }
 .sort-item { font-size: 24rpx; color: #666; padding: 6rpx 16rpx; border-radius: 20rpx; background: #f5f5f5; display: inline-block; }
 .sort-item.on { background: #e8f5e9; color: #1aad19; font-weight: 600; }
+
+/* 类型等级标牌筛选 */
+.admin-filter { padding: 4rpx 12rpx; background: #fff; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 8rpx; padding: 4rpx 0; }
+.filter-chip { font-size: 22rpx; color: #666; padding: 4rpx 14rpx; border-radius: 12rpx; background: #f5f5f5; flex-shrink: 0; }
+.filter-chip.on { background: #e8f5e9; color: #1aad19; font-weight: 600; }
 
 .race-list { padding: 0 12rpx; }
 
@@ -38,10 +43,15 @@
 .race-score { font-size: 24rpx; color: #ff9800; margin-top: 6rpx; }
 .race-tags { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 8rpx; }
 .race-tag { font-size: 22rpx; color: #1aad19; background: #e8f5e9; padding: 4rpx 12rpx; border-radius: 8rpx; }
-.race-bottom { display: flex; justify-content: center; align-items: center; margin-top: 16rpx; gap: 20rpx; }
+.race-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; }
 .my-status { font-size: 22rpx; color: #999; }
-.status-badge { font-size: 26rpx; font-weight: 600; color: #fff; background: linear-gradient(135deg, #1aad19, #0d8c0d); padding: 8rpx 24rpx; border-radius: 20rpx; box-shadow: 0 2rpx 8rpx rgba(26,173,25,0.25); display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-.mark-btn { font-size: 22rpx; color: #1aad19; padding: 8rpx 18rpx; border: 2rpx solid #1aad19; border-radius: 20rpx; background: #fff; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.status-badge { font-size: 28rpx; font-weight: 600; color: #fff; background: linear-gradient(135deg, #1aad19, #0d8c0d); padding: 12rpx 28rpx; border-radius: 22rpx; box-shadow: 0 2rpx 8rpx rgba(26,173,25,0.25); display: inline-flex; align-items: center; justify-content: center; line-height: 1; white-space: nowrap; }
+.mark-btn { font-size: 22rpx; color: #1aad19; padding: 10rpx 20rpx; border: 2rpx solid #1aad19; border-radius: 20rpx; background: #fff; display: inline-flex; align-items: center; justify-content: center; line-height: 1; white-space: nowrap; }
+.notify-icon { font-size: 32rpx; padding: 4rpx; }
+
+.result-row { display: flex; align-items: center; gap: 4rpx; margin-top: 8rpx; }
+.result-pick { flex: 1; text-align: center; padding: 14rpx 8rpx !important; font-size: 28rpx; }
+.result-sep { font-size: 28rpx; color: #666; flex-shrink: 0; }
 .mark-btn:active { background: #e8f5e9; }
 
 .modal-mask { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:100; }
@@ -61,5 +71,9 @@
 .modal-actions .btn-primary { flex: 1; }
 .modal-actions .btn-outline { flex: 1; }
 .modal-actions .btn-reject { flex: 1; background: #fff; border: 2rpx solid #ff4d4f; color: #ff4d4f; border-radius: 10rpx; font-size: 26rpx; }
+
+.notify-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20rpx; padding: 12rpx 0; }
+.notify-label { font-size: 26rpx; color: #333; }
+.notify-hint { font-size: 22rpx; color: #999; margin-top: 4rpx; }
 
 .empty-state { padding: 80rpx 0; text-align: center; font-size: 28rpx; color: #bbb; }

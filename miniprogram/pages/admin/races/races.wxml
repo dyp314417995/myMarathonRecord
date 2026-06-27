@@ -2,18 +2,44 @@
 <view class="races-page">
   <view wx:if="{{!isAdmin}}" class="empty-state"><text>仅管理员可操作</text></view>
   <view wx:else>
+    <!-- 筛选栏 -->
+    <view class="admin-filter">
+      <input class="filter-input" placeholder="搜索赛事名称" value="{{adminSearch}}" bindinput="onAdminSearch" />
+      <view class="filter-row">
+        <text class="filter-chip {{adminType === '' ? 'on' : ''}}" data-v="" bindtap="onAdminFilter" data-field="type">全部</text>
+        <text class="filter-chip {{adminType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onAdminFilter" data-field="type">全马</text>
+        <text class="filter-chip {{adminType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onAdminFilter" data-field="type">半马</text>
+        <text class="filter-chip {{adminType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onAdminFilter" data-field="type">10K</text>
+        <text class="filter-chip {{adminType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onAdminFilter" data-field="type">越野</text>
+      </view>
+      <view class="filter-row">
+        <text class="filter-chip {{adminLevel === '' ? 'on' : ''}}" data-v="" bindtap="onAdminFilter" data-field="level">全部</text>
+        <text class="filter-chip {{adminLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onAdminFilter" data-field="level">A级</text>
+        <text class="filter-chip {{adminLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onAdminFilter" data-field="level">B级</text>
+        <text class="filter-chip {{adminLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onAdminFilter" data-field="level">C级</text>
+      </view>
+      <view class="filter-row">
+        <text class="filter-chip {{adminLabel === '' ? 'on' : ''}}" data-v="" bindtap="onAdminFilter" data-field="label">全部</text>
+        <text class="filter-chip {{adminLabel === '白金标' ? 'on' : ''}}" data-v="白金标" bindtap="onAdminFilter" data-field="label">白金标</text>
+        <text class="filter-chip {{adminLabel === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onAdminFilter" data-field="label">金标</text>
+        <text class="filter-chip {{adminLabel === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onAdminFilter" data-field="label">精英标</text>
+        <text class="filter-chip {{adminLabel === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onAdminFilter" data-field="label">普通标</text>
+      </view>
+    </view>
     <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
-    <view class="card race-card" wx:for="{{raceList}}" wx:key="_id">
+    <view class="card race-card" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
       <view class="race-info">
         <text class="race-name">{{item.name}}</text>
-        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceType === 'full' ? '全马' : item.raceType === 'half' ? '半马' : item.raceType === '10k' ? '10K' : '越野'}}<text wx:if="{{item.raceType !== 'trail'}}"> · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}</text>{{item.scale ? ' · ' + item.scale : ''}}</text>
+        <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{!(item.raceTypes && item.raceTypes.length === 1 && item.raceTypes[0] === 'trail')}}"> · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}</text>{{item.scale ? ' · ' + item.scale : ''}}</text>
         <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
         <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
+        <text class="tag tag-draft" wx:if="{{!item.confirmed}}">草稿</text>
       </view>
       <view class="race-actions">
-        <text class="act" data-id="{{item._id}}" bindtap="onEdit">✏️</text>
-        <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onManageReviews">📝</text>
-        <text class="act del" data-id="{{item._id}}" bindtap="onDel">🗑</text>
+        <text class="act" data-id="{{item._id}}" catchtap="onEdit">✏️</text>
+        <text class="act" data-id="{{item._id}}" catchtap="onDup">📋</text>
+        <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onManageReviews">📝</text>
+        <text class="act del" data-id="{{item._id}}" catchtap="onDel">🗑</text>
       </view>
     </view>
     <view class="btn-area" style="padding:24rpx;">
@@ -27,24 +53,33 @@
         <text>{{editingId ? '编辑' : '添加'}}赛事</text>
         <text class="modal-close" bindtap="onHideForm">✕</text>
       </view>
+      <!-- 粘贴全文快速提取 -->
+      <view wx:if="{{!showPaste}}" class="paste-trigger" bindtap="onTogglePaste">
+        <text>📋 粘贴报名须知全文，自动提取时间节点</text>
+      </view>
+      <view wx:if="{{showPaste}}" class="paste-area">
+        <textarea class="paste-input" placeholder="粘贴赛事报名须知/竞赛规程全文..." value="{{pasteText}}" bindinput="onPasteInput" auto-height maxlength="5000" />
+        <view class="paste-actions">
+          <button class="btn-sm btn-outline" bindtap="onPasteParse" loading="{{parsing}}">提取时间节点</button>
+          <text class="paste-close" bindtap="onTogglePaste">收起</text>
+        </view>
+      </view>
       <text class="form-label">赛事名称 *</text>
       <input class="form-input" placeholder="如：北京马拉松" value="{{form.name}}" data-k="name" bindinput="onInput" />
-      <text class="form-label">举办日期 *</text>
-      <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
-        <view class="form-input date-input"><text class="{{form.date ? '' : 'placeholder'}}">{{form.date || '选择日期'}}</text></view>
-      </picker>
       <text class="form-label">省份</text>
       <input class="form-input" placeholder="如：北京市" value="{{form.province}}" data-k="province" bindinput="onInput" />
       <text class="form-label">城市</text>
       <input class="form-input" placeholder="如：北京" value="{{form.city}}" data-k="city" bindinput="onInput" />
-      <text class="form-label">赛事类型</text>
+      <text class="form-label">赛事类型（全马/半马可多选）</text>
       <view class="btn-row">
-        <text class="opt-btn {{form.raceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
-        <text class="opt-btn {{form.raceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
-        <text class="opt-btn {{form.raceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
-        <text class="opt-btn {{form.raceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onFormType">越野</text>
+        <text class="opt-btn {{typeFull ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
+        <text class="opt-btn {{typeHalf ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
+        <text class="opt-btn {{type10k ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
+        <text class="opt-btn {{typeTrail ? 'on' : ''}}" data-v="trail" bindtap="onFormType">越野</text>
       </view>
-      <block wx:if="{{form.raceType !== 'trail'}}">
+      <text class="form-label">赛事组（同赛事不同年份关联）</text>
+      <input class="form-input" placeholder="如：北京马拉松" value="{{form.raceGroup}}" data-k="raceGroup" bindinput="onInput" />
+      <block wx:if="{{!typeTrail}}">
         <text class="form-label">赛事等级</text>
         <view class="btn-row">
           <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
@@ -74,9 +109,21 @@
       <text class="form-label">官网链接</text>
       <input class="form-input" placeholder="https://" value="{{form.website}}" data-k="website" bindinput="onInput" />
       <text class="form-label">赛事规模</text>
-      <input class="form-input" placeholder="如：35000人" value="{{form.scale}}" data-k="scale" bindinput="onInput" />
+      <block wx:if="{{typeFull && typeHalf}}">
+        <view style="display:flex;gap:12rpx;">
+          <input class="form-input" style="flex:1" placeholder="全马规模" value="{{form.scaleFull}}" data-k="scaleFull" bindinput="onInput" />
+          <input class="form-input" style="flex:1" placeholder="半马规模" value="{{form.scaleHalf}}" data-k="scaleHalf" bindinput="onInput" />
+        </view>
+      </block>
+      <input wx:else class="form-input" placeholder="如：35000人" value="{{form.scale}}" data-k="scale" bindinput="onInput" />
       <text class="form-label">报名费用</text>
-      <input class="form-input" placeholder="如：200元/人" value="{{form.fee}}" data-k="fee" bindinput="onInput" />
+      <block wx:if="{{typeFull && typeHalf}}">
+        <view style="display:flex;gap:12rpx;">
+          <input class="form-input" style="flex:1" placeholder="全马费用" value="{{form.feeFull}}" data-k="feeFull" bindinput="onInput" />
+          <input class="form-input" style="flex:1" placeholder="半马费用" value="{{form.feeHalf}}" data-k="feeHalf" bindinput="onInput" />
+        </view>
+      </block>
+      <input wx:else class="form-input" placeholder="如：200元/人" value="{{form.fee}}" data-k="fee" bindinput="onInput" />
       <text class="form-label">报名机制</text>
       <view class="btn-row">
         <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
@@ -87,13 +134,41 @@
         <text class="opt-btn {{form.payment === '先缴费' ? 'on' : ''}}" data-v="先缴费" bindtap="onFormPayment">先缴费</text>
         <text class="opt-btn {{form.payment === '中签后缴费' ? 'on' : ''}}" data-v="中签后缴费" bindtap="onFormPayment">中签后缴费</text>
       </view>
-      <text class="form-label">时间节点（选填）</text>
-      <view class="timeline-form" wx:for="{{timelineNodes}}" wx:key="label">
-        <text class="tl-label">{{item.label}}</text>
-        <picker mode="date" value="{{item.date}}" bindchange="onTimelineDate" data-idx="{{index}}">
-          <view class="tl-date-pick"><text class="{{item.date ? '' : 'placeholder'}}">{{item.date || '选择日期'}}</text></view>
-        </picker>
+      <view class="confirm-row">
+        <text class="form-label">标签</text>
+        <text class="confirm-toggle {{form.confirmed ? 'on' : ''}}" bindtap="onToggleConfirm">{{form.confirmed ? '✅ 已确认' : '📝 草稿'}}</text>
       </view>
+      <text class="form-label">赛事标签（逗号分隔）</text>
+      <input class="form-input" placeholder="如：金标赛事, PB赛道" value="{{form.tagsStr}}" data-k="tagsStr" bindinput="onInput" />
+      <text class="form-label">时间节点</text>
+      <block wx:for="{{timelineNodes}}" wx:key="label" wx:for-item="node" wx:for-index="idx">
+        <view wx:if="{{node.label === '鸣枪开跑'}}" class="gun-block">
+          <text class="tl-label" style="margin-bottom:8rpx;">{{node.label}}</text>
+          <picker mode="date" value="{{node.date}}" bindchange="onTimelineDate" data-idx="{{idx}}">
+            <view class="tl-date-pick" style="margin-bottom:8rpx;"><text class="{{node.date ? '' : 'placeholder'}}">{{node.date || '日期'}}</text></view>
+          </picker>
+          <view class="gun-row" wx:for="{{gunTimes}}" wx:key="index" wx:for-item="g" wx:for-index="gi">
+            <input class="gun-zone-input" placeholder="分区" value="{{g.zone}}" data-idx="{{gi}}" data-field="zone" bindinput="onGunTimeInput" />
+            <picker mode="time" value="{{g.time || '07:00'}}" bindchange="onGunTimeTime" data-idx="{{gi}}">
+              <view class="gun-time-pick">{{g.time || '07:00'}}</view>
+            </picker>
+            <text class="gun-del" wx:if="{{gunTimes.length > 1}}" catchtap="onDelGunTime" data-idx="{{gi}}">🗑</text>
+          </view>
+          <view class="add-guntime" bindtap="onAddGunTime"><text>+ 添加发枪分区</text></view>
+        </view>
+        <view class="timeline-form" wx:else>
+          <text class="tl-label">{{node.label}}</text>
+          <view class="tl-pickers">
+            <picker mode="date" value="{{node.date}}" bindchange="onTimelineDate" data-idx="{{idx}}">
+              <view class="tl-date-pick"><text class="{{node.date ? '' : 'placeholder'}}">{{node.date || '日期'}}</text></view>
+            </picker>
+            <picker mode="time" value="{{node.time || '12:00'}}" bindchange="onTimelineTime" data-idx="{{idx}}">
+              <view class="tl-date-pick tl-time-pick"><text class="{{node.time ? '' : 'placeholder'}}">{{node.time || '时间'}}</text></view>
+            </picker>
+            <text class="tl-clear" wx:if="{{node.date || node.time}}" catchtap="onClearTime" data-idx="{{idx}}">✕</text>
+          </view>
+        </view>
+      </block>
       <text class="form-label">海报图片（选填）</text>
       <view class="poster-upload" bindtap="onChoosePoster">
         <image wx:if="{{posterTemp}}" src="{{posterTemp}}" mode="aspectFill" class="poster-preview" />

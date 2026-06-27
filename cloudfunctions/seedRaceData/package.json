@@ -1,0 +1,9 @@
+{
+  "name": "seedRaceData",
+  "version": "1.0.0",
+  "description": "一次性录入初始赛事数据",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

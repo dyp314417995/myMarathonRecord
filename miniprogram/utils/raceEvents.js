@@ -10,10 +10,27 @@ async function getList(skip = 0, limit = 20) {
   return { data: all.slice(skip, skip + limit) };
 }
 
-/** 获取所有赛事（通过云函数绕过权限限制） */
-async function getAll() {
-  const res = await wx.cloud.callFunction({ name: 'getRaceEvents' });
-  return res.result || [];
+/** 分页获取赛事（服务端筛选+分页） */
+async function getAll(params = {}) {
+  const data = { skip: 0, limit: 20 };
+  if (params.search !== undefined) data.search = params.search;
+  if (params.dateFrom !== undefined) data.dateFrom = params.dateFrom;
+  if (params.dateTo !== undefined) data.dateTo = params.dateTo;
+  if (params.raceType !== undefined) data.raceType = params.raceType;
+  if (params.raceLevel !== undefined) data.raceLevel = params.raceLevel;
+  if (params.raceLabel !== undefined) data.raceLabel = params.raceLabel;
+  if (params.userId !== undefined) data.userId = params.userId;
+  const res = await wx.cloud.callFunction({ name: 'getRaceEvents', data });
+  return res.result || { list: [], total: 0, hasMore: false };
+}
+
+/** 加载更多赛事 */
+async function loadMore(params = {}) {
+  const res = await wx.cloud.callFunction({
+    name: 'getRaceEvents',
+    data: params
+  });
+  return res.result || { list: [], total: 0, hasMore: false };
 }
 
 /** 创建赛事 */
@@ -34,16 +51,15 @@ async function remove(id) {
 }
 
 /** 标记我的赛事 */
-async function markEvent(userId, eventId, status) {
+async function markEvent(userId, eventId, status, notifyEnabled = false, raceType = 'full') {
+  const data = { status, notifyEnabled, raceType, updateTime: new Date() };
   const exist = await db.collection('race_markers')
     .where({ userId, eventId }).get();
   if (exist.data.length > 0) {
-    return await db.collection('race_markers').doc(exist.data[0]._id).update({
-      data: { status, updateTime: new Date() }
-    });
+    return await db.collection('race_markers').doc(exist.data[0]._id).update({ data });
   }
   return await db.collection('race_markers').add({
-    data: { userId, eventId, status, createTime: new Date() }
+    data: { userId, eventId, ...data, createTime: new Date() }
   });
 }
 

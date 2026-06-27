@@ -19,13 +19,13 @@
         <text>全马{{sortBy === 'pbFull' ? (sortAsc ? '↑' : '↓') : ''}}</text>
       </view>
     </view>
-    <text class="total-count">共 {{users.length}} 位跑友</text>
+    <text class="total-count">共 {{totalCount}} 位跑友</text>
   </view>
 
   <block wx:for="{{users}}" wx:key="_id">
     <view class="card user-card-item" data-id="{{item._id}}" bindtap="onViewUser">
       <view class="user-row">
-        <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" />
+        <image class="u-avatar" src="{{item.avatarUrl || '/imgs/back.svg'}}" mode="aspectFill" binderror="onAvatarError" data-id="{{item._id}}" />
         <view class="u-info">
           <text class="u-name">{{item.nickName || '未知'}}</text>
           <text class="u-meta">{{item.city || '未知'}} · {{item.groupName}}</text>

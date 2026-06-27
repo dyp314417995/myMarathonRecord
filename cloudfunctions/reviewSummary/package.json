@@ -1,0 +1,10 @@
+{
+  "name": "reviewSummary",
+  "version": "1.0.0",
+  "description": "AI总结赛事评价",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest",
+    "node-fetch": "^2.6.7"
+  }
+}
