@@ -42,7 +42,7 @@ App({
   checkLaunchScene() {
     const scene = wx.getLaunchOptionsSync().query.scene || wx.getEnterOptionsSync().query.scene || '';
     if (!scene) return;
-    const m = scene.match(/act=([a-zA-Z0-9]+)/);
+    const m = scene.match(/^([a-zA-Z0-9]{20,30})$/);
     if (!m) return;
     const activityId = m[1];
     const userInfo = wx.getStorageSync('userInfo');

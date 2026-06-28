@@ -5,7 +5,7 @@ exports.main = async (event) => {
   const { activityId } = event;
   try {
     const result = await cloud.openapi.wxacode.getUnlimited({
-      scene: `act=${activityId}`,
+      scene: activityId,
       page: 'pages/tools/activity/detail',
       width: 280,
       checkPath: true,
