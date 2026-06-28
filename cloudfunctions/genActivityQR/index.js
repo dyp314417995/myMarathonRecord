@@ -1,6 +1,6 @@
 // 生成活动小程序码
 const cloud = require('wx-server-sdk');
-cloud.init();
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 exports.main = async (event) => {
   const { activityId } = event;
   try {
