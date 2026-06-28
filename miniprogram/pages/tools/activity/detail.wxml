@@ -26,7 +26,7 @@
   <!-- 自定义属性（管理员和已报名只读，未报名时点击选择） -->
   <view class="card" wx:if="{{activity.customFields && activity.customFields.length && activity.status === 'active'}}">
     <text class="card-title">报名信息</text>
-    <block wx:if="{{!registered && !isAdmin}}">
+    <block wx:if="{{!registered}}">
       <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
         <text class="form-label">{{f.label}} {{f.required ? '*' : ''}}</text>
         <input wx:if="{{f.type === 'text' || f.type === 'number'}}" class="form-input" value="{{customValues[f.label]}}" data-k="{{f.label}}" bindinput="onCustomInput" placeholder="请输入" />
@@ -57,8 +57,8 @@
     </view>
   </view>
 
-  <!-- 操作按钮（管理员不显示） -->
-  <view class="btn-area" wx:if="{{activity.status === 'active' && !isAdmin}}">
+  <!-- 操作按钮 -->
+  <view class="btn-area" wx:if="{{activity.status === 'active'}}">
     <button wx:if="{{!registered}}" class="btn-primary" bindtap="onRegister">立即报名</button>
     <button wx:else class="btn-outline" bindtap="onUnregister">取消报名</button>
   </view>
