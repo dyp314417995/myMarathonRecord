@@ -6,6 +6,10 @@
   </view>
 
   <view class="list" wx:if="{{tab === 'all'}}">
+    <!-- 筛选 -->
+    <scroll-view class="filter-row" scroll-x>
+      <text class="filter-chip {{filterIdx === idx ? 'on' : ''}}" wx:for="{{filterOptions}}" wx:key="*this" wx:for-index="idx" data-idx="{{idx}}" bindtap="onFilter">{{item}}</text>
+    </scroll-view>
     <view class="act-card" wx:for="{{activities}}" wx:key="_id" bindtap="onDetail" data-id="{{item._id}}">
       <view class="card-body">
         <view class="card-row1">
@@ -18,6 +22,7 @@
       </view>
     </view>
     <view wx:if="{{!activities.length}}" class="empty">暂无活动</view>
+    <view class="load-more" wx:if="{{hasMore}}" bindtap="onLoadMore">加载更多</view>
   </view>
 
   <view class="list" wx:if="{{tab === 'my'}}">

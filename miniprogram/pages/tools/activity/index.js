@@ -4,6 +4,9 @@ Page({
     tab: 'all',
     activities: [],
     myActivities: [],
+    // 分页筛选
+    allLoaded: [], page: 1, pageSize: 20, hasMore: false,
+    filterIdx: 0, filterOptions: ['全部状态', '报名中', '进行中', '已截止', '已完成', '已取消'],
   },
 
   async onShow() { this.loadData(); },
@@ -14,10 +17,11 @@ Page({
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
 
     try {
-      const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list' } });
+      const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list', limit: 100 } });
       const allList = (allRes.result || {}).list || [];
       allList.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
-      this.setData({ activities: allList });
+      this.setData({ allLoaded: allList, page: 1 });
+      this.applyFilter();
       if (userId) {
         const myRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'my', userId } });
         const myList = (myRes.result || {}).list || [];
@@ -26,6 +30,28 @@ Page({
       }
     } catch (e) { console.error(e); }
     wx.hideLoading();
+  },
+
+  applyFilter() {
+    const { allLoaded, filterIdx, filterOptions } = this.data;
+    let list = [...allLoaded];
+    if (filterIdx > 0) {
+      const tag = filterOptions[filterIdx];
+      list = list.filter(a => a.stateTag && a.stateTag.text === tag);
+    }
+    const end = this.data.page * this.data.pageSize;
+    const sliced = list.slice(0, end);
+    this.setData({ activities: sliced, hasMore: end < list.length });
+  },
+
+  onLoadMore() {
+    this.setData({ page: this.data.page + 1 });
+    this.applyFilter();
+  },
+
+  onFilter(e) {
+    this.setData({ filterIdx: e.currentTarget.dataset.idx, page: 1 });
+    this.applyFilter();
   },
 
   onTab(e) {
