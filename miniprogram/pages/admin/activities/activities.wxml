@@ -5,15 +5,9 @@
   </view>
 
   <!-- 筛选 -->
-  <view class="filter-row">
-    <picker mode="selector" range="{{statusOptions}}" value="{{filterStatusIdx}}" bindchange="onFilterStatus">
-      <view class="filter-pick">{{statusOptions[filterStatusIdx] || '全部状态'}} ▼</view>
-    </picker>
-    <picker mode="date" bindchange="onFilterDate">
-      <view class="filter-pick">{{filterDate || '按日期筛选'}} ▼</view>
-    </picker>
-    <text class="filter-pick" wx:if="{{filterDate}}" bindtap="onClearFilter">✕</text>
-  </view>
+  <scroll-view class="filter-row" scroll-x>
+    <text class="filter-chip {{filterStatusIdx === idx ? 'on' : ''}}" wx:for="{{statusOptions}}" wx:key="*this" wx:for-index="idx" data-idx="{{idx}}" bindtap="onFilterStatus">{{item}}</text>
+  </scroll-view>
 
   <view class="act-list" wx:if="{{activities.length}}">
     <view class="act-card" wx:for="{{activities}}" wx:key="_id" bindtap="onViewDetail" data-id="{{item._id}}">

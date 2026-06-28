@@ -10,7 +10,6 @@ Page({
     // 分页筛选
     page: 0, pageSize: 20, hasMore: true,
     filterStatusIdx: 0, statusOptions: ['全部状态', '报名中', '进行中', '已结束', '已完成', '已取消'],
-    filterDate: '',
     allLoaded: [], // 全量缓存用于前端筛选
   },
 
@@ -27,24 +26,14 @@ Page({
   },
 
   applyFilter() {
-    const { allLoaded, filterStatusIdx, statusOptions, filterDate } = this.data;
+    const { allLoaded, filterStatusIdx, statusOptions } = this.data;
     let list = [...allLoaded];
-    // 状态筛选
     if (filterStatusIdx > 0) {
       const tag = statusOptions[filterStatusIdx];
       list = list.filter(a => a.stateTag && a.stateTag.text === tag);
     }
-    // 日期筛选
-    if (filterDate) {
-      list = list.filter(a => {
-        const ts = a.timeStart ? new Date(a.timeStart) : null;
-        if (!ts) return false;
-        return ts.toISOString().startsWith(filterDate);
-      });
-    }
-    // 分页
-    const start = 0, end = this.data.page * this.data.pageSize;
-    const sliced = list.slice(start, end);
+    const end = this.data.page * this.data.pageSize;
+    const sliced = list.slice(0, end);
     this.setData({ activities: sliced, hasMore: end < list.length });
   },
 
@@ -54,15 +43,7 @@ Page({
   },
 
   onFilterStatus(e) {
-    this.setData({ filterStatusIdx: e.detail.value, page: 1 });
-    this.applyFilter();
-  },
-  onFilterDate(e) {
-    this.setData({ filterDate: e.detail.value, page: 1 });
-    this.applyFilter();
-  },
-  onClearFilter() {
-    this.setData({ filterDate: '', filterStatusIdx: 0, page: 1 });
+    this.setData({ filterStatusIdx: e.currentTarget.dataset.idx, page: 1 });
     this.applyFilter();
   },
 
