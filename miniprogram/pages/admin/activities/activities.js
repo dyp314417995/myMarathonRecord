@@ -107,13 +107,21 @@ Page({
       const dt = new Date(d);
       return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
     };
+    // 自定义字段 options 还原为 optionsStr
+    const fields = (a.customFields || []).map(f => ({
+      ...f,
+      optionsStr: (f.options || []).join('，'),
+    }));
     this.setData({
       showForm: true, editingId: a._id, tmpImages: a.images || [],
       form: {
-        ...a,
+        name: a.name || '', location: a.location || '', fee: a.fee || '',
+        maxPeople: a.maxPeople || '', description: a.description || '',
+        customFields: fields,
         timeStartDate: toT(a.timeStart), timeStartTime: toTi(a.timeStart),
         timeEndDate: toT(a.timeEnd), timeEndTime: toTi(a.timeEnd),
         deadlineDate: toT(a.deadline), deadlineTime: toTi(a.deadline),
+        images: a.images || [],
       },
     });
   },

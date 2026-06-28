@@ -18,13 +18,13 @@
       <text class="act-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
       <text class="act-info">👥 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人</text>
       <view class="act-ops">
-        <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️ 编辑</text>
-        <text class="op-btn" bindtap="onCopy" data-id="{{item._id}}">📋 复制</text>
+        <text class="op-btn" catchtap="onEdit" data-id="{{item._id}}">✏️ 编辑</text>
+        <text class="op-btn" catchtap="onCopy" data-id="{{item._id}}">📋 复制</text>
         <text class="op-btn" catchtap="onShare" data-id="{{item._id}}" data-qr="{{item.qrcode || ''}}">📱 分享</text>
         <block wx:if="{{item.status === 'active'}}">
-          <text class="op-btn" bindtap="onCancel" data-id="{{item._id}}">🚫 取消</text>
+          <text class="op-btn" catchtap="onCancel" data-id="{{item._id}}">🚫 取消</text>
         </block>
-        <text class="op-btn del" bindtap="onDelete" data-id="{{item._id}}">🗑 删除</text>
+        <text class="op-btn del" catchtap="onDelete" data-id="{{item._id}}">🗑 删除</text>
       </view>
     </view>
   </view>
