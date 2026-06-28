@@ -126,7 +126,8 @@
   maxPeople: Number,      // 人数上限（null=不限）
   images: [String],       // 活动图片 fileID
   description: String,    // 活动说明
-  customFields: [{        // 自定义字段
+  qrcode: String,         // 小程序码 cloud fileID
+  customFields: [{        // 自定义字段（上限5个）
     key: String,          // 字段标识
     label: String,        // 字段标题
     type: 'text'|'radio'|'checkbox'|'number',
