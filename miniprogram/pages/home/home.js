@@ -136,7 +136,13 @@ Page({
   onManageRaces() {
     wx.navigateTo({ url: '/pages/admin/races/races' });
   },
+  onManageActivities() {
+    wx.navigateTo({ url: '/pages/admin/activities/activities' });
+  },
   onCalendar() {
     wx.navigateTo({ url: '/pages/tools/calendar/index' });
+  },
+  onActivity() {
+    wx.navigateTo({ url: '/pages/tools/activity/index' });
   },
 });

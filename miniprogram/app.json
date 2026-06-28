@@ -19,7 +19,10 @@
     "pages/tools/calendar/review",
     "pages/tools/calendar/review-list",
     "pages/privacy/index",
-    "pages/records/public"
+    "pages/records/public",
+    "pages/tools/activity/index",
+    "pages/tools/activity/detail",
+    "pages/admin/activities/activities"
   ],
   "usingComponents": {},
   "window": {

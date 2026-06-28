@@ -1,0 +1,130 @@
+<!-- pages/admin/activities/activities.wxml -->
+<view class="page">
+  <view class="top-bar">
+    <button class="btn-primary btn-sm" bindtap="onAdd">+ 发布活动</button>
+  </view>
+
+  <view class="act-list" wx:if="{{activities.length}}">
+    <view class="act-card" wx:for="{{activities}}" wx:key="_id">
+      <view class="act-row1">
+        <text class="act-name">{{item.name}}</text>
+        <text class="act-status {{item.status}}">{{item.status === 'active' ? '进行中' : item.status === 'finished' ? '已结束' : '已取消'}}</text>
+      </view>
+      <text class="act-info">📅 {{item.timeStart}}</text>
+      <text class="act-info">📍 {{item.location}}</text>
+      <text class="act-info">👥 报名 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人</text>
+      <view class="act-ops">
+        <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️</text>
+        <text class="op-btn" bindtap="onRegistrations" data-id="{{item._id}}">📋</text>
+        <block wx:if="{{item.status === 'active'}}">
+          <text class="op-btn" bindtap="onFinish" data-id="{{item._id}}">✅</text>
+          <text class="op-btn" bindtap="onCancel" data-id="{{item._id}}">🚫</text>
+        </block>
+        <text class="op-btn" bindtap="onDelete" data-id="{{item._id}}">🗑</text>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="empty">暂无活动</view>
+</view>
+
+<!-- 编辑弹窗 -->
+<view class="modal" wx:if="{{showForm}}">
+  <view class="modal-content">
+    <text class="modal-title">{{editingId ? '编辑' : '发布'}}活动</text>
+    <scroll-view scroll-y style="max-height:80vh;">
+      <text class="form-label">活动名称 *</text>
+      <input class="form-input" value="{{form.name}}" data-k="name" bindinput="onInput" placeholder="如：周日奥森LSD" />
+
+      <text class="form-label">开始时间 *</text>
+      <view style="display:flex;gap:12rpx;">
+        <picker mode="date" bindchange="onDate" data-k="timeStartDate">
+          <view class="form-input" style="flex:1">{{form.timeStartDate || '日期'}}</view>
+        </picker>
+        <picker mode="time" bindchange="onDate" data-k="timeStartTime">
+          <view class="form-input" style="flex:1">{{form.timeStartTime || '时间'}}</view>
+        </picker>
+      </view>
+
+      <text class="form-label">结束时间</text>
+      <view style="display:flex;gap:12rpx;">
+        <picker mode="date" bindchange="onDate" data-k="timeEndDate">
+          <view class="form-input" style="flex:1">{{form.timeEndDate || '日期'}}</view>
+        </picker>
+        <picker mode="time" bindchange="onDate" data-k="timeEndTime">
+          <view class="form-input" style="flex:1">{{form.timeEndTime || '时间'}}</view>
+        </picker>
+      </view>
+
+      <text class="form-label">报名截止</text>
+      <view style="display:flex;gap:12rpx;">
+        <picker mode="date" bindchange="onDate" data-k="deadlineDate">
+          <view class="form-input" style="flex:1">{{form.deadlineDate || '日期'}}</view>
+        </picker>
+        <picker mode="time" bindchange="onDate" data-k="deadlineTime">
+          <view class="form-input" style="flex:1">{{form.deadlineTime || '时间'}}</view>
+        </picker>
+      </view>
+
+      <text class="form-label">地点</text>
+      <input class="form-input" value="{{form.location}}" data-k="location" bindinput="onInput" placeholder="如：奥森南门" />
+
+      <text class="form-label">费用</text>
+      <input class="form-input" value="{{form.fee}}" data-k="fee" bindinput="onInput" placeholder="如：免费 / AA 50元" />
+
+      <text class="form-label">报名截止</text>
+      <picker mode="date" value="2026-01-01" bindchange="onDate" data-k="deadline">
+        <view class="form-input">{{form.deadline || '可选'}}</view>
+      </picker>
+
+      <text class="form-label">人数上限</text>
+      <input class="form-input" value="{{form.maxPeople}}" data-k="maxPeople" bindinput="onInput" placeholder="不填=不限" type="number" />
+
+      <text class="form-label">图片</text>
+      <view class="img-row">
+        <image wx:for="{{tmpImages}}" wx:key="index" src="{{item}}" mode="aspectFill" class="img-thumb" bindtap="onRemoveImage" data-idx="{{index}}" />
+        <view wx:if="{{tmpImages.length < 3}}" class="img-add" bindtap="onChooseImage">+</view>
+      </view>
+
+      <text class="form-label">说明</text>
+      <textarea class="form-textarea" value="{{form.description}}" data-k="description" bindinput="onInput" placeholder="活动详情..." />
+
+      <!-- 自定义字段 -->
+      <text class="form-label">自定义报名字段</text>
+      <view class="field-item" wx:for="{{form.customFields}}" wx:key="index">
+        <input class="form-input" style="flex:1" placeholder="字段名" value="{{item.label}}" data-idx="{{index}}" data-key="label" bindinput="onFieldInput" />
+        <view class="btn-row">
+          <text class="opt-btn {{item.type==='text'?'on':''}}" data-idx="{{index}}" data-v="text" bindtap="onFieldType">文本</text>
+          <text class="opt-btn {{item.type==='radio'?'on':''}}" data-idx="{{index}}" data-v="radio" bindtap="onFieldType">单选</text>
+        </view>
+        <input wx:if="{{item.type !== 'text'}}" class="form-input" placeholder="选项，逗号分隔" value="{{item.optionsStr}}" data-idx="{{index}}" data-key="optionsStr" bindinput="onFieldInput" />
+        <text class="opt-btn" data-idx="{{index}}" bindtap="onFieldRequired">{{item.required ? '必填' : '选填'}}</text>
+        <text class="field-del" bindtap="onDelField" data-idx="{{index}}">✕</text>
+      </view>
+      <view class="add-field" bindtap="onAddField">+ 添加字段</view>
+    </scroll-view>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideForm">取消</button>
+      <button class="btn-primary" bindtap="onSave" loading="{{submitting}}">保存</button>
+    </view>
+  </view>
+</view>
+
+<!-- 报名详情弹窗 -->
+<view class="modal" wx:if="{{showRegs}}">
+  <view class="modal-content">
+    <text class="modal-title">报名详情</text>
+    <scroll-view scroll-y style="max-height:60vh;">
+      <view class="reg-item" wx:for="{{regList}}" wx:key="_id">
+        <text class="reg-name">{{item.userName}}</text>
+        <text class="reg-phone">{{item.userPhone}}</text>
+        <view wx:if="{{item.customValues}}" class="reg-fields">
+          <text class="reg-f" wx:for="{{item.customValues}}" wx:key="*this" wx:for-item="v" wx:for-index="k">{{k}}: {{v}}</text>
+        </view>
+      </view>
+      <view wx:if="{{!regList.length}}" class="empty">暂无报名</view>
+    </scroll-view>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideRegs">关闭</button>
+    </view>
+  </view>
+</view>

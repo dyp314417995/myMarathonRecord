@@ -1,0 +1,39 @@
+<!-- pages/tools/activity/detail.wxml -->
+<view class="page" wx:if="{{activity}}">
+  <image wx:if="{{activity.images[0]}}" src="{{activity.images[0]}}" mode="aspectFill" class="banner" />
+
+  <view class="card">
+    <text class="act-name">{{activity.name}}</text>
+    <text class="act-status {{activity.status}}">{{activity.status === 'active' ? '进行中' : activity.status === 'finished' ? '已结束' : '已取消'}}</text>
+  </view>
+
+  <view class="card">
+    <text class="info-row">📅 {{activity.timeStart}} ~ {{activity.timeEnd || '--'}}</text>
+    <text class="info-row">📍 {{activity.location}}</text>
+    <text class="info-row">💰 {{activity.fee || '免费'}}</text>
+    <text class="info-row">🕐 截止：{{activity.deadline || '--'}}</text>
+    <text class="info-row">👥 {{activity.regCount || 0}}{{activity.maxPeople ? '/' + activity.maxPeople : ''}} 人已报名</text>
+  </view>
+
+  <view class="card" wx:if="{{activity.description}}">
+    <text class="desc">{{activity.description}}</text>
+  </view>
+
+  <!-- 自定义报名表单 -->
+  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && !registered && activity.status === 'active'}}">
+    <text class="card-title">报名信息</text>
+    <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
+      <text class="form-label">{{f.label}} {{f.required ? '*' : ''}}</text>
+      <input wx:if="{{f.type === 'text' || f.type === 'number'}}" class="form-input" value="{{customValues[f.label]}}" data-k="{{f.label}}" bindinput="onCustomInput" placeholder="请输入" />
+      <view wx:if="{{f.type === 'radio'}}" class="radio-group">
+        <text class="radio-opt {{customValues[f.label] === o ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomRadio">{{o}}</text>
+      </view>
+    </block>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="btn-area" wx:if="{{activity.status === 'active'}}">
+    <button wx:if="{{!registered}}" class="btn-primary" bindtap="onRegister" loading="{{submitting}}">立即报名</button>
+    <button wx:else class="btn-outline" bindtap="onUnregister">取消报名</button>
+  </view>
+</view>

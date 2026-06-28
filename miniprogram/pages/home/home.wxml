@@ -51,6 +51,10 @@
         <text class="menu-icon">🏁</text>
         <text class="menu-text">赛事管理</text>
       </view>
+      <view class="menu-item card" bindtap="onManageActivities">
+        <text class="menu-icon">🎉</text>
+        <text class="menu-text">活动管理</text>
+      </view>
     </view>
 
     <view class="section-title">我的</view>
@@ -89,6 +93,10 @@
       <view class="menu-item card" bindtap="onManageRaces">
         <text class="menu-icon">🏁</text>
         <text class="menu-text">赛事管理</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageActivities">
+        <text class="menu-icon">🎉</text>
+        <text class="menu-text">活动管理</text>
       </view>
     </view>
 
@@ -143,9 +151,9 @@
       <text class="menu-icon">📅</text>
       <text class="menu-text">赛事日历</text>
     </view>
-  <view class="menu-item card disabled">
-      <text class="menu-icon">⏱️</text>
-      <text class="menu-text">配速计算器</text>
+    <view class="menu-item card" bindtap="onActivity">
+      <text class="menu-icon">🎉</text>
+      <text class="menu-text">活动广场</text>
     </view>
   </view>
 </view>

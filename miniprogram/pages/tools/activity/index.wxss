@@ -1,0 +1,14 @@
+.page { padding-bottom: 40rpx; }
+.tabs { display: flex; border-bottom: 2rpx solid #eee; }
+.tab { flex: 1; text-align: center; padding: 20rpx; font-size: 28rpx; color: #999; }
+.tab.on { color: #1aad19; font-weight: 700; border-bottom: 4rpx solid #1aad19; }
+
+.list { padding: 16rpx; }
+.act-card { display: flex; background: #fff; border-radius: 12rpx; margin-bottom: 16rpx; overflow: hidden; }
+.card-img { width: 160rpx; height: 160rpx; flex-shrink: 0; }
+.card-body { flex: 1; padding: 16rpx; }
+.card-name { font-size: 30rpx; font-weight: 700; color: #333; display: block; margin-bottom: 8rpx; }
+.card-info { font-size: 24rpx; color: #888; display: block; }
+.card-count { font-size: 22rpx; color: #1aad19; margin-top: 4rpx; }
+.card-fee { font-size: 22rpx; color: #ff6b00; margin-top: 4rpx; }
+.empty { text-align: center; padding: 80rpx; color: #bbb; font-size: 28rpx; }
