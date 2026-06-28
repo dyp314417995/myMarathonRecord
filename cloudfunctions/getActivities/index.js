@@ -73,7 +73,7 @@ exports.main = async (event) => {
     await autoFinish();
     const now = new Date();
     const res = await db.collection('activities')
-      .orderBy('timeStart', 'desc')
+      .orderBy('timeStart', 'asc')
       .skip(skip || 0)
       .limit(limit || 20)
       .get();
