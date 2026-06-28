@@ -42,7 +42,8 @@
       <!-- 只读展示 -->
       <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
         <text class="form-label">{{f.label}}</text>
-        <text class="readonly-val">{{f.type === 'text' || f.type === 'number' ? '—' : (f.options || []).join(' / ')}}</text>
+        <text class="readonly-val" wx:if="{{f.type === 'text' || f.type === 'number'}}">—</text>
+        <text class="readonly-val" wx:else>{{f.options}}</text>
       </block>
     </block>
   </view>
