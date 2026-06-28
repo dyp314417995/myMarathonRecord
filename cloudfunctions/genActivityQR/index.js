@@ -8,7 +8,7 @@ exports.main = async (event) => {
       scene: activityId,
       page: 'pages/tools/activity/detail',
       width: 280,
-      checkPath: true,
+      checkPath: false,
     });
     // 上传到云存储
     const upload = await cloud.uploadFile({
