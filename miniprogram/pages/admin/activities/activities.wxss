@@ -9,7 +9,8 @@
 .act-status.cancelled { background: #fff2f0; color: #ff4d4f; }
 .act-info { font-size: 24rpx; color: #888; display: block; margin-top: 6rpx; }
 .act-ops { display: flex; gap: 16rpx; margin-top: 12rpx; }
-.op-btn { font-size: 28rpx; padding: 6rpx; }
+.op-btn { font-size: 22rpx; padding: 4rpx 8rpx; color: #555; }
+.op-btn.del { color: #ff4d4f; }
 
 .img-row { display: flex; gap: 12rpx; flex-wrap: wrap; margin-bottom: 12rpx; }
 .img-thumb { width: 120rpx; height: 120rpx; border-radius: 8rpx; }
