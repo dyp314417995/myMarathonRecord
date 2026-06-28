@@ -91,6 +91,7 @@ Page({
   },
   onDate(e) {
     const { k } = e.currentTarget.dataset;
+    console.log('onDate', k, '=', e.detail.value);
     const updates = { ['form.' + k]: e.detail.value };
     // 开始时间变化 → 自动调整结束和截止
     if (k === 'timeStartTime') {
@@ -152,6 +153,7 @@ Page({
 
   async onSave() {
     const f = this.data.form;
+    console.log('save form:', JSON.stringify({ name: f.name, sd: f.timeStartDate, st: f.timeStartTime, ed: f.timeEndDate, dl: f.deadlineDate }));
     if (!f.name.trim()) return wx.showToast({ title: '请输入活动名称', icon: 'none' });
     if (!f.timeStartDate) return wx.showToast({ title: '请选择开始日期', icon: 'none' });
     if (!f.timeStartTime) return wx.showToast({ title: '请选择开始时间', icon: 'none' });
