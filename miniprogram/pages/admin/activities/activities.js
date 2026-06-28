@@ -282,21 +282,24 @@ Page({
     this.setData({ showRegs: true, regList: (res.result || {}).list || [], regActId: id });
   },
   onHideRegs() { this.setData({ showRegs: false }); },
-  onShowQR(e) { this.setData({ showQR: true, qrImage: e.currentTarget.dataset.qr }); },
-  onHideQR() { this.setData({ showQR: false }); },
-  async onGenQR(e) {
-    const id = e.currentTarget.dataset.id;
+  async onShare(e) {
+    const { id, qr } = e.currentTarget.dataset;
+    if (qr) {
+      this.setData({ showQR: true, qrImage: qr });
+      return;
+    }
     wx.showLoading({ title: '生成中' });
     const res = await wx.cloud.callFunction({ name: 'genActivityQR', data: { activityId: id } });
     wx.hideLoading();
     if (res.result && res.result.fileID) {
       await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'update', id, data: { qrcode: res.result.fileID } } });
       this.setData({ showQR: true, qrImage: res.result.fileID });
-      this.onShow(); // 刷新列表
+      this.onShow();
     } else {
       wx.showToast({ title: '生成失败', icon: 'none' });
     }
   },
+  onHideQR() { this.setData({ showQR: false }); },
 
   onViewDetail(e) {
     wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}` });

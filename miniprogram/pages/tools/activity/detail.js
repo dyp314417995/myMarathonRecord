@@ -10,7 +10,9 @@ Page({
   },
 
   async onLoad(options) {
-    this.setData({ activityId: options.id });
+    // QR扫码: scene, 直接跳转: id
+    const activityId = options.scene ? decodeURIComponent(options.scene) : options.id;
+    this.setData({ activityId });
     await this.loadDetail();
   },
   async onShow() { if (this.data.activityId) await this.loadDetail(); },

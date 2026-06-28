@@ -20,8 +20,7 @@
       <view class="act-ops">
         <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️ 编辑</text>
         <text class="op-btn" bindtap="onCopy" data-id="{{item._id}}">📋 复制</text>
-        <text class="op-btn" wx:if="{{item.qrcode}}" bindtap="onShowQR" data-id="{{item._id}}" data-qr="{{item.qrcode}}">📱 分享</text>
-        <text class="op-btn" wx:else bindtap="onGenQR" data-id="{{item._id}}">📱 生成码</text>
+        <text class="op-btn" catchtap="onShare" data-id="{{item._id}}" data-qr="{{item.qrcode || ''}}">📱 分享</text>
         <block wx:if="{{item.status === 'active'}}">
           <text class="op-btn" bindtap="onCancel" data-id="{{item._id}}">🚫 取消</text>
         </block>
