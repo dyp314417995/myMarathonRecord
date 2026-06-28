@@ -2,7 +2,6 @@
 <view class="page" wx:if="{{activity}}">
   <view class="card">
     <text class="act-name">{{activity.name}}</text>
-    <text class="act-status {{activity.status}}">{{activity.status === 'active' ? '进行中' : activity.status === 'finished' ? '已结束' : '已取消'}}</text>
   </view>
 
   <!-- 按创建顺序：时间、地点、费用、截止、人数 -->
@@ -25,17 +24,22 @@
   </view>
 
   <!-- 自定义报名表单 -->
-  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && !registered && activity.status === 'active'}}">
+  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && activity.status === 'active'}}">
     <text class="card-title">报名信息</text>
-    <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
-      <text class="form-label">{{f.label}} {{f.required ? '*' : ''}}</text>
-      <input wx:if="{{f.type === 'text' || f.type === 'number'}}" class="form-input" value="{{customValues[f.label]}}" data-k="{{f.label}}" bindinput="onCustomInput" placeholder="请输入" />
-      <view wx:if="{{f.type === 'radio'}}" class="radio-group">
-        <text class="radio-opt {{customValues[f.label] === o ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomRadio">{{o}}</text>
-      </view>
-      <view wx:if="{{f.type === 'checkbox'}}" class="radio-group">
-        <text class="radio-opt {{customValues[f.label+'_'+o] ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomCheck">{{o}}</text>
-      </view>
+    <block wx:if="{{!registered}}">
+      <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
+        <text class="form-label">{{f.label}} {{f.required ? '*' : ''}}</text>
+        <input wx:if="{{f.type === 'text' || f.type === 'number'}}" class="form-input" value="{{customValues[f.label]}}" data-k="{{f.label}}" bindinput="onCustomInput" placeholder="请输入" />
+        <view wx:if="{{f.type === 'radio'}}" class="radio-group">
+          <text class="radio-opt {{customValues[f.label] === o ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomRadio">{{o}}</text>
+        </view>
+        <view wx:if="{{f.type === 'checkbox'}}" class="radio-group">
+          <text class="radio-opt {{customValues[f.label+'_'+o] ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomCheck">{{o}}</text>
+        </view>
+      </block>
+    </block>
+    <block wx:else>
+      <text style="font-size:22rpx;color:#999;">如需修改报名信息，请取消后重新报名</text>
     </block>
   </view>
 

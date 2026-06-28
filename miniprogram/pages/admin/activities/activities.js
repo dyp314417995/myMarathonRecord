@@ -7,17 +7,63 @@ Page({
     form: { name: '', timeStart: '', timeEnd: '', location: '', fee: '', deadline: '', maxPeople: '', images: [], description: '', customFields: [] },
     tmpImages: [],
     submitting: false,
+    // 分页筛选
+    page: 0, pageSize: 20, hasMore: true,
+    filterStatusIdx: 0, statusOptions: ['全部状态', '报名中', '进行中', '已结束', '已完成', '已取消'],
+    filterDate: '',
+    allLoaded: [], // 全量缓存用于前端筛选
   },
 
   async onShow() {
     wx.showLoading({ title: '加载中' });
     try {
-      const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'all' } });
+      const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'all', skip: 0, limit: 100 } });
       const list = (res.result || {}).list || [];
       list.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
-      this.setData({ activities: list });
+      this.setData({ allLoaded: list, page: 1 });
+      this.applyFilter();
     } catch (e) { console.error(e); }
     wx.hideLoading();
+  },
+
+  applyFilter() {
+    const { allLoaded, filterStatusIdx, statusOptions, filterDate } = this.data;
+    let list = [...allLoaded];
+    // 状态筛选
+    if (filterStatusIdx > 0) {
+      const tag = statusOptions[filterStatusIdx];
+      list = list.filter(a => a.stateTag && a.stateTag.text === tag);
+    }
+    // 日期筛选
+    if (filterDate) {
+      list = list.filter(a => {
+        const ts = a.timeStart ? new Date(a.timeStart) : null;
+        if (!ts) return false;
+        return ts.toISOString().startsWith(filterDate);
+      });
+    }
+    // 分页
+    const start = 0, end = this.data.page * this.data.pageSize;
+    const sliced = list.slice(start, end);
+    this.setData({ activities: sliced, hasMore: end < list.length });
+  },
+
+  async onLoadMore() {
+    this.setData({ page: this.data.page + 1 });
+    this.applyFilter();
+  },
+
+  onFilterStatus(e) {
+    this.setData({ filterStatusIdx: e.detail.value, page: 1 });
+    this.applyFilter();
+  },
+  onFilterDate(e) {
+    this.setData({ filterDate: e.detail.value, page: 1 });
+    this.applyFilter();
+  },
+  onClearFilter() {
+    this.setData({ filterDate: '', filterStatusIdx: 0, page: 1 });
+    this.applyFilter();
   },
 
   onHideForm() { this.setData({ showForm: false }); },
@@ -127,6 +173,9 @@ Page({
 
   // 自定义字段
   onAddField() {
+    if (this.data.form.customFields.length >= 5) {
+      return wx.showToast({ title: '最多5个自定义字段', icon: 'none' });
+    }
     this.setData({ 'form.customFields': [...this.data.form.customFields, { label: '', type: 'text', required: false, options: [] }] });
   },
   onDelField(e) {
