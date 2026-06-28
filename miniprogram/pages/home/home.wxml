@@ -143,11 +143,7 @@
       <text class="menu-icon">📅</text>
       <text class="menu-text">赛事日历</text>
     </view>
-    <view class="menu-item card disabled">
-      <text class="menu-icon">💬</text>
-      <text class="menu-text">跑步教练</text>
-    </view>
-    <view class="menu-item card disabled">
+  <view class="menu-item card disabled">
       <text class="menu-icon">⏱️</text>
       <text class="menu-text">配速计算器</text>
     </view>
