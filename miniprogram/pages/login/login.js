@@ -164,7 +164,9 @@ Page({
           groupIds: selectedGroupIds, points: 50,
         };
         const addRes = await dbUtil.createUser(userData);
-        user = { _id: addRes._id, ...userData, role: 'user', status: 'approved' };
+        // 从 DB 读取完整信息（含角色）
+        const fullUser = await dbUtil.db.collection('users').doc(addRes._id).get();
+        user = fullUser.data;
         // 更新群成员数
         for (const gid of selectedGroupIds) {
           dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});

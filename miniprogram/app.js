@@ -17,8 +17,22 @@ App({
       });
     }
     this.initDefaultGroups();
-    // 检查扫码参数
+    this.fixUserRole();
     this.checkLaunchScene();
+  },
+
+  // 修复本地角色：从 DB 同步真实 role
+  async fixUserRole() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return;
+    const db = wx.cloud.database();
+    try {
+      const res = await db.collection('users').doc(userInfo._id).get();
+      if (res.data && res.data.role) {
+        userInfo.role = res.data.role;
+        wx.setStorageSync('userInfo', userInfo);
+      }
+    } catch {}
   },
 
   onShow: function (options) {

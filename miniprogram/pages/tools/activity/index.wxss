@@ -4,11 +4,21 @@
 .tab.on { color: #1aad19; font-weight: 700; border-bottom: 4rpx solid #1aad19; }
 
 .list { padding: 16rpx; }
-.act-card { display: flex; background: #fff; border-radius: 12rpx; margin-bottom: 16rpx; overflow: hidden; }
-.card-img { width: 160rpx; height: 160rpx; flex-shrink: 0; }
+.act-card { display: flex; background: #fff; border-radius: 12rpx; margin-bottom: 16rpx; overflow: hidden; align-items: center; }
 .card-body { flex: 1; padding: 16rpx; }
-.card-name { font-size: 30rpx; font-weight: 700; color: #333; display: block; margin-bottom: 8rpx; }
+.card-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
+.card-name { font-size: 30rpx; font-weight: 700; color: #333; flex: 1; }
 .card-info { font-size: 24rpx; color: #888; display: block; }
 .card-count { font-size: 22rpx; color: #1aad19; margin-top: 4rpx; }
 .card-fee { font-size: 22rpx; color: #ff6b00; margin-top: 4rpx; }
+.unreg-btn { font-size: 22rpx; color: #ff4d4f; padding: 8rpx 16rpx; flex-shrink: 0; }
+
+.state-tag { font-size: 20rpx; padding: 4rpx 12rpx; border-radius: 8rpx; flex-shrink: 0; }
+.state-s1 { background: #e8f5e9; color: #1aad19; }
+.state-s2 { background: #e3f2fd; color: #1976d2; }
+.state-s3 { background: #fff3e0; color: #ff9800; }
+.state-s4 { background: #fff3e0; color: #ff9800; }
+.state-s5 { background: #fff2f0; color: #ff4d4f; }
+.state-s6 { background: #f5f5f5; color: #999; }
+.state-s7 { background: #f5f5f5; color: #ccc; }
 .empty { text-align: center; padding: 80rpx; color: #bbb; font-size: 28rpx; }

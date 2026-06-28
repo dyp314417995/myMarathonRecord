@@ -5,10 +5,10 @@
   </view>
 
   <view class="act-list" wx:if="{{activities.length}}">
-    <view class="act-card" wx:for="{{activities}}" wx:key="_id">
+    <view class="act-card" wx:for="{{activities}}" wx:key="_id" bindtap="onViewDetail" data-id="{{item._id}}">
       <view class="act-row1">
         <text class="act-name">{{item.name}}</text>
-        <text class="act-status {{item.status}}">{{item.status === 'active' ? '进行中' : item.status === 'finished' ? '已结束' : '已取消'}}</text>
+        <text class="state-tag {{item.stateTag.cls}}">{{item.stateTag.text}}</text>
       </view>
       <text class="act-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
       <text class="act-info">👥 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人</text>

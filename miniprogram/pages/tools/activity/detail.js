@@ -5,6 +5,8 @@ Page({
     customValues: {},
     registered: false,
     registration: null,
+    isAdmin: false,
+    regList: [],
   },
 
   async onLoad(options) {
@@ -23,17 +25,30 @@ Page({
       const act = res.result;
       // 报名人数
       const cntRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'registrations', id: this.data.activityId } });
-      act.regCount = ((cntRes.result || {}).list || []).length;
+      const allRegs = (cntRes.result || {}).list || [];
+      act.regCount = allRegs.length;
+
+      act._fmtStart = this.fmtDate(act.timeStart);
+      act._fmtEnd = act.timeEnd ? this.fmtDate(act.timeEnd) : '';
+      act._fmtDeadline = act.deadline ? this.fmtDate(act.deadline) : '';
+
+      // 管理员：从 DB 查，不靠本地缓存
+      let isAdmin = false;
+      if (userInfo && userInfo._id) {
+        const db = wx.cloud.database();
+        const userRes = await db.collection('users').doc(userInfo._id).get();
+        const role = userRes.data ? (userRes.data.role || 'user') : 'user';
+        isAdmin = role === 'admin' || role === 'super_admin';
+      }
 
       // 是否已报名
       let registered = false;
       if (userId) {
-        const regs = ((cntRes.result || {}).list || []);
-        const mine = regs.find(r => r.userId === userId);
+        const mine = allRegs.find(r => r.userId === userId);
         if (mine) { registered = true; this.setData({ registration: mine }); }
       }
 
-      this.setData({ activity: act, registered });
+      this.setData({ activity: act, registered, isAdmin, regList: isAdmin ? allRegs : [] });
     } catch (e) { console.error(e); }
     wx.hideLoading();
   },

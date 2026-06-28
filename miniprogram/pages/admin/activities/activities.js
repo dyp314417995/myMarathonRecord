@@ -251,6 +251,10 @@ Page({
   onShowQR(e) { this.setData({ showQR: true, qrImage: e.currentTarget.dataset.qr }); },
   onHideQR() { this.setData({ showQR: false }); },
 
+  onViewDetail(e) {
+    wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}` });
+  },
+
   fmtDate(d) {
     if (!d) return '';
     const dt = new Date(d);

@@ -7,9 +7,11 @@
 
   <view class="list" wx:if="{{tab === 'all'}}">
     <view class="act-card" wx:for="{{activities}}" wx:key="_id" bindtap="onDetail" data-id="{{item._id}}">
-      <image wx:if="{{item.images[0]}}" src="{{item.images[0]}}" mode="aspectFill" class="card-img" />
       <view class="card-body">
-        <text class="card-name">{{item.name}}</text>
+        <view class="card-row1">
+          <text class="card-name">{{item.name}}</text>
+          <text class="state-tag {{item.stateTag.cls}}">{{item.stateTag.text}}</text>
+        </view>
         <text class="card-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
         <text class="card-count">👥 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人已报名</text>
         <text class="card-fee" wx:if="{{item.fee}}">💰 {{item.fee}}</text>
@@ -19,13 +21,13 @@
   </view>
 
   <view class="list" wx:if="{{tab === 'my'}}">
-    <view class="act-card" wx:for="{{myActivities}}" wx:key="_id" bindtap="onDetail" data-id="{{item._id}}">
-      <image wx:if="{{item.images[0]}}" src="{{item.images[0]}}" mode="aspectFill" class="card-img" />
-      <view class="card-body">
+    <view class="act-card" wx:for="{{myActivities}}" wx:key="_id">
+      <view class="card-body" bindtap="onDetail" data-id="{{item._id}}">
         <text class="card-name">{{item.name}}</text>
         <text class="card-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
         <text class="card-count">👥 {{item.regCount || 0}} 人已报名</text>
       </view>
+      <text class="unreg-btn" catchtap="onUnregister" data-id="{{item._id}}">取消</text>
     </view>
     <view wx:if="{{!myActivities.length}}" class="empty">还没报名活动</view>
   </view>

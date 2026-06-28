@@ -3,10 +3,14 @@
 .act-card { background: #fff; border-radius: 12rpx; padding: 20rpx; margin-bottom: 16rpx; }
 .act-row1 { display: flex; justify-content: space-between; align-items: center; }
 .act-name { font-size: 30rpx; font-weight: 700; color: #333; }
-.act-status { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 8rpx; }
-.act-status.active { background: #e8f5e9; color: #1aad19; }
-.act-status.finished { background: #f5f5f5; color: #999; }
-.act-status.cancelled { background: #fff2f0; color: #ff4d4f; }
+.state-tag { font-size: 20rpx; padding: 4rpx 12rpx; border-radius: 8rpx; flex-shrink: 0; }
+.state-s1 { background: #e8f5e9; color: #1aad19; }
+.state-s2 { background: #e3f2fd; color: #1976d2; }
+.state-s3 { background: #fff3e0; color: #ff9800; }
+.state-s4 { background: #fff3e0; color: #ff9800; }
+.state-s5 { background: #fff2f0; color: #ff4d4f; }
+.state-s6 { background: #f5f5f5; color: #999; }
+.state-s7 { background: #f5f5f5; color: #ccc; }
 .act-info { font-size: 24rpx; color: #888; display: block; margin-top: 6rpx; }
 .act-ops { display: flex; gap: 16rpx; margin-top: 12rpx; }
 .op-btn { font-size: 22rpx; padding: 4rpx 8rpx; color: #555; }
@@ -17,6 +21,9 @@
 .img-add { width: 120rpx; height: 120rpx; border-radius: 8rpx; border: 2rpx dashed #ddd; display: flex; align-items: center; justify-content: center; font-size: 48rpx; color: #ccc; }
 
 .field-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8rpx; margin-bottom: 8rpx; padding: 8rpx; background: #f9f9f9; border-radius: 8rpx; }
+.field-item .btn-row { display: flex; gap: 4rpx; }
+.field-item .opt-btn { font-size: 20rpx; padding: 4rpx 10rpx; border-radius: 6rpx; background: #eee; color: #666; }
+.field-item .opt-btn.on { background: #e8f5e9; color: #1aad19; }
 .field-del { font-size: 28rpx; color: #ff4d4f; padding: 4rpx; }
 .add-field { text-align: center; padding: 12rpx; font-size: 24rpx; color: #1aad19; border: 1rpx dashed #1aad19; border-radius: 8rpx; margin: 8rpx 0; }
 
@@ -34,3 +41,7 @@
 .btn-primary { flex: 1; background: #1aad19; color: #fff; border-radius: 12rpx; padding: 16rpx; border: none; }
 .btn-sm { padding: 12rpx 24rpx; font-size: 26rpx; }
 .empty { text-align: center; padding: 80rpx; color: #bbb; font-size: 28rpx; }
+
+.info-row { font-size: 26rpx; color: #555; margin-top: 8rpx; }
+.divider { height: 1rpx; background: #eee; margin: 16rpx 0; }
+.form-label { font-size: 26rpx; font-weight: 700; color: #333; margin-bottom: 8rpx; display: block; }

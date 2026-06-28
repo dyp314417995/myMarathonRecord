@@ -35,6 +35,19 @@ Page({
   onDetail(e) {
     wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}` });
   },
+  async onUnregister(e) {
+    const id = e.currentTarget.dataset.id;
+    const userInfo = wx.getStorageSync('userInfo');
+    wx.showModal({
+      title: '取消报名', content: '确定取消？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'unregister', activityId: id, userId: userInfo._id } });
+        wx.showToast({ title: '已取消', icon: 'success' });
+        this.loadData();
+      },
+    });
+  },
 
   fmtDate(d) {
     const dt = new Date(d);
