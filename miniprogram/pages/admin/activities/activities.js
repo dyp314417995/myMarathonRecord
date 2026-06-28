@@ -91,7 +91,25 @@ Page({
   },
   onDate(e) {
     const { k } = e.currentTarget.dataset;
-    this.setData({ ['form.' + k]: e.detail.value });
+    const updates = { ['form.' + k]: e.detail.value };
+    // 开始时间变化 → 自动调整结束和截止
+    if (k === 'timeStartTime') {
+      const [h, m] = e.detail.value.split(':').map(Number);
+      // 结束 = 开始 + 2h
+      const endH = (h + 2) % 24;
+      updates['form.timeEndTime'] = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      updates['form.timeEndDate'] = this.data.form.timeStartDate;
+      // 截止 = 开始 - 1h
+      let deadH = h - 1, deadDate = this.data.form.timeStartDate;
+      if (deadH < 0) { deadH = 23; }
+      updates['form.deadlineTime'] = `${String(deadH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      updates['form.deadlineDate'] = deadDate;
+    }
+    if (k === 'timeStartDate') {
+      updates['form.timeEndDate'] = e.detail.value;
+      updates['form.deadlineDate'] = e.detail.value;
+    }
+    this.setData(updates);
   },
 
   onChooseImage() {
