@@ -116,7 +116,7 @@ Page({
         if (isNaN(td.getTime())) return;
         if (t.label === '鸣枪开跑' && firstGun) {
           const diffMs = firstGun - now;
-          if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = '开赛'; }
+          if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = '鸣枪开跑'; }
           return;
         }
         if (t.time) { const [h, m] = t.time.split(':'); td.setHours(+h || 0, +m || 0, 0, 0); }
@@ -127,7 +127,7 @@ Page({
     }
     if (!nearestLabel && firstGun) {
       const diffMs = firstGun - now;
-      if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '开赛'; }
+      if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '鸣枪开跑'; }
     }
 
     if (nearestLabel) {
@@ -142,8 +142,8 @@ Page({
     const rd = toDate(d);
     if (isNaN(rd.getTime())) return '';
     const diffMs = rd - now;
-    if (diffMs > 0) return `距开赛 ${Math.ceil(diffMs / 86400000)} 天`;
-    if (Math.abs(diffMs) < 86400000) return '今天开赛';
+    if (diffMs > 0) return `距鸣枪开跑 ${Math.ceil(diffMs / 86400000)} 天`;
+    if (Math.abs(diffMs) < 86400000) return '今天鸣枪开跑';
     return `已举办 ${Math.ceil(Math.abs(diffMs) / 86400000)} 天`;
   },
 

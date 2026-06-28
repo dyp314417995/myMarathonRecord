@@ -192,7 +192,7 @@ Page({
         // 鸣枪开跑用最早发枪时间
         if (t.label === '鸣枪开跑' && firstGun) {
           const diffMs = firstGun - now;
-          if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = '开赛'; }
+          if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = '鸣枪开跑'; }
           return;
         }
         if (t.time) { const [h, m] = t.time.split(':'); td.setHours(+h || 0, +m || 0, 0, 0); }
@@ -204,7 +204,7 @@ Page({
     // 没有时间轴但有发枪时间
     if (!nearestLabel && firstGun) {
       const diffMs = firstGun - now;
-      if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '开赛'; }
+      if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '鸣枪开跑'; }
     }
     if (nearestLabel) {
       const label = nearestLabel.replace('时间', '');
@@ -219,8 +219,8 @@ Page({
     const rd = toDate(dateStr);
     if (isNaN(rd.getTime())) return '';
     const diffMs = rd - now;
-    if (diffMs > 0) { const d2 = Math.ceil(diffMs / 86400000); return `距开赛 ${d2} 天`; }
-    if (Math.abs(diffMs) < 86400000) return '今天开赛';
+    if (diffMs > 0) { const d2 = Math.ceil(diffMs / 86400000); return `距鸣枪开跑 ${d2} 天`; }
+    if (Math.abs(diffMs) < 86400000) return '今天鸣枪开跑';
     return `已举办 ${Math.ceil(Math.abs(diffMs) / 86400000)} 天`;
   },
 
