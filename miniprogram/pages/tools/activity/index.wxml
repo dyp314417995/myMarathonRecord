@@ -10,7 +10,7 @@
       <image wx:if="{{item.images[0]}}" src="{{item.images[0]}}" mode="aspectFill" class="card-img" />
       <view class="card-body">
         <text class="card-name">{{item.name}}</text>
-        <text class="card-info">📅 {{item.timeStart}} 📍 {{item.location}}</text>
+        <text class="card-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
         <text class="card-count">👥 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人已报名</text>
         <text class="card-fee" wx:if="{{item.fee}}">💰 {{item.fee}}</text>
       </view>
@@ -23,7 +23,7 @@
       <image wx:if="{{item.images[0]}}" src="{{item.images[0]}}" mode="aspectFill" class="card-img" />
       <view class="card-body">
         <text class="card-name">{{item.name}}</text>
-        <text class="card-info">📅 {{item.timeStart}} 📍 {{item.location}}</text>
+        <text class="card-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
         <text class="card-count">👥 {{item.regCount || 0}} 人已报名</text>
       </view>
     </view>

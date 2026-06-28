@@ -13,7 +13,9 @@ Page({
     wx.showLoading({ title: '加载中' });
     try {
       const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'all' } });
-      this.setData({ activities: (res.result || {}).list || [] });
+      const list = (res.result || {}).list || [];
+      list.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
+      this.setData({ activities: list });
     } catch (e) { console.error(e); }
     wx.hideLoading();
   },

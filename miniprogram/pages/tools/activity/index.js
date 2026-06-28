@@ -15,10 +15,14 @@ Page({
 
     try {
       const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list' } });
-      this.setData({ activities: (allRes.result || {}).list || [] });
+      const allList = (allRes.result || {}).list || [];
+      allList.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
+      this.setData({ activities: allList });
       if (userId) {
         const myRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'my', userId } });
-        this.setData({ myActivities: (myRes.result || {}).list || [] });
+        const myList = (myRes.result || {}).list || [];
+        myList.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
+        this.setData({ myActivities: myList });
       }
     } catch (e) { console.error(e); }
     wx.hideLoading();

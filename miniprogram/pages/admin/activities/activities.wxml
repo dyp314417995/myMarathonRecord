@@ -10,7 +10,7 @@
         <text class="act-name">{{item.name}}</text>
         <text class="act-status {{item.status}}">{{item.status === 'active' ? '进行中' : item.status === 'finished' ? '已结束' : '已取消'}}</text>
       </view>
-      <text class="act-info">📅 {{item.timeStart}} 📍 {{item.location}}</text>
+      <text class="act-info">📅 {{item._fmtStart}} 📍 {{item.location}}</text>
       <text class="act-info">👥 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人</text>
       <view class="act-ops">
         <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️ 编辑</text>
