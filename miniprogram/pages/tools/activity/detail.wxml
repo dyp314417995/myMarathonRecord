@@ -57,8 +57,8 @@
     </view>
   </view>
 
-  <!-- 操作按钮 -->
-  <view class="btn-area" wx:if="{{activity.status === 'active'}}">
+  <!-- 操作按钮（管理员查看时不显示） -->
+  <view class="btn-area" wx:if="{{activity.status === 'active' && !fromAdmin}}">
     <button wx:if="{{!registered}}" class="btn-primary" bindtap="onRegister">立即报名</button>
     <button wx:else class="btn-outline" bindtap="onUnregister">取消报名</button>
   </view>

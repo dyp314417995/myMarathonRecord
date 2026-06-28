@@ -310,7 +310,7 @@ Page({
   onHideQR() { this.setData({ showQR: false }); },
 
   onViewDetail(e) {
-    wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}` });
+    wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}&from=admin` });
   },
 
   fmtDate(d) {
