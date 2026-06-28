@@ -59,7 +59,7 @@ exports.main = async (event) => {
   if (action === 'list') {
     const now = new Date();
     const res = await db.collection('activities')
-      .where({ status: 'active', timeStart: _.gte(now) })
+      .where({ status: 'active' })
       .orderBy('timeStart', 'asc')
       .skip(skip || 0)
       .limit(limit || 20)
