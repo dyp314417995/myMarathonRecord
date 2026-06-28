@@ -207,10 +207,11 @@ Page({
       if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '开赛'; }
     }
     if (nearestLabel) {
+      const label = nearestLabel.replace('时间', '');
       const diffHours = Math.round(nearestMs / 3600000);
-      if (diffHours < 1) return `即将${nearestLabel}`;
-      if (diffHours < 24) return `距${nearestLabel} ${diffHours} 小时`;
-      return `距${nearestLabel} ${Math.ceil(nearestMs / 86400000)} 天`;
+      if (diffHours < 1) return `即将${label}`;
+      if (diffHours < 24) return `距${label} ${diffHours} 小时`;
+      return `距${label} ${Math.ceil(nearestMs / 86400000)} 天`;
     }
 
     // 兜底：用赛事日期
