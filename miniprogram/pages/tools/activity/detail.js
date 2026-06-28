@@ -46,6 +46,11 @@ Page({
     const { k, v } = e.currentTarget.dataset;
     this.setData({ ['customValues.' + k]: v });
   },
+  onCustomCheck(e) {
+    const { k, v } = e.currentTarget.dataset;
+    const key = k + '_' + v;
+    this.setData({ ['customValues.' + key]: !this.data.customValues[key] });
+  },
 
   async onRegister() {
     const userInfo = wx.getStorageSync('userInfo');

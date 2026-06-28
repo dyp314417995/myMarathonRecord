@@ -20,18 +20,68 @@ Page({
 
   onHideForm() { this.setData({ showForm: false }); },
   onAdd() {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    // 默认开始 7:00，结束 9:00，截止 6:00
     this.setData({
       showForm: true, editingId: '', tmpImages: [],
-      form: { name: '', timeStart: '', timeEnd: '', location: '', fee: '', deadline: '', maxPeople: '', images: [], description: '', customFields: [] },
+      form: {
+        name: '', location: '', fee: '', maxPeople: '', images: [], description: '', customFields: [],
+        timeStartDate: today, timeStartTime: '07:00',
+        timeEndDate: today, timeEndTime: '09:00',
+        deadlineDate: today, deadlineTime: '06:00',
+      },
+    });
+  },
+
+  onCopy(e) {
+    const a = this.data.activities.find(x => x._id === e.currentTarget.dataset.id);
+    if (!a) return;
+    const toT = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    };
+    const toTi = (d) => {
+      if (!d) return '07:00';
+      const dt = new Date(d);
+      return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    };
+    this.setData({
+      showForm: true, editingId: '', tmpImages: a.images || [],
+      form: {
+        name: a.name + '（副本）', location: a.location || '', fee: a.fee || '',
+        maxPeople: a.maxPeople || '', description: a.description || '',
+        customFields: JSON.parse(JSON.stringify(a.customFields || [])),
+        timeStartDate: toT(a.timeStart), timeStartTime: toTi(a.timeStart),
+        timeEndDate: toT(a.timeEnd), timeEndTime: toTi(a.timeEnd),
+        deadlineDate: toT(a.deadline), deadlineTime: toTi(a.deadline),
+        images: a.images || [],
+      },
     });
   },
 
   onEdit(e) {
     const a = this.data.activities.find(x => x._id === e.currentTarget.dataset.id);
     if (!a) return;
+    const toT = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    };
+    const toTi = (d) => {
+      if (!d) return '07:00';
+      const dt = new Date(d);
+      return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    };
     this.setData({
       showForm: true, editingId: a._id, tmpImages: a.images || [],
-      form: { ...a },
+      form: {
+        ...a,
+        timeStartDate: toT(a.timeStart), timeStartTime: toTi(a.timeStart),
+        timeEndDate: toT(a.timeEnd), timeEndTime: toTi(a.timeEnd),
+        deadlineDate: toT(a.deadline), deadlineTime: toTi(a.deadline),
+      },
     });
   },
 

@@ -28,6 +28,9 @@
       <view wx:if="{{f.type === 'radio'}}" class="radio-group">
         <text class="radio-opt {{customValues[f.label] === o ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomRadio">{{o}}</text>
       </view>
+      <view wx:if="{{f.type === 'checkbox'}}" class="radio-group">
+        <text class="radio-opt {{customValues[f.label+'_'+o] ? 'on' : ''}}" wx:for="{{f.options}}" wx:key="*this" wx:for-item="o" data-k="{{f.label}}" data-v="{{o}}" bindtap="onCustomCheck">{{o}}</text>
+      </view>
     </block>
   </view>
 

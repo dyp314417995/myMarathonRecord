@@ -10,12 +10,12 @@
         <text class="act-name">{{item.name}}</text>
         <text class="act-status {{item.status}}">{{item.status === 'active' ? '进行中' : item.status === 'finished' ? '已结束' : '已取消'}}</text>
       </view>
-      <text class="act-info">📅 {{item.timeStart}}</text>
-      <text class="act-info">📍 {{item.location}}</text>
-      <text class="act-info">👥 报名 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人</text>
+      <text class="act-info">📅 {{item.timeStart}} 📍 {{item.location}}</text>
+      <text class="act-info">👥 {{item.regCount || 0}}{{item.maxPeople ? '/' + item.maxPeople : ''}} 人</text>
       <view class="act-ops">
         <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️</text>
-        <text class="op-btn" bindtap="onRegistrations" data-id="{{item._id}}">📋</text>
+        <text class="op-btn" bindtap="onCopy" data-id="{{item._id}}">📋</text>
+        <text class="op-btn" bindtap="onRegistrations" data-id="{{item._id}}">👥</text>
         <text class="op-btn" wx:if="{{item.qrcode}}" bindtap="onShowQR" data-id="{{item._id}}" data-qr="{{item.qrcode}}">📱</text>
         <block wx:if="{{item.status === 'active'}}">
           <text class="op-btn" bindtap="onFinish" data-id="{{item._id}}">✅</text>
@@ -32,37 +32,27 @@
 <view class="modal" wx:if="{{showForm}}">
   <view class="modal-content">
     <text class="modal-title">{{editingId ? '编辑' : '发布'}}活动</text>
-    <scroll-view scroll-y style="max-height:80vh;">
+    <scroll-view scroll-y style="max-height:75vh;">
       <text class="form-label">活动名称 *</text>
       <input class="form-input" value="{{form.name}}" data-k="name" bindinput="onInput" placeholder="如：周日奥森LSD" />
 
       <text class="form-label">开始时间 *</text>
       <view style="display:flex;gap:12rpx;">
-        <picker mode="date" bindchange="onDate" data-k="timeStartDate">
-          <view class="form-input" style="flex:1">{{form.timeStartDate || '日期'}}</view>
+        <picker mode="date" value="{{form.timeStartDate}}" bindchange="onDate" data-k="timeStartDate">
+          <view class="form-input" style="flex:1"><text class="{{form.timeStartDate ? '' : 'placeholder'}}">{{form.timeStartDate || '日期'}}</text></view>
         </picker>
-        <picker mode="time" bindchange="onDate" data-k="timeStartTime">
-          <view class="form-input" style="flex:1">{{form.timeStartTime || '时间'}}</view>
+        <picker mode="time" value="{{form.timeStartTime}}" bindchange="onDate" data-k="timeStartTime">
+          <view class="form-input" style="flex:1"><text class="{{form.timeStartTime ? '' : 'placeholder'}}">{{form.timeStartTime || '时间'}}</text></view>
         </picker>
       </view>
 
       <text class="form-label">结束时间</text>
       <view style="display:flex;gap:12rpx;">
-        <picker mode="date" bindchange="onDate" data-k="timeEndDate">
-          <view class="form-input" style="flex:1">{{form.timeEndDate || '日期'}}</view>
+        <picker mode="date" value="{{form.timeEndDate}}" bindchange="onDate" data-k="timeEndDate">
+          <view class="form-input" style="flex:1"><text class="{{form.timeEndDate ? '' : 'placeholder'}}">{{form.timeEndDate || '日期'}}</text></view>
         </picker>
-        <picker mode="time" bindchange="onDate" data-k="timeEndTime">
-          <view class="form-input" style="flex:1">{{form.timeEndTime || '时间'}}</view>
-        </picker>
-      </view>
-
-      <text class="form-label">报名截止</text>
-      <view style="display:flex;gap:12rpx;">
-        <picker mode="date" bindchange="onDate" data-k="deadlineDate">
-          <view class="form-input" style="flex:1">{{form.deadlineDate || '日期'}}</view>
-        </picker>
-        <picker mode="time" bindchange="onDate" data-k="deadlineTime">
-          <view class="form-input" style="flex:1">{{form.deadlineTime || '时间'}}</view>
+        <picker mode="time" value="{{form.timeEndTime}}" bindchange="onDate" data-k="timeEndTime">
+          <view class="form-input" style="flex:1"><text class="{{form.timeEndTime ? '' : 'placeholder'}}">{{form.timeEndTime || '时间'}}</text></view>
         </picker>
       </view>
 
@@ -73,9 +63,14 @@
       <input class="form-input" value="{{form.fee}}" data-k="fee" bindinput="onInput" placeholder="如：免费 / AA 50元" />
 
       <text class="form-label">报名截止</text>
-      <picker mode="date" value="2026-01-01" bindchange="onDate" data-k="deadline">
-        <view class="form-input">{{form.deadline || '可选'}}</view>
-      </picker>
+      <view style="display:flex;gap:12rpx;">
+        <picker mode="date" value="{{form.deadlineDate}}" bindchange="onDate" data-k="deadlineDate">
+          <view class="form-input" style="flex:1"><text class="{{form.deadlineDate ? '' : 'placeholder'}}">{{form.deadlineDate || '日期'}}</text></view>
+        </picker>
+        <picker mode="time" value="{{form.deadlineTime}}" bindchange="onDate" data-k="deadlineTime">
+          <view class="form-input" style="flex:1"><text class="{{form.deadlineTime ? '' : 'placeholder'}}">{{form.deadlineTime || '时间'}}</text></view>
+        </picker>
+      </view>
 
       <text class="form-label">人数上限</text>
       <input class="form-input" value="{{form.maxPeople}}" data-k="maxPeople" bindinput="onInput" placeholder="不填=不限" type="number" />
@@ -96,9 +91,10 @@
         <view class="btn-row">
           <text class="opt-btn {{item.type==='text'?'on':''}}" data-idx="{{index}}" data-v="text" bindtap="onFieldType">文本</text>
           <text class="opt-btn {{item.type==='radio'?'on':''}}" data-idx="{{index}}" data-v="radio" bindtap="onFieldType">单选</text>
+          <text class="opt-btn {{item.type==='checkbox'?'on':''}}" data-idx="{{index}}" data-v="checkbox" bindtap="onFieldType">多选</text>
         </view>
         <input wx:if="{{item.type !== 'text'}}" class="form-input" placeholder="选项，逗号分隔" value="{{item.optionsStr}}" data-idx="{{index}}" data-key="optionsStr" bindinput="onFieldInput" />
-        <text class="opt-btn" data-idx="{{index}}" bindtap="onFieldRequired">{{item.required ? '必填' : '选填'}}</text>
+        <text class="opt-btn sm" data-idx="{{index}}" bindtap="onFieldRequired">{{item.required ? '必填' : '选填'}}</text>
         <text class="field-del" bindtap="onDelField" data-idx="{{index}}">✕</text>
       </view>
       <view class="add-field" bindtap="onAddField">+ 添加字段</view>
