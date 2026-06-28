@@ -134,7 +134,7 @@
 <view class="modal" wx:if="{{showQR}}">
   <view class="modal-content" style="text-align:center;">
     <text class="modal-title">活动小程序码</text>
-    <image src="{{qrImage}}" mode="aspectFit" style="width:400rpx;height:400rpx;margin:20rpx auto;" />
+    <image src="{{qrImage}}" mode="aspectFit" style="width:400rpx;height:400rpx;margin:20rpx auto;display:block;" />
     <text style="font-size:22rpx;color:#999;">长按保存后分享给跑友</text>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideQR">关闭</button>
