@@ -15,7 +15,6 @@
       <view class="act-ops">
         <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️ 编辑</text>
         <text class="op-btn" bindtap="onCopy" data-id="{{item._id}}">📋 复制</text>
-        <text class="op-btn" bindtap="onRegistrations" data-id="{{item._id}}">👥 报名</text>
         <text class="op-btn" wx:if="{{item.qrcode}}" bindtap="onShowQR" data-id="{{item._id}}" data-qr="{{item.qrcode}}">📱 码</text>
         <block wx:if="{{item.status === 'active'}}">
           <text class="op-btn" bindtap="onFinish" data-id="{{item._id}}">✅ 完成</text>
