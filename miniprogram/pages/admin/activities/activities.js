@@ -153,7 +153,8 @@ Page({
   async onSave() {
     const f = this.data.form;
     if (!f.name.trim()) return wx.showToast({ title: '请输入活动名称', icon: 'none' });
-    if (!f.timeStart) return wx.showToast({ title: '请选择开始时间', icon: 'none' });
+    if (!f.timeStartDate) return wx.showToast({ title: '请选择开始日期', icon: 'none' });
+    if (!f.timeStartTime) return wx.showToast({ title: '请选择开始时间', icon: 'none' });
 
     this.setData({ submitting: true });
     wx.showLoading({ title: '保存中' });
