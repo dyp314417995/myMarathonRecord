@@ -23,10 +23,10 @@
     <text class="desc">{{activity.description}}</text>
   </view>
 
-  <!-- 自定义报名表单（仅非管理员+未报名+进行中时可填写） -->
-  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && activity.status === 'active' && !isAdmin}}">
+  <!-- 自定义属性（管理员和已报名只读，未报名时点击选择） -->
+  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && activity.status === 'active'}}">
     <text class="card-title">报名信息</text>
-    <block wx:if="{{!registered}}">
+    <block wx:if="{{!registered && !isAdmin}}">
       <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
         <text class="form-label">{{f.label}} {{f.required ? '*' : ''}}</text>
         <input wx:if="{{f.type === 'text' || f.type === 'number'}}" class="form-input" value="{{customValues[f.label]}}" data-k="{{f.label}}" bindinput="onCustomInput" placeholder="请输入" />
@@ -39,7 +39,11 @@
       </block>
     </block>
     <block wx:else>
-      <text style="font-size:22rpx;color:#999;">如需修改报名信息，请取消后重新报名</text>
+      <!-- 只读展示 -->
+      <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">
+        <text class="form-label">{{f.label}}</text>
+        <text class="readonly-val">{{f.type === 'text' || f.type === 'number' ? '—' : (f.options || []).join(' / ')}}</text>
+      </block>
     </block>
   </view>
 
