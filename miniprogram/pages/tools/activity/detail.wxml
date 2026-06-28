@@ -23,8 +23,8 @@
     <text class="desc">{{activity.description}}</text>
   </view>
 
-  <!-- 自定义报名表单 -->
-  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && activity.status === 'active'}}">
+  <!-- 自定义报名表单（仅非管理员+未报名+进行中时可填写） -->
+  <view class="card" wx:if="{{activity.customFields && activity.customFields.length && activity.status === 'active' && !isAdmin}}">
     <text class="card-title">报名信息</text>
     <block wx:if="{{!registered}}">
       <block wx:for="{{activity.customFields}}" wx:key="index" wx:for-item="f">

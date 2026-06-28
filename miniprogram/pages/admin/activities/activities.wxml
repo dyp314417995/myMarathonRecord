@@ -23,7 +23,6 @@
         <text class="op-btn" wx:if="{{item.qrcode}}" bindtap="onShowQR" data-id="{{item._id}}" data-qr="{{item.qrcode}}">📱 码</text>
         <text class="op-btn" wx:else bindtap="onGenQR" data-id="{{item._id}}">📱 生成码</text>
         <block wx:if="{{item.status === 'active'}}">
-          <text class="op-btn" bindtap="onFinish" data-id="{{item._id}}">✅ 完成</text>
           <text class="op-btn" bindtap="onCancel" data-id="{{item._id}}">🚫 取消</text>
         </block>
         <text class="op-btn del" bindtap="onDelete" data-id="{{item._id}}">🗑 删除</text>
