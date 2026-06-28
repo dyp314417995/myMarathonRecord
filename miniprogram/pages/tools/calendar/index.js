@@ -170,35 +170,41 @@ Page({
     const now = new Date();
     const toDate = (v) => v instanceof Date ? v : new Date(v);
 
-    // 优先 gunTimes
+    // 找最早发枪时间（用于时间轴节点补充和兜底）
+    let firstGun = null;
     if (gunTimes && gunTimes.length) {
-      let earliest = null;
       gunTimes.forEach(g => {
         if (!g.time) return;
         const rd = dateStr ? toDate(dateStr) : new Date();
         const [h, m] = g.time.split(':');
         rd.setHours(+h || 0, +m || 0, 0, 0);
-        if (!earliest || rd < earliest) earliest = rd;
+        if (!firstGun || rd < firstGun) firstGun = rd;
       });
-      if (earliest) {
-        const diffMs = earliest - now;
-        if (diffMs > 0) { const d2 = Math.ceil(diffMs / 86400000); return `距开赛 ${d2} 天`; }
-        if (Math.abs(diffMs) < 86400000) return '今天开赛';
-        return `已举办 ${Math.ceil(Math.abs(diffMs) / 86400000)} 天`;
-      }
     }
 
+    // 优先找最近的下一个时间节点（含发枪时间）
     let nearestLabel = '', nearestMs = Infinity;
     if (timeline && timeline.length) {
       timeline.forEach(t => {
         if (!t.date) return;
         const td = toDate(t.date);
         if (isNaN(td.getTime())) return;
+        // 鸣枪开跑用最早发枪时间
+        if (t.label === '鸣枪开跑' && firstGun) {
+          const diffMs = firstGun - now;
+          if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = '开赛'; }
+          return;
+        }
         if (t.time) { const [h, m] = t.time.split(':'); td.setHours(+h || 0, +m || 0, 0, 0); }
         else td.setHours(0, 0, 0, 0);
         const diffMs = td - now;
         if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = t.label; }
       });
+    }
+    // 没有时间轴但有发枪时间
+    if (!nearestLabel && firstGun) {
+      const diffMs = firstGun - now;
+      if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '开赛'; }
     }
     if (nearestLabel) {
       const diffHours = Math.round(nearestMs / 3600000);
@@ -207,11 +213,12 @@ Page({
       return `距${nearestLabel} ${Math.ceil(nearestMs / 86400000)} 天`;
     }
 
+    // 兜底：用赛事日期
     if (!dateStr) return '';
     const rd = toDate(dateStr);
     if (isNaN(rd.getTime())) return '';
     const diffMs = rd - now;
-    if (diffMs > 0) return `距开赛 ${Math.ceil(diffMs / 86400000)} 天`;
+    if (diffMs > 0) { const d2 = Math.ceil(diffMs / 86400000); return `距开赛 ${d2} 天`; }
     if (Math.abs(diffMs) < 86400000) return '今天开赛';
     return `已举办 ${Math.ceil(Math.abs(diffMs) / 86400000)} 天`;
   },

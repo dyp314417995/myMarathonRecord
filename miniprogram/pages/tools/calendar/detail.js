@@ -121,42 +121,45 @@ Page({
     const now = new Date();
     const toDate = (v) => v instanceof Date ? v : new Date(v);
 
-    // 优先使用 gunTimes 最早发枪时间
+    // 找最早发枪时间
+    let firstGun = null;
     if (gunTimes && gunTimes.length) {
-      let earliest = null;
       gunTimes.forEach(g => {
         if (!g.time) return;
-        const raceDate = d ? toDate(d) : new Date();
+        const rd = d ? toDate(d) : new Date();
         const [h, m] = g.time.split(':');
-        raceDate.setHours(+h || 0, +m || 0, 0, 0);
-        if (!earliest || raceDate < earliest) earliest = raceDate;
+        rd.setHours(+h || 0, +m || 0, 0, 0);
+        if (!firstGun || rd < firstGun) firstGun = rd;
       });
-      if (earliest) {
-        const diffMs = earliest - now;
-        if (diffMs > 0) { const d2 = Math.ceil(diffMs / 86400000); return `距开赛 ${d2} 天`; }
-        if (Math.abs(diffMs) < 86400000) return '今天开赛';
-        return `已举办 ${Math.ceil(Math.abs(diffMs) / 86400000)} 天`;
-      }
     }
-    // gunTimes 没找到，回退到原逻辑
+
+    // 优先找最近的下一个时间节点（含发枪时间）
     let nearestLabel = '', nearestMs = Infinity;
     if (timeline && timeline.length) {
       timeline.forEach(t => {
         if (!t.date) return;
         const td = toDate(t.date);
         if (isNaN(td.getTime())) return;
+        if (t.label === '鸣枪开跑' && firstGun) {
+          const diffMs = firstGun - now;
+          if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = '开赛'; }
+          return;
+        }
         if (t.time) { const [h, m] = t.time.split(':'); td.setHours(+h || 0, +m || 0, 0, 0); }
         else td.setHours(0, 0, 0, 0);
         const diffMs = td - now;
         if (diffMs >= 0 && diffMs < nearestMs) { nearestMs = diffMs; nearestLabel = t.label; }
       });
     }
+    if (!nearestLabel && firstGun) {
+      const diffMs = firstGun - now;
+      if (diffMs >= 0) { nearestMs = diffMs; nearestLabel = '开赛'; }
+    }
     if (nearestLabel) {
       const diffHours = Math.round(nearestMs / 3600000);
       if (diffHours < 1) return `即将${nearestLabel}`;
       if (diffHours < 24) return `距${nearestLabel} ${diffHours} 小时`;
-      const diffDays = Math.ceil(nearestMs / 86400000);
-      return `距${nearestLabel} ${diffDays} 天`;
+      return `距${nearestLabel} ${Math.ceil(nearestMs / 86400000)} 天`;
     }
     if (!d) return '';
     const rd = toDate(d);
