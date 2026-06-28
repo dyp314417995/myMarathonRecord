@@ -4,6 +4,7 @@ App({
     userInfo: null,       // 当前用户信息
     isAdmin: false,       // 是否为管理员
     isSuperAdmin: false,  // 是否为超管
+    pendingActivityId: '', // 扫码待跳转的活动ID
   },
 
   onLaunch: function () {
@@ -15,8 +16,31 @@ App({
         traceUser: true,
       });
     }
-    // 首次进入时初始化默认群组
     this.initDefaultGroups();
+    // 检查扫码参数
+    this.checkLaunchScene();
+  },
+
+  onShow: function (options) {
+    this.checkLaunchScene();
+  },
+
+  checkLaunchScene() {
+    const scene = wx.getLaunchOptionsSync().query.scene || wx.getEnterOptionsSync().query.scene || '';
+    if (!scene) return;
+    const m = scene.match(/act=([a-zA-Z0-9]+)/);
+    if (!m) return;
+    const activityId = m[1];
+    const userInfo = wx.getStorageSync('userInfo');
+    if (userInfo && userInfo._id) {
+      // 已登录，直接跳转
+      setTimeout(() => {
+        wx.navigateTo({ url: `/pages/tools/activity/detail?id=${activityId}` });
+      }, 500);
+    } else {
+      // 未登录，记住活动ID，登录后跳转
+      this.globalData.pendingActivityId = activityId;
+    }
   },
 
   // 初始化默认群组（仅当 groups 集合为空时）

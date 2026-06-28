@@ -25,16 +25,20 @@ Page({
   },
 
   async onLoad() {
-    // 已注册用户直接跳转首页
+    // 已注册用户直接跳转首页（或扫码活动）
+    const pending = getApp().globalData.pendingActivityId;
+    const dest = pending ? `/pages/tools/activity/detail?id=${pending}` : '/pages/home/home';
     const cached = wx.getStorageSync('userInfo');
     if (cached && cached._id) {
-      wx.reLaunch({ url: '/pages/home/home' });
+      if (pending) getApp().globalData.pendingActivityId = '';
+      wx.reLaunch({ url: dest });
       return;
     }
     const user = await dbUtil.getCurrentUser();
     if (user) {
       wx.setStorageSync('userInfo', user);
-      wx.reLaunch({ url: '/pages/home/home' });
+      if (pending) getApp().globalData.pendingActivityId = '';
+      wx.reLaunch({ url: dest });
       return;
     }
     this.loadGroups();
@@ -182,7 +186,13 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: '注册成功', icon: 'success' });
       setTimeout(() => {
-        wx.reLaunch({ url: '/pages/home/home' });
+        const pending = app.globalData.pendingActivityId;
+        if (pending) {
+          app.globalData.pendingActivityId = '';
+          wx.reLaunch({ url: `/pages/tools/activity/detail?id=${pending}` });
+        } else {
+          wx.reLaunch({ url: '/pages/home/home' });
+        }
       }, 1500);
 
     } catch (err) {

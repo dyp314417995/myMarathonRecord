@@ -16,6 +16,7 @@
       <view class="act-ops">
         <text class="op-btn" bindtap="onEdit" data-id="{{item._id}}">✏️</text>
         <text class="op-btn" bindtap="onRegistrations" data-id="{{item._id}}">📋</text>
+        <text class="op-btn" wx:if="{{item.qrcode}}" bindtap="onShowQR" data-id="{{item._id}}" data-qr="{{item.qrcode}}">📱</text>
         <block wx:if="{{item.status === 'active'}}">
           <text class="op-btn" bindtap="onFinish" data-id="{{item._id}}">✅</text>
           <text class="op-btn" bindtap="onCancel" data-id="{{item._id}}">🚫</text>
@@ -125,6 +126,18 @@
     </scroll-view>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideRegs">关闭</button>
+    </view>
+  </view>
+</view>
+
+<!-- 二维码弹窗 -->
+<view class="modal" wx:if="{{showQR}}">
+  <view class="modal-content" style="text-align:center;">
+    <text class="modal-title">活动小程序码</text>
+    <image src="{{qrImage}}" mode="aspectFit" style="width:400rpx;height:400rpx;margin:20rpx auto;" />
+    <text style="font-size:22rpx;color:#999;">长按保存后分享给跑友</text>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideQR">关闭</button>
     </view>
   </view>
 </view>

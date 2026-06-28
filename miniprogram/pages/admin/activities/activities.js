@@ -116,11 +116,17 @@ Page({
       customFields: (f.customFields || []).map(cf => ({ label: cf.label, type: cf.type, required: cf.required, options: (cf.optionsStr || '').split(/[,，]/).map(s => s.trim()).filter(Boolean) })),
     };
 
+    let result;
     try {
       if (this.data.editingId) {
-        await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'update', id: this.data.editingId, data } });
+        result = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'update', id: this.data.editingId, data } });
       } else {
-        await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'create', data } });
+        result = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'create', data } });
+        // 新活动生成小程序码
+        const qrRes = await wx.cloud.callFunction({ name: 'genActivityQR', data: { activityId: result.result._id } });
+        if (qrRes.result && qrRes.result.fileID) {
+          await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'update', id: result.result._id, data: { qrcode: qrRes.result.fileID } } });
+        }
       }
       wx.hideLoading();
       wx.showToast({ title: '保存成功', icon: 'success' });
@@ -171,6 +177,8 @@ Page({
     this.setData({ showRegs: true, regList: (res.result || {}).list || [], regActId: id });
   },
   onHideRegs() { this.setData({ showRegs: false }); },
+  onShowQR(e) { this.setData({ showQR: true, qrImage: e.currentTarget.dataset.qr }); },
+  onHideQR() { this.setData({ showQR: false }); },
 
   fmtDate(d) {
     if (!d) return '';
