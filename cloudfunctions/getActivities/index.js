@@ -166,11 +166,9 @@ exports.main = async (event) => {
 // 计算展示状态
 function computeState(a, regCount, now) {
   if (a.status === 'cancelled') return { cls: 'state-s7', text: '已取消' };
-  if (a.status === 'finished') return { cls: 'state-s6', text: '已完成' };
-  // active
+  if (a.status === 'finished' || (a.timeEnd && new Date(a.timeEnd) < now)) return { cls: 'state-s6', text: '已完成' };
   if (a.maxPeople && regCount >= a.maxPeople) return { cls: 'state-s5', text: '已满员' };
   if (a.deadline && new Date(a.deadline) < now) return { cls: 'state-s4', text: '已截止' };
-  if (a.timeEnd && new Date(a.timeEnd) < now) return { cls: 'state-s3', text: '已结束' };
   if (a.timeStart && new Date(a.timeStart) < now) return { cls: 'state-s2', text: '进行中' };
   return { cls: 'state-s1', text: '报名中' };
 }

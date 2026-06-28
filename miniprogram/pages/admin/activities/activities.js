@@ -9,7 +9,7 @@ Page({
     submitting: false,
     // 分页筛选
     page: 0, pageSize: 20, hasMore: true,
-    filterStatusIdx: 0, statusOptions: ['全部状态', '报名中', '进行中', '已结束', '已完成', '已取消'],
+    filterStatusIdx: 0, statusOptions: ['全部状态', '报名中', '进行中', '已截止', '已完成', '已取消'],
     allLoaded: [], // 全量缓存用于前端筛选
   },
 
