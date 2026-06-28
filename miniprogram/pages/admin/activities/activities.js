@@ -27,7 +27,11 @@ Page({
 
   applyFilter() {
     const { allLoaded, filterStatusIdx, statusOptions } = this.data;
-    let list = [...allLoaded];
+    const thisYear = new Date().getFullYear();
+    let list = allLoaded.filter(a => {
+      const ts = a.timeStart ? new Date(a.timeStart) : null;
+      return ts && ts.getFullYear() === thisYear;
+    });
     if (filterStatusIdx > 0) {
       const tag = statusOptions[filterStatusIdx];
       list = list.filter(a => a.stateTag && a.stateTag.text === tag);
