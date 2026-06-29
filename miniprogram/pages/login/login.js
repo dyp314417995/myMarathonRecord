@@ -144,10 +144,15 @@ Page({
         }
       }
 
+      // 获取 openid 用于消息推送
+      const openRes = await wx.cloud.callFunction({ name: 'getOpenid' }).catch(() => ({ result: {} }));
+      const openid = openRes.result.openid || '';
+
       // 检查是否已注册
       let user = await dbUtil.getCurrentUser();
       if (user) {
         await dbUtil.updateUser(user._id, {
+          openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
           groupIds: selectedGroupIds
@@ -159,6 +164,7 @@ Page({
       } else {
         // 新用户注册
         const userData = {
+          openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
           groupIds: selectedGroupIds, points: 50,

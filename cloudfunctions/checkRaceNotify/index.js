@@ -1,59 +1,43 @@
 // cloudfunctions/checkRaceNotify - 每日检查赛事倒计时并推送通知
 const cloud = require('wx-server-sdk');
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+cloud.init({ env: 'cloud1-d5gy0iuiba5f9300f', traceUser: true });
 const db = cloud.database();
 
 // 通知话术模板（接受 time 变量）
-function getMsg(label, time, eventName) {
-  const t = time ? `明天${time} ` : '明天';
+function getMsg(label, time, eventName, nodeDate) {
+  const ds = nodeDate ? `${nodeDate.getFullYear()}年${nodeDate.getMonth()+1}月${nodeDate.getDate()}日 ${time || '00:00'}` : '';
   const templates = {
     '报名开启': {
-      thing1: '报名开启提醒',
-      thing2: `${t}报名开启！准备好报名资料，定好闹钟别错过`,
-      thing3: '报名即将开始'
+      date1: ds, thing2: `${eventName} 报名即将开始`, time3: ds
     },
     '报名截止': {
-      thing1: '报名截止提醒',
-      thing2: `${t}报名截止！还没报名的跑友抓紧最后机会`,
-      thing3: '报名即将截止'
+      date1: ds, thing2: `${eventName} 报名即将截止`, time3: ds
     },
     '退费截止': {
-      thing1: '退费截止提醒',
-      thing2: `${t}退费截止，需要退费请尽快操作`,
-      thing3: '退费即将截止'
+      date1: ds, thing2: `${eventName} 退费即将截止`, time3: ds
     },
     '出签时间': {
-      thing1: '抽签结果提醒',
-      thing2: `${t}公布中签结果，祝你好运！🍀`,
-      thing3: '中签结果即将公布'
+      date1: ds, thing2: `${eventName} 中签结果即将公布`, time3: ds
     },
     '缴费截止': {
-      thing1: '缴费截止提醒',
-      thing2: `${t}缴费截止，中签后请及时缴费锁定名额`,
-      thing3: '缴费即将截止'
+      date1: ds, thing2: `${eventName} 请及时缴费`, time3: ds
     },
     '候补时间': {
-      thing1: '候补机会提醒',
-      thing2: `${t}开启候补，还有机会！别放弃`,
-      thing3: '候补即将开启'
+      date1: ds, thing2: `${eventName} 候补即将开启`, time3: ds
     },
     '二抽出签': {
-      thing1: '二轮抽签提醒',
-      thing2: `${t}二轮抽签出结果，再试试手气！`,
-      thing3: '二抽结果即将公布'
+      date1: ds, thing2: `${eventName} 二抽结果即将公布`, time3: ds
     },
     '鸣枪开跑': {
-      thing1: '开赛提醒',
-      thing2: `${t}鸣枪开跑！检查装备，早睡早起，加油！🏃`,
-      thing3: '比赛日倒计时1天'
+      date1: ds, thing2: `${eventName} 明天开跑，加油！`, time3: ds
     }
   };
   const tmpl = templates[label];
   if (!tmpl) return null;
   return {
-    thing1: tmpl.thing1,
-    thing2: `${eventName} - ${tmpl.thing2}`,
-    thing3: tmpl.thing3,
+    date1: { value: tmpl.date1 },
+    thing2: { value: tmpl.thing2 },
+    time3: { value: tmpl.time3 },
   };
 }
 
@@ -89,7 +73,6 @@ exports.main = async (event, context) => {
       const event = eventsMap[marker.eventId];
       if (!event || !event.timeline || !event.timeline.length) continue;
 
-      // 找明天到期的节点
       for (const node of event.timeline) {
         if (!node.date) continue;
         const nodeDateStr = typeof node.date === 'string'
@@ -98,7 +81,7 @@ exports.main = async (event, context) => {
 
         if (nodeDateStr !== tomorrowStr) continue;
 
-        const msgData = getMsg(node.label, node.time || '', event.name);
+        const msgData = getMsg(node.label, node.time || '', event.name, new Date(node.date));
         if (!msgData) continue;
 
         // 4. 发送订阅消息
@@ -111,14 +94,13 @@ exports.main = async (event, context) => {
             continue;
           }
 
-          await cloud.openapi.subscribeMessage.send({
-            touser: openid,
-            templateId: 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew',
-            page: `/pages/tools/calendar/detail?id=${event._id}`,
+          await cloud.callFunction({
+            name: 'sendSubscribeMsg',
             data: {
-              thing1: { value: msgData.thing1 },
-              thing2: { value: msgData.thing2 },
-              thing3: { value: msgData.thing3 },
+              openid,
+              templateId: 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew',
+              page: `/pages/tools/calendar/detail?id=${event._id}`,
+              data: msgData,
             }
           });
           sentCount++;

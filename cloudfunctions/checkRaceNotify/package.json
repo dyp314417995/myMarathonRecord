@@ -1,8 +1,6 @@
 {
   "name": "checkRaceNotify",
   "version": "1.0.0",
-  "description": "每日检查赛事倒计时推送通知",
-  "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "latest"
   }

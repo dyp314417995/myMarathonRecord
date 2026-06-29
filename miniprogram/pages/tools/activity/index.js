@@ -43,6 +43,19 @@ Page({
       const tag = filterOptions[filterIdx];
       list = list.filter(a => a.stateTag && a.stateTag.text === tag);
     }
+    // 按最近时间节点排序（截止/开始时间取最近）
+    const now = new Date();
+    list.sort((a, b) => {
+      const na = Math.min(
+        a.deadline && new Date(a.deadline) > now ? new Date(a.deadline) : Infinity,
+        new Date(a.timeStart) > now ? new Date(a.timeStart) : Infinity
+      );
+      const nb = Math.min(
+        b.deadline && new Date(b.deadline) > now ? new Date(b.deadline) : Infinity,
+        new Date(b.timeStart) > now ? new Date(b.timeStart) : Infinity
+      );
+      return na - nb;
+    });
     const end = this.data.page * this.data.pageSize;
     const sliced = list.slice(0, end);
     this.setData({ activities: sliced, hasMore: end < list.length });

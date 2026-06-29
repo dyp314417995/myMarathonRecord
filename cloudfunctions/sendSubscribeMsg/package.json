@@ -1,0 +1,9 @@
+{
+  "name": "sendSubscribeMsg",
+  "version": "1.0.0",
+  "dependencies": {
+    "wx-server-sdk": "latest",
+    "request": "2.88.2",
+    "request-promise": "4.2.6"
+  }
+}

@@ -17,8 +17,25 @@ App({
       });
     }
     this.initDefaultGroups();
+    this.fixOpenid();
     this.fixUserRole();
     this.checkLaunchScene();
+  },
+
+  // 补存 openid（已有用户）
+  async fixOpenid() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return;
+    const db = wx.cloud.database();
+    try {
+      const u = await db.collection('users').doc(userInfo._id).get();
+      if (u.data && !u.data.openid) {
+        const openRes = await wx.cloud.callFunction({ name: 'getOpenid' }).catch(() => ({ result: {} }));
+        if (openRes.result.openid) {
+          await db.collection('users').doc(userInfo._id).update({ data: { openid: openRes.result.openid } });
+        }
+      }
+    } catch {}
   },
 
   // 修复本地角色：从 DB 同步真实 role

@@ -27,7 +27,8 @@ Page({
 
   applyFilter() {
     const { allLoaded, filterStatusIdx, statusOptions } = this.data;
-    const thisYear = new Date().getFullYear();
+    const now = new Date();
+    const thisYear = now.getFullYear();
     let list = allLoaded.filter(a => {
       const ts = a.timeStart ? new Date(a.timeStart) : null;
       return ts && ts.getFullYear() === thisYear;
@@ -36,6 +37,18 @@ Page({
       const tag = statusOptions[filterStatusIdx];
       list = list.filter(a => a.stateTag && a.stateTag.text === tag);
     }
+    // 按最近时间节点排序（截止/开始取最近的）
+    list.sort((a, b) => {
+      const na = Math.min(
+        a.deadline && new Date(a.deadline) > now ? new Date(a.deadline) : Infinity,
+        new Date(a.timeStart) > now ? new Date(a.timeStart) : Infinity
+      );
+      const nb = Math.min(
+        b.deadline && new Date(b.deadline) > now ? new Date(b.deadline) : Infinity,
+        new Date(b.timeStart) > now ? new Date(b.timeStart) : Infinity
+      );
+      return na - nb;
+    });
     const end = this.data.page * this.data.pageSize;
     const sliced = list.slice(0, end);
     this.setData({ activities: sliced, hasMore: end < list.length });

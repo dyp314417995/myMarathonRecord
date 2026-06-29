@@ -132,10 +132,12 @@ Page({
         }
       });
 
+      const now = new Date();
       races = races.map(r => ({
         ...r,
         raceTypeName: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('·'),
         countdown: this.calcCountdown(r.date, r.timeline, r.gunTimes),
+        _nearestMs: this.getNearestMs(r, now),
         isMine: !!this.data.myMarkers[r._id],
         myStatus: this.data.myMarkers[r._id] || '',
         myNotify: (this.data.myMarkersData[r._id] && this.data.myMarkersData[r._id].notifyEnabled) || false,
@@ -154,6 +156,32 @@ Page({
     } catch (err) {
       wx.hideLoading();
     }
+  },
+
+  getNearestMs(r, now) {
+    let min = Infinity;
+    if (r.gunTimes && r.gunTimes.length) {
+      r.gunTimes.forEach(g => {
+        if (!g.time) return;
+        const [h, m] = g.time.split(':').map(Number);
+        const d = r.date ? new Date(r.date) : new Date();
+        d.setHours(h || 0, m || 0, 0, 0);
+        const diff = d - now;
+        if (diff >= 0 && diff < min) min = diff;
+      });
+    }
+    if (r.timeline && r.timeline.length) {
+      r.timeline.forEach(t => {
+        if (!t.date) return;
+        const d = new Date(t.date);
+        if (isNaN(d.getTime())) return;
+        if (t.time) { const [h, m] = t.time.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); }
+        else d.setHours(0, 0, 0, 0);
+        const diff = d - now;
+        if (diff >= 0 && diff < min) min = diff;
+      });
+    }
+    return min;
   },
 
   isRegNotOpen(timeline) {
@@ -236,7 +264,7 @@ Page({
     const sb = this.data.sortBy;
     const asc = this.data.sortAsc;
     const dimKeys = ['difficulty','atmosphere','supply','transport','scenery','org','medal','value'];
-    if (sb === 'date') { races.sort((a, b) => asc ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date)); }
+    if (sb === 'date') { races.sort((a, b) => asc ? (a._nearestMs || Infinity) - (b._nearestMs || Infinity) : (b._nearestMs || Infinity) - (a._nearestMs || Infinity)); }
     else if (sb === 'score') { races.sort((a, b) => asc ? (a.avgScore || 0) - (b.avgScore || 0) : (b.avgScore || 0) - (a.avgScore || 0)); }
     else if (dimKeys.includes(sb)) { races.sort((a, b) => asc ? ((a.dimensions||{})[sb] || 0) - ((b.dimensions||{})[sb] || 0) : ((b.dimensions||{})[sb] || 0) - ((a.dimensions||{})[sb] || 0)); }
     this.setData({ races });
