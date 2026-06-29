@@ -8,7 +8,7 @@ async function getToken() {
   if (cachedToken && Date.now() < tokenExpire) return cachedToken;
   const res = await rp({
     uri: 'https://api.weixin.qq.com/cgi-bin/token',
-    qs: { grant_type: 'client_credential', appid: 'wx07a1eccd2cbf673e', secret: '8180a1c098c30f9dfe454e17853e4b48' },
+    qs: { grant_type: 'client_credential', appid: 'wx07a1eccd2cbf673e', secret: process.env.APP_SECRET },
     json: true,
   });
   cachedToken = res.access_token;
