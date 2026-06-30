@@ -14,15 +14,29 @@ Page({
   },
 
   async onShow() {
+    this.setData({ page: 0, allLoaded: [], hasMore: true });
+    this.loadActivities();
+  },
+
+  async loadActivities(isLoadMore = false) {
+    if (isLoadMore && !this.data.hasMore) return;
     wx.showLoading({ title: '加载中' });
     try {
-      const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'all', skip: 0, limit: 100 } });
-      const list = (res.result || {}).list || [];
+      const skip = this.data.page * this.data.pageSize;
+      const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'all', skip, limit: this.data.pageSize } });
+      const result = res.result || {};
+      const list = result.list || [];
       list.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
-      this.setData({ allLoaded: list, page: 1 });
+      const merged = isLoadMore ? [...this.data.allLoaded, ...list] : list;
+      this.setData({ allLoaded: merged, hasMore: result.hasMore || false });
       this.applyFilter();
     } catch (e) { console.error(e); }
     wx.hideLoading();
+  },
+
+  onLoadMore() {
+    if (!this.data.hasMore) return;
+    this.setData({ page: this.data.page + 1 }, () => this.loadActivities(true));
   },
 
   applyFilter() {
@@ -49,7 +63,7 @@ Page({
       );
       return na - nb;
     });
-    const end = this.data.page * this.data.pageSize;
+    const end = (this.data.page + 1) * this.data.pageSize;
     const sliced = list.slice(0, end);
     this.setData({ activities: sliced, hasMore: end < list.length });
   },

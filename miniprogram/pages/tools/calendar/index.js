@@ -32,6 +32,9 @@ Page({
     dateFrom: '',
     dateTo: '',
     dateRangeText: '',
+    page: 0,
+    pageSize: 20,
+    hasMore: false,
   },
 
   onLoad() {
@@ -42,12 +45,16 @@ Page({
 
   onShow() {
     this.setDefaultDates();
-    this.loadData();
+    this.loadData(false);
   },
 
   onHide() {
-    // 记住当前 tab
     wx.setStorageSync('calendar_tab', this.data.tab);
+  },
+
+  onLoadMore() {
+    if (!this.data.hasMore) return;
+    this.setData({ page: this.data.page + 1 }, () => this.loadData(true));
   },
 
   setDefaultDates() {
@@ -72,13 +79,18 @@ Page({
     });
   },
 
-  async loadData() {
+  async loadData(isLoadMore = false) {
+    if (!isLoadMore) {
+      this.setData({ page: 0, allRaces: [], races: [], hasMore: false });
+    }
     wx.showLoading({ title: '加载中' });
     try {
       const userInfo = wx.getStorageSync('userInfo');
       const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
 
+      const skip = this.data.page * this.data.pageSize;
       const res = await raceUtil.getAll({
+        skip, limit: this.data.pageSize,
         search: this.data.searchKey,
         dateFrom: this.data.dateFrom,
         dateTo: this.data.dateTo,
@@ -88,18 +100,18 @@ Page({
         userId,
       });
       const all = res.list;
-      if (all.length === 0) {
+      if (all.length === 0 && !isLoadMore) {
         wx.hideLoading();
-        this.setData({ races: [], allRaces: [], allTags: [], dateRangeText: '', total: 0, hasMore: false });
+        this.setData({ races: [], allRaces: [], allTags: [], total: 0, hasMore: false });
         return;
       }
 
       const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const from = new Date(this.data.dateFrom);
       const to = new Date(this.data.dateTo);
-      this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}`, total: res.total, hasMore: res.hasMore });
+      this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}`, total: res.total || 0, hasMore: res.hasMore || false });
 
-      let races = all;
+      let races = [...this.data.allRaces, ...all];
 
       const tagSet = new Set();
       races.forEach(r => (r.tags || []).forEach(t => tagSet.add(t)));

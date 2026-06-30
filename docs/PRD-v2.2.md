@@ -112,7 +112,10 @@
 
 ## 4. 数据模型
 
-### 4.1 `activities` 集合
+### 4.3 分页统一
+- 赛事日历、活动广场、活动管理、赛事管理全面改用服务端分页（skip/limit）
+- 每页 20 条，拉到底"加载更多"
+- 云函数 getActivities / getRaceEvents 返回 total + hasMore
 
 ```js
 {

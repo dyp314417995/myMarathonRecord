@@ -9,18 +9,22 @@ Page({
     filterIdx: 0, filterOptions: ['全部状态', '报名中', '进行中', '已截止', '已完成', '已取消'],
   },
 
-  async onShow() { this.loadData(); },
+  async onShow() { this.setData({ page: 1, allLoaded: [], hasMore: false }); this.loadData(); },
 
-  async loadData() {
+  async loadData(isLoadMore = false) {
+    if (isLoadMore && !this.data.hasMore) return;
     wx.showLoading({ title: '加载中' });
     const userInfo = wx.getStorageSync('userInfo');
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
+    const skip = (this.data.page - 1) * this.data.pageSize;
 
     try {
-      const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list', limit: 100 } });
-      const allList = (allRes.result || {}).list || [];
+      const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list', skip, limit: this.data.pageSize } });
+      const result = allRes.result || {};
+      const allList = result.list || [];
       allList.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
-      this.setData({ allLoaded: allList, page: 1 });
+      const merged = isLoadMore ? [...this.data.allLoaded, ...allList] : allList;
+      this.setData({ allLoaded: merged, hasMore: result.hasMore || false });
       this.applyFilter();
       if (userId) {
         const myRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'my', userId } });
@@ -30,6 +34,11 @@ Page({
       }
     } catch (e) { console.error(e); }
     wx.hideLoading();
+  },
+
+  onLoadMore() {
+    if (!this.data.hasMore) return;
+    this.setData({ page: this.data.page + 1 }, () => this.loadData(true));
   },
 
   applyFilter() {

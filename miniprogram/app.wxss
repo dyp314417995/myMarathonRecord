@@ -108,3 +108,11 @@ page {
   border-bottom: 1rpx solid #f0f0f0;
 }
 .list-item:last-child { border-bottom: none; }
+
+/* 加载更多 */
+.load-more {
+  text-align: center;
+  padding: 24rpx;
+  font-size: 26rpx;
+  color: #1aad19;
+}

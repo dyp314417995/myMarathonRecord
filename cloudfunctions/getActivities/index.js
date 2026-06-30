@@ -46,13 +46,9 @@ exports.main = async (event) => {
   if (action === 'list') {
     await autoFinish();
     const now = new Date();
-    const res = await db.collection('activities')
-      .where({ status: 'active' })
-      .orderBy('timeStart', 'asc')
-      .skip(skip || 0)
-      .limit(limit || 20)
-      .get();
-    // 批量查报名数
+    const query = db.collection('activities').where({ status: 'active' }).orderBy('timeStart', 'asc');
+    const totalRes = await query.count();
+    const res = await query.skip(skip || 0).limit(limit || 20).get();
     const ids = res.data.map(a => a._id);
     const countMap = {};
     if (ids.length) {
@@ -65,6 +61,8 @@ exports.main = async (event) => {
         ...a, regCount: countMap[a._id] || 0,
         stateTag: computeState(a, countMap[a._id] || 0, now),
       })),
+      total: totalRes.total,
+      hasMore: (skip || 0) + (limit || 20) < totalRes.total,
     };
   }
 
@@ -72,11 +70,9 @@ exports.main = async (event) => {
   if (action === 'all') {
     await autoFinish();
     const now = new Date();
-    const res = await db.collection('activities')
-      .orderBy('timeStart', 'asc')
-      .skip(skip || 0)
-      .limit(limit || 20)
-      .get();
+    const query = db.collection('activities').orderBy('timeStart', 'asc');
+    const totalRes = await query.count();
+    const res = await query.skip(skip || 0).limit(limit || 20).get();
     const ids = res.data.map(a => a._id);
     const countMap = {};
     if (ids.length) {
@@ -89,6 +85,8 @@ exports.main = async (event) => {
         ...a, regCount: countMap[a._id] || 0,
         stateTag: computeState(a, countMap[a._id] || 0, now),
       })),
+      total: totalRes.total,
+      hasMore: (skip || 0) + (limit || 20) < totalRes.total,
     };
   }
 

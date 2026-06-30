@@ -107,6 +107,9 @@
       </view>
     </view>
   </scroll-view>
+  <view wx:if="{{hasMore}}" class="load-more" bindtap="onLoadMore">
+    <text>加载更多</text>
+  </view>
 
   <!-- 标记弹窗 -->
   <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>

@@ -12,7 +12,7 @@ async function getList(skip = 0, limit = 20) {
 
 /** 分页获取赛事（服务端筛选+分页） */
 async function getAll(params = {}) {
-  const data = { skip: 0, limit: 20 };
+  const data = { skip: params.skip || 0, limit: params.limit || 20 };
   if (params.search !== undefined) data.search = params.search;
   if (params.dateFrom !== undefined) data.dateFrom = params.dateFrom;
   if (params.dateTo !== undefined) data.dateTo = params.dateTo;

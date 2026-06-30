@@ -6,7 +6,7 @@ Page({
     isAdmin: false,
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
-    adminSearch: '', adminType: 'full', adminLevel: 'A', adminLabel: '金标',
+    adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
     typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
     showForm: false,
     gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
@@ -41,16 +41,16 @@ Page({
   onShow() {
     const userInfo = wx.getStorageSync('userInfo') || {};
     const role = userInfo.role || 'user';
-    this.setData({ isAdmin: role === 'super_admin' || role === 'admin' });
+    this.setData({ isAdmin: role === 'super_admin' || role === 'admin', adminPage: 0, adminHasMore: true, allRaceList: [], raceList: [] });
     if (this.data.isAdmin) this.loadRaces();
   },
 
   async loadRaces() {
     const userInfo = wx.getStorageSync('userInfo');
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
-    const res = await raceUtil.getAll({ limit: 200, userId });
+    const skip = this.data.adminPage * 20;
+    const res = await raceUtil.getAll({ skip, limit: 20, userId });
     const all = res.list;
-    // 兼容旧数据
     all.forEach(r => {
       if (r.raceType && !r.raceTypes) r.raceTypes = [r.raceType];
       if (!r.raceTypes || !r.raceTypes.length) r.raceTypes = ['full'];
@@ -61,8 +61,14 @@ Page({
       countdown: this.calcCountdown(r.date, r.status, r.timeline, r.gunTimes),
       confirmed: r.confirmed || false,
     }));
-    this.setData({ allRaceList: list });
+    const merged = [...this.data.allRaceList, ...list];
+    this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
     this.applyAdminFilter();
+  },
+
+  onLoadMoreRaces() {
+    if (!this.data.adminHasMore) return;
+    this.setData({ adminPage: this.data.adminPage + 1 }, () => this.loadRaces());
   },
 
   applyAdminFilter() {

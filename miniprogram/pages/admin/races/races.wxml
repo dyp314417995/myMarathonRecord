@@ -42,6 +42,7 @@
         <text class="act del" data-id="{{item._id}}" catchtap="onDel">🗑</text>
       </view>
     </view>
+    <view wx:if="{{adminHasMore}}" class="load-more" bindtap="onLoadMoreRaces">加载更多</view>
     <view class="btn-area" style="padding:24rpx;">
       <button class="btn-primary" bindtap="onAdd">+ 添加赛事</button>
     </view>
