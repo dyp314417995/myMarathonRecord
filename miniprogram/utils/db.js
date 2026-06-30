@@ -108,7 +108,7 @@ async function updateUser(userId, data) {
 
 /** 获取用户列表 (管理员用) */
 async function getUserList(condition = {}, skip = 0, limit = 100) {
-  return await db.collection('users').where(condition).orderBy('createTime', 'desc').skip(skip).limit(limit).get();
+  return await db.collection('users').where(condition).orderBy('createTime', 'desc').orderBy('_id', 'desc').skip(skip).limit(limit).get();
 }
 
 /** 获取用户总数 */
