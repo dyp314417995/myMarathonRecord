@@ -50,8 +50,8 @@ Page({
         const raw = u.avatarUrl || '';
         let avatar = '';
         if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
-        // 其他格式（wxfile://、temp https等）都是临时路径，清空走默认头像
+        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+        // 其他格式（wxfile://、temp https、过期云链接等）清空走默认头像
         return {
           ...u, avatarUrl: avatar,
           groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
@@ -98,7 +98,7 @@ Page({
     const newUsers = res.data.map(u => {
       let avatar = u.avatarUrl || '';
       if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
-      else if (!avatar.startsWith('https://')) avatar = '';
+      else if (!avatar.startsWith('https://') || avatar.includes('tcb.qcloud.la')) avatar = '';
       return {
         ...u, avatarUrl: avatar,
         groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
@@ -111,17 +111,45 @@ Page({
   },
 
   // 搜索
+  onSearchBlur(e) {
+    this.onSearchInput(e);
+  },
+
   onSearchInput(e) {
     const kw = e.detail.value || '';
     this.setData({ searchKey: kw });
-    if (kw) {
-      if (this.data._allLoaded) {
-        this.applyFilter();
-      } else {
-        this.loadAllUsers().then(() => this.applyFilter());
+    if (kw) { this.searchUsers(kw); }
+    else { this.loadUsers(); }
+  },
+
+  async searchUsers(kw) {
+    this.setData({ loading: true });
+    try {
+      const res = await wx.cloud.callFunction({ name: 'searchUsers', data: { kw } });
+      const list = (res.result || {}).list || [];
+      const groupsRes = await dbUtil.getGroups();
+      const groupMap = {};
+      groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
+      const cloudIds = list.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+      let urlMap = {};
+      if (cloudIds.length) {
+        try {
+          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
+          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+        } catch {}
       }
-    } else {
+      const all = list.map(u => {
+        const raw = u.avatarUrl || '';
+        let avatar = '';
+        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+        return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
+      });
+      this.setData({ allUsers: all, hasMore: false, loading: false });
       this.applyFilter();
+    } catch (e) {
+      console.error('[users] searchUsers error:', e);
+      this.setData({ loading: false });
     }
   },
 
@@ -150,14 +178,12 @@ Page({
         (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
       } catch {}
     }
-    if (Object.keys(urlMap).length > 0) {
-      all = all.map(u => {
-        if (u.avatarUrl && u.avatarUrl.startsWith('cloud://')) {
-          return { ...u, avatarUrl: urlMap[u.avatarUrl] || '' };
-        }
-        return u;
-      });
-    }
+    all = all.map(u => {
+      const raw = u.avatarUrl || '';
+      if (raw.startsWith('cloud://')) return { ...u, avatarUrl: urlMap[raw] || '' };
+      if (raw.includes('tcb.qcloud.la')) return { ...u, avatarUrl: '' };
+      return u;
+    });
     this.setData({ allUsers: all, hasMore: false, _allLoaded: true });
   },
 

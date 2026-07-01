@@ -1,4 +1,4 @@
-// pages/admin/members/members.js - 跑友名录（只读）
+// pages/admin/members/members.js - 跑友名录
 const dbUtil = require('../../../utils/db');
 
 Page({
@@ -8,7 +8,6 @@ Page({
     totalCount: 0,
     showDetail: false, detailUser: {}, detailGroups: '', detailRaces: [],
     hasMore: false,
-    _allLoaded: false,
   },
 
   async onShow() { this.loadUsers(); },
@@ -19,7 +18,6 @@ Page({
       const [usersRes, groupsRes] = await Promise.all([dbUtil.getUserList({}, 0, 20), dbUtil.getGroups()]);
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-
       const cloudIds = usersRes.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
       let urlMap = {};
       if (cloudIds.length) {
@@ -28,17 +26,12 @@ Page({
           (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
         } catch {}
       }
-
       const allUsers = usersRes.data.map(u => {
         const raw = u.avatarUrl || '';
         let avatar = '';
         if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
-        // 其他格式（临时路径等）清空走默认头像
-        return {
-          ...u, avatarUrl: avatar,
-          groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-        };
+        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+        return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
       });
       const totalCount = await dbUtil.getUserCount();
       this.setData({ allUsers, totalCount, loading: false, hasMore: usersRes.data.length >= 20 });
@@ -50,10 +43,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     if (id) {
       const idx = this.data.allUsers.findIndex(u => u._id === id);
-      if (idx !== -1) {
-        this.setData({ [`allUsers[${idx}].avatarUrl`]: '/imgs/back.svg' });
-        this.applyFilter();
-      }
+      if (idx !== -1) { this.setData({ [`allUsers[${idx}].avatarUrl`]: '/imgs/back.svg' }); this.applyFilter(); }
     }
   },
 
@@ -67,11 +57,9 @@ Page({
         (u.groupName || '').toLowerCase().includes(kw)
       );
     }
-    const by = this.data.sortBy;
-    const asc = this.data.sortAsc;
+    const by = this.data.sortBy, asc = this.data.sortAsc;
     users.sort((a, b) => {
-      let va, vb;
-      if (by === 'name') { va = a.nickName || ''; vb = b.nickName || ''; return asc ? va.localeCompare(vb) : vb.localeCompare(va); }
+      if (by === 'name') return asc ? (a.nickName||'').localeCompare(b.nickName||'') : (b.nickName||'').localeCompare(a.nickName||'');
       if (by === 'pb10k' || by === 'pbHalf' || by === 'pbFull') {
         const pa = a[by] || '', pb = b[by] || '';
         return asc ? pa.localeCompare(pb) : pb.localeCompare(pa);
@@ -81,54 +69,39 @@ Page({
     this.setData({ users });
   },
 
+  onSearchBlur(e) { this.onSearchInput(e); },
+
   onSearchInput(e) {
     const kw = e.detail.value || '';
     this.setData({ searchKey: kw });
-    if (kw) {
-      this.searchUsers(kw);
-    } else {
-      this.loadUsers();
-    }
+    if (kw) { this.searchUsers(kw); }
+    else { this.loadUsers(); }
   },
 
   async searchUsers(kw) {
-    this.setData({ loading: true, _allLoaded: true });
+    console.log('[client] searchUsers kw=', kw);
+    this.setData({ loading: true });
     try {
-      const regex = dbUtil.db.RegExp({ regexp: kw, options: 'i' });
-      const [nameRes, cityRes] = await Promise.all([
-        dbUtil.db.collection('users').where({ nickName: regex }).limit(50).get(),
-        dbUtil.db.collection('users').where({ city: regex }).limit(50).get(),
-      ]);
-      const seen = new Set();
-      const uniqueUsers = [];
+      const res = await wx.cloud.callFunction({ name: 'searchUsers', data: { kw } });
+      console.log('[client] searchUsers result=', res.result);
+      const list = (res.result || {}).list || [];
       const groupsRes = await dbUtil.getGroups();
       const groupMap = {};
       groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-      const processUser = (u) => {
-        if (seen.has(u._id)) return;
-        seen.add(u._id);
-        uniqueUsers.push(u);
-      };
-      (nameRes.data || []).forEach(processUser);
-      (cityRes.data || []).forEach(processUser);
-      const cloudIds = uniqueUsers.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-      const urlMap = {};
-      for (let i = 0; i < cloudIds.length; i += 50) {
+      const cloudIds = list.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+      let urlMap = {};
+      if (cloudIds.length) {
         try {
-          const batch = cloudIds.slice(i, i + 50);
-          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: batch } });
+          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
           (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
         } catch {}
       }
-      const all = uniqueUsers.map(u => {
+      const all = list.map(u => {
         const raw = u.avatarUrl || '';
         let avatar = '';
         if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
-        return {
-          ...u, avatarUrl: avatar,
-          groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-        };
+        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+        return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
       });
       this.setData({ allUsers: all, hasMore: false, loading: false });
       this.applyFilter();
@@ -137,11 +110,8 @@ Page({
 
   onSortBy(e) {
     const by = e.currentTarget.dataset.by;
-    if (this.data.sortBy === by) {
-      this.setData({ sortAsc: !this.data.sortAsc });
-    } else {
-      this.setData({ sortBy: by, sortAsc: false });
-    }
+    if (this.data.sortBy === by) { this.setData({ sortAsc: !this.data.sortAsc }); }
+    else { this.setData({ sortBy: by, sortAsc: false }); }
     this.applyFilter();
   },
 
@@ -149,7 +119,6 @@ Page({
     const { id } = e.currentTarget.dataset;
     const user = this.data.allUsers.find(u => u._id === id);
     if (!user) return;
-    // 拉最近的 3 条公开记录预览
     let raceRecords = [];
     try {
       const rr = await dbUtil.db.collection('race_records').where({ userId: id, isPublic: true }).orderBy('date', 'desc').limit(3).get();
@@ -159,12 +128,7 @@ Page({
         statusName: r.status === 'planned' ? '计划报名' : r.status === 'finished' ? '已完赛' : r.status === 'dnf' ? '未完赛' : r.status === 'dns' ? '弃赛' : r.status === 'won' ? '已中签' : '已报名',
       }));
     } catch {}
-    this.setData({
-      showDetail: true,
-      detailUser: user,
-      detailGroups: user.groupName,
-      detailRaces: raceRecords,
-    });
+    this.setData({ showDetail: true, detailUser: user, detailGroups: user.groupName, detailRaces: raceRecords });
   },
 
   onViewAllRaces() {
@@ -174,12 +138,10 @@ Page({
 
   onHideDetail() { this.setData({ showDetail: false }); },
 
-  onReachBottom() {
-    if (this.data.hasMore) this.loadMore();
-  },
+  onReachBottom() { if (this.data.hasMore) this.loadMore(); },
 
   async loadMore() {
-    if (this.data.searchKey) return; // 搜索模式不支持分页
+    if (this.data.searchKey) return;
     const existingIds = new Set(this.data.allUsers.map(u => u._id));
     const skip = this.data.allUsers.length;
     const res = await dbUtil.getUserList({}, skip, 20);
@@ -195,20 +157,14 @@ Page({
         (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
       } catch {}
     }
-    const newUsers = res.data
-      .filter(u => !existingIds.has(u._id))
-      .map(u => {
-        const raw = u.avatarUrl || '';
-        let avatar = '';
-        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp')) avatar = raw;
-        return {
-          ...u, avatarUrl: avatar,
-          groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-        };
-      });
-    const all = [...this.data.allUsers, ...newUsers];
-    this.setData({ allUsers: all, hasMore: res.data.length >= 20 });
+    const newUsers = res.data.filter(u => !existingIds.has(u._id)).map(u => {
+      const raw = u.avatarUrl || '';
+      let avatar = '';
+      if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+      else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+      return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
+    });
+    this.setData({ allUsers: [...this.data.allUsers, ...newUsers], hasMore: res.data.length >= 20 });
     this.applyFilter();
   },
 });

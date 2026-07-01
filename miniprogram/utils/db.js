@@ -108,7 +108,13 @@ async function updateUser(userId, data) {
 
 /** 获取用户列表 (管理员用) */
 async function getUserList(condition = {}, skip = 0, limit = 100) {
-  return await db.collection('users').where(condition).orderBy('createTime', 'desc').orderBy('_id', 'desc').skip(skip).limit(limit).get();
+  const cond = { ...condition };
+  if (cond.search) {
+    const regex = db.RegExp({ regexp: cond.search, options: 'i' });
+    cond.nickName = regex;
+    delete cond.search;
+  }
+  return await db.collection('users').where(cond).orderBy('createTime', 'desc').orderBy('_id', 'desc').skip(skip).limit(limit).get();
 }
 
 /** 获取用户总数 */
