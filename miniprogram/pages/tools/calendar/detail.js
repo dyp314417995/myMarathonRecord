@@ -281,7 +281,7 @@ Page({
   onShareAppMessage() {
     const { event } = this.data;
     return {
-      title: `${event.name} · 赛事体验`,
+      title: `扫码给${event.name || '这赛事'}打分`,
       path: `/pages/tools/calendar/detail?id=${this.data.eventId}`,
       imageUrl: event.poster || '',
     };

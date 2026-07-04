@@ -570,7 +570,7 @@ Page({
     const name = e.currentTarget.dataset.name || '';
     wx.showLoading({ title: '生成中' });
     try {
-      const res = await wx.cloud.callFunction({ name: 'genRaceQR', data: { raceId: id } });
+      const res = await wx.cloud.callFunction({ name: 'genRaceQR', data: { raceId: id, raceName: name } });
       const fileID = (res.result || {}).fileID;
       const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [fileID] } });
       const url = (r.result || [])[0];
