@@ -28,8 +28,9 @@ Page({
   },
 
   onLoad(options) {
-    if (!options.id) return;
-    this.setData({ eventId: options.id });
+    const eventId = options.scene ? decodeURIComponent(options.scene) : options.id;
+    if (!eventId) return;
+    this.setData({ eventId });
     this.loadEvent();
   },
 

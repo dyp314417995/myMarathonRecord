@@ -38,6 +38,7 @@
       <view class="race-actions">
         <text class="act" data-id="{{item._id}}" catchtap="onEdit">✏️</text>
         <text class="act" data-id="{{item._id}}" catchtap="onDup">📋</text>
+        <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onShare">📱</text>
         <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onManageReviews">📝</text>
         <text class="act del" data-id="{{item._id}}" catchtap="onDel">🗑</text>
       </view>
@@ -203,5 +204,17 @@
         </view>
       </scroll-view>
     </view>
+  </view>
+
+  <!-- QR 弹窗 -->
+  <view class="modal-mask" wx:if="{{showQR}}" catchtap="onHideQR"></view>
+  <view class="modal-box" wx:if="{{showQR}}">
+    <view class="modal-header">
+      <text>赛事分享</text>
+      <text class="modal-close" bindtap="onHideQR">✕</text>
+    </view>
+    <text>{{sharingRaceName}}</text>
+    <image wx:if="{{qrFileID}}" src="{{qrFileID}}" mode="widthFix" class="qr-img" />
+    <view class="qr-tip">扫码可查看赛事详情、标记和评分</view>
   </view>
 </view>

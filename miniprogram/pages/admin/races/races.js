@@ -7,6 +7,7 @@ Page({
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
+    showQR: false, qrFileID: '', sharingRaceName: '',
     typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
     showForm: false,
     gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
@@ -563,4 +564,22 @@ Page({
     this.setData({ showForm: false });
     this.loadRaces();
   },
+
+  async onShare(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name || '';
+    wx.showLoading({ title: '生成中' });
+    try {
+      const res = await wx.cloud.callFunction({ name: 'genRaceQR', data: { raceId: id } });
+      const fileID = (res.result || {}).fileID;
+      const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [fileID] } });
+      const url = (r.result || [])[0];
+      this.setData({ showQR: true, qrFileID: url ? url.tempFileURL : fileID, sharingRaceName: name });
+    } catch (e) {
+      console.error('genRaceQR error:', e);
+      wx.showToast({ title: '生成失败', icon: 'none' });
+    }
+    wx.hideLoading();
+  },
+  onHideQR() { this.setData({ showQR: false }); },
 });
