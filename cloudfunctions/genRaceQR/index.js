@@ -8,6 +8,7 @@ exports.main = async (event) => {
     page: 'pages/tools/calendar/detail',
     width: 280,
     checkPath: false,
+    env_version: 'trial',
   });
   const upload = await cloud.uploadFile({
     cloudPath: `qrcode/race_${raceId}.png`,
