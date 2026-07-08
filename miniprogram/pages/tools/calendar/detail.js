@@ -18,6 +18,8 @@ Page({
     scoreTab: 'all',  // all | full | half
     reviewTypeFilter: '',
     showAllTimeline: false,
+    showPoster: false,
+    posterIdx: 0,
   },
 
   onScoreTab(e) { this.setData({ scoreTab: e.currentTarget.dataset.t }); },
@@ -25,6 +27,15 @@ Page({
   onReviewTypeFilter(e) {
     const v = e.currentTarget.dataset.v;
     this.setData({ reviewTypeFilter: this.data.reviewTypeFilter === v ? '' : v });
+  },
+
+  onPreviewPoster(e) {
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    this.setData({ showPoster: true, posterIdx: idx });
+  },
+  onHidePoster() { this.setData({ showPoster: false }); },
+  onPosterSwiperChange(e) {
+    this.setData({ posterIdx: e.detail.current });
   },
 
   onLoad(options) {
@@ -88,13 +99,64 @@ Page({
       }
       const processedTimeline = this.processTimeline(timeline);
 
+      // 海报cloud://转临时链接，兼容 posters 数组和 poster 单图
+      let posterUrl = '';
+      let postersArr = [];
+      const rawPosters = event.posters && event.posters.length ? event.posters : (event.poster ? [event.poster] : []);
+      if (rawPosters.length) {
+        const cloudOnes = rawPosters.filter(p => p && p.startsWith('cloud://'));
+        const others = rawPosters.filter(p => p && !p.startsWith('cloud://'));
+        if (cloudOnes.length) {
+          // 先尝试云函数 getImageUrls 批量转换
+          let map = {};
+          try {
+            const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudOnes } });
+            (r.result || []).forEach(f => { if (f.tempFileURL) map[f.fileID] = f.tempFileURL; });
+          } catch (e) { console.warn('getImageUrls 云函数调用失败，尝试客户端 API', e); }
+          // 如果有失败的，用客户端 wx.cloud.getTempFileURL 兜底
+          const missing = cloudOnes.filter(id => !map[id]);
+          if (missing.length) {
+            try {
+              const cr = await wx.cloud.getTempFileURL({ fileList: missing });
+              (cr.fileList || []).forEach(f => { if (f.tempFileURL) map[f.fileID] = f.tempFileURL; });
+            } catch (e) { console.warn('客户端 getTempFileURL 也失败', e); }
+          }
+          postersArr = rawPosters.map(p => p.startsWith('cloud://') ? (map[p] || '') : p).filter(Boolean);
+        } else {
+          postersArr = others;
+        }
+        posterUrl = postersArr[0] || '';
+      }
+      console.log('[detail] postersArr:', postersArr, 'rawPosters:', rawPosters, 'event.posters:', event.posters);
+
+      // 根据 raceTypes 计算规模/费用展示
+      const rt = event.raceTypes || [event.raceType || 'full'];
+      const hasBoth = rt.includes('full') && rt.includes('half');
+      let scaleDisplay, feeDisplay;
+      if (hasBoth) {
+        const sp = []; const fp = [];
+        if (event.scaleFull) sp.push(`全马 ${event.scaleFull}`);
+        if (event.scaleHalf) sp.push(`半马 ${event.scaleHalf}`);
+        if (event.feeFull) fp.push(`全马 ${event.feeFull}`);
+        if (event.feeHalf) fp.push(`半马 ${event.feeHalf}`);
+        scaleDisplay = sp.length ? sp.join(' · ') : event.scale || '';
+        feeDisplay = fp.length ? fp.join(' · ') : event.fee || '';
+      } else {
+        scaleDisplay = event.scaleFull || event.scaleHalf || event.scale || '';
+        feeDisplay = event.feeFull || event.feeHalf || event.fee || '';
+      }
+
       this.setData({
         event: {
           ...event,
+          poster: posterUrl,
+          _posters: postersArr,
           fmtDate: this.fmtDate(event.date),
           countdown: this.calcCountdown(event.date, timeline, event.gunTimes),
-          raceTypeName: (event.raceTypes || [event.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('·'),
+          raceTypeName: (rt).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('·'),
           timeline: processedTimeline,
+          _scaleDisplay: scaleDisplay,
+          _feeDisplay: feeDisplay,
         },
         raceGroup: event.raceGroup || '',
         reviewStats: stats,
@@ -268,8 +330,17 @@ Page({
   onWebsite() {
     const url = this.data.event.website;
     if (url) {
-      wx.setClipboardData({ data: url });
-      wx.showToast({ title: '链接已复制', icon: 'success' });
+      wx.setClipboardData({
+        data: url,
+        success: () => {
+          wx.showModal({
+            title: '链接已复制',
+            content: `已复制到剪贴板，请粘贴到浏览器中打开\n\n${url}`,
+            confirmText: '知道了',
+            showCancel: false,
+          });
+        }
+      });
     }
   },
 

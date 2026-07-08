@@ -57,20 +57,25 @@ App({
   },
 
   checkLaunchScene() {
-    const scene = wx.getLaunchOptionsSync().query.scene || wx.getEnterOptionsSync().query.scene || '';
+    const launchOptions = wx.getLaunchOptionsSync();
+    const scene = launchOptions.query.scene || wx.getEnterOptionsSync().query.scene || '';
     if (!scene) return;
     const m = scene.match(/^([a-zA-Z0-9]{20,30})$/);
     if (!m) return;
-    const activityId = m[1];
+    const id = m[1];
+    // 根据扫码落地的页面路径判断：活动 vs 赛事
+    const pagePath = (launchOptions.path || '').split('?')[0];
     const userInfo = wx.getStorageSync('userInfo');
-    if (userInfo && userInfo._id) {
-      // 已登录，直接跳转
-      setTimeout(() => {
-        wx.navigateTo({ url: `/pages/tools/activity/detail?id=${activityId}` });
-      }, 500);
-    } else {
-      // 未登录，记住活动ID，登录后跳转
-      this.globalData.pendingActivityId = activityId;
+    if (pagePath === 'pages/tools/activity/detail') {
+      // 活动二维码
+      if (userInfo && userInfo._id) {
+        // 页面自身的 onLoad 已处理 scene，不需额外跳转
+      } else {
+        this.globalData.pendingActivityId = id;
+      }
+    } else if (pagePath === 'pages/tools/calendar/detail') {
+      // 赛事二维码 - 页面自身的 onLoad 已处理 scene
+      // 未登录时不做 pending 跳转（赛事详情不需要登录即可查看）
     }
   },
 

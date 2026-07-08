@@ -8,13 +8,14 @@ Page({
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
     showQR: false, qrFileID: '', sharingRaceName: '',
+    showPoster: false, posterIdx: 0, posterPreviewUrl: '',
     typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
     showForm: false,
     gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
     editingId: '',
-    form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
-    posterTemp: '',
+    form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', posters: [], certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
+    posterTemp: [],
     showPaste: false,    // 粘贴全文面板
     pasteText: '',       // 粘贴的全文
     parsing: false,      // 解析中
@@ -163,9 +164,9 @@ Page({
 
   onAdd() {
     this.setData({
-      showForm: true, editingId: '', posterTemp: '', showPaste: false, pasteText: '', parsing: false,
+      showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false,
       typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
-      form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'A', distance: '', elevation: '', website: '', scale: '', fee: '', scaleFull: '', scaleHalf: '', feeFull: '', feeHalf: '', mechanism: '抽签', label: '普通标', poster: '', certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
+      form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'A', distance: '', elevation: '', website: '', scale: '', fee: '', scaleFull: '', scaleHalf: '', feeFull: '', feeHalf: '', mechanism: '抽签', label: '普通标', posters: [], certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
       timelineNodes: [
@@ -206,10 +207,23 @@ Page({
     }
 
     const raceTypes = r.raceTypes || [r.raceType || 'full'];
+    const initPosters = ((r.posters || []).filter(Boolean).length ? r.posters.filter(Boolean) : (r.poster ? [r.poster] : [])).filter(p => p && typeof p === 'string');
+    (async () => {
+      if (initPosters.length > 0) {
+        const cld = initPosters.filter(p => p.startsWith('cloud://'));
+        if (cld.length > 0) {
+          try {
+            const ur = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cld } });
+            const m = {}; (ur.result || []).forEach(f => { if (f.tempFileURL) m[f.fileID] = f.tempFileURL; });
+            this.setData({ posterTemp: initPosters.map(p => p.startsWith('cloud://') ? (m[p] || '') : p).filter(Boolean) });
+          } catch { this.setData({ posterTemp: [] }); }
+        } else { this.setData({ posterTemp: initPosters }); }
+      }
+    })();
     this.setData({
-      showForm: true, editingId: r._id, posterTemp: r.posterUrl || '',
+      showForm: true, editingId: r._id,
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'), typeTrail: raceTypes.includes('trail'),
-      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceTypes, raceGroup: r.raceGroup || '', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', scaleFull: r.scaleFull||'', scaleHalf: r.scaleHalf||'', feeFull: r.feeFull||'', feeHalf: r.feeHalf||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', poster: r.poster||'', certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', confirmed: r.confirmed || false, tagsStr: (r.tags || []).join(', '), timeline: existingTimeline },
+      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceTypes, raceGroup: r.raceGroup || '', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', scaleFull: r.scaleFull||'', scaleHalf: r.scaleHalf||'', feeFull: r.feeFull||'', feeHalf: r.feeHalf||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', posters: (r.posters || []).filter(Boolean), certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', confirmed: r.confirmed || false, tagsStr: (r.tags || []).join(', '), timeline: existingTimeline },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       timelineNodes: tNodes,
     });
@@ -246,7 +260,7 @@ Page({
       fee: r.fee || '',
       mechanism: r.mechanism || '抽签',
       payment: r.payment || '先缴费',
-      poster: r.poster || '',
+      posters: r.posters || (r.poster ? [r.poster] : []),
       certs: r.certs || {},
       timeline: (r.timeline || []).map(t => ({ label: t.label, date: t.date, time: t.time || '' })),
       status: r.status || 'upcoming',
@@ -319,6 +333,68 @@ Page({
   },
 
   onInput(e) { this.setData({ [`form.${e.currentTarget.dataset.k}`]: e.detail.value }); },
+
+  onChoosePoster() {
+    const remain = 9 - this.data.posterTemp.length;
+    if (remain <= 0) return wx.showToast({ title: '最多上传9张图片', icon: 'none' });
+    wx.chooseImage({ count: remain, sizeType: ['compressed'], sourceType: ['album', 'camera'], success: async (res) => {
+      wx.showLoading({ title: '上传中' });
+      const newIDs = [];
+      for (const fp of res.tempFilePaths) {
+        try {
+          const up = await wx.cloud.uploadFile({ cloudPath: `races/poster-${Date.now()}-${Math.random().toString(36).slice(2,8)}.png`, filePath: fp });
+          if (up.fileID) newIDs.push(up.fileID);
+        } catch {}
+      }
+      if (!newIDs.length) return wx.hideLoading();
+      const urlR = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: newIDs } });
+      const map = {};
+      (urlR.result || []).forEach(f => { if (f.tempFileURL) map[f.fileID] = f.tempFileURL; });
+      const newUrls = newIDs.map(id => map[id] || id);
+      this.setData({
+        posterTemp: [...this.data.posterTemp, ...newUrls],
+        'form.posters': [...this.data.form.posters, ...newIDs]
+      });
+      wx.hideLoading();
+    }});
+  },
+  onPreviewPoster(e) {
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    this.setData({ showPoster: true, posterIdx: idx });
+  },
+  onHidePoster() { this.setData({ showPoster: false }); },
+  onPosterSwiperChange(e) {
+    this.setData({ posterIdx: e.detail.current });
+  },
+  onDelPosterSmall(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const imgs = [...this.data.posterTemp];
+    const fids = [...this.data.form.posters];
+    imgs.splice(idx, 1);
+    fids.splice(idx, 1);
+    this.setData({ posterTemp: imgs, 'form.posters': fids });
+  },
+  onToggleReorder() {
+    this.setData({ reorderMode: !this.data.reorderMode });
+  },
+  onMovePosterLeft(e) {
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    if (idx <= 0) return;
+    const imgs = [...this.data.posterTemp];
+    const fids = [...this.data.form.posters];
+    [imgs[idx - 1], imgs[idx]] = [imgs[idx], imgs[idx - 1]];
+    [fids[idx - 1], fids[idx]] = [fids[idx], fids[idx - 1]];
+    this.setData({ posterTemp: imgs, 'form.posters': fids });
+  },
+  onMovePosterRight(e) {
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    if (idx >= this.data.posterTemp.length - 1) return;
+    const imgs = [...this.data.posterTemp];
+    const fids = [...this.data.form.posters];
+    [imgs[idx], imgs[idx + 1]] = [imgs[idx + 1], imgs[idx]];
+    [fids[idx], fids[idx + 1]] = [fids[idx + 1], fids[idx]];
+    this.setData({ posterTemp: imgs, 'form.posters': fids });
+  },
 
   onTogglePaste() { this.setData({ showPaste: !this.data.showPaste, pasteText: '', parsing: false }); },
   onPasteInput(e) { this.setData({ pasteText: e.detail.value }); },
@@ -509,32 +585,14 @@ Page({
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onHideForm() { this.setData({ showForm: false }); },
 
-  onChoosePoster() {
-    wx.chooseMedia({
-      count: 1, mediaType: ['image'], sourceType: ['album', 'camera'],
-      success: (res) => {
-        this.setData({ posterTemp: res.tempFiles[0].tempFilePath });
-      },
-    });
-  },
-
   async onSave() {
     const f = this.data.form;
     if (!f.name.trim()) return wx.showToast({ title: '请输入赛事名称', icon: 'none' });
     if (!f.date) return wx.showToast({ title: '请选择鸣枪开跑日期', icon: 'none' });
     wx.showLoading({ title: '保存中' });
 
-    // 上传海报
-    let poster = f.poster || '';
-    if (this.data.posterTemp && this.data.posterTemp !== poster) {
-      try {
-        const up = await wx.cloud.uploadFile({
-          cloudPath: `races/poster-${Date.now()}.png`,
-          filePath: this.data.posterTemp,
-        });
-        poster = up.fileID;
-      } catch {}
-    }
+    // 海报使用 posters 数组
+    const posters = (f.posters || []).filter(Boolean) || [];
 
     const data = {
       name: f.name.trim(), date: new Date(f.date), city: f.city.trim(), province: f.province.trim(),
@@ -548,7 +606,7 @@ Page({
       gunTimes: this.data.gunTimes.filter(g => g.time),
       mechanism: f.mechanism, label: f.label,
       payment: f.payment, timeline: this.data.timelineNodes.filter(n => n.date).map(n => ({ label: n.label, date: n.date, time: n.time || '' })),
-      poster,
+      posters,
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
       certs: (f.raceTypes || []).includes('trail') ? f.certs : {},
       tags: (f.tagsStr || '').split(/[,，]/).map(s => s.trim()).filter(Boolean), tagStats: {}, reviewCount: 0, avgScore: 0,

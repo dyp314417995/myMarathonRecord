@@ -2,24 +2,36 @@
 <view class="detail-page">
   <!-- 基本信息 -->
   <view class="card">
+    <view wx:if="{{event._posters && event._posters.length}}" class="dtl-poster-grid count-{{event._posters.length === 1 ? 1 : (event._posters.length === 2 ? 2 : 3)}}">
+      <view class="dtl-poster-item {{event._posters.length === 1 ? 'single' : ''}} {{event._posters.length === 2 ? 'two' : ''}}" wx:for="{{event._posters}}" wx:key="*this" wx:for-index="idx" catchtap="onPreviewPoster" data-idx="{{idx}}">
+        <image src="{{item}}" mode="{{event._posters.length === 1 ? 'widthFix' : 'aspectFill'}}" class="dtl-poster-img {{event._posters.length === 1 ? 'single' : ''}}" />
+      </view>
+    </view>
+    <image wx:elif="{{event.poster}}" src="{{event.poster}}" mode="widthFix" class="poster-img" />
     <view class="header-row">
       <text class="event-name">{{event.name}}</text>
       <text class="countdown">{{event.countdown}}</text>
     </view>
-    <view class="meta-row">
-      <text>{{event.city || '未知'}} · {{event.raceTypeName}}<text wx:if="{{event.raceType !== 'trail'}}"> · {{event.raceLevel}}级</text></text>
+    <view class="dtl-meta">
+      <text class="dtl-meta-item">{{event.city || '未知'}} · {{event.raceTypeName}}<text wx:if="{{event.raceType !== 'trail'}}"> · {{event.raceLevel}}级</text><text wx:if="{{event.label}}"> · {{event.label}}</text></text>
     </view>
-    <view wx:if="{{event.distance}}" class="meta-row">
-      <text>距离 {{event.distance}}km<text wx:if="{{event.elevation}}"> · 爬升 {{event.elevation}}m</text></text>
+    <view wx:if="{{event.distance}}" class="dtl-meta">
+      <text class="dtl-meta-item">距离 {{event.distance}}km<text wx:if="{{event.elevation}}"> · 爬升 {{event.elevation}}m</text></text>
     </view>
-    <view wx:if="{{event.certs && (event.certs.itra || event.certs.utmb || event.certs.utmbws)}}" class="meta-row">
-      <text>认证：{{event.certs.itra ? 'ITRA ' : ''}}{{event.certs.utmb ? 'UTMB ' : ''}}{{event.certs.utmbws ? 'UTMB世界系列赛' : ''}}</text>
+    <view wx:if="{{event.certs && (event.certs.itra || event.certs.utmb || event.certs.utmbws)}}" class="dtl-meta">
+      <text class="dtl-meta-item">认证：{{event.certs.itra ? 'ITRA ' : ''}}{{event.certs.utmb ? 'UTMB ' : ''}}{{event.certs.utmbws ? 'UTMB世界系列赛' : ''}}</text>
     </view>
-    <view wx:if="{{event.website}}" class="link-row" bindtap="onWebsite">
-      <text>📎 官网链接（点击复制）</text>
+    <view wx:if="{{event._scaleDisplay}}" class="dtl-meta">
+      <text class="dtl-meta-label">规模</text>
+      <text class="dtl-meta-value">{{event._scaleDisplay}}</text>
     </view>
-    <view wx:if="{{event.scale || event.fee || event.mechanism || event.label || event.payment}}" class="meta-row">
-      <text>{{event.label ? event.label + ' · ' : ''}}{{event.scale ? event.scale + ' · ' : ''}}{{event.fee ? event.fee + ' · ' : ''}}{{event.mechanism ? event.mechanism + ' · ' : ''}}{{event.payment ? event.payment : ''}}</text>
+    <view wx:if="{{event._feeDisplay || event.mechanism}}" class="dtl-meta">
+      <text class="dtl-meta-label">费用</text>
+      <text class="dtl-meta-value">{{event._feeDisplay}}{{event._feeDisplay && event.mechanism ? ' · ' : ''}}{{event.mechanism || ''}}{{event.payment ? ' · ' + event.payment : ''}}</text>
+    </view>
+    <view wx:if="{{event.website}}" class="dtl-meta link" bindtap="onWebsite">
+      <text class="dtl-meta-label">官网</text>
+      <text class="dtl-meta-link">{{event.website}}</text>
     </view>
   </view>
 
@@ -188,9 +200,33 @@
     </view>
   </view>
 
-  <!-- 操作按钮 -->
+  <!-- 我的状态 & 操作按钮 -->
+  <view class="card" wx:if="{{isMine}}">
+    <view class="section-title"><text>📌 我的状态</text></view>
+    <view class="mark-row">
+      <text>{{myStatus === 'planned' ? '📋 计划报名' : myStatus === 'registered' ? '✅ 已报名' : myStatus === 'won' ? '🎉 已中签' : myStatus === 'lost' ? '❌ 未中签' : myStatus === 'finished' ? '🏁 已完赛' : myStatus === 'dnf' ? '💔 未完赛' : myStatus === 'dns' ? '🚫 弃赛' : '未标记'}}</text>
+      <text class="act" bindtap="onMark">修改</text>
+    </view>
+  </view>
+  <view class="card" wx:elif="{{!isMine}}">
+    <button class="btn-primary" bindtap="onMark">🏷 标记我的赛事</button>
+  </view>
   <view class="btn-area">
-    <button wx:if="{{myStatus === 'finished' || myReview._id}}" class="btn-primary" bindtap="onReview">{{myReview._id ? '✏️ 修改评价' : '⭐ 参与评分'}}</button>
-    <button wx:elif="{{isMine && myStatus !== 'finished'}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
+    <button wx:if="{{myReview._id}}" class="btn-primary" bindtap="onReview">✏️ 修改评价</button>
+    <button wx:elif="{{myStatus === 'finished'}}" class="btn-primary" bindtap="onReview">⭐ 参与评分</button>
+    <button wx:elif="{{isMine}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
+  </view>
+
+  <!-- 图片预览 -->
+  <view class="poster-full" wx:if="{{showPoster && event._posters && event._posters.length}}">
+    <view class="poster-full-top">
+      <text class="poster-full-counter">{{posterIdx + 1}} / {{event._posters.length}}</text>
+      <text class="poster-full-close" bindtap="onHidePoster">✕</text>
+    </view>
+    <swiper class="poster-full-swiper" current="{{posterIdx}}" bindchange="onPosterSwiperChange" duration="200">
+      <swiper-item wx:for="{{event._posters}}" wx:key="*this">
+        <image src="{{item}}" mode="aspectFit" class="poster-full-img" />
+      </swiper-item>
+    </swiper>
   </view>
 </view>
