@@ -223,7 +223,7 @@ Page({
     this.setData({
       showForm: true, editingId: r._id,
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'), typeTrail: raceTypes.includes('trail'),
-      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceTypes, raceGroup: r.raceGroup || '', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', scaleFull: r.scaleFull||'', scaleHalf: r.scaleHalf||'', feeFull: r.feeFull||'', feeHalf: r.feeHalf||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', posters: (r.posters || []).filter(Boolean), certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', confirmed: r.confirmed || false, tagsStr: (r.tags || []).join(', '), timeline: existingTimeline },
+      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceTypes, raceGroup: r.raceGroup || '', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', scaleFull: r.scaleFull||'', scaleHalf: r.scaleHalf||'', feeFull: r.feeFull||'', feeHalf: r.feeHalf||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', posters: initPosters, certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', confirmed: r.confirmed || false, tagsStr: (r.tags || []).join(', '), timeline: existingTimeline },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       timelineNodes: tNodes,
     });

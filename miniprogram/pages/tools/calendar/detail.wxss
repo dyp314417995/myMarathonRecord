@@ -11,6 +11,7 @@
 .dtl-poster-grid.count-1 { grid-template-columns: 1fr; }
 .dtl-poster-grid.count-2 { grid-template-columns: 1fr 1fr; }
 .dtl-poster-grid.count-3 { grid-template-columns: 1fr 1fr 1fr; }
+.dtl-poster-grid.count-4 { grid-template-columns: 1fr 1fr; }
 .dtl-poster-item {
   aspect-ratio: 1;
   overflow: hidden;

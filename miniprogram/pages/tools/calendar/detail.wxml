@@ -2,7 +2,7 @@
 <view class="detail-page">
   <!-- 基本信息 -->
   <view class="card">
-    <view wx:if="{{event._posters && event._posters.length}}" class="dtl-poster-grid count-{{event._posters.length === 1 ? 1 : (event._posters.length === 2 ? 2 : 3)}}">
+    <view wx:if="{{event._posters && event._posters.length}}" class="dtl-poster-grid count-{{event._posters.length === 1 ? 1 : (event._posters.length === 2 || event._posters.length === 4 ? 2 : 3)}}">
       <view class="dtl-poster-item {{event._posters.length === 1 ? 'single' : ''}} {{event._posters.length === 2 ? 'two' : ''}}" wx:for="{{event._posters}}" wx:key="*this" wx:for-index="idx" catchtap="onPreviewPoster" data-idx="{{idx}}">
         <image src="{{item}}" mode="{{event._posters.length === 1 ? 'widthFix' : 'aspectFill'}}" class="dtl-poster-img {{event._posters.length === 1 ? 'single' : ''}}" />
       </view>

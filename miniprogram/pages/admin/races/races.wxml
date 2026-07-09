@@ -172,7 +172,7 @@
         </view>
       </block>
       <text class="form-label">赛事图片（选填，最多9张）</text>
-      <view class="poster-grid count-{{posterTemp.length === 0 ? 3 : (posterTemp.length === 1 ? 1 : (posterTemp.length === 2 ? 2 : 3))}}">
+      <view class="poster-grid count-{{posterTemp.length === 1 ? 1 : (posterTemp.length === 2 || posterTemp.length === 4 ? 2 : 3)}}">
         <view class="poster-grid-item {{reorderMode ? 'reordering' : ''}}" wx:for="{{posterTemp}}" wx:key="*this" wx:for-index="idx">
           <image src="{{item}}" mode="aspectFill" class="poster-grid-img" data-idx="{{idx}}" bindtap="{{reorderMode ? '' : 'onPreviewPoster'}}" />
           <text wx:if="{{!reorderMode}}" class="poster-grid-del" data-idx="{{idx}}" catchtap="onDelPosterSmall">✕</text>

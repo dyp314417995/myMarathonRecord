@@ -80,6 +80,7 @@
 .poster-grid.count-1 { grid-template-columns: 1fr; }
 .poster-grid.count-2 { grid-template-columns: 1fr 1fr; }
 .poster-grid.count-3 { grid-template-columns: 1fr 1fr 1fr; }
+.poster-grid.count-4 { grid-template-columns: 1fr 1fr; }
 .poster-grid-item {
   position: relative;
   aspect-ratio: 1;

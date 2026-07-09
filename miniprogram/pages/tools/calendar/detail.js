@@ -359,8 +359,14 @@ Page({
   },
 
   onMark() {
-    // 复用日历页的标记逻辑，简化版
-    const { eventId, event, myStatus } = this.data;
+    const { eventId } = this.data;
+    if (!eventId) return wx.showToast({ title: '赛事ID无效', icon: 'none' });
+
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || (!userInfo._id && !userInfo.openid)) {
+      return wx.showToast({ title: '请先登录', icon: 'none' });
+    }
+
     const statuses = ['planned', 'registered', 'won', 'lost', 'finished', 'dnf', 'dns'];
     const labels = ['计划报名', '已报名', '已中签', '未中签', '已完赛', '未完赛', '弃赛'];
 
@@ -368,11 +374,15 @@ Page({
       itemList: labels,
       success: async (res) => {
         const status = statuses[res.tapIndex];
-        const userInfo = wx.getStorageSync('userInfo');
-        if (!userInfo) return;
-        await raceUtil.markEvent(userInfo._id, eventId, status);
-        wx.showToast({ title: '已标记', icon: 'success' });
-        this.setData({ myStatus: status, isMine: true });
+        const userId = userInfo._id || userInfo.openid;
+        try {
+          await raceUtil.markEvent(userId, eventId, status);
+          wx.showToast({ title: '已标记', icon: 'success' });
+          this.setData({ myStatus: status, isMine: true });
+        } catch (err) {
+          console.error('标记赛事失败:', err);
+          wx.showToast({ title: '标记失败，请重试', icon: 'none' });
+        }
       }
     });
   },
