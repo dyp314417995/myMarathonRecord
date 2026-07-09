@@ -63,7 +63,7 @@ Page({
       countdown: this.calcCountdown(r.date, r.status, r.timeline, r.gunTimes),
       confirmed: r.confirmed || false,
     }));
-    const merged = [...this.data.allRaceList, ...list];
+        const merged = skip === 0 ? list : [...this.data.allRaceList, ...list];
     this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
     this.applyAdminFilter();
   },
