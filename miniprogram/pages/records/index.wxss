@@ -65,6 +65,16 @@
 .modal-close { color: #999; padding: 8rpx; }
 
 .form-label { font-size: 26rpx; color: #666; margin-top: 24rpx; margin-bottom: 12rpx; display: block; }
+.search-wrap { position: relative; display: flex; align-items: center; }
+.search-input { padding-right: 60rpx !important; }
+.search-clear { position: absolute; right: 16rpx; font-size: 32rpx; color: #999; padding: 8rpx; }
+.search-dropdown { background: #fff; border: 2rpx solid #e0e0e0; border-radius: 12rpx; max-height: 400rpx; overflow-y: auto; margin-top: 4rpx; }
+.search-empty { padding: 24rpx; text-align: center; font-size: 24rpx; color: #bbb; }
+.search-item { padding: 16rpx 20rpx; border-bottom: 1rpx solid #f5f5f5; }
+.search-item:last-child { border-bottom: none; }
+.search-item-name { font-size: 26rpx; color: #333; font-weight: 500; display: block; }
+.search-item-meta { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
+.search-item:active { background: #f5f5f5; }
 .btn-row { display: flex; gap: 16rpx; flex-wrap: wrap; }
 .opt-btn { padding: 12rpx 24rpx; border-radius: 20rpx; font-size: 24rpx; color: #666; background: #f5f5f5; }
 .opt-btn.on { color: #fff; background: #1aad19; }

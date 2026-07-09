@@ -20,6 +20,9 @@ Page({
     showAllTimeline: false,
     showPoster: false,
     posterIdx: 0,
+    showResultModal: false,
+    resultInput: '',
+    resultRaceType: 'full',
   },
 
   onScoreTab(e) { this.setData({ scoreTab: e.currentTarget.dataset.t }); },
@@ -374,6 +377,18 @@ Page({
       itemList: labels,
       success: async (res) => {
         const status = statuses[res.tapIndex];
+        // 标记已完赛需额外录入成绩
+        if (status === 'finished') {
+          const evt = this.data.event || {};
+          const rt = evt.raceTypes || [evt.raceType || 'full'];
+          this.setData({
+            showResultModal: true,
+            resultInput: '',
+            resultRaceType: rt.includes('full') ? 'full' : rt[0],
+          });
+          return;
+        }
+        // 其他状态直接标记
         const userId = userInfo._id || userInfo.openid;
         try {
           await raceUtil.markEvent(userId, eventId, status);
@@ -385,6 +400,86 @@ Page({
         }
       }
     });
+  },
+
+  onResultRaceType(e) { this.setData({ resultRaceType: e.currentTarget.dataset.v }); },
+  onResultInput(e) { this.setData({ resultInput: e.detail.value }); },
+  onCancelResult() { this.setData({ showResultModal: false }); },
+
+  async onConfirmResult() {
+    const { eventId, event, resultInput, resultRaceType } = this.data;
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return wx.showToast({ title: '请先登录', icon: 'none' });
+
+    // 验证成绩格式 H:MM:SS
+    if (!resultInput || !/^\d{1,2}:\d{2}:\d{2}$/.test(resultInput.trim())) {
+      return wx.showToast({ title: '请输入有效成绩（H:MM:SS）', icon: 'none' });
+    }
+
+    wx.showLoading({ title: '保存中' });
+    try {
+      const userId = userInfo._id;
+      const resultTime = resultInput.trim();
+
+      // 标记赛事
+      await raceUtil.markEvent(userId, eventId, 'finished');
+
+      // 创建跑马记录
+      const db = require('../../../utils/db').db;
+      const eventDate = this.fmtDate(event.date);
+      const recordData = {
+        userId,
+        raceType: resultRaceType,
+        raceLevel: event.raceLevel || 'B',
+        status: 'finished',
+        date: eventDate,
+        city: event.name || '',
+        result: resultTime,
+        distance: event.distance || '',
+        elevation: event.elevation || '',
+        certs: event.certs || {},
+        isPublic: true,
+        images: [],
+        createTime: new Date(),
+      };
+      const addRes = await db.collection('race_records').add({ data: recordData });
+
+      // 更新 marker 关联 recordId
+      const mkRes = await db.collection('race_markers').where({ userId, eventId }).get();
+      if (mkRes.data.length > 0) {
+        await db.collection('race_markers').doc(mkRes.data[0]._id).update({
+          data: { recordId: addRes._id }
+        });
+      }
+
+      // 检查 PB
+      await this.checkPB(resultRaceType, resultTime, userInfo);
+
+      wx.hideLoading();
+      wx.showToast({ title: '已标记并记录成绩', icon: 'success' });
+      this.setData({ showResultModal: false, myStatus: 'finished', isMine: true });
+      this.loadEvent();
+    } catch (err) {
+      wx.hideLoading();
+      console.error('标记完赛失败:', err);
+      wx.showToast({ title: '标记失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
+    }
+  },
+
+  async checkPB(type, result, userInfo) {
+    const dbUtil = require('../../../utils/db');
+    const fields = { '10k': 'pb10k', half: 'pbHalf', full: 'pbFull' };
+    const field = fields[type];
+    if (!field) return;
+    const current = userInfo[field];
+    const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
+    const newSec = toSec(result);
+    if (!current || newSec < toSec(current)) {
+      await dbUtil.updateUser(userInfo._id, { [field]: result });
+      userInfo[field] = result;
+      wx.setStorageSync('userInfo', userInfo);
+      wx.showToast({ title: '🏆 新PB！', icon: 'success', duration: 2000 });
+    }
   },
 
   onScoreDetail() {

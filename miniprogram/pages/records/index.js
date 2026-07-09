@@ -1,6 +1,7 @@
 // pages/records/index.js - 跑马记录
 const dbUtil = require('../../utils/db');
 const db = dbUtil.db;
+const raceUtil = require('../../utils/raceEvents');
 
 Page({
   data: {
@@ -15,6 +16,11 @@ Page({
     showTimePicker: false,
     showChart: false,
     chartTips: '',
+    // 赛事搜索
+    searchText: '',
+    searchResults: [],
+    showSearchResults: false,
+    searching: false,
   },
 
   onShow() { this.loadRecords(); },
@@ -159,13 +165,63 @@ Page({
     this.setData({ formImages: imgs });
   },
   onImagePreview(e) {
-    wx.previewImage({ urls: this.data.formImages.map(f => f.previewUrl || f.local || f.cloudID), current: e.currentTarget.dataset.src });
+    const src = e.currentTarget.dataset.src;
+    // 表单中预览展示所有已选图片，卡片中预览单张
+    if (this.data.showForm && this.data.formImages.length) {
+      wx.previewImage({ urls: this.data.formImages.map(f => f.previewUrl || f.local || f.cloudID), current: src });
+    } else {
+      wx.previewImage({ urls: [src], current: src });
+    }
   },
 
-  onHideForm() { this.setData({ showForm: false }); },
+  onHideForm() { this.setData({ showForm: false, searchText: '', searchResults: [], showSearchResults: false }); },
   onHideTime() { this.setData({ showTimePicker: false }); },
-  onImagePreview(e) {
-    wx.previewImage({ urls: [e.currentTarget.dataset.src], current: e.currentTarget.dataset.src });
+
+  // 赛事搜索
+  onSearchRaceInput(e) {
+    const text = e.detail.value;
+    this.setData({ searchText: text, showSearchResults: !!text });
+    if (!text.trim()) { this.setData({ searchResults: [], showSearchResults: false }); return; }
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => this.searchRaces(text.trim()), 300);
+  },
+  onClearSearch() {
+    this.setData({ searchText: '', searchResults: [], showSearchResults: false });
+  },
+  async searchRaces(text) {
+    this.setData({ searching: true });
+    try {
+      const res = await raceUtil.getAll({ search: text, limit: 10 });
+      this.setData({ searchResults: res.list || [], showSearchResults: true });
+    } catch (err) {
+      console.error('搜索赛事失败:', err);
+      this.setData({ searchResults: [] });
+    }
+    this.setData({ searching: false });
+  },
+  onSelectRace(e) {
+    const race = e.currentTarget.dataset.race;
+    if (!race) return;
+    const rt = race.raceTypes || [race.raceType || 'full'];
+    const primaryType = rt.includes('full') ? 'full' : rt[0];
+    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00', trail: '5:00:00' };
+    this.setData({
+      'form.date': this.fmtDate(race.date),
+      'form.city': race.name || '',
+      'form.raceType': primaryType,
+      'form.raceLevel': race.raceLevel || 'B',
+      'form.distance': race.distance || '',
+      'form.elevation': race.elevation || '',
+      'form.certs': race.certs || { itra: false, utmb: false, utmbws: false },
+      'form.result': defaults[primaryType] || '3:30:00',
+      searchText: race.name || '',
+      showSearchResults: false,
+    });
+  },
+  fmtDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   },
 
   // 保存

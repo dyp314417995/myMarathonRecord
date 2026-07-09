@@ -217,6 +217,28 @@
     <button wx:elif="{{isMine}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
   </view>
 
+  <!-- 完赛成绩录入弹窗 -->
+  <view class="modal-mask" wx:if="{{showResultModal}}" catchtap="onCancelResult"></view>
+  <view class="modal-box" wx:if="{{showResultModal}}">
+    <view class="modal-header">
+      <text>录入完赛成绩</text>
+      <text class="modal-close" bindtap="onCancelResult">✕</text>
+    </view>
+    <text class="form-label">参赛项目</text>
+    <view class="btn-row">
+      <text class="opt-btn {{resultRaceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onResultRaceType">全马</text>
+      <text class="opt-btn {{resultRaceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onResultRaceType">半马</text>
+      <text class="opt-btn {{resultRaceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onResultRaceType">10K</text>
+      <text class="opt-btn {{resultRaceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onResultRaceType">越野</text>
+    </view>
+    <text class="form-label">完赛成绩</text>
+    <input class="form-input" placeholder="格式：3:30:00（时:分:秒）" value="{{resultInput}}" bindinput="onResultInput" />
+    <view class="modal-actions" style="margin-top:32rpx;">
+      <button class="btn-outline" bindtap="onCancelResult">取消</button>
+      <button class="btn-primary" bindtap="onConfirmResult">确认标记</button>
+    </view>
+  </view>
+
   <!-- 图片预览 -->
   <view class="poster-full" wx:if="{{showPoster && event._posters && event._posters.length}}">
     <view class="poster-full-top">

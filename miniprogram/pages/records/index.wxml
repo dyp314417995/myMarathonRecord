@@ -84,8 +84,29 @@
       <text class="modal-close" bindtap="onHideForm">✕</text>
     </view>
 
-    <!-- 赛事类型（由当前 Tab 决定，不显式选择） -->
-    <text class="form-label">赛事类型：{{form.raceType === '10k' ? '10公里' : form.raceType === 'half' ? '半程马拉松' : form.raceType === 'trail' ? '越野跑' : '全程马拉松'}}</text>
+    <!-- 赛事搜索 -->
+    <text class="form-label">关联赛事（选填，搜索自动填充）</text>
+    <view class="search-wrap">
+      <input class="form-input search-input" placeholder="输入赛事名称搜索..." value="{{searchText}}" bindinput="onSearchRaceInput" />
+      <text wx:if="{{searchText}}" class="search-clear" catchtap="onClearSearch">✕</text>
+    </view>
+    <view wx:if="{{showSearchResults}}" class="search-dropdown">
+      <view wx:if="{{searching}}" class="search-empty"><text>搜索中...</text></view>
+      <view wx:elif="{{searchResults.length === 0}}" class="search-empty"><text>未找到赛事，可手动填写下方信息</text></view>
+      <view wx:for="{{searchResults}}" wx:key="_id" class="search-item" catchtap="onSelectRace" data-race="{{item}}">
+        <text class="search-item-name">{{item.name}}</text>
+        <text class="search-item-meta">{{item.city || '未知'}} · {{(item.raceTypes || [item.raceType || 'full']).map(function(t){return ({full:'全马',half:'半马','10k':'10K',trail:'越野'})[t]||t}).join('/')}} · {{item.raceLevel}}级</text>
+      </view>
+    </view>
+
+    <!-- 赛事类型 -->
+    <text class="form-label">赛事类型</text>
+    <view class="btn-row">
+      <text class="opt-btn {{form.raceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
+      <text class="opt-btn {{form.raceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
+      <text class="opt-btn {{form.raceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
+      <text class="opt-btn {{form.raceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onFormType">越野</text>
+    </view>
 
     <!-- 赛事等级 -->
     <block wx:if="{{form.raceType === 'trail'}}">
