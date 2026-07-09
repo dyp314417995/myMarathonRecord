@@ -19,6 +19,9 @@
 .stat-num.highlight { color: #ff9800; }
 .stat-label { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }
 
+.logout-wrap { text-align: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f0f0f0; }
+.logout-btn { font-size: 24rpx; color: #999; padding: 8rpx 24rpx; }
+
 /* 功能区 */
 .section-title {
   font-size: 30rpx; font-weight: 600; color: #333;
@@ -38,3 +41,45 @@
 
 .menu-item.disabled { opacity: 0.5; }
 .beta-tag { font-size: 22rpx; color: #ff9800; font-weight: 400; margin-left: 8rpx; }
+
+/* ===== 游客模式 ===== */
+.guest-page { padding: 0 24rpx 40rpx; }
+
+.guest-welcome { text-align: center; padding: 48rpx 32rpx; }
+.guest-title { font-size: 36rpx; font-weight: 700; color: #333; display: block; }
+.guest-subtitle { font-size: 26rpx; color: #999; margin-top: 12rpx; display: block; }
+
+/* 联盟介绍 */
+.guest-intro { padding: 32rpx; }
+.intro-header { margin-bottom: 20rpx; }
+.intro-title { font-size: 32rpx; font-weight: 700; color: #1aad19; display: block; }
+.intro-slogan { font-size: 24rpx; color: #666; margin-top: 8rpx; display: block; font-style: italic; }
+.intro-body {
+  font-size: 26rpx; color: #444; line-height: 1.8;
+  display: block; white-space: pre-line;
+}
+
+/* 联系方式 */
+.intro-contact {
+  margin-top: 24rpx; padding-top: 20rpx;
+  border-top: 2rpx solid #f0f0f0;
+  display: flex; align-items: center;
+}
+.contact-label { font-size: 26rpx; color: #666; flex-shrink: 0; }
+.contact-value-wrap {
+  display: flex; align-items: center; gap: 12rpx;
+  background: #f5f5f5; padding: 8rpx 16rpx; border-radius: 8rpx;
+}
+.contact-value { font-size: 26rpx; color: #333; font-weight: 600; }
+.contact-copy {
+  font-size: 22rpx; color: #fff; background: #1aad19;
+  padding: 4rpx 16rpx; border-radius: 6rpx;
+}
+
+/* 登录引导 */
+.guest-login {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 32rpx; margin-top: 24rpx; background: linear-gradient(135deg, #1aad19, #4caf50);
+}
+.login-text { font-size: 26rpx; color: #fff; flex: 1; }
+.login-arrow { font-size: 40rpx; color: rgba(255,255,255,0.8); margin-left: 16rpx; }

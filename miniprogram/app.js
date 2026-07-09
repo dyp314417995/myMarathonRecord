@@ -4,6 +4,7 @@ App({
     userInfo: null,       // 当前用户信息
     isAdmin: false,       // 是否为管理员
     isSuperAdmin: false,  // 是否为超管
+    isGuest: false,       // 游客模式（退出登录后标记）
     pendingActivityId: '', // 扫码待跳转的活动ID
   },
 

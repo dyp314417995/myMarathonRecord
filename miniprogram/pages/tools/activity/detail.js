@@ -1,6 +1,8 @@
 // pages/tools/activity/detail.js
 Page({
   data: {
+    loading: true,
+    loadError: false,
     activity: null,
     customValues: {},
     registered: false,
@@ -17,22 +19,37 @@ Page({
   },
   async onShow() { if (this.data.activityId) await this.loadDetail(); },
 
+  // 带超时的云函数调用（默认15s客户端超时）
+  async callFunctionWithTimeout(params, timeoutMs = 15000) {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('云函数调用超时，请检查网络后重试')), timeoutMs)
+    );
+    return await Promise.race([
+      wx.cloud.callFunction(params),
+      timeoutPromise,
+    ]);
+  },
+
   async loadDetail() {
+    this.setData({ loading: true, loadError: false });
     wx.showLoading({ title: '加载中' });
     const userInfo = wx.getStorageSync('userInfo');
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
 
     try {
-      const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'detail', id: this.data.activityId } });
+      const res = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'detail', id: this.data.activityId } });
       const act = res.result;
+      if (!act) throw new Error('活动不存在');
+
       // 报名人数
-      const cntRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'registrations', id: this.data.activityId } });
+      const cntRes = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'registrations', id: this.data.activityId } });
       const allRegs = (cntRes.result || {}).list || [];
       act.regCount = allRegs.length;
 
       act._fmtStart = this.fmtDate(act.timeStart);
       act._fmtEnd = act.timeEnd ? this.fmtDate(act.timeEnd) : '';
       act._fmtDeadline = act.deadline ? this.fmtDate(act.deadline) : '';
+      act._expired = act.deadline && new Date(act.deadline) < new Date();
 
       // 管理员：从 DB 查，不靠本地缓存
       let isAdmin = false;
@@ -50,8 +67,11 @@ Page({
         if (mine) { registered = true; this.setData({ registration: mine }); }
       }
 
-      this.setData({ activity: act, registered, isAdmin, regList: isAdmin ? allRegs : [] });
-    } catch (e) { console.error(e); }
+      this.setData({ activity: act, registered, isAdmin, regList: isAdmin ? allRegs : [], loading: false, loadError: false });
+    } catch (e) {
+      console.error('[loadDetail]', e);
+      this.setData({ loading: false, loadError: true });
+    }
     wx.hideLoading();
   },
 
@@ -71,10 +91,17 @@ Page({
 
   async onRegister() {
     const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo) return wx.showToast({ title: '请先登录', icon: 'none' });
+    if (!userInfo) {
+      getApp().globalData.isGuest = false; // 退出标记清除，允许登录页自动登录
+      return wx.navigateTo({ url: '/pages/login/login' });
+    }
 
     // 验证必填字段
     const act = this.data.activity;
+    // 检查报名截止
+    if (act.deadline && new Date(act.deadline) < new Date()) {
+      return wx.showToast({ title: '报名已截止', icon: 'none' });
+    }
     if (act.customFields) {
       for (const f of act.customFields) {
         if (f.required && !this.data.customValues[f.label]) {
@@ -85,7 +112,7 @@ Page({
 
     wx.showLoading({ title: '报名中' });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await this.callFunctionWithTimeout({
         name: 'getActivities',
         data: {
           action: 'register',
@@ -103,23 +130,33 @@ Page({
       }
     } catch (e) {
       wx.hideLoading();
+      console.error('[onRegister] 报名失败:', e);
       wx.showToast({ title: '报名失败', icon: 'none' });
     }
   },
 
   async onUnregister() {
     const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo) return;
     wx.showModal({
       title: '取消报名',
       content: '确定取消？',
       success: async (res) => {
         if (!res.confirm) return;
-        await wx.cloud.callFunction({
-          name: 'getActivities',
-          data: { action: 'unregister', activityId: this.data.activityId, userId: userInfo._id },
-        });
-        wx.showToast({ title: '已取消', icon: 'success' });
-        this.loadDetail();
+        wx.showLoading({ title: '取消中' });
+        try {
+          await this.callFunctionWithTimeout({
+            name: 'getActivities',
+            data: { action: 'unregister', activityId: this.data.activityId, userId: userInfo._id },
+          });
+          wx.hideLoading();
+          wx.showToast({ title: '已取消', icon: 'success' });
+          this.loadDetail();
+        } catch (e) {
+          wx.hideLoading();
+          console.error('[onUnregister]', e);
+          wx.showToast({ title: '取消失败', icon: 'none' });
+        }
       },
     });
   },

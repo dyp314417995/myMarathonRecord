@@ -122,8 +122,11 @@ exports.main = async (event) => {
     const exist = await db.collection('activity_registrations')
       .where({ activityId, userId: userInfo._id, status: 'active' }).get();
     if (exist.data.length) return { error: '已报名' };
-    // 检查人数上限
+    // 检查活动详情（截止时间 + 人数上限）
     const act = await db.collection('activities').doc(activityId).get();
+    if (act.data.deadline && new Date(act.data.deadline) < new Date()) {
+      return { error: '报名已截止' };
+    }
     if (act.data.maxPeople) {
       const cnt = await db.collection('activity_registrations')
         .where({ activityId, status: 'active' }).count();

@@ -25,20 +25,78 @@ Page({
   },
 
   async onLoad() {
-    // 已注册用户直接跳转首页（或扫码活动）
+    // 退出过的用户：检测是否有账号，让用户一键登录
+    if (wx.getStorageSync('_logged_out')) {
+      wx.removeStorageSync('_logged_out');
+      const user = await dbUtil.getCurrentUser();
+      if (user) {
+        const res = await new Promise(resolve => {
+          wx.showModal({
+            title: '已有账号',
+            content: `欢迎回来，${user.nickName || '跑友'}！是否直接登录？`,
+            confirmText: '直接登录',
+            cancelText: '重新注册',
+            success: (r) => resolve(r.confirm),
+          });
+        });
+        if (res) {
+          wx.setStorageSync('userInfo', user);
+          app.globalData.isGuest = false;
+          app.globalData.userInfo = user;
+          const pending = getApp().globalData.pendingActivityId;
+          if (pending) {
+            getApp().globalData.pendingActivityId = '';
+            wx.reLaunch({ url: `/pages/tools/activity/detail?id=${pending}` });
+          } else if (getCurrentPages().length > 1) {
+            // 强制重建上一页，确保完全刷新
+            const prev = getCurrentPages()[getCurrentPages().length - 2];
+            const id = (prev && (prev.options.scene || prev.options.id)) || (prev && prev.data && prev.data.activityId);
+            if (prev && id) {
+              wx.reLaunch({ url: `/${prev.route}?id=${encodeURIComponent(id)}` });
+            } else {
+              wx.reLaunch({ url: '/pages/home/home' });
+            }
+          } else {
+            wx.reLaunch({ url: '/pages/home/home' });
+          }
+          return;
+        }
+      }
+      this.loadGroups();
+      return;
+    }
+
+    // 有扫码待跳转的活动时，直接跳转
     const pending = getApp().globalData.pendingActivityId;
-    const dest = pending ? `/pages/tools/activity/detail?id=${pending}` : '/pages/home/home';
+    if (pending) {
+      getApp().globalData.pendingActivityId = '';
+      const cached = wx.getStorageSync('userInfo');
+      if (cached && cached._id) {
+        wx.reLaunch({ url: `/pages/tools/activity/detail?id=${pending}` });
+        return;
+      }
+      const user = await dbUtil.getCurrentUser();
+      if (user) {
+        wx.setStorageSync('userInfo', user);
+        wx.reLaunch({ url: `/pages/tools/activity/detail?id=${pending}` });
+        return;
+      }
+      this.loadGroups();
+      return;
+    }
+
+    // 正常登录/注册：已注册用户返回上一页（如从详情点报名过来）
     const cached = wx.getStorageSync('userInfo');
     if (cached && cached._id) {
-      if (pending) getApp().globalData.pendingActivityId = '';
-      wx.reLaunch({ url: dest });
+      if (getCurrentPages().length > 1) wx.navigateBack();
+      else wx.reLaunch({ url: '/pages/home/home' });
       return;
     }
     const user = await dbUtil.getCurrentUser();
     if (user) {
       wx.setStorageSync('userInfo', user);
-      if (pending) getApp().globalData.pendingActivityId = '';
-      wx.reLaunch({ url: dest });
+      if (getCurrentPages().length > 1) wx.navigateBack();
+      else wx.reLaunch({ url: '/pages/home/home' });
       return;
     }
     this.loadGroups();
@@ -162,7 +220,7 @@ Page({
           dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
       } else {
-        // 新用户注册
+        // 新用户注册（已注册用户会被 getCurrentUser() 在 onLoad/onSubmit 前置拦截）
         const userData = {
           openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
@@ -170,14 +228,11 @@ Page({
           groupIds: selectedGroupIds, points: 50,
         };
         const addRes = await dbUtil.createUser(userData);
-        // 从 DB 读取完整信息（含角色）
         const fullUser = await dbUtil.db.collection('users').doc(addRes._id).get();
         user = fullUser.data;
-        // 更新群成员数
         for (const gid of selectedGroupIds) {
           dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
-        // 注册送50积分
         await pointsUtil.addRecord({
           userId: addRes._id, type: 'earn', category: '注册赠送',
           points: 50, description: '新用户注册赠送',
@@ -198,6 +253,8 @@ Page({
         if (pending) {
           app.globalData.pendingActivityId = '';
           wx.reLaunch({ url: `/pages/tools/activity/detail?id=${pending}` });
+        } else if (getCurrentPages().length > 1) {
+          wx.navigateBack();
         } else {
           wx.reLaunch({ url: '/pages/home/home' });
         }
@@ -232,6 +289,10 @@ Page({
 
   // 跳过，稍后填写
   onSkip() {
-    wx.switchTab({ url: '/pages/home/home' });
+    if (getCurrentPages().length > 1) {
+      wx.navigateBack();
+    } else {
+      wx.reLaunch({ url: '/pages/home/home' });
+    }
   },
 });

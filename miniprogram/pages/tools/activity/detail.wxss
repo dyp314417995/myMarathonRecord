@@ -1,4 +1,7 @@
 .page { padding-bottom: 40rpx; }
+.loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 200rpx 32rpx; }
+.loading-text { font-size: 28rpx; color: #999; }
+.retry-btn { font-size: 28rpx; color: #1aad19; margin-top: 20rpx; padding: 12rpx 32rpx; border: 2rpx solid #1aad19; border-radius: 12rpx; }
 .banner { width: 100%; height: 360rpx; }
 .card { background: #fff; border-radius: 12rpx; padding: 24rpx; margin: 12rpx 16rpx; }
 .act-name { font-size: 34rpx; font-weight: 700; color: #333; display: block; }

@@ -9,6 +9,7 @@ Page({
     groupName: '',
     status: '',
     pendingCount: 0,   // 待审批数
+    isGuest: false,
   },
 
   async onShow() {
@@ -17,12 +18,28 @@ Page({
 
   async loadUserInfo() {
     try {
+      // 退出标记：退出过的用户不自动登录
+      if (wx.getStorageSync('_logged_out')) {
+        this.setData({ isGuest: true });
+        return;
+      }
+
+      // 退出标记：不清除则不重新登录，保持游客状态
+      if (app.globalData.isGuest) {
+        // 登录页自动登录后会重新写入缓存，此时应清除退出标记
+        const cached = wx.getStorageSync('userInfo');
+        if (cached && cached._id) {
+          app.globalData.isGuest = false;
+        } else {
+          this.setData({ isGuest: true });
+          return;
+        }
+      }
       // 始终从数据库拉最新数据
       let user = await dbUtil.getCurrentUser();
       if (!user) {
-        // 用户已被删除或不存在，清除缓存并重新注册
         wx.removeStorageSync('userInfo');
-        wx.redirectTo({ url: '/pages/login/login' });
+        this.setData({ isGuest: true });
         return;
       }
       // 更新本地缓存
@@ -144,5 +161,38 @@ Page({
   },
   onActivity() {
     wx.navigateTo({ url: '/pages/tools/activity/index' });
+  },
+
+  // 复制微信号
+  onCopyWechat() {
+    wx.setClipboardData({
+      data: 'dyp1314sxm',
+      success: () => wx.showToast({ title: '已复制微信号', icon: 'success' }),
+    });
+  },
+
+  // 游客→登录注册
+  onGoLogin() {
+    app.globalData.isGuest = false; // 清除退出标记，允许重新登录
+    wx.navigateTo({ url: '/pages/login/login' });
+  },
+
+  // 退出登录
+  onLogout() {
+    wx.showModal({
+      title: '确认退出',
+      content: '退出后仍可浏览赛事信息',
+      success: (res) => {
+        if (res.confirm) {
+          wx.removeStorageSync('userInfo');
+          wx.setStorageSync('_logged_out', true); // 退出标记，阻止静默自动登录
+          app.globalData.userInfo = null;
+          app.globalData.isSuperAdmin = false;
+          app.globalData.isAdmin = false;
+          app.globalData.isGuest = true;
+          wx.reLaunch({ url: '/pages/home/home' });
+        }
+      },
+    });
   },
 });

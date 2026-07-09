@@ -1,5 +1,64 @@
 <!-- pages/home/home.wxml - 首页面板 -->
 <view class="home-page">
+  <!-- ========== 游客模式 ========== -->
+  <view wx:if="{{isGuest}}" class="guest-page">
+    <!-- 欢迎卡片 -->
+    <view class="card guest-welcome">
+      <text class="guest-title">🏃 我的跑马记录</text>
+      <text class="guest-subtitle">记录你的每一场马拉松</text>
+    </view>
+
+    <!-- 九州战马联盟介绍 -->
+    <view class="card guest-intro">
+      <view class="intro-header">
+        <text class="intro-title">九州战马联盟</text>
+        <text class="intro-slogan">不止于赛道，更是一场跑者的双向奔赴</text>
+      </view>
+      <text class="intro-body">
+从2025年银川马拉松赛后的一拍即合，到如今汇聚全国1000余名跑友、百余位大众精英的大家庭，"九州战马联盟"在一年间完成了从跑团到全国性马拉松社群的蜕变。我们始终践行"科学训练，无伤进步"的核心理念。
+
+但我们的价值远不止于跑步本身——每逢重大赛事，我们火速拉起"临时互助群"，为奔赴山海的你提供从"怎么玩"到"怎么赢"的全方位保障：
+
+落地无忧：整合旅游攻略、美食地图与低价酒店资源，助你避开本地人都不踩的坑；
+名额福利：不定期释放稀缺赛事名额，并配备免费私兔（配速员），助你突破PB；
+社交盛宴：组织赛前碳水聚餐、清晨唤醒早餐跑，让陌生的城市因跑步而温暖。
+
+在这里，没有比赛时我们隔空互相鼓励，用汗水对抗惰性；有比赛时我们从全国各地奔赴同一座赛场，用脚步丈量友情。目前，已经有三个永久群开放，无论你在哪个群，都是我们认证的"战马"。未来，我们希望影响力能覆盖更多城市，为你争取更多跑者专属权益。
+
+期待在未来的某条赛道上，与你偶遇，击掌，然后并肩前行。
+九州战马，等你上马！ 🐎
+      </text>
+      <view class="intro-contact">
+        <text class="contact-label">主理人微信：</text>
+        <view class="contact-value-wrap">
+          <text class="contact-value" selectable="true">dyp1314sxm</text>
+          <text class="contact-copy" bindtap="onCopyWechat">复制</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 小工具 -->
+    <view class="section-title">小工具</view>
+    <view class="menu-grid col2">
+      <view class="menu-item card" bindtap="onCalendar">
+        <text class="menu-icon">📅</text>
+        <text class="menu-text">赛事日历</text>
+      </view>
+      <view class="menu-item card" bindtap="onActivity">
+        <text class="menu-icon">🎉</text>
+        <text class="menu-text">活动广场</text>
+      </view>
+    </view>
+
+    <!-- 登录引导 -->
+    <view class="guest-login card" bindtap="onGoLogin">
+      <text class="login-text">登录 / 注册，解锁赛事标记、评价、积分等完整功能</text>
+      <text class="login-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- ========== 已登录用户 ========== -->
+  <view wx:else>
   <!-- 用户信息卡片 -->
   <view class="user-card card">
     <view class="user-info" bindtap="onProfile">
@@ -24,6 +83,9 @@
         <text class="stat-num">{{userInfo.city || '未设置'}}</text>
         <text class="stat-label">城市</text>
       </view>
+    </view>
+    <view class="logout-wrap">
+      <text class="logout-btn" bindtap="onLogout">退出登录</text>
     </view>
   </view>
 
@@ -156,4 +218,5 @@
       <text class="menu-text">活动广场</text>
     </view>
   </view>
+</view>
 </view>

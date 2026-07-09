@@ -20,7 +20,7 @@ Page({
   async onLoad() {
     let userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) {
-      wx.redirectTo({ url: '/pages/login/login' });
+      wx.navigateTo({ url: '/pages/login/login' });
       return;
     }
     // 兼容旧数据：groupId → groupIds

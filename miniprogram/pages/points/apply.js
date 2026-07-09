@@ -18,7 +18,7 @@ Page({
 
   async onLoad() {
     const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo) return wx.redirectTo({ url: '/pages/login/login' });
+    if (!userInfo) return wx.navigateTo({ url: '/pages/login/login' });
     const role = userInfo.role || 'user';
     const isAdmin = role === 'super_admin' || role === 'admin';
     this.setData({ userId: userInfo._id, isAdmin });

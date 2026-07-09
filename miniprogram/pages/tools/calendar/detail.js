@@ -51,6 +51,12 @@ Page({
   },
 
   onShow() {
+    // 退出登录后重新加载，清除用户相关数据
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo && (this.data.myReview || this.data.isMine || this.data.myStatus)) {
+      this.loadEvent();
+      return;
+    }
     // 从评价页返回后刷新（评价页会设 needRefresh 标志）
     const needRefresh = this.data._needRefresh;
     if (needRefresh) {
@@ -369,7 +375,8 @@ Page({
 
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || (!userInfo._id && !userInfo.openid)) {
-      return wx.showToast({ title: '请先登录', icon: 'none' });
+      this.setData({ _needRefresh: true });
+      return wx.navigateTo({ url: '/pages/login/login' });
     }
 
     this.setData({ showMarkSheet: true });
@@ -424,7 +431,7 @@ Page({
   async onConfirmResult() {
     const { eventId, event, resultInput, resultRaceType } = this.data;
     const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo || !userInfo._id) return wx.showToast({ title: '请先登录', icon: 'none' });
+    if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
 
     // 验证成绩格式 H:MM:SS
     if (!resultInput || !/^\d{1,2}:\d{2}:\d{2}$/.test(resultInput.trim())) {

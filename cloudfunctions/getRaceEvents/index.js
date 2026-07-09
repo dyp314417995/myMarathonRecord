@@ -7,7 +7,7 @@ const _ = db.command;
 exports.main = async (event) => {
   const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId } = event || {};
   const wxContext = cloud.getWXContext();
-  const uid = userId || wxContext.OPENID;
+  const uid = userId;  // 只在有明确 userId 时查用户相关数据（null=游客）
 
   let query;
   if (search) {

@@ -127,7 +127,7 @@ Page({
   async onSubmit() {
     if (this.data.submitting) return;
     const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo) return wx.showToast({ title: '请先登录', icon: 'none' });
+    if (!userInfo) return wx.navigateTo({ url: '/pages/login/login' });
 
     this.setData({ submitting: true });
     wx.showLoading({ title: '提交中' });

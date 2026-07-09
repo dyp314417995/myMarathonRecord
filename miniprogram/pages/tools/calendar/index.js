@@ -351,7 +351,7 @@ Page({
 
   async onMark() {
     const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo) return wx.showToast({ title: '请先登录', icon: 'none' });
+    if (!userInfo) return wx.navigateTo({ url: '/pages/login/login' });
     const { markingEventId, selectedStatus, markingEvent, notifyEnabled, hours, minutes, seconds, raceHIdx, raceMIdx, raceSIdx } = this.data;
     const raceResult = `${hours[raceHIdx]}:${minutes[raceMIdx]}:${seconds[raceSIdx]}`;
     // 开启通知时申请订阅消息授权
