@@ -95,7 +95,7 @@
       <view wx:elif="{{searchResults.length === 0}}" class="search-empty"><text>未找到赛事，可手动填写下方信息</text></view>
       <view wx:for="{{searchResults}}" wx:key="_id" class="search-item" catchtap="onSelectRace" data-race="{{item}}">
         <text class="search-item-name">{{item.name}}</text>
-        <text class="search-item-meta">{{item.city || '未知'}} · {{(item.raceTypes || [item.raceType || 'full']).map(function(t){return ({full:'全马',half:'半马','10k':'10K',trail:'越野'})[t]||t}).join('/')}} · {{item.raceLevel}}级</text>
+        <text class="search-item-meta">{{item.city || '未知'}} · {{item.raceTypesStr}} · {{item.raceLevel}}级</text>
       </view>
     </view>
 

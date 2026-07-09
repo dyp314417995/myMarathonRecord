@@ -192,7 +192,11 @@ Page({
     this.setData({ searching: true });
     try {
       const res = await raceUtil.getAll({ search: text, limit: 10 });
-      this.setData({ searchResults: res.list || [], showSearchResults: true });
+      const list = (res.list || []).map(r => ({
+        ...r,
+        raceTypesStr: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('/'),
+      }));
+      this.setData({ searchResults: list, showSearchResults: true });
     } catch (err) {
       console.error('搜索赛事失败:', err);
       this.setData({ searchResults: [] });
