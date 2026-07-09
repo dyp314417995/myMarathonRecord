@@ -124,6 +124,7 @@ Page({
       showForm: true, editingId: r._id,
       form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', distance: r.distance || '', elevation: r.elevation || '', itra: r.itra || '', certs: r.certs || { itra: false, utmb: false, utmbws: false }, note: r.note || '', isPublic: r.isPublic !== false },
       formImages: images,
+      searchText: r.city || '',
     });
   },
 
@@ -251,11 +252,27 @@ Page({
       distance: f.raceType === 'trail' ? f.distance : '', elevation: f.raceType === 'trail' ? f.elevation : '', itra: f.raceType === 'trail' && f.status === 'finished' ? f.itra : '', certs: f.raceType === 'trail' ? f.certs : undefined,
       note: f.note.trim(), isPublic: f.isPublic, images,
     };
+    const newImgUrls = this.data.formImages.map(img => img.previewUrl || img.local || '').filter(Boolean);
     if (this.data.editingId) {
       await db.collection('race_records').doc(this.data.editingId).update({ data });
+      // 直接更新本地缓存，避免云数据库 read-after-write 不一致
+      const records = this.data.records.slice();
+      const idx = records.findIndex(r => r._id === this.data.editingId);
+      if (idx > -1) {
+        records[idx] = { ...records[idx], ...data, images: data.images, imgUrls: newImgUrls };
+        this.setData({ records, showForm: false });
+        this.updateFiltered();
+        this.updateChart();
+      }
     } else {
       const u = wx.getStorageSync('userInfo');
-      await db.collection('race_records').add({ data: { ...data, userId: u._id, createTime: new Date() } });
+      const addRes = await db.collection('race_records').add({ data: { ...data, userId: u._id, createTime: new Date() } });
+      // 新记录加到本地缓存
+      const newRecord = { _id: addRes._id, ...data, userId: u._id, createTime: new Date(), imgUrls: newImgUrls };
+      const records = [newRecord, ...this.data.records];
+      this.setData({ records, showForm: false });
+      this.updateFiltered();
+      this.updateChart();
     }
     // 检查是否刷新 PB
     if (f.status === 'finished' && f.result) {
@@ -263,8 +280,6 @@ Page({
     }
     wx.hideLoading();
     wx.showToast({ title: '已保存', icon: 'success' });
-    this.setData({ showForm: false });
-    this.loadRecords();
   },
 
   // 检查并更新 PB

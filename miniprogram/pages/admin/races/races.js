@@ -7,7 +7,9 @@ Page({
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
-    showQR: false, qrFileID: '', sharingRaceName: '',
+    showQR: false, qrFileID: '', sharingRaceName: '', sharingRaceInfo: {},
+    showQRText: true, // 合成海报后隐藏重复文字
+    nameDupStatus: '', // '' | 'checking' | 'ok' | 'dup'
     showPoster: false, posterIdx: 0, posterPreviewUrl: '',
     typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
     showForm: false,
@@ -51,7 +53,8 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
     const skip = this.data.adminPage * 20;
-    const res = await raceUtil.getAll({ skip, limit: 20, userId });
+    const search = this.data.adminSearch || '';
+    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined });
     const all = res.list;
     all.forEach(r => {
       if (r.raceType && !r.raceTypes) r.raceTypes = [r.raceType];
@@ -83,8 +86,9 @@ Page({
   },
 
   onAdminSearch(e) {
-    this.setData({ adminSearch: e.detail.value });
-    this.applyAdminFilter();
+    this.setData({ adminSearch: e.detail.value, adminPage: 0 }, () => {
+      this.loadRaces();
+    });
   },
 
   onAdminFilter(e) {
@@ -164,7 +168,7 @@ Page({
 
   onAdd() {
     this.setData({
-      showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false,
+      showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false, nameDupStatus: '',
       typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
       form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'A', distance: '', elevation: '', website: '', scale: '', fee: '', scaleFull: '', scaleHalf: '', feeFull: '', feeHalf: '', mechanism: '抽签', label: '普通标', posters: [], certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
@@ -221,7 +225,7 @@ Page({
       }
     })();
     this.setData({
-      showForm: true, editingId: r._id,
+      showForm: true, editingId: r._id, nameDupStatus: '',
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'), typeTrail: raceTypes.includes('trail'),
       form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceTypes, raceGroup: r.raceGroup || '', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', scaleFull: r.scaleFull||'', scaleHalf: r.scaleHalf||'', feeFull: r.feeFull||'', feeHalf: r.feeHalf||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', posters: initPosters, certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', confirmed: r.confirmed || false, tagsStr: (r.tags || []).join(', '), timeline: existingTimeline },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
@@ -332,7 +336,29 @@ Page({
     }});
   },
 
-  onInput(e) { this.setData({ [`form.${e.currentTarget.dataset.k}`]: e.detail.value }); },
+  onInput(e) {
+    const k = e.currentTarget.dataset.k;
+    this.setData({ [`form.${k}`]: e.detail.value });
+    if (k === 'name') this.setData({ nameDupStatus: '' });
+  },
+
+  async onNameBlur(e) {
+    const name = (e.detail.value || '').trim();
+    if (!name) { this.setData({ nameDupStatus: '' }); return; }
+    // 编辑时名字没改则不校验
+    if (this.data.editingId) {
+      const orig = this.data.raceList.find(x => x._id === this.data.editingId);
+      if (orig && orig.name === name) { this.setData({ nameDupStatus: '' }); return; }
+    }
+    this.setData({ nameDupStatus: 'checking' });
+    try {
+      const dupRes = await raceUtil.getAll({ search: name, limit: 200 });
+      const dup = (dupRes.list || []).find(r => r.name === name && r._id !== this.data.editingId);
+      this.setData({ nameDupStatus: dup ? 'dup' : 'ok' });
+    } catch {
+      this.setData({ nameDupStatus: '' });
+    }
+  },
 
   onChoosePoster() {
     const remain = 9 - this.data.posterTemp.length;
@@ -585,6 +611,7 @@ Page({
   async onSave() {
     const f = this.data.form;
     if (!f.name.trim()) return wx.showToast({ title: '请输入赛事名称', icon: 'none' });
+    if (this.data.nameDupStatus === 'dup') return wx.showToast({ title: '同名赛事已存在，请修改名称', icon: 'none' });
     if (!f.date) return wx.showToast({ title: '请选择鸣枪开跑日期', icon: 'none' });
     wx.showLoading({ title: '保存中' });
 
@@ -611,30 +638,147 @@ Page({
     };
     if (this.data.editingId) {
       await raceUtil.update(this.data.editingId, data);
+      // 直接更新本地缓存
+      const list = this.data.allRaceList.slice();
+      const idx = list.findIndex(r => r._id === this.data.editingId);
+      if (idx > -1) {
+        list[idx] = { ...list[idx], ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K', trail:'越野' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
+        this.setData({ allRaceList: list, showForm: false });
+        this.applyAdminFilter();
+      }
     } else {
-      await raceUtil.create(data);
+      const addRes = await raceUtil.create(data);
+      // 新记录加到本地缓存
+      const newItem = { _id: addRes._id, ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K', trail:'越野' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
+      const list = [newItem, ...this.data.allRaceList];
+      this.setData({ allRaceList: list, showForm: false });
+      this.applyAdminFilter();
     }
     wx.hideLoading();
     wx.showToast({ title: '已保存', icon: 'success' });
-    this.setData({ showForm: false });
-    this.loadRaces();
+  },
+
+  genRacePoster(qrTempURL, raceInfo) {
+    return new Promise((resolve, reject) => {
+      wx.getImageInfo({
+        src: qrTempURL,
+        success: (imgInfo) => {
+          const query = wx.createSelectorQuery();
+          query.select('#qrPosterCanvas').fields({ node: true, size: true }).exec((res) => {
+            try {
+              if (!res || !res[0]) return reject(new Error('canvas not found'));
+              const canvas = res[0].node;
+              const ctx = canvas.getContext('2d');
+              const dpr = wx.getSystemInfoSync().pixelRatio || 2;
+              const W = 400, H = 520;
+              canvas.width = W * dpr;
+              canvas.height = H * dpr;
+              ctx.scale(dpr, dpr);
+
+              // 白色背景
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, W, H);
+
+              // 赛事名称（截断防溢出）
+              ctx.fillStyle = '#333333';
+              ctx.font = 'bold 24px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'top';
+              let displayName = raceInfo.name || '';
+              if (displayName.length > 14) displayName = displayName.slice(0, 12) + '…';
+              ctx.fillText(displayName, W / 2, 24);
+
+              // 日期 · 城市
+              ctx.fillStyle = '#888888';
+              ctx.font = '18px sans-serif';
+              const metaParts = [raceInfo.date, raceInfo.city].filter(Boolean);
+              if (metaParts.length) ctx.fillText(metaParts.join(' · '), W / 2, 56);
+
+              // 类型 · 等级 · 标牌
+              const typeParts = [];
+              if (raceInfo.type) typeParts.push(raceInfo.type);
+              if (raceInfo.level) typeParts.push(raceInfo.level + '级');
+              if (raceInfo.label) typeParts.push(raceInfo.label);
+              if (typeParts.length) ctx.fillText(typeParts.join(' · '), W / 2, 80);
+
+              // 加载二维码图片并绘制
+              const img = canvas.createImage();
+              img.src = imgInfo.path;
+              img.onload = () => {
+                const qrSize = 280;
+                const qrX = (W - qrSize) / 2;
+                const qrY = 112;
+                ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+                // 底部提示
+                ctx.fillStyle = '#aaaaaa';
+                ctx.font = '14px sans-serif';
+                ctx.fillText('扫码查看赛事详情、标记和评分', W / 2, 415);
+
+                // 导出为临时文件
+                wx.canvasToTempFilePath({
+                  canvas,
+                  x: 0, y: 0,
+                  width: W * dpr, height: H * dpr,
+                  destWidth: W * dpr, destHeight: H * dpr,
+                  fileType: 'png',
+                  quality: 1,
+                  success: (r) => resolve(r.tempFilePath),
+                  fail: (e) => reject(e),
+                });
+              };
+              img.onerror = () => reject(new Error('canvas image load failed'));
+            } catch (e) { reject(e); }
+          });
+        },
+        fail: () => reject(new Error('getImageInfo failed')),
+      });
+    });
   },
 
   async onShare(e) {
     const id = e.currentTarget.dataset.id;
-    const name = e.currentTarget.dataset.name || '';
+    const r = this.data.raceList.find(x => x._id === id);
+    const name = r ? r.name : (e.currentTarget.dataset.name || '');
+    const city = r ? (r.city || '') : '';
+    const dateStr = r ? r.fmtDate || this.fmtDate(r.date) : '';
+    const rtStr = r ? r.raceTypesStr || (r.raceTypes || [r.raceType || 'full']).map(t => ({ full:'全马', half:'半马', '10k':'10K', trail:'越野' }[t]||t)).join('/') : '';
+    const levelStr = r && !(r.raceTypes && r.raceTypes.length === 1 && r.raceTypes[0] === 'trail') ? (r.raceLevel || '') : '';
+    const labelStr = r && r.label ? r.label : '';
+    const raceInfo = { name, city, date: dateStr, type: rtStr, level: levelStr, label: labelStr };
     wx.showLoading({ title: '生成中' });
     try {
       const res = await wx.cloud.callFunction({ name: 'genRaceQR', data: { raceId: id, raceName: name } });
       const fileID = (res.result || {}).fileID;
-      const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [fileID] } });
-      const url = (r.result || [])[0];
-      this.setData({ showQR: true, qrFileID: url ? url.tempFileURL : fileID, sharingRaceName: name });
+      const r2 = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [fileID] } });
+      const url = (r2.result || [])[0];
+      const qrUrl = url ? url.tempFileURL : fileID;
+
+      // 尝试合成带赛事信息的海报图
+      try {
+        const posterPath = await this.genRacePoster(qrUrl, raceInfo);
+        const upRes = await wx.cloud.uploadFile({
+          cloudPath: `qrcode/race_${id}_poster.png`,
+          filePath: posterPath,
+        });
+        if (upRes.fileID) {
+          const r3 = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [upRes.fileID] } });
+          const posterUrl = (r3.result || [])[0];
+          this.setData({ showQR: true, qrFileID: posterUrl ? posterUrl.tempFileURL : upRes.fileID, sharingRaceName: name, sharingRaceInfo: raceInfo, showQRText: false });
+          wx.hideLoading();
+          return;
+        }
+      } catch (posterErr) {
+        console.warn('poster composition failed, fallback to plain QR', posterErr);
+      }
+
+      // 兜底：显示原始二维码
+      this.setData({ showQR: true, qrFileID: qrUrl, sharingRaceName: name, sharingRaceInfo: raceInfo, showQRText: true });
     } catch (e) {
       console.error('genRaceQR error:', e);
       wx.showToast({ title: '生成失败', icon: 'none' });
     }
     wx.hideLoading();
   },
-  onHideQR() { this.setData({ showQR: false }); },
+  onHideQR() { this.setData({ showQR: false, showQRText: true }); },
 });

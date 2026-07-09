@@ -1,1 +1,1 @@
-{"navigationBarTitleText":"赛事详情","usingComponents":{}}
+{"navigationBarTitleText":"赛事详情","usingComponents":{"time-picker":"/components/time-picker/index"}}

@@ -23,6 +23,8 @@ Page({
     showResultModal: false,
     resultInput: '',
     resultRaceType: 'full',
+    showResultTimePicker: false,
+    showMarkSheet: false,
   },
 
   onScoreTab(e) { this.setData({ scoreTab: e.currentTarget.dataset.t }); },
@@ -370,41 +372,54 @@ Page({
       return wx.showToast({ title: '请先登录', icon: 'none' });
     }
 
-    const statuses = ['planned', 'registered', 'won', 'lost', 'finished', 'dnf', 'dns'];
-    const labels = ['计划报名', '已报名', '已中签', '未中签', '已完赛', '未完赛', '弃赛'];
+    this.setData({ showMarkSheet: true });
+  },
 
-    wx.showActionSheet({
-      itemList: labels,
-      success: async (res) => {
-        const status = statuses[res.tapIndex];
-        // 标记已完赛需额外录入成绩
-        if (status === 'finished') {
-          const evt = this.data.event || {};
-          const rt = evt.raceTypes || [evt.raceType || 'full'];
-          this.setData({
-            showResultModal: true,
-            resultInput: '',
-            resultRaceType: rt.includes('full') ? 'full' : rt[0],
-          });
-          return;
-        }
-        // 其他状态直接标记
-        const userId = userInfo._id || userInfo.openid;
-        try {
-          await raceUtil.markEvent(userId, eventId, status);
-          wx.showToast({ title: '已标记', icon: 'success' });
-          this.setData({ myStatus: status, isMine: true });
-        } catch (err) {
-          console.error('标记赛事失败:', err);
-          wx.showToast({ title: '标记失败，请重试', icon: 'none' });
-        }
-      }
+  onMarkSelect(e) {
+    const status = e.currentTarget.dataset.status;
+    const eventId = this.data.eventId;
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return;
+
+    this.setData({ showMarkSheet: false });
+
+    // 标记已完赛需额外录入成绩
+    if (status === 'finished') {
+      const evt = this.data.event || {};
+      const rt = evt.raceTypes || [evt.raceType || 'full'];
+      const primaryType = rt.includes('full') ? 'full' : rt[0];
+      this.setData({
+        showResultModal: true,
+        resultInput: '',
+        resultRaceType: primaryType,
+      });
+      return;
+    }
+
+    // 取主参赛类型，与列表页一致
+    const evt = this.data.event || {};
+    const rt = evt.raceTypes || [evt.raceType || 'full'];
+    const primaryType = rt.includes('full') ? 'full' : rt[0];
+
+    // 其他状态直接标记
+    wx.showLoading({ title: '标记中' });
+    raceUtil.markEvent(userInfo._id, eventId, status, false, primaryType).then(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '已标记', icon: 'success' });
+      this.setData({ myStatus: status, isMine: true });
+    }).catch(err => {
+      wx.hideLoading();
+      console.error('标记赛事失败:', err);
+      wx.showToast({ title: '标记失败，请重试', icon: 'none' });
     });
   },
 
-  onResultRaceType(e) { this.setData({ resultRaceType: e.currentTarget.dataset.v }); },
-  onResultInput(e) { this.setData({ resultInput: e.detail.value }); },
+  onHideMarkSheet() { this.setData({ showMarkSheet: false }); },
+
   onCancelResult() { this.setData({ showResultModal: false }); },
+  onPickResultTime() { this.setData({ showResultTimePicker: true }); },
+  onResultTimeChange(e) { this.setData({ resultInput: e.detail.value, showResultTimePicker: false }); },
+  onHideResultTime() { this.setData({ showResultTimePicker: false }); },
 
   async onConfirmResult() {
     const { eventId, event, resultInput, resultRaceType } = this.data;
@@ -421,39 +436,46 @@ Page({
       const userId = userInfo._id;
       const resultTime = resultInput.trim();
 
-      // 标记赛事
-      await raceUtil.markEvent(userId, eventId, 'finished');
+      // 标记赛事（传 raceType 与列表页保持一致）
+      await raceUtil.markEvent(userId, eventId, 'finished', false, resultRaceType);
 
-      // 创建跑马记录
+      // 检查是否已同步过跑马记录（与列表页一致）
       const db = require('../../../utils/db').db;
       const eventDate = this.fmtDate(event.date);
-      const recordData = {
+      const existRecord = await db.collection('race_records').where({
         userId,
-        raceType: resultRaceType,
-        raceLevel: event.raceLevel || 'B',
-        status: 'finished',
-        date: eventDate,
-        city: event.name || '',
-        result: resultTime,
-        distance: event.distance || '',
-        elevation: event.elevation || '',
-        certs: event.certs || {},
-        isPublic: true,
-        images: [],
-        createTime: new Date(),
-      };
-      const addRes = await db.collection('race_records').add({ data: recordData });
+        city: event.name || ''
+      }).get();
 
-      // 更新 marker 关联 recordId
-      const mkRes = await db.collection('race_markers').where({ userId, eventId }).get();
-      if (mkRes.data.length > 0) {
-        await db.collection('race_markers').doc(mkRes.data[0]._id).update({
-          data: { recordId: addRes._id }
-        });
+      if (existRecord.data.length === 0) {
+        const recordData = {
+          userId,
+          raceType: resultRaceType,
+          raceLevel: event.raceLevel || 'B',
+          status: 'finished',
+          date: eventDate,
+          city: event.name || '',
+          result: resultTime,
+          distance: event.distance || '',
+          elevation: event.elevation || '',
+          certs: event.certs || {},
+          isPublic: true,
+          images: [],
+          createTime: new Date(),
+        };
+        const addRes = await db.collection('race_records').add({ data: recordData });
+
+        // 更新 marker 关联 recordId
+        const mkRes = await db.collection('race_markers').where({ userId, eventId }).get();
+        if (mkRes.data.length > 0) {
+          await db.collection('race_markers').doc(mkRes.data[0]._id).update({
+            data: { recordId: addRes._id }
+          });
+        }
+
+        // 检查 PB
+        await this.checkPB(resultRaceType, resultTime, userInfo);
       }
-
-      // 检查 PB
-      await this.checkPB(resultRaceType, resultTime, userInfo);
 
       wx.hideLoading();
       wx.showToast({ title: '已标记并记录成绩', icon: 'success' });

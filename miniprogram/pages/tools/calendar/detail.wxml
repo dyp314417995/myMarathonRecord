@@ -205,15 +205,29 @@
     <view class="section-title"><text>📌 我的状态</text></view>
     <view class="mark-row">
       <text>{{myStatus === 'planned' ? '📋 计划报名' : myStatus === 'registered' ? '✅ 已报名' : myStatus === 'won' ? '🎉 已中签' : myStatus === 'lost' ? '❌ 未中签' : myStatus === 'finished' ? '🏁 已完赛' : myStatus === 'dnf' ? '💔 未完赛' : myStatus === 'dns' ? '🚫 弃赛' : '未标记'}}</text>
-      <text class="act" bindtap="onMark">修改</text>
+      <text class="act" catchtap="onMark">修改</text>
     </view>
   </view>
   <view class="card" wx:elif="{{!isMine}}">
-    <button class="btn-primary" bindtap="onMark">🏷 标记我的赛事</button>
+    <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">🏷 标记我的赛事</view>
+  </view>
+
+  <!-- 自定义标记操作面板 -->
+  <view class="action-sheet-mask" wx:if="{{showMarkSheet}}" catchtap="onHideMarkSheet"></view>
+  <view class="action-sheet" wx:if="{{showMarkSheet}}">
+    <view class="action-sheet-title">标记我的赛事</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="planned">📋 计划报名</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="registered">✅ 已报名</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="won">🎉 已中签</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="lost">❌ 未中签</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="finished">🏁 已完赛</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="dnf">💔 未完赛</view>
+    <view class="action-sheet-item" catchtap="onMarkSelect" data-status="dns">🚫 弃赛</view>
+    <view class="action-sheet-cancel" catchtap="onHideMarkSheet">取消</view>
   </view>
   <view class="btn-area">
-    <button wx:if="{{myReview._id}}" class="btn-primary" bindtap="onReview">✏️ 修改评价</button>
-    <button wx:elif="{{myStatus === 'finished'}}" class="btn-primary" bindtap="onReview">⭐ 参与评分</button>
+    <button wx:if="{{myReview._id}}" class="btn-primary" catchtap="onReview">✏️ 修改评价</button>
+    <button wx:elif="{{myStatus === 'finished'}}" class="btn-primary" catchtap="onReview">⭐ 参与评分</button>
     <button wx:elif="{{isMine}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
   </view>
 
@@ -224,20 +238,18 @@
       <text>录入完赛成绩</text>
       <text class="modal-close" bindtap="onCancelResult">✕</text>
     </view>
-    <text class="form-label">参赛项目</text>
-    <view class="btn-row">
-      <text class="opt-btn {{resultRaceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onResultRaceType">全马</text>
-      <text class="opt-btn {{resultRaceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onResultRaceType">半马</text>
-      <text class="opt-btn {{resultRaceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onResultRaceType">10K</text>
-      <text class="opt-btn {{resultRaceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onResultRaceType">越野</text>
-    </view>
     <text class="form-label">完赛成绩</text>
-    <input class="form-input" placeholder="格式：3:30:00（时:分:秒）" value="{{resultInput}}" bindinput="onResultInput" />
+    <view class="form-input time-trigger" catchtap="onPickResultTime">
+      <text class="{{resultInput ? '' : 'placeholder'}}">{{resultInput || '点此选择'}}</text>
+      <text class="city-arrow">▾</text>
+    </view>
     <view class="modal-actions" style="margin-top:32rpx;">
-      <button class="btn-outline" bindtap="onCancelResult">取消</button>
-      <button class="btn-primary" bindtap="onConfirmResult">确认标记</button>
+      <button class="btn-outline" catchtap="onCancelResult">取消</button>
+      <button class="btn-primary" catchtap="onConfirmResult">确认标记</button>
     </view>
   </view>
+
+  <time-picker value="{{resultInput}}" show="{{showResultTimePicker}}" label="完赛成绩" default-value="{{resultRaceType === '10k' ? '0:50:30' : resultRaceType === 'half' ? '2:00:00' : '3:30:00'}}" bind:confirm="onResultTimeChange" bind:cancel="onHideResultTime"></time-picker>
 
   <!-- 图片预览 -->
   <view class="poster-full" wx:if="{{showPoster && event._posters && event._posters.length}}">

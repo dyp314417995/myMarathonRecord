@@ -67,7 +67,12 @@
         </view>
       </view>
       <text class="form-label">赛事名称 *</text>
-      <input class="form-input" placeholder="如：北京马拉松" value="{{form.name}}" data-k="name" bindinput="onInput" />
+      <view class="name-input-wrap">
+        <input class="form-input" placeholder="如：北京马拉松" value="{{form.name}}" data-k="name" bindinput="onInput" bindblur="onNameBlur" />
+        <text wx:if="{{nameDupStatus === 'checking'}}" class="name-status checking">校验中...</text>
+        <text wx:elif="{{nameDupStatus === 'dup'}}" class="name-status dup">⚠️ 同名赛事已存在</text>
+        <text wx:elif="{{nameDupStatus === 'ok'}}" class="name-status ok">✓ 名称可用</text>
+      </view>
       <text class="form-label">省份</text>
       <input class="form-input" placeholder="如：北京市" value="{{form.province}}" data-k="province" bindinput="onInput" />
       <text class="form-label">城市</text>
@@ -229,6 +234,9 @@
     </swiper>
   </view>
 
+  <!-- 隐藏Canvas用于合成二维码海报 -->
+  <canvas type="2d" id="qrPosterCanvas" style="width:400px;height:520px;position:fixed;left:9999px;top:9999px;z-index:-1;"></canvas>
+
   <!-- QR 弹窗 -->
   <view class="modal-mask" wx:if="{{showQR}}" catchtap="onHideQR"></view>
   <view class="modal-box" wx:if="{{showQR}}">
@@ -236,8 +244,12 @@
       <text>赛事分享</text>
       <text class="modal-close" bindtap="onHideQR">✕</text>
     </view>
-    <text>{{sharingRaceName}}</text>
+    <view class="qr-race-info" wx:if="{{showQRText}}">
+      <text class="qr-race-name">{{sharingRaceName}}</text>
+      <text wx:if="{{sharingRaceInfo.date}}" class="qr-race-meta">{{sharingRaceInfo.date}}{{sharingRaceInfo.city ? ' · ' + sharingRaceInfo.city : ''}}</text>
+      <text wx:if="{{sharingRaceInfo.type || sharingRaceInfo.level || sharingRaceInfo.label}}" class="qr-race-meta">{{sharingRaceInfo.type}}{{sharingRaceInfo.level ? ' · ' + sharingRaceInfo.level + '级' : ''}}{{sharingRaceInfo.label ? ' · ' + sharingRaceInfo.label : ''}}</text>
+    </view>
     <image wx:if="{{qrFileID}}" src="{{qrFileID}}" mode="widthFix" class="qr-img" show-menu-by-longpress="{{true}}" />
-    <view class="qr-tip">扫码可查看赛事详情、标记和评分</view>
+    <view class="qr-tip" wx:if="{{showQRText}}">扫码可查看赛事详情、标记和评分</view>
   </view>
 </view>

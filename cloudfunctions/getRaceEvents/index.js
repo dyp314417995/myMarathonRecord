@@ -9,14 +9,14 @@ exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
   const uid = userId || wxContext.OPENID;
 
-  const cond = {};
+  let query;
   if (search) {
     const regex = db.RegExp({ regexp: search, options: 'i' });
-    cond._id = _.or([{ name: regex }, { city: regex }]);
+    query = _.or([{ name: regex }, { city: regex }]);
   }
 
   let ref = db.collection('race_events');
-  if (Object.keys(cond).length) ref = ref.where(cond);
+  if (query) ref = ref.where(query);
 
   const countRes = await ref.count();
   const total = countRes.total;

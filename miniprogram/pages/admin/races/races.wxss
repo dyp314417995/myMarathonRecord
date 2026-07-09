@@ -40,6 +40,12 @@
 .form-input { background: #f7f7f7; border-radius: 12rpx; padding: 20rpx; font-size: 28rpx; margin-top: 8rpx; }
 .date-input { display: flex; align-items: center; }
 .placeholder { color: #bbb; }
+.name-input-wrap { position: relative; margin-top: 8rpx; }
+.name-input-wrap .form-input { margin-top: 0; }
+.name-status { position: absolute; right: 16rpx; top: 50%; transform: translateY(-50%); font-size: 22rpx; pointer-events: none; }
+.name-status.checking { color: #999; }
+.name-status.dup { color: #ff4d4f; }
+.name-status.ok { color: #1aad19; }
 
 .paste-trigger { padding: 12rpx 20rpx; margin-top: 8rpx; background: #f0f7ff; border-radius: 12rpx; font-size: 24rpx; color: #1a73e8; border: 2rpx dashed #1a73e8; text-align: center; }
 .paste-area { margin-top: 8rpx; }
@@ -172,6 +178,9 @@
 
 .qr-img { width: 100%; margin-top: 16rpx; }
 .qr-tip { text-align: center; font-size: 24rpx; color: #999; margin-top: 12rpx; }
+.qr-race-info { text-align: center; margin: 8rpx 0 4rpx; padding: 0 16rpx; }
+.qr-race-name { font-size: 30rpx; font-weight: 600; color: #333; display: block; }
+.qr-race-meta { font-size: 24rpx; color: #888; margin-top: 4rpx; display: block; }
 
 .poster-full { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; }
 .poster-full-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 60rpx 32rpx 0; z-index: 10; }
