@@ -134,9 +134,7 @@
   opacity: 0.25;
   pointer-events: none;
 }
-.poster-grid-item.reordering {
-  border: 3rpx solid #1aad19;
-}
+
 .poster-grid-upload {
   border: 2rpx dashed #ddd;
   display: flex;
@@ -154,22 +152,6 @@
   font-size: 22rpx;
   color: #ccc;
   margin-top: 8rpx;
-}
-.poster-grid-actions {
-  margin-top: 8rpx;
-  text-align: center;
-}
-.poster-reorder-btn {
-  font-size: 24rpx;
-  color: #1aad19;
-  padding: 6rpx 24rpx;
-  border-radius: 8rpx;
-  background: #e8f5e9;
-}
-.poster-reorder-btn.on {
-  color: #fff;
-  background: #1aad19;
-  font-weight: 600;
 }
 
 .btn-row.wrap { flex-wrap: wrap; }

@@ -215,8 +215,8 @@ Page({
           try {
             const ur = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cld } });
             const m = {}; (ur.result || []).forEach(f => { if (f.tempFileURL) m[f.fileID] = f.tempFileURL; });
-            this.setData({ posterTemp: initPosters.map(p => p.startsWith('cloud://') ? (m[p] || '') : p).filter(Boolean) });
-          } catch { this.setData({ posterTemp: [] }); }
+            this.setData({ posterTemp: initPosters.map(p => p.startsWith('cloud://') ? (m[p] || p) : p) });
+          } catch { this.setData({ posterTemp: initPosters }); }
         } else { this.setData({ posterTemp: initPosters }); }
       }
     })();
@@ -373,9 +373,6 @@ Page({
     imgs.splice(idx, 1);
     fids.splice(idx, 1);
     this.setData({ posterTemp: imgs, 'form.posters': fids });
-  },
-  onToggleReorder() {
-    this.setData({ reorderMode: !this.data.reorderMode });
   },
   onMovePosterLeft(e) {
     const idx = parseInt(e.currentTarget.dataset.idx);

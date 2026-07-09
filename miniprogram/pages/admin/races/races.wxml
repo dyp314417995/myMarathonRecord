@@ -173,24 +173,18 @@
       </block>
       <text class="form-label">赛事图片（选填，最多9张）</text>
       <view class="poster-grid count-{{posterTemp.length === 1 ? 1 : (posterTemp.length === 2 || posterTemp.length === 4 ? 2 : 3)}}">
-        <view class="poster-grid-item {{reorderMode ? 'reordering' : ''}}" wx:for="{{posterTemp}}" wx:key="*this" wx:for-index="idx">
-          <image src="{{item}}" mode="aspectFill" class="poster-grid-img" data-idx="{{idx}}" bindtap="{{reorderMode ? '' : 'onPreviewPoster'}}" />
-          <text wx:if="{{!reorderMode}}" class="poster-grid-del" data-idx="{{idx}}" catchtap="onDelPosterSmall">✕</text>
-          <view wx:if="{{reorderMode && posterTemp.length > 1}}" class="poster-grid-move">
+        <view class="poster-grid-item" wx:for="{{posterTemp}}" wx:key="*this" wx:for-index="idx">
+          <image src="{{item}}" mode="aspectFill" class="poster-grid-img" data-idx="{{idx}}" bindtap="onPreviewPoster" />
+          <text class="poster-grid-del" data-idx="{{idx}}" catchtap="onDelPosterSmall">✕</text>
+          <view wx:if="{{posterTemp.length > 1}}" class="poster-grid-move">
             <text class="poster-move-btn {{idx === 0 ? 'disabled' : ''}}" data-idx="{{idx}}" catchtap="onMovePosterLeft">‹</text>
             <text class="poster-move-btn {{idx === posterTemp.length - 1 ? 'disabled' : ''}}" data-idx="{{idx}}" catchtap="onMovePosterRight">›</text>
           </view>
         </view>
-        <view wx:if="{{posterTemp.length < 9 && !reorderMode}}" class="poster-grid-item poster-grid-upload" bindtap="onChoosePoster">
+        <view wx:if="{{posterTemp.length < 9}}" class="poster-grid-item poster-grid-upload" bindtap="onChoosePoster">
           <text class="poster-grid-add">+</text>
           <text class="poster-grid-count">{{posterTemp.length}}/9</text>
         </view>
-      </view>
-      <view class="poster-grid-actions" wx:if="{{posterTemp.length > 1 && !reorderMode}}">
-        <text class="poster-reorder-btn" bindtap="onToggleReorder">调整顺序</text>
-      </view>
-      <view class="poster-grid-actions" wx:if="{{reorderMode}}">
-        <text class="poster-reorder-btn on" bindtap="onToggleReorder">完成排序</text>
       </view>
       <view class="modal-actions" style="margin-top:24rpx;">
         <button class="btn-outline" bindtap="onHideForm">取消</button>
