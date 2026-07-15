@@ -1,7 +1,7 @@
 {
-  "name": "seedRaceData",
+  "name": "checkAiSummary",
   "version": "1.0.0",
-  "description": "一次性录入初始赛事数据",
+  "description": "诊断 aiSummary 数据状态",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "latest"

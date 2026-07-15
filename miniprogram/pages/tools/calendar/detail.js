@@ -51,18 +51,7 @@ Page({
   },
 
   onShow() {
-    // 退出登录后重新加载，清除用户相关数据
-    const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo && (this.data.myReview || this.data.isMine || this.data.myStatus)) {
-      this.loadEvent();
-      return;
-    }
-    // 从评价页返回后刷新（评价页会设 needRefresh 标志）
-    const needRefresh = this.data._needRefresh;
-    if (needRefresh) {
-      this.setData({ _needRefresh: false });
-      this.loadEvent();
-    }
+    this.loadEvent();
   },
 
   async loadEvent() {
@@ -555,7 +544,7 @@ Page({
       });
 
       wx.showToast({ title: '已删除，-10积分', icon: 'success' });
-      this.setData({ myReview: null });
+      this.setData({ myReview: null, myStatus: '', isMine: false });
       this.loadEvent();
     }});
   },

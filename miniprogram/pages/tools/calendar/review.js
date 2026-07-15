@@ -31,29 +31,39 @@ Page({
 
   async onLoad(options) {
     if (!options.id) return;
-    this.setData({ eventId: options.id, eventName: options.name || '' });
+    wx.showLoading({ title: '加载中...' });
 
-    // 加载赛事项目类型
-    let raceGroup = '';
-    try {
-      const res = await raceUtil.getAll({ limit: 200 });
-      const event = (res.list || []).find(r => r._id === options.id);
-      if (event) {
-        const types = event.raceTypes || [event.raceType || 'full'];
-        raceGroup = event.raceGroup || '';
-        this.setData({
-          eventTypes: types, reviewRaceType: types[0] || 'full', raceGroup,
-          hasFull: types.includes('full'), hasHalf: types.includes('half'),
-          hasBoth: types.includes('full') && types.includes('half'),
-        });
-      }
-    } catch {}
-    // 年份取赛事日期年份
-    const year = event ? new Date(event.date).getFullYear() : new Date().getFullYear();
-    this.setData({ reviewYear: year });
+    // 并行加载赛事信息、已有评价、热门标签
+    const [event, myReviewData, stats] = await Promise.all([
+      raceUtil.getAll({ limit: 200 }).then(res => (res.list || []).find(r => r._id === options.id)).catch(() => null),
+      this._loadMyReview(options.id),
+      raceUtil.getReviewStats(options.id).catch(() => ({ tagStats: {} })),
+    ]);
 
-    await this.loadHotTags();
-    await this.loadMyReview();
+    const data = { eventId: options.id, eventName: options.name || '' };
+
+    if (event) {
+      const types = event.raceTypes || [event.raceType || 'full'];
+      data.eventTypes = types;
+      data.reviewRaceType = types[0] || 'full';
+      data.raceGroup = event.raceGroup || '';
+      data.hasFull = types.includes('full');
+      data.hasHalf = types.includes('half');
+      data.hasBoth = types.includes('full') && types.includes('half');
+      data.reviewYear = new Date(event.date).getFullYear();
+    }
+
+    // 热门标签
+    const tagStats = stats.tagStats || {};
+    data.hotTags = Object.entries(tagStats)
+      .sort((a, b) => b[1] - a[1]).slice(0, 15)
+      .map(([name, count]) => ({ name, count }));
+
+    // 已有评价回显
+    if (myReviewData) Object.assign(data, myReviewData);
+
+    this.setData(data);
+    wx.hideLoading();
   },
 
   onShow() {
@@ -63,23 +73,28 @@ Page({
   onTypeSel(e) { this.setData({ reviewRaceType: e.currentTarget.dataset.v }); },
   onYearSel(e) { this.setData({ yearIdx: e.detail.value }); },
 
-  async loadMyReview() {
+  // 加载已有评价数据（返回数据对象，不调 setData，避免闪烁）
+  async _loadMyReview(eventId) {
     const userInfo = wx.getStorageSync('userInfo');
-    if (userInfo) {
+    if (!userInfo || !userInfo._id) return null;
+    try {
       const db = require('../../../utils/db').db;
       const exist = await db.collection('race_reviews').where({
-        eventId: this.data.eventId, userId: userInfo._id
+        eventId, userId: userInfo._id
       }).get();
       if (exist.data.length > 0) {
         const r = exist.data[0];
-        this.setData({
+        return {
           isEdit: true, existingId: r._id,
-          scores: r.scores || this.data.scores,
+          scores: r.scores || { difficulty: 5, atmosphere: 5, supply: 5, transport: 5 },
           selectedTags: r.tags || [],
           description: r.description || '',
-        });
+          reviewRaceType: r.raceType || 'full',
+          reviewYear: r.year || new Date().getFullYear(),
+        };
       }
-    }
+    } catch (e) { console.error('loadMyReview error:', e); }
+    return null;
   },
 
   async loadHotTags() {
@@ -135,6 +150,20 @@ Page({
     try {
       const db = require('../../../utils/db').db;
       const year = this.data.reviewYear || new Date().getFullYear();
+
+      // 服务端防重复：再查一次是否已有评价
+      if (!this.data.isEdit) {
+        const check = await db.collection('race_reviews').where({
+          eventId: this.data.eventId, userId: userInfo._id
+        }).limit(1).get();
+        if (check.data.length > 0) {
+          this.setData({ isEdit: true, existingId: check.data[0]._id, submitting: false });
+          wx.hideLoading();
+          wx.showToast({ title: '已评价，改为编辑模式', icon: 'none' });
+          return;
+        }
+      }
+
       const updateData = {
         scores: this.data.scores,
         tags: this.data.selectedTags,
@@ -172,9 +201,6 @@ Page({
       await db.collection('race_events').doc(this.data.eventId).update({
         data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
       });
-
-      // 触发 AI 总结（异步，不阻塞）
-      wx.cloud.callFunction({ name: 'reviewSummary', data: { eventId: this.data.eventId } }).catch(() => {});
 
       wx.hideLoading();
       wx.showToast({ title: this.data.isEdit ? '已更新' : '提交成功，+10积分', icon: 'success' });

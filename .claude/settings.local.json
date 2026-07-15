@@ -4,7 +4,12 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(npx cloudbase:*)",
+      "Bash(npx tcb:*)",
+      "Bash(2>&1)",
+      "Bash(node -e ':*)",
+      "Bash(python3:*)"
     ]
   }
 }

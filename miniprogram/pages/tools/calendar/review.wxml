@@ -47,7 +47,7 @@
   <!-- 文字描述 -->
   <view class="card">
     <text class="form-label">赛事体验描述</text>
-    <textarea class="desc-input" placeholder="说说你的参赛感受（200字以内）..." value="{{description}}" bindinput="onDescInput" maxlength="200" auto-height />
+    <textarea class="desc-input" placeholder="说说你的参赛感受（800字以内）..." value="{{description}}" bindinput="onDescInput" maxlength="800" auto-height />
   </view>
 
   <view class="btn-area">

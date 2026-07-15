@@ -1,4 +1,4 @@
-// 云函数 reviewSummary - 每日自动总结赛事评价并存入数据库
+// 云函数 reviewSummary - 每日定时总结赛事评价（有新增才重新生成）
 const cloud = require('wx-server-sdk');
 const fetch = require('node-fetch');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
@@ -8,28 +8,73 @@ const QWEN_KEY = process.env.QWEN_KEY || '';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_KEY || '';
 
 exports.main = async (event) => {
-  if (event && event.eventId) return await summarizeOne(event.eventId);
-
+  // 手动触发：传 eventId 或 'all'
+  if (event && event.eventId && event.eventId !== 'all') {
+    return await summarizeIfNeeded(event.eventId);
+  }
   try {
-    const reviewsRes = await db.collection('race_reviews').get();
-    const eventIds = [...new Set(reviewsRes.data.map(r => r.eventId))];
+    // 找出有评价的赛事组，按赛事组聚合
+    const eventsRes = await db.collection('race_events').field({ raceGroup: true, aiSummaryAt: true }).get();
+    const groups = {};
+    eventsRes.data.forEach(e => {
+      if (!e.raceGroup) return;
+      if (!groups[e.raceGroup]) groups[e.raceGroup] = [];
+      groups[e.raceGroup].push(e);
+    });
+
     const results = [];
-    for (const id of eventIds) {
-      const r = await summarizeOne(id);
+    for (const [raceGroup, groupEvents] of Object.entries(groups)) {
+      const eventIds = groupEvents.map(e => e._id);
+      // 最新总结时间（未总结过则为0）
+      const times = groupEvents.map(e => e.aiSummaryAt ? new Date(e.aiSummaryAt).getTime() : 0);
+      const lastAt = Math.max(...times);
+
+      // 如果总结过，检查是否有新评价；未总结过则直接生成
+      if (lastAt > 0) {
+        const newCount = await db.collection('race_reviews')
+          .where({ eventId: db.command.in(eventIds), createTime: db.command.gt(new Date(lastAt)) })
+          .count();
+        if (newCount.total === 0) {
+          results.push({ raceGroup, status: 'skip', reason: '无新评价' });
+          continue;
+        }
+      }
+
+      const r = await summarizeGroup(raceGroup, eventIds);
       results.push(r);
     }
-    return { success: true, processed: results.length, results };
+    return { success: true, processed: results };
   } catch (err) {
     console.error('reviewSummary error:', err);
     return { success: false, error: err.message };
   }
 };
 
-async function summarizeOne(eventId) {
+// 外部调用（详情页/管理端）
+async function summarizeIfNeeded(eventId) {
+  const evt = await db.collection('race_events').doc(eventId).get();
+  const raceGroup = (evt.data || {}).raceGroup;
+  if (!raceGroup) return { status: 'no_raceGroup' };
+
+  const groupEvents = await db.collection('race_events').where({ raceGroup }).get();
+  const eventIds = groupEvents.data.map(e => e._id);
+  const times = groupEvents.data.map(e => e.aiSummaryAt ? new Date(e.aiSummaryAt).getTime() : 0);
+  const lastAt = Math.max(...times);
+  if (lastAt > 0) {
+    const newCount = await db.collection('race_reviews')
+      .where({ eventId: db.command.in(eventIds), createTime: db.command.gt(new Date(lastAt)) })
+      .count();
+    if (newCount.total === 0) return { status: 'skip', reason: '无新评价' };
+  }
+
+  return await summarizeGroup(raceGroup, eventIds);
+}
+
+async function summarizeGroup(raceGroup, eventIds) {
   try {
-    const res = await db.collection('race_reviews').where({ eventId }).get();
+    const res = await db.collection('race_reviews').where({ eventId: db.command.in(eventIds) }).get();
     const reviews = res.data;
-    if (!reviews.length) return { eventId, status: 'no_reviews' };
+    if (!reviews.length) return { raceGroup, status: 'no_reviews' };
 
     const fullReviews = reviews.filter(r => r.raceType !== 'half');
     const halfReviews = reviews.filter(r => r.raceType === 'half');
@@ -45,10 +90,13 @@ async function summarizeOne(eventId) {
     }
 
     const summary = parts.join('；') || '暂无评价';
-    await db.collection('race_events').doc(eventId).update({ data: { aiSummary: summary } });
-    return { eventId, status: 'ok', summary };
+    const now = new Date();
+    for (const eid of eventIds) {
+      await db.collection('race_events').doc(eid).update({ data: { aiSummary: summary, aiSummaryAt: now } });
+    }
+    return { raceGroup, status: 'ok', summary, updated: eventIds.length };
   } catch (err) {
-    return { eventId, status: 'error', error: err.message };
+    return { raceGroup, status: 'error', error: err.message };
   }
 }
 

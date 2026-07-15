@@ -137,7 +137,7 @@
       <text>📝 我的评价</text>
       <view style="display:flex;gap:12rpx;">
         <text class="del-review-btn" bindtap="onReview">✏️ 编辑</text>
-        <text class="del-review-btn" catchtap="onDelMyReview">🗑 删除</text>
+        <text class="del-review-btn" catchtap="onDelMyReview" data-id="{{myReview._id}}">🗑 删除</text>
       </view>
     </view>
     <view class="my-review">
