@@ -32,6 +32,7 @@ Page({
     dateFrom: '',
     dateTo: '',
     dateRangeText: '',
+    _dateSet: false,       // 用户是否手动设置了时间范围
     page: 0,
     pageSize: 20,
     hasMore: false,
@@ -44,8 +45,13 @@ Page({
   },
 
   onShow() {
-    this.setDefaultDates();
-    this.loadData(false);
+    // 首次加载或 tab 切换（onTab 里会重置 flag）才设默认日期，从详情页返回时保留用户已选的时间
+    if (!this.data._dateSet) this.setDefaultDates();
+    if (this.data.races.length > 0) {
+      this.loadData(false, true); // 有缓存，后台静默刷新
+    } else {
+      this.loadData(false);
+    }
   },
 
   onHide() {
@@ -79,11 +85,11 @@ Page({
     });
   },
 
-  async loadData(isLoadMore = false) {
-    if (!isLoadMore) {
+  async loadData(isLoadMore = false, silent = false) {
+    if (!isLoadMore && !silent) {
       this.setData({ page: 0, allRaces: [], races: [], hasMore: false });
     }
-    wx.showLoading({ title: '加载中' });
+    if (!silent) wx.showLoading({ title: '加载中' });
     try {
       const userInfo = wx.getStorageSync('userInfo');
       const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
@@ -101,7 +107,7 @@ Page({
       });
       const all = res.list;
       if (all.length === 0 && !isLoadMore) {
-        wx.hideLoading();
+        if (!silent) wx.hideLoading();
         this.setData({ races: [], allRaces: [], allTags: [], total: 0, hasMore: false });
         return;
       }
@@ -120,16 +126,6 @@ Page({
       // 评分已由云函数批量返回
       const reviewMap = {};
       races.forEach(r => { if (r.reviewStats) reviewMap[r._id] = r.reviewStats; });
-
-      // 已标记人数统计
-      const markerMap = {};
-      try {
-        const db = require('../../../utils/db').db;
-        const mkRes = await db.collection('race_markers').get();
-        (mkRes.data || []).forEach(m => {
-          markerMap[m.eventId] = (markerMap[m.eventId] || 0) + 1;
-        });
-      } catch {}
 
       if (userId) {
         try { const mkRes = await raceUtil.getMyMarkers(userId); const mMap = {}; const mData = {}; mkRes.data.forEach(m => { mMap[m.eventId] = m.status; mData[m.eventId] = m; }); this.setData({ myMarkers: mMap, myMarkersData: mData }); } catch {}
@@ -157,16 +153,16 @@ Page({
         // 列表卡片：单赛事统计；详情页：赛事组统计
         avgScore: r.avgScore || 0,
         reviewCount: r.reviewCount || 0,
-        markerCount: markerMap[r._id] || 0,
+        markerCount: r.markerCount || 0,
         dimensions: r.reviewStats ? r.reviewStats.dimensions : {},
         hasReviewed: r.hasReviewed || false,
       }));
 
       this.setData({ allRaces: races, allTags });
       this.applyFilter();
-      wx.hideLoading();
+      if (!silent) wx.hideLoading();
     } catch (err) {
-      wx.hideLoading();
+      if (!silent) wx.hideLoading();
     }
   },
 
@@ -284,7 +280,7 @@ Page({
 
   onTab(e) {
     const t = e.currentTarget.dataset.t;
-    this.setData({ tab: t });
+    this.setData({ tab: t, _dateSet: false });
     wx.setStorageSync('calendar_tab', t);
     this.setDefaultDates();
     this.loadData();
@@ -328,8 +324,8 @@ Page({
     this._searchTimer = setTimeout(() => this.applyFilter(), 300);
   },
 
-  onDateFrom(e) { this.setData({ dateFrom: e.detail.value }); this.loadData(); },
-  onDateTo(e) { this.setData({ dateTo: e.detail.value }); this.loadData(); },
+  onDateFrom(e) { this.setData({ dateFrom: e.detail.value, _dateSet: true }); this.loadData(); },
+  onDateTo(e) { this.setData({ dateTo: e.detail.value, _dateSet: true }); this.loadData(); },
 
   onShowMark(e) {
     const id = e.currentTarget.dataset.id;
@@ -407,12 +403,12 @@ Page({
         }
       }
 
-      wx.hideLoading();
+      if (!silent) wx.hideLoading();
       wx.showToast({ title: '已标记', icon: 'success' });
       this.setData({ showForm: false });
       this.loadData();
     } catch (err) {
-      wx.hideLoading();
+      if (!silent) wx.hideLoading();
       console.error('标记失败:', err);
       wx.showToast({ title: '保存失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
     }

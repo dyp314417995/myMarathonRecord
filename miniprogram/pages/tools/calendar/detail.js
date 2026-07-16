@@ -47,39 +47,32 @@ Page({
     const eventId = options.scene ? decodeURIComponent(options.scene) : options.id;
     if (!eventId) return;
     this.setData({ eventId });
-    this.loadEvent();
+    // onShow 会负责加载数据，避免重复请求
   },
 
   onShow() {
-    this.loadEvent();
+    if (this.data.event && this.data.event._id) {
+      this.loadEvent(true); // 有缓存，后台静默刷新
+    } else {
+      this.loadEvent();
+    }
   },
 
-  async loadEvent() {
-    wx.showLoading({ title: '加载中' });
+  async loadEvent(silent = false) {
+    if (!silent) wx.showLoading({ title: '加载中' });
     try {
-      const res = await raceUtil.getAll({ limit: 200 });
-      const event = (res.list || []).find(r => r._id === this.data.eventId);
+      const userInfo = wx.getStorageSync('userInfo');
+      const uid = userInfo ? (userInfo._id || userInfo.openid) : null;
+
+      const { event, reviewStats, myMarker, myReview } = await raceUtil.getEventDetail(this.data.eventId, uid);
       if (!event) { wx.showToast({ title: '赛事不存在', icon: 'none' }); return; }
 
-      let stats = event.reviewStats || { count: 0, avgScore: 0, dimensions: {}, tagStats: {} };
-      if (!stats.count) { try { stats = await raceUtil.getReviewStats(this.data.eventId); } catch {} }
+      const stats = reviewStats || { count: 0, avgScore: 0, dimensions: {}, tagStats: {} };
       const tagEntries = Object.entries(stats.tagStats || {})
         .sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-      const userInfo = wx.getStorageSync('userInfo');
-      let isMine = false, myStatus = '', myReview = null;
-      if (userInfo) {
-        try {
-          const mkRes = await raceUtil.getMyMarkers(userInfo._id);
-          const mine = mkRes.data.find(m => m.eventId === this.data.eventId);
-          if (mine) { isMine = true; myStatus = mine.status; }
-        } catch {}
-
-        try {
-          const allRv = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', userId: userInfo._id } });
-          myReview = (allRv.result || []).find(r => r.eventId === this.data.eventId) || null;
-        } catch {}
-      }
+      const isMine = !!myMarker;
+      const myStatus = myMarker ? myMarker.status : '';
 
       // 把赛事鸣枪开跑日期注入时间轴（如果还没在 timeline 中）
       let timeline = event.timeline || [];
@@ -165,11 +158,11 @@ Page({
         myReviewTags: myReview ? (myReview.tags || []).join('、') : '',
         'myReview.myAvg': myReview && myReview.scores ? Math.round((myReview.scores.difficulty + myReview.scores.atmosphere + myReview.scores.supply + myReview.scores.transport) / 0.4) / 10 : 0,
       });
-      wx.hideLoading();
+      if (!silent) wx.hideLoading();
       // 加载他人评价
       if (event.raceGroup) this.loadOtherReviews();
     } catch (err) {
-      wx.hideLoading();
+      if (!silent) wx.hideLoading();
       console.error('详情加载失败:', err);
       wx.showToast({ title: '加载失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
     }

@@ -75,6 +75,15 @@ async function getMyMarkers(userId) {
     .where({ userId }).get();
 }
 
+/** 获取赛事详情（单条，含评分统计 + 用户标记/评价） */
+async function getEventDetail(eventId, userId) {
+  const res = await wx.cloud.callFunction({
+    name: 'getEventDetail',
+    data: { eventId, userId }
+  });
+  return res.result || { event: null, reviewStats: null, myMarker: null, myReview: null };
+}
+
 /** 获取赛事评分统计（云函数绕过权限） */
 async function getReviewStats(eventId) {
   const res = await wx.cloud.callFunction({
@@ -87,5 +96,5 @@ async function getReviewStats(eventId) {
 module.exports = {
   getList, getAll, create, update, remove,
   markEvent, unmarkEvent, getMyMarkers,
-  getReviewStats,
+  getReviewStats, getEventDetail,
 };

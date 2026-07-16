@@ -117,6 +117,16 @@ exports.main = async (event) => {
     }
   }
 
+  // 查询当前页赛事的标记人数
+  const markerCountMap = {};
+  try {
+    const pageEventIds = list.map(r => r._id).filter(Boolean);
+    if (pageEventIds.length) {
+      const mkRes = await db.collection('race_markers').where({ eventId: _.in(pageEventIds) }).get();
+      mkRes.data.forEach(m => { markerCountMap[m.eventId] = (markerCountMap[m.eventId] || 0) + 1; });
+    }
+  } catch (e) { console.warn('getRaceEvents markers:', e); }
+
   // 查询当前用户评价过的赛事组
   let userReviewedGroups = new Set();
   let userReviewedEvents = new Set();
@@ -145,6 +155,7 @@ exports.main = async (event) => {
     return {
       ...r,
       reviewStats: { count: groupStats.count || 0, avgScore: groupStats.avgScore || 0, dimensions: groupStats.dimensions || {}, fullStats: groupStats.fullStats, halfStats: groupStats.halfStats },
+      markerCount: markerCountMap[r._id] || 0,
       // 列表卡片用单赛事统计
       avgScore: evtStats.avgScore || 0,
       reviewCount: evtStats.count || 0,

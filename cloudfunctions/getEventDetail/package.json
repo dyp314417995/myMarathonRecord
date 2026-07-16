@@ -1,0 +1,9 @@
+{
+  "name": "getEventDetail",
+  "version": "1.0.0",
+  "description": "查询单条赛事详情+评分统计+用户标记/评价",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
