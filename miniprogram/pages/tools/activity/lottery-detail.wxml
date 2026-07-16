@@ -44,13 +44,6 @@
       </view>
     </view>
 
-    <!-- 等待开奖 -->
-    <view class="card" wx:elif="{{lottery.status === 'active' && lottery.stateTag.text === '待开奖'}}">
-      <text class="info-row" style="text-align:center;color:#ff9800;padding:20rpx 0;">
-        ⏳ 抽奖已截止，等待管理员开奖...
-      </text>
-    </view>
-
     <!-- 已取消 -->
     <view class="card" wx:elif="{{lottery.status === 'cancelled'}}">
       <text class="info-row" style="text-align:center;color:#999;padding:20rpx 0;">

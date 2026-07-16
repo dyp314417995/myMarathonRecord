@@ -20,13 +20,9 @@ function fmtDate(d) {
 }
 
 function computeState(item) {
-  const now = new Date();
   if (item.status === 'cancelled') return { text: '已取消', cls: 'tag-red' };
   if (item.status === 'drawn') return { text: '已开奖', cls: 'tag-orange' };
-  if (item.status === 'active') {
-    if (item.timeEnd && new Date(item.timeEnd) < now) return { text: '待开奖', cls: 'tag-blue' };
-    return { text: '进行中', cls: 'tag-green' };
-  }
+  if (item.status === 'active') return { text: '进行中', cls: 'tag-green' };
   return { text: '已结束', cls: 'tag-gray' };
 }
 
@@ -40,6 +36,50 @@ function getUserPrize(winners, userId) {
   if (!winners || !userId) return null;
   const w = winners.find(x => x.userId === userId);
   return w ? w.prizeName : null;
+}
+
+/** 执行开奖（抽选 + 分配奖品）。已通过 where 条件保证幂等 */
+async function performDraw(lottery) {
+  const slots = [];
+  for (const p of lottery.prizes) {
+    const cnt = parseInt(p.count) || 0;
+    for (let i = 0; i < cnt; i++) slots.push({ prizeName: p.name });
+  }
+  if (!slots.length) return;
+
+  const codeRes = await db.collection('lottery_codes')
+    .where({ lotteryId: lottery._id, usedBy: _.neq(null) })
+    .field({ usedBy: true })
+    .limit(10000)
+    .get();
+  const participants = [...new Set(codeRes.data.map(c => c.usedBy))];
+
+  let winners = [];
+  if (participants.length > 0) {
+    const shuffled = [...participants];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const winnerCount = Math.min(shuffled.length, slots.length);
+    winners = shuffled.slice(0, winnerCount).map((uid, idx) => ({
+      userId: uid, prizeName: slots[idx].prizeName,
+    }));
+  }
+
+  // 条件更新：只有 status 仍为 active 时才执行，避免重复开奖
+  await db.collection('lotteries')
+    .where({ _id: lottery._id, status: 'active' })
+    .update({ data: { status: 'drawn', winners, drawAt: db.serverDate() } });
+}
+
+/** 检查并自动开奖：status=active 且已过结束时间。开奖后同步更新 item 的内存状态 */
+async function autoDrawIfExpired(item) {
+  if (item.status !== 'active') return false;
+  if (!item.timeEnd || new Date(item.timeEnd) >= new Date()) return false;
+  await performDraw(item);
+  item.status = 'drawn';
+  return true;
 }
 
 exports.main = async (event) => {
@@ -181,6 +221,7 @@ exports.main = async (event) => {
 
     const list = [];
     for (const item of res.data) {
+      await autoDrawIfExpired(item);
       const usedRes = await db.collection('lottery_codes')
         .where({ lotteryId: item._id, usedBy: _.neq(null) }).count();
       const state = computeState(item);
@@ -215,10 +256,12 @@ exports.main = async (event) => {
 
     const lotRes = await db.collection('lotteries')
       .where({ _id: _.in(lotteryIds) }).get();
-    const list = lotRes.data.map(item => {
+    const list = [];
+    for (const item of lotRes.data) {
+      await autoDrawIfExpired(item);
       const state = computeState(item);
       const prizeName = getUserPrize(item.winners, userId);
-      return {
+      list.push({
         _id: item._id,
         name: item.name,
         status: item.status,
@@ -228,17 +271,24 @@ exports.main = async (event) => {
         isWinner: !!prizeName,
         prizeName,
         _fmtStart: fmtDate(item.timeStart),
-      };
-    });
+      });
+    }
     return { list };
   }
 
   // ------- 详情 -------
   if (action === 'detail') {
     if (!id) return { error: '缺少 id' };
-    const lotRes = await db.collection('lotteries').doc(id).get();
-    const item = lotRes.data;
+    let lotRes = await db.collection('lotteries').doc(id).get();
+    let item = lotRes.data;
     if (!item) return { error: '抽奖不存在' };
+
+    // 已过结束时间则自动开奖
+    const drawn = await autoDrawIfExpired(item);
+    if (drawn) {
+      lotRes = await db.collection('lotteries').doc(id).get();
+      item = lotRes.data;
+    }
 
     const usedRes = await db.collection('lottery_codes')
       .where({ lotteryId: id, usedBy: _.neq(null) }).count();
@@ -334,6 +384,7 @@ exports.main = async (event) => {
 
     const list = [];
     for (const item of res.data) {
+      await autoDrawIfExpired(item);
       const usedRes = await db.collection('lottery_codes')
         .where({ lotteryId: item._id, usedBy: _.neq(null) }).count();
       const state = computeState(item);
