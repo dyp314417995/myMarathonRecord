@@ -22,7 +22,9 @@
     "pages/records/public",
     "pages/tools/activity/index",
     "pages/tools/activity/detail",
-    "pages/admin/activities/activities"
+    "pages/admin/activities/activities",
+    "pages/admin/lotteries/lotteries",
+    "pages/tools/activity/lottery-detail"
   ],
   "usingComponents": {},
   "window": {

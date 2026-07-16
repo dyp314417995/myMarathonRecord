@@ -156,6 +156,9 @@ Page({
   onManageActivities() {
     wx.navigateTo({ url: '/pages/admin/activities/activities' });
   },
+  onManageLotteries() {
+    wx.navigateTo({ url: '/pages/admin/lotteries/lotteries' });
+  },
   onCalendar() {
     wx.navigateTo({ url: '/pages/tools/calendar/index' });
   },

@@ -1,0 +1,107 @@
+<view class="page">
+  <view class="top-bar">
+    <button class="btn-primary btn-sm" bindtap="onAdd">+ 发起抽奖</button>
+  </view>
+
+  <view class="lot-list" wx:if="{{lotteries.length}}">
+    <view class="lot-card" wx:for="{{lotteries}}" wx:key="_id">
+      <view class="lot-row1">
+        <text class="lot-name">{{item.name}}</text>
+        <text class="tag {{item.stateTag.cls}}">{{item.stateTag.text}}</text>
+      </view>
+      <text class="lot-info">🕐 {{item._fmtCreate || '--'}}</text>
+      <text class="lot-info">🎫 {{item.codeCount}} 个码 · {{item.usedCount || 0}} 人已使用</text>
+      <text class="lot-info">🏆 <text wx:for="{{item.prizes}}" wx:key="name">{{item.name}}×{{item.count}} </text></text>
+      <view class="lot-ops">
+        <text class="op-btn" catchtap="onViewCodes" data-id="{{item._id}}">📋 查看码</text>
+        <text class="op-btn" catchtap="onViewDetail" data-id="{{item._id}}">👁 查看</text>
+        <text class="op-btn" catchtap="onEdit" data-id="{{item._id}}">✏️ 编辑</text>
+        <text class="op-btn" catchtap="onCopy" data-id="{{item._id}}">📄 复制</text>
+        <text class="op-btn" wx:if="{{item.status === 'active' && item.prizes && item.prizes.length}}" catchtap="onDraw" data-id="{{item._id}}">🎲 开奖</text>
+        <text class="op-btn" wx:if="{{item.winners && item.winners.length > 0}}" catchtap="onViewWinners" data-id="{{item._id}}">🏆 中奖名单</text>
+        <block wx:if="{{item.status === 'active'}}">
+          <text class="op-btn del" catchtap="onCancel" data-id="{{item._id}}">🚫 取消</text>
+        </block>
+        <text class="op-btn del" catchtap="onDelete" data-id="{{item._id}}">🗑 删除</text>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="empty">暂无抽奖活动</view>
+  <view class="load-more" wx:if="{{hasMore}}" bindtap="onLoadMore">加载更多</view>
+</view>
+
+<!-- 发起/编辑弹窗 -->
+<view class="modal" wx:if="{{showForm}}">
+  <view class="modal-content">
+    <text class="modal-title">{{editingId ? '编辑' : '发起'}}抽奖</text>
+    <scroll-view scroll-y style="max-height:70vh;">
+      <text class="form-label">抽奖名称 *</text>
+      <input class="form-input" value="{{form.name}}" data-k="name" bindinput="onInput" placeholder="如：2026北京马拉松抽奖" disabled="{{isEditing}}" />
+
+      <text class="form-label">开始时间</text>
+      <view class="dt-row">
+        <picker mode="date" value="{{form.timeStartDate}}" bindchange="onDate" data-k="timeStartDate">
+          <view class="dt-picker"><text class="{{form.timeStartDate ? '' : 'placeholder'}}">{{form.timeStartDate || '选择日期'}}</text></view>
+        </picker>
+        <text class="dt-sep">-</text>
+        <picker mode="time" value="{{form.timeStartTime}}" bindchange="onDate" data-k="timeStartTime">
+          <view class="dt-picker dt-time"><text>{{form.timeStartTime}}</text></view>
+        </picker>
+      </view>
+
+      <text class="form-label">结束时间 *</text>
+      <view class="dt-row">
+        <picker mode="date" value="{{form.timeEndDate}}" bindchange="onDate" data-k="timeEndDate">
+          <view class="dt-picker"><text class="{{form.timeEndDate ? '' : 'placeholder'}}">{{form.timeEndDate || '选择日期'}}</text></view>
+        </picker>
+        <text class="dt-sep">-</text>
+        <picker mode="time" value="{{form.timeEndTime}}" bindchange="onDate" data-k="timeEndTime">
+          <view class="dt-picker dt-time"><text>{{form.timeEndTime}}</text></view>
+        </picker>
+      </view>
+
+      <text class="form-label">抽奖码数量 *</text>
+      <input class="form-input" value="{{form.codeCount}}" data-k="codeCount" bindinput="onInput" placeholder="生成多少个抽奖码？" type="number" disabled="{{isEditing}}" />
+
+      <!-- 奖品配置 -->
+      <text class="form-label">奖品设置 *</text>
+      <view wx:if="{{isEditing}}">
+        <view class="prize-readonly" wx:for="{{form.prizes}}" wx:key="index">
+          <text class="prize-readonly-item">{{item.name}} × {{item.count}}</text>
+        </view>
+      </view>
+      <view wx:else>
+        <view class="prize-item" wx:for="{{form.prizes}}" wx:key="index">
+          <input class="form-input" style="flex:2;margin-right:12rpx;" placeholder="奖品名称" value="{{item.name}}" data-idx="{{index}}" data-field="name" bindinput="onPrizeInput" />
+          <input class="form-input" style="flex:1;margin-right:12rpx;" placeholder="数量" value="{{item.count}}" data-idx="{{index}}" data-field="count" bindinput="onPrizeInput" type="number" />
+          <text class="field-del" wx:if="{{form.prizes.length > 1}}" catchtap="onDelPrize" data-idx="{{index}}">✕</text>
+        </view>
+        <view class="add-field" bindtap="onAddPrize">+ 添加奖品</view>
+      </view>
+
+      <text class="form-label">说明</text>
+      <textarea class="form-textarea" value="{{form.description}}" data-k="description" bindinput="onInput" placeholder="抽奖活动详情..." disabled="{{isEditing}}" />
+    </scroll-view>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideForm">取消</button>
+      <button class="btn-primary" bindtap="onSave" loading="{{submitting}}">保存</button>
+    </view>
+  </view>
+</view>
+
+<!-- 查看抽奖码弹窗 -->
+<view class="modal" wx:if="{{showCodes}}">
+  <view class="modal-content">
+    <text class="modal-title">抽奖码 ({{codesTotal}}个)</text>
+    <text class="code-summary">已使用 {{codesUsed}} / {{codesTotal}}</text>
+    <view class="copy-btn" bindtap="onCopyCodes">📋 复制全部</view>
+    <scroll-view scroll-y style="max-height:50vh;">
+      <view class="code-grid">
+        <text class="code-item {{item.usedBy ? 'used' : ''}}" wx:for="{{codesList}}" wx:key="code">{{item.code}}{{item.usedBy ? ' ✅' : ''}}</text>
+      </view>
+    </scroll-view>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideCodes">关闭</button>
+    </view>
+  </view>
+</view>

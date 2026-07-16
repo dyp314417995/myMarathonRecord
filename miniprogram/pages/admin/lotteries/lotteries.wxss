@@ -1,0 +1,50 @@
+.top-bar { display: flex; padding: 24rpx; background: #fff; border-bottom: 1rpx solid #eee; }
+.top-bar .btn-primary { flex: 0 0 auto; }
+.lot-list { padding: 0 24rpx; }
+.lot-card { background: #fff; border-radius: 16rpx; margin-top: 24rpx; padding: 28rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06); }
+.lot-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rpx; }
+.lot-name { font-size: 32rpx; font-weight: 600; }
+.lot-info { font-size: 26rpx; color: #999; display: block; margin-bottom: 8rpx; }
+.lot-ops { display: flex; gap: 20rpx; margin-top: 20rpx; flex-wrap: wrap; }
+.op-btn { font-size: 24rpx; color: #1aad19; padding: 8rpx 16rpx; background: #e8f5e9; border-radius: 8rpx; }
+.op-btn.del { color: #ff4d4f; background: #ffebee; }
+
+/* 弹窗 */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.modal-content { background: #fff; border-radius: 20rpx; width: 86%; max-height: 80vh; overflow-y: auto; padding: 32rpx; }
+.modal-title { font-size: 36rpx; font-weight: 600; display: block; margin-bottom: 32rpx; }
+.modal-actions { display: flex; gap: 24rpx; margin-top: 32rpx; }
+.modal-actions button { flex: 1; }
+
+/* 表单 */
+.form-label { font-size: 28rpx; color: #666; margin-bottom: 12rpx; display: block; margin-top: 24rpx; }
+.form-label:first-child { margin-top: 0; }
+.form-input { width: 100%; padding: 22rpx 20rpx; background: #f7f7f7; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; }
+.form-textarea { width: 100%; padding: 22rpx 20rpx; background: #f7f7f7; border-radius: 12rpx; font-size: 28rpx; min-height: 160rpx; box-sizing: border-box; }
+
+/* 日期+时间选择行 */
+.dt-row { display: flex; align-items: center; gap: 12rpx; }
+.dt-picker { flex: 1; padding: 22rpx 20rpx; background: #f7f7f7; border-radius: 12rpx; font-size: 28rpx; text-align: center; }
+.dt-picker .placeholder { color: #bbb; }
+.dt-time { flex: 0 0 auto; min-width: 120rpx; font-family: monospace; font-size: 30rpx; font-weight: 600; color: #333; }
+.dt-sep { color: #ccc; font-size: 28rpx; }
+
+/* 码列表 */
+.code-grid { display: flex; flex-wrap: wrap; gap: 12rpx; margin: 20rpx 0; }
+.code-item { font-size: 24rpx; font-family: monospace; background: #f0f0f0; padding: 10rpx 16rpx; border-radius: 8rpx; }
+.code-item.used { background: #e8f5e9; color: #1aad19; }
+.code-summary { font-size: 26rpx; color: #999; display: block; margin-bottom: 16rpx; }
+.copy-btn { font-size: 24rpx; color: #1aad19; padding: 8rpx 20rpx; background: #e8f5e9; border-radius: 8rpx; display: inline-block; margin-bottom: 20rpx; }
+
+/* 奖品编辑 */
+.prize-item { display: flex; align-items: center; margin-bottom: 16rpx; }
+.field-del { font-size: 28rpx; color: #ff4d4f; padding: 8rpx; flex-shrink: 0; }
+.add-field { font-size: 26rpx; color: #1aad19; padding: 12rpx 0; display: inline-block; }
+
+/* 编辑时只读奖品列表 */
+.prize-readonly { padding: 12rpx 0; }
+.prize-readonly-item { display: block; font-size: 28rpx; color: #666; padding: 8rpx 0; }
+
+/* 中奖名单弹窗 */
+.winner-group { margin-bottom: 20rpx; }
+.winner-group-name { font-size: 30rpx; font-weight: 600; color: #ff6b00; display: block; margin-bottom: 8rpx; }

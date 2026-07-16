@@ -1,0 +1,29 @@
+/* 抽奖详情页 */
+.lottery-page { padding-bottom: 40rpx; }
+.page { padding-bottom: 40rpx; }
+.loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 200rpx 32rpx; }
+.loading-text { color: #999; font-size: 28rpx; }
+.retry-btn { color: #1aad19; font-size: 28rpx; margin-top: 20rpx; padding: 12rpx 32rpx; border: 2rpx solid #1aad19; border-radius: 12rpx; }
+
+.card { background: #fff; border-radius: 12rpx; padding: 24rpx; margin: 12rpx 16rpx; }
+.card-title { font-size: 28rpx; font-weight: 700; color: #333; margin-bottom: 12rpx; display: block; }
+.lot-name { font-size: 36rpx; font-weight: 600; }
+.info-row { font-size: 26rpx; color: #666; display: block; margin-top: 16rpx; }
+.info-row:first-child { margin-top: 0; }
+.desc { font-size: 28rpx; color: #333; line-height: 1.6; white-space: pre-wrap; }
+.detail-img { width: 100%; height: 360rpx; border-radius: 8rpx; margin-bottom: 8rpx; }
+.btn-area { padding: 24rpx; }
+
+.code-input { width: 100%; min-height: 240rpx; padding: 24rpx; background: #f7f7f7; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; font-family: monospace; }
+.code-hint { font-size: 24rpx; color: #999; margin-top: 12rpx; display: block; }
+
+.result-box { margin-top: 24rpx; padding: 24rpx; border-radius: 12rpx; }
+.result-box.success { background: #e8f5e9; }
+.result-box.fail { background: #ffebee; }
+.result-title { font-size: 30rpx; font-weight: 600; margin-bottom: 12rpx; display: block; }
+.result-box.success .result-title { color: #1aad19; }
+.result-box.fail .result-title { color: #f44336; }
+.result-text { font-size: 26rpx; color: #666; display: block; margin-top: 8rpx; }
+
+.my-codes { margin-top: 20rpx; }
+.my-code-item { font-size: 28rpx; font-family: monospace; color: #1aad19; background: #e8f5e9; display: inline-block; padding: 8rpx 20rpx; border-radius: 8rpx; margin: 6rpx; }

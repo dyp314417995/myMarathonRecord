@@ -1,0 +1,96 @@
+<view class="lottery-page">
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <text class="loading-text">加载中...</text>
+  </view>
+  <view wx:elif="{{loadError}}" class="loading-wrap">
+    <text class="loading-text">加载失败</text>
+    <text class="retry-btn" bindtap="loadDetail">点击重试</text>
+  </view>
+  <view wx:elif="{{!lottery}}" class="loading-wrap">
+    <text class="loading-text">暂无数据</text>
+  </view>
+
+  <view wx:elif="{{lottery}}" class="page">
+    <!-- 基本信息 -->
+    <view class="card">
+      <view style="display:flex;align-items:center;justify-content:space-between;">
+        <text class="lot-name">{{lottery.name}}</text>
+        <text class="tag {{lottery.stateTag.cls}}">{{lottery.stateTag.text}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="info-row">🕐 {{lottery._fmtStart || '--'}} ~ {{lottery._fmtEnd || '--'}}</text>
+      <text class="info-row">🎫 共 {{lottery.codeCount}} 个抽奖码 · {{lottery.usedCount}} 人已参与</text>
+      <text class="info-row" wx:if="{{lottery.prizes && lottery.prizes.length}}">
+        🏆 奖品：
+        <text wx:for="{{lottery.prizes}}" wx:key="name" style="margin-right:12rpx;">{{item.name}}×{{item.count}}</text>
+      </text>
+    </view>
+
+    <!-- 中奖结果 -->
+    <view class="card" wx:if="{{lottery.status === 'drawn'}}">
+      <text class="card-title">🎊 开奖结果</text>
+      <view wx:if="{{lottery.isWinner}}" style="text-align:center;padding:20rpx 0;">
+        <text style="font-size:40rpx;color:#ff6b00;font-weight:700;display:block;">恭喜中奖！🎉</text>
+        <text style="font-size:32rpx;color:#1aad19;font-weight:600;display:block;margin-top:12rpx;">
+          奖品：{{lottery.prizeName}}
+        </text>
+      </view>
+      <text wx:else style="font-size:30rpx;color:#999;display:block;text-align:center;padding:20rpx 0;">很遗憾，未中奖</text>
+      <!-- 奖品明细 -->
+      <view wx:for="{{lottery.prizes}}" wx:key="name" style="margin-top:8rpx;font-size:24rpx;color:#999;">
+        <text>{{item.name}} × {{item.count}}</text>
+      </view>
+    </view>
+
+    <!-- 等待开奖 -->
+    <view class="card" wx:elif="{{lottery.status === 'active' && lottery.stateTag.text === '待开奖'}}">
+      <text class="info-row" style="text-align:center;color:#ff9800;padding:20rpx 0;">
+        ⏳ 抽奖已截止，等待管理员开奖...
+      </text>
+    </view>
+
+    <!-- 已取消 -->
+    <view class="card" wx:elif="{{lottery.status === 'cancelled'}}">
+      <text class="info-row" style="text-align:center;color:#999;padding:20rpx 0;">
+        抽奖已取消
+      </text>
+    </view>
+
+    <!-- 图片 -->
+    <view class="card" wx:if="{{lottery.images && lottery.images.length > 0}}">
+      <image wx:for="{{lottery.images}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="detail-img" />
+    </view>
+
+    <!-- 说明 -->
+    <view class="card" wx:if="{{lottery.description}}">
+      <text class="desc">{{lottery.description}}</text>
+    </view>
+
+    <!-- 已使用的码 -->
+    <view class="card" wx:if="{{lottery.myCodes && lottery.myCodes.length > 0}}">
+      <text class="card-title">✅ 已使用的抽奖码</text>
+      <view class="my-codes">
+        <text class="my-code-item" wx:for="{{lottery.myCodes}}" wx:key="*this">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 输入抽奖码 -->
+    <view class="card" wx:if="{{lottery.status === 'active' && lottery.stateTag.text === '进行中'}}">
+      <text class="card-title">输入抽奖码</text>
+      <textarea class="code-input" value="{{codeInput}}" bindinput="onCodeInput" placeholder="每行输入一个抽奖码&#10;支持同时输入多个" maxlength="5000" auto-height />
+      <text class="code-hint">支持多行输入，每行一个抽奖码</text>
+
+      <view class="result-box {{result.type}}" wx:if="{{result.show}}">
+        <text class="result-title">{{result.title}}</text>
+        <text class="result-text" wx:if="{{result.invalid.length}}">无效码：{{result.invalid.join('、')}}</text>
+        <text class="result-text" wx:if="{{result.used.length}}">已被他人使用：{{result.used.join('、')}}</text>
+      </view>
+
+      <view class="btn-area" style="margin-top:24rpx;">
+        <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}">提交抽奖码</button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+{
+  "name": "getLotteries",
+  "version": "1.0.0",
+  "description": "抽奖活动管理 + 抽奖码验证",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

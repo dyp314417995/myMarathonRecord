@@ -4,13 +4,22 @@ Page({
     tab: 'all',
     activities: [],
     myActivities: [],
+    lotteries: [],
+    myLotteries: [],
     // 分页筛选
     allLoaded: [], page: 1, pageSize: 20, hasMore: false,
     filterIdx: 0, filterOptions: ['全部状态', '报名中', '进行中', '已截止', '已完成', '已取消'],
+    // 抽奖分页
+    lotPage: 1, lotHasMore: false, allLotteries: [],
   },
 
-  async onShow() { this.setData({ page: 1, allLoaded: [], hasMore: false }); this.loadData(); },
+  async onShow() {
+    this.setData({ page: 1, allLoaded: [], hasMore: false, lotPage: 1, allLotteries: [] });
+    this.loadData();
+    this.loadLotteries();
+  },
 
+  // ---------- 活动 ----------
   async loadData(isLoadMore = false) {
     if (isLoadMore && !this.data.hasMore) return;
     wx.showLoading({ title: '加载中' });
@@ -34,11 +43,6 @@ Page({
       }
     } catch (e) { console.error(e); }
     wx.hideLoading();
-  },
-
-  onLoadMore() {
-    if (!this.data.hasMore) return;
-    this.setData({ page: this.data.page + 1 }, () => this.loadData(true));
   },
 
   applyFilter() {
@@ -87,6 +91,11 @@ Page({
   onDetail(e) {
     wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}` });
   },
+
+  onLotteryDetail(e) {
+    wx.navigateTo({ url: `/pages/tools/activity/lottery-detail?id=${e.currentTarget.dataset.id}` });
+  },
+
   async onUnregister(e) {
     const id = e.currentTarget.dataset.id;
     const userInfo = wx.getStorageSync('userInfo');
@@ -101,6 +110,35 @@ Page({
     });
   },
 
+  // ---------- 抽奖 ----------
+  async loadLotteries(isLoadMore = false) {
+    if (isLoadMore && !this.data.lotHasMore) return;
+    try {
+      const userInfo = wx.getStorageSync('userInfo');
+      const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
+
+      const res = await wx.cloud.callFunction({
+        name: 'getLotteries',
+        data: { action: 'list', userId, page: this.data.lotPage, pageSize: this.data.pageSize },
+      });
+      const result = res.result || {};
+      const list = result.list || [];
+      const merged = isLoadMore ? [...this.data.allLotteries, ...list] : list;
+      this.setData({ allLotteries: merged, lotHasMore: result.hasMore || false });
+
+      if (userId) {
+        const myRes = await wx.cloud.callFunction({ name: 'getLotteries', data: { action: 'my', userId } });
+        this.setData({ myLotteries: (myRes.result || {}).list || [] });
+      }
+    } catch (e) { console.error(e); }
+  },
+
+  onLotLoadMore() {
+    if (!this.data.lotHasMore) return;
+    this.setData({ lotPage: this.data.lotPage + 1 }, () => this.loadLotteries(true));
+  },
+
+  // ---------- 通用 ----------
   fmtDate(d) {
     const dt = new Date(d);
     const m = dt.getMonth() + 1, day = dt.getDate(), h = dt.getHours(), mi = String(dt.getMinutes()).padStart(2, '0');

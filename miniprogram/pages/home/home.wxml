@@ -117,6 +117,10 @@
         <text class="menu-icon">🎉</text>
         <text class="menu-text">活动管理</text>
       </view>
+      <view class="menu-item card" bindtap="onManageLotteries">
+        <text class="menu-icon">🎰</text>
+        <text class="menu-text">抽奖管理</text>
+      </view>
     </view>
 
     <view class="section-title">我的</view>
@@ -159,6 +163,10 @@
       <view class="menu-item card" bindtap="onManageActivities">
         <text class="menu-icon">🎉</text>
         <text class="menu-text">活动管理</text>
+      </view>
+      <view class="menu-item card" bindtap="onManageLotteries">
+        <text class="menu-icon">🎰</text>
+        <text class="menu-text">抽奖管理</text>
       </view>
     </view>
 
