@@ -16,7 +16,9 @@ function generateCode(len = 8) {
 function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d);
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  // 云函数运行在 UTC 时区，转为北京时间 (UTC+8) 显示
+  const cst = new Date(dt.getTime() + 8 * 3600000);
+  return `${cst.getUTCFullYear()}-${String(cst.getUTCMonth()+1).padStart(2,'0')}-${String(cst.getUTCDate()).padStart(2,'0')} ${String(cst.getUTCHours()).padStart(2,'0')}:${String(cst.getUTCMinutes()).padStart(2,'0')}`;
 }
 
 function computeState(item) {
