@@ -9,7 +9,7 @@
         <text class="lot-name">{{item.name}}</text>
         <text class="tag {{item.stateTag.cls}}">{{item.stateTag.text}}</text>
       </view>
-      <text class="lot-info">🕐 {{item._fmtCreate || '--'}}</text>
+      <text class="lot-info">🕐 {{item._fmtStart || '--'}} ~ {{item._fmtEnd || '--'}}</text>
       <text class="lot-info">🎫 {{item.codeCount}} 个码 · {{item.usedCount || 0}} 人已使用</text>
       <text class="lot-info">🏆 <text wx:for="{{item.prizes}}" wx:key="name">{{item.name}}×{{item.count}} </text></text>
       <view class="lot-ops">
@@ -102,6 +102,25 @@
     </scroll-view>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideCodes">关闭</button>
+    </view>
+  </view>
+</view>
+
+<!-- 中奖名单弹窗 -->
+<view class="modal" wx:if="{{showWinners}}">
+  <view class="modal-content">
+    <text class="modal-title">🏆 {{winnerTitle}}</text>
+    <scroll-view scroll-y style="max-height:60vh;">
+      <view class="winner-group" wx:for="{{winnerList}}" wx:key="name">
+        <text class="winner-prize">{{item.name}}（{{item.count}}人）</text>
+        <view class="winner-user" wx:for="{{item.users}}" wx:key="userId">
+          <text class="winner-name">{{item.userName}}</text>
+          <text wx:if="{{item.winningCode}}" class="winner-code">码：{{item.winningCode}}</text>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideWinners">关闭</button>
     </view>
   </view>
 </view>

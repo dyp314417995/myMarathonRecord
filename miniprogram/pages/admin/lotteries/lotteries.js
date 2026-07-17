@@ -162,6 +162,13 @@ Page({
 
     const buildDT = (date, time) => date ? new Date(date + ' ' + (time || '00:00')) : null;
 
+    const timeNow = new Date();
+    const startTime = buildDT(f.timeStartDate, f.timeStartTime);
+    const endTime = buildDT(f.timeEndDate, f.timeEndTime);
+
+    if (startTime && startTime < timeNow) return wx.showToast({ title: '开始时间不能早于当前时间', icon: 'none' });
+    if (endTime && startTime && endTime <= startTime) return wx.showToast({ title: '结束时间必须晚于开始时间', icon: 'none' });
+
     if (this.data.editingId) {
       // 编辑：只修改时间 + 名称/说明
       const data = {
@@ -310,20 +317,46 @@ Page({
     });
   },
 
-  onViewWinners(e) {
+  async onViewWinners(e) {
     const item = this.data.lotteries.find(x => x._id === e.currentTarget.dataset.id);
     if (!item || !item.winners || !item.winners.length) {
       return wx.showToast({ title: '暂无中奖信息', icon: 'none' });
     }
-    const groups = {};
+
+    // 加载用户昵称
+    const db = wx.cloud.database();
+    const _ = db.command;
+    const userIds = [...new Set(item.winners.map(w => w.userId))];
+    const userMap = {};
+    try {
+      const userRes = await db.collection('users')
+        .where({ _id: _.in(userIds) })
+        .field({ _id: true, nickName: true })
+        .get();
+      userRes.data.forEach(u => { userMap[u._id] = u.nickName || '未知'; });
+    } catch (e) { console.error(e); }
+
+    // 按奖品分组展示
+    const prizeGroups = {};
     item.winners.forEach(w => {
-      if (!groups[w.prizeName]) groups[w.prizeName] = [];
-      groups[w.prizeName].push(w.userId);
+      if (!prizeGroups[w.prizeName]) prizeGroups[w.prizeName] = [];
+      prizeGroups[w.prizeName].push({
+        userId: w.userId,
+        userName: userMap[w.userId] || '未知',
+        winningCode: w.winningCode || '',
+      });
     });
+
+    const winnerList = Object.entries(prizeGroups).map(([name, users]) => ({
+      name,
+      count: users.length,
+      users,
+    }));
+
     this.setData({
       showWinners: true,
       winnerTitle: `${item.winners.length} 人中奖`,
-      winnerList: Object.entries(groups).map(([name, ids]) => ({ name, count: ids.length })),
+      winnerList,
     });
   },
 

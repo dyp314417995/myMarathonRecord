@@ -38,6 +38,17 @@ Page({
       const lot = res.result;
       if (!lot || lot.error) throw new Error(lot ? lot.error : '抽奖不存在');
 
+      // 标记哪个码是中奖码（兼容已转换和未转换的格式）
+      if (lot.myCodes && lot.myCodes.length) {
+        const isObj = typeof lot.myCodes[0] === 'object';
+        if (!isObj) {
+          lot.myCodes = lot.myCodes.map(c => ({
+            code: c,
+            isWinner: !!(lot.winningCode && c === lot.winningCode),
+          }));
+        }
+      }
+
       this.setData({
         lottery: lot,
         loading: false,

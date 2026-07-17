@@ -27,3 +27,4 @@
 
 .my-codes { margin-top: 20rpx; }
 .my-code-item { font-size: 28rpx; font-family: monospace; color: #1aad19; background: #e8f5e9; display: inline-block; padding: 8rpx 20rpx; border-radius: 8rpx; margin: 6rpx; }
+.my-code-item.winner { background: #fff3e0; color: #ff6b00; border: 2rpx solid #ff6b00; font-weight: 700; }

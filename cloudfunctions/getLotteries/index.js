@@ -62,9 +62,22 @@ async function performDraw(lottery) {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     const winnerCount = Math.min(shuffled.length, slots.length);
-    winners = shuffled.slice(0, winnerCount).map((uid, idx) => ({
-      userId: uid, prizeName: slots[idx].prizeName,
-    }));
+    // 为每个中奖者随机选一个他提交的抽奖码作为中奖码
+    const selectedUsers = shuffled.slice(0, winnerCount);
+    winners = [];
+    for (let idx = 0; idx < selectedUsers.length; idx++) {
+      const uid = selectedUsers[idx];
+      let winningCode = '';
+      try {
+        const cRes = await db.collection('lottery_codes')
+          .where({ lotteryId: lottery._id, usedBy: uid })
+          .field({ code: true })
+          .get();
+        const codes = cRes.data.map(c => c.code);
+        if (codes.length > 0) winningCode = codes[Math.floor(Math.random() * codes.length)];
+      } catch (e) {}
+      winners.push({ userId: uid, prizeName: slots[idx].prizeName, winningCode });
+    }
   }
 
   // 条件更新：只有 status 仍为 active 时才执行，避免重复开奖
@@ -192,10 +205,20 @@ exports.main = async (event) => {
     // 取 min(参与人数, 总奖品数) 个获奖者，按顺序分配奖品
     const winnerCount = Math.min(shuffled.length, slots.length);
     const selected = shuffled.slice(0, winnerCount);
-    const winners = selected.map((uid, idx) => ({
-      userId: uid,
-      prizeName: slots[idx].prizeName,
-    }));
+    const winners = [];
+    for (let idx = 0; idx < selected.length; idx++) {
+      const uid = selected[idx];
+      let winningCode = '';
+      try {
+        const cRes = await db.collection('lottery_codes')
+          .where({ lotteryId: id, usedBy: uid })
+          .field({ code: true })
+          .get();
+        const codes = cRes.data.map(c => c.code);
+        if (codes.length > 0) winningCode = codes[Math.floor(Math.random() * codes.length)];
+      } catch (e) {}
+      winners.push({ userId: uid, prizeName: slots[idx].prizeName, winningCode });
+    }
 
     await db.collection('lotteries').doc(id).update({
       data: { status: 'drawn', winners, drawAt: db.serverDate() },
@@ -261,6 +284,7 @@ exports.main = async (event) => {
       await autoDrawIfExpired(item);
       const state = computeState(item);
       const prizeName = getUserPrize(item.winners, userId);
+      const myWinner = (item.winners || []).find(w => w.userId === userId);
       list.push({
         _id: item._id,
         name: item.name,
@@ -270,6 +294,7 @@ exports.main = async (event) => {
         stateTag: state,
         isWinner: !!prizeName,
         prizeName,
+        winningCode: myWinner ? (myWinner.winningCode || '') : '',
         _fmtStart: fmtDate(item.timeStart),
       });
     }
@@ -294,10 +319,16 @@ exports.main = async (event) => {
       .where({ lotteryId: id, usedBy: _.neq(null) }).count();
 
     let myCodes = [];
+    let winningCode = '';
     if (userId) {
       const myRes = await db.collection('lottery_codes')
         .where({ lotteryId: id, usedBy: userId }).get();
       myCodes = myRes.data.map(c => c.code);
+      // 从中奖记录中找到该用户的中奖码
+      const myWinner = (item.winners || []).find(w => w.userId === userId);
+      if (myWinner && myWinner.winningCode) {
+        winningCode = myWinner.winningCode;
+      }
     }
 
     const state = computeState(item);
@@ -320,6 +351,7 @@ exports.main = async (event) => {
       myCodes,
       isWinner: !!prizeName,
       prizeName,
+      winningCode,
       _fmtStart: fmtDate(item.timeStart),
       _fmtEnd: fmtDate(item.timeEnd),
     };

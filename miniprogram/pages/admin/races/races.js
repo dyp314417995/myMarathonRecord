@@ -613,6 +613,8 @@ Page({
     if (!f.name.trim()) return wx.showToast({ title: '请输入赛事名称', icon: 'none' });
     if (this.data.nameDupStatus === 'dup') return wx.showToast({ title: '同名赛事已存在，请修改名称', icon: 'none' });
     if (!f.date) return wx.showToast({ title: '请选择鸣枪开跑日期', icon: 'none' });
+    const raceDate = new Date(f.date);
+    if (raceDate < new Date(new Date().toDateString())) return wx.showToast({ title: '赛事日期不能早于今天', icon: 'none' });
     wx.showLoading({ title: '保存中' });
 
     // 海报使用 posters 数组

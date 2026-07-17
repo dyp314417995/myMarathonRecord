@@ -36,6 +36,9 @@
         <text style="font-size:32rpx;color:#1aad19;font-weight:600;display:block;margin-top:12rpx;">
           奖品：{{lottery.prizeName}}
         </text>
+        <text wx:if="{{lottery.winningCode}}" style="font-size:26rpx;color:#ff6b00;display:block;margin-top:8rpx;">
+          中奖码：<text style="font-family:monospace;font-weight:700;background:#fff3e0;padding:4rpx 12rpx;border-radius:6rpx;">{{lottery.winningCode}}</text>
+        </text>
       </view>
       <text wx:else style="font-size:30rpx;color:#999;display:block;text-align:center;padding:20rpx 0;">很遗憾，未中奖</text>
       <!-- 奖品明细 -->
@@ -65,7 +68,7 @@
     <view class="card" wx:if="{{lottery.myCodes && lottery.myCodes.length > 0}}">
       <text class="card-title">✅ 已使用的抽奖码</text>
       <view class="my-codes">
-        <text class="my-code-item" wx:for="{{lottery.myCodes}}" wx:key="*this">{{item}}</text>
+        <text class="my-code-item {{item.isWinner ? 'winner' : ''}}" wx:for="{{lottery.myCodes}}" wx:key="code">{{item.code}}<text wx:if="{{item.isWinner}}" style="color:#ff6b00;font-weight:700;"> ⭐中奖</text></text>
       </view>
     </view>
 

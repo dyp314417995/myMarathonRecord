@@ -26,7 +26,10 @@ Page({
       const res = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'all', skip, limit: this.data.pageSize } });
       const result = res.result || {};
       const list = result.list || [];
-      list.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
+      list.forEach(item => {
+        item._fmtStart = this.fmtDate(item.timeStart);
+        item._fmtEnd = item.timeEnd ? this.fmtDate(item.timeEnd) : '';
+      });
       const merged = isLoadMore ? [...this.data.allLoaded, ...list] : list;
       this.setData({ allLoaded: merged, hasMore: result.hasMore || false });
       this.applyFilter();
@@ -227,6 +230,18 @@ Page({
     if (!f.timeStartDate) return wx.showToast({ title: '请选择开始日期', icon: 'none' });
     if (!f.timeStartTime) return wx.showToast({ title: '请选择开始时间', icon: 'none' });
 
+    const buildDateTime = (date, time) => {
+      if (!date) return null;
+      const d = date + ' ' + (time || '00:00');
+      return new Date(d);
+    };
+    const startTime = buildDateTime(f.timeStartDate, f.timeStartTime);
+    const endTime = buildDateTime(f.timeEndDate, f.timeEndTime);
+    const timeNow = new Date();
+
+    if (startTime && startTime < timeNow) return wx.showToast({ title: '开始时间不能早于当前时间', icon: 'none' });
+    if (endTime && startTime && endTime <= startTime) return wx.showToast({ title: '结束时间必须晚于开始时间', icon: 'none' });
+
     this.setData({ submitting: true });
     wx.showLoading({ title: '保存中' });
 
@@ -240,11 +255,6 @@ Page({
       } catch {}
     }
 
-    const buildDateTime = (date, time) => {
-      if (!date) return null;
-      const d = date + ' ' + (time || '00:00');
-      return new Date(d);
-    };
     const data = {
       name: f.name.trim(),
       timeStart: buildDateTime(f.timeStartDate, f.timeStartTime),
