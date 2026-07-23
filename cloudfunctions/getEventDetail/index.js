@@ -1,4 +1,4 @@
-// 云函数 getEventDetail - 查询单条赛事详情 + 评分统计 + 用户标记/评价
+// 云函数 getEventDetail - 查询单条赛事详情 + 评分统计 + 用户标记/评价（优化版）
 const cloud = require('wx-server-sdk');
 cloud.init();
 const db = cloud.database();
@@ -22,10 +22,14 @@ exports.main = async (event) => {
     const grpRes = await db.collection('race_events').where({ raceGroup }).get();
     groupEventIds = grpRes.data.map(e => e._id);
 
-    const revRes = await db.collection('race_reviews').where(_.or([
-      { raceGroup, status: 'approved' },
-      { eventId: _.in(groupEventIds), status: 'approved' }
-    ])).get();
+    // 优化：只查询需要的字段（scores, raceType, tags），减少数据传输
+    const revRes = await db.collection('race_reviews')
+      .where(_.or([
+        { raceGroup, status: 'approved' },
+        { eventId: _.in(groupEventIds), status: 'approved' }
+      ]))
+      .field({ scores: 1, raceType: 1, tags: 1 })  // 只取需要的字段
+      .get();
     const revs = revRes.data;
 
     if (revs.length) {
@@ -72,19 +76,18 @@ exports.main = async (event) => {
     }
   }
 
-  // 3. 查用户标记和评价
+  // 3. 查询用户标记和评价（并行执行）
   let myMarker = null;
   let myReview = null;
   if (userId) {
     try {
-      const mkRes = await db.collection('race_markers').where({ userId, eventId }).limit(1).get();
+      const [mkRes, rvRes] = await Promise.all([
+        db.collection('race_markers').where({ userId, eventId }).limit(1).get(),
+        db.collection('race_reviews').where({ userId, eventId }).limit(1).get(),
+      ]);
       myMarker = mkRes.data[0] || null;
-    } catch (e) { console.warn('getEventDetail markers:', e); }
-
-    try {
-      const rvRes = await db.collection('race_reviews').where({ userId, eventId }).limit(1).get();
       myReview = rvRes.data[0] || null;
-    } catch (e) { console.warn('getEventDetail reviews:', e); }
+    } catch (e) { console.warn('getEventDetail user data:', e); }
   }
 
   return { event: evt, reviewStats, myMarker, myReview };

@@ -7,9 +7,7 @@ Page({
     races: [],
     allRaces: [],
     allTags: [],           // 所有可用标签
-    myMarkers: {},         // eventId -> markerStatus
-    myMarkersData: {},     // eventId -> full marker data (with notifyEnabled)
-    myReviewIds: {},       // eventId -> true (用户评价过的赛事)
+    // 标记/评价状态由云函数 getRaceEvents 返回（不再需要客户端额外请求）
     sortBy: 'date',        // date | score | difficulty | atmosphere | supply | transport | scenery | org | medal | value
     sortAsc: true,   // 默认时间从近到远
     tagFilter: '',
@@ -123,14 +121,7 @@ Page({
       races.forEach(r => (r.tags || []).forEach(t => tagSet.add(t)));
       const allTags = [...tagSet];
 
-      // 评分已由云函数批量返回
-      const reviewMap = {};
-      races.forEach(r => { if (r.reviewStats) reviewMap[r._id] = r.reviewStats; });
-
-      if (userId) {
-        try { const mkRes = await raceUtil.getMyMarkers(userId); const mMap = {}; const mData = {}; mkRes.data.forEach(m => { mMap[m.eventId] = m.status; mData[m.eventId] = m; }); this.setData({ myMarkers: mMap, myMarkersData: mData }); } catch {}
-        try { const rvMap = {}; const allRv = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', userId } }); (allRv.result||[]).forEach(r => { rvMap[r.eventId] = true; }); this.setData({ myReviewIds: rvMap }); } catch {}
-      }
+      // 标记/评价状态已由云函数批量返回（myMarkInfo / hasReviewed）
 
       // 兼容旧标签名
       races.forEach(r => {
@@ -146,9 +137,9 @@ Page({
         raceTypeName: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('·'),
         countdown: this.calcCountdown(r.date, r.timeline, r.gunTimes),
         _nearestMs: this.getNearestMs(r, now),
-        isMine: !!this.data.myMarkers[r._id],
-        myStatus: this.data.myMarkers[r._id] || '',
-        myNotify: (this.data.myMarkersData[r._id] && this.data.myMarkersData[r._id].notifyEnabled) || false,
+        isMine: r.isMarked || false,
+        myStatus: r.myStatus || '',
+        myNotify: r.myNotify || false,
         regNotOpen: this.isRegNotOpen(r.timeline),  // 报名未开启
         // 列表卡片：单赛事统计；详情页：赛事组统计
         avgScore: r.avgScore || 0,
@@ -330,7 +321,7 @@ Page({
   onShowMark(e) {
     const id = e.currentTarget.dataset.id;
     const event = this.data.allRaces.find(r => r._id === id) || {};
-    const existingMarker = this.data.myMarkersData ? this.data.myMarkersData[id] : null;
+    const existingMarker = event.myMarkInfo || null;
     // 根据赛事类型设完赛时间默认值
     const primaryType = (event.raceTypes || [event.raceType || 'full'])[0];
     const defaults = { full: { h: 3, m: 30, s: 0 }, half: { h: 2, m: 0, s: 0 }, '10k': { h: 0, m: 50, s: 0 }, trail: { h: 3, m: 30, s: 0 } };
@@ -339,7 +330,7 @@ Page({
       showForm: true, markingEventId: id, markingEventName: event.name || '',
       markingEvent: event,
       markRaceType: (event.raceTypes || ['full'])[0] || 'full',
-      selectedStatus: this.data.myMarkers[id] || 'planned',
+      selectedStatus: event.myStatus || 'planned',
       raceHIdx: d.h, raceMIdx: d.m, raceSIdx: d.s,
       notifyEnabled: existingMarker ? existingMarker.notifyEnabled || false : false,
     });

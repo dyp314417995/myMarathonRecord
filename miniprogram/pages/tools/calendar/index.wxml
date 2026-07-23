@@ -77,7 +77,7 @@
         <view class="race-name-row">
           <text class="race-name">{{item.name}}</text>
           <text class="tag tag-green" wx:if="{{item.isMine && tab !== 'mine'}}">我的</text>
-          <text class="tag tag-blue" wx:if="{{myReviewIds[item._id]}}">已评价</text>
+          <text class="tag tag-blue" wx:if="{{item.hasReviewed}}">已评价</text>
           <text class="tag tag-orange" wx:if="{{item.regNotOpen}}">未开启报名</text>
         </view>
         <text class="countdown">{{item.countdown}}</text>
@@ -160,7 +160,7 @@
     <text class="notify-hint" wx:if="{{notifyEnabled}}">将在每个时间节点前一天推送通知</text>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideForm">取消</button>
-      <button wx:if="{{!myMarkers[markingEventId]}}" class="btn-primary" bindtap="onMark">确认标记</button>
+      <button wx:if="{{!markingEvent.myMarkInfo}}" class="btn-primary" bindtap="onMark">确认标记</button>
       <block wx:else>
         <button class="btn-primary" bindtap="onMark">更新状态</button>
         <button class="btn-reject" bindtap="onUnmark">取消标记</button>
