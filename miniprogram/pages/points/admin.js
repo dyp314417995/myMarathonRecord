@@ -29,6 +29,16 @@ Page({
     isMulti: false,
     showUserPicker: false,
     userFilter: '',
+    // 规则编辑表单
+    showRuleForm: false,
+    editingRuleId: '',
+    ruleForm: { name: '', category: '', points: '', minPoints: '', maxPoints: '', period: '', limitCount: '', status: 'active' },
+    periodOptions: [
+      { v: '', t: '不限制' },
+      { v: 'day', t: '每天' },
+      { v: 'week', t: '每周' },
+      { v: 'month', t: '每月' },
+    ],
   },
 
   async onShow() {
@@ -65,7 +75,11 @@ Page({
   // ========== 规则 ==========
   async loadRules() {
     const res = await pointsUtil.getRules();
-    this.setData({ rules: res.data });
+    const rules = (res.data || []).map(r => ({
+      ...r,
+      limitText: pointsUtil.getRuleLimitText(r),
+    }));
+    this.setData({ rules });
   },
 
   async onToggleRuleStatus(e) {
@@ -73,6 +87,124 @@ Page({
     const newStatus = status === 'active' ? 'disabled' : 'active';
     await pointsUtil.updateRule(id, { status: newStatus });
     this.loadRules();
+  },
+
+  // 新增规则
+  onAddRule() {
+    this.setData({
+      showRuleForm: true,
+      editingRuleId: '',
+      ruleForm: { name: '', category: '', points: '', minPoints: '', maxPoints: '', period: '', limitCount: '', status: 'active' },
+    });
+  },
+
+  // 编辑规则
+  onEditRule(e) {
+    const r = this.data.rules.find(x => x._id === e.currentTarget.dataset.id);
+    if (!r) return;
+    this.setData({
+      showRuleForm: true,
+      editingRuleId: r._id,
+      ruleForm: {
+        name: r.name || '',
+        category: r.category || '',
+        points: String(r.points != null ? r.points : ''),
+        minPoints: String(r.minPoints != null ? r.minPoints : ''),
+        maxPoints: String(r.maxPoints != null ? r.maxPoints : ''),
+        period: r.period || (r.monthlyLimit ? 'month' : ''),
+        limitCount: String(r.limitCount || r.monthlyLimit || ''),
+        status: r.status || 'active',
+      },
+    });
+  },
+
+  onHideRuleForm() { this.setData({ showRuleForm: false }); },
+
+  onRuleInput(e) {
+    const k = e.currentTarget.dataset.k;
+    this.setData({ ['ruleForm.' + k]: e.detail.value });
+  },
+
+  onRulePeriod(e) {
+    this.setData({ 'ruleForm.period': e.currentTarget.dataset.v });
+  },
+
+  onRuleStatus(e) {
+    this.setData({ 'ruleForm.status': e.currentTarget.dataset.v });
+  },
+
+  async onSaveRule() {
+    const f = this.data.ruleForm;
+    if (!f.name.trim()) return wx.showToast({ title: '请填写规则名称', icon: 'none' });
+    if (!f.category.trim()) return wx.showToast({ title: '请填写分类名称', icon: 'none' });
+    const points = parseInt(f.points, 10);
+    if (isNaN(points) || points <= 0) return wx.showToast({ title: '请填写有效积分值', icon: 'none' });
+    let limitCount = 0;
+    if (f.period) {
+      limitCount = parseInt(f.limitCount, 10);
+      if (isNaN(limitCount) || limitCount < 1 || limitCount > 10) {
+        return wx.showToast({ title: '次数限制需在1~10之间', icon: 'none' });
+      }
+    }
+    let minPoints = 0, maxPoints = 0;
+    if (f.minPoints || f.maxPoints) {
+      minPoints = parseInt(f.minPoints, 10);
+      maxPoints = parseInt(f.maxPoints, 10);
+      if (isNaN(minPoints) || isNaN(maxPoints) || minPoints < 1 || maxPoints < minPoints) {
+        return wx.showToast({ title: '随机范围不合法（最大值需大于等于最小值）', icon: 'none' });
+      }
+    }
+    const data = {
+      name: f.name.trim(),
+      category: f.category.trim(),
+      points,
+      minPoints: minPoints || 0,
+      maxPoints: maxPoints || 0,
+      period: f.period,
+      limitCount: f.period ? limitCount : 0,
+      status: f.status,
+    };
+    wx.showLoading({ title: '保存中' });
+    try {
+      if (this.data.editingRuleId) {
+        await pointsUtil.updateRule(this.data.editingRuleId, data);
+      } else {
+        // 同名分类不允许重复
+        const dup = this.data.rules.find(r => r.category === data.category && r._id !== this.data.editingRuleId);
+        if (dup) {
+          wx.hideLoading();
+          return wx.showToast({ title: '分类名称已存在', icon: 'none' });
+        }
+        await pointsUtil.addRule(data);
+      }
+      wx.hideLoading();
+      wx.showToast({ title: '保存成功', icon: 'success' });
+      this.setData({ showRuleForm: false });
+      this.loadRules();
+    } catch (err) {
+      wx.hideLoading();
+      wx.showToast({ title: '保存失败', icon: 'none' });
+    }
+  },
+
+  async onDeleteRule(e) {
+    const id = e.currentTarget.dataset.id;
+    const r = this.data.rules.find(x => x._id === id);
+    wx.showModal({
+      title: '删除规则',
+      content: '确定删除“' + (r ? r.name : '') + '”？删除后无法恢复。',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await pointsUtil.deleteRule(id);
+          wx.showToast({ title: '已删除', icon: 'success' });
+          this.loadRules();
+        } catch (err) {
+          wx.showToast({ title: '删除失败', icon: 'none' });
+        }
+      },
+    });
   },
 
   // ========== 审批 ==========

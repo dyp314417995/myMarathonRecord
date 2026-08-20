@@ -181,11 +181,12 @@ Page({
           data: { ...updateData, eventId: this.data.eventId, userId: userInfo._id, raceGroup: this.data.raceGroup, status: 'approved', createTime: new Date() }
         });
 
+        const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励', 10);
         await pointsUtil.addRecord({
           userId: userInfo._id,
           type: 'earn',
           category: '赛事评分奖励',
-          points: 10,
+          points: reviewPoints,
           description: `赛事"${this.data.eventName}"体验评分奖励`,
           images: [],
           earnDate: new Date(),
@@ -203,7 +204,7 @@ Page({
       });
 
       wx.hideLoading();
-      wx.showToast({ title: this.data.isEdit ? '已更新' : '提交成功，+10积分', icon: 'success' });
+      wx.showToast({ title: this.data.isEdit ? '已更新' : '提交成功，+' + reviewPoints + '积分', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();
@@ -214,9 +215,10 @@ Page({
   },
 
   async onDelete() {
+    const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励', 10);
     wx.showModal({
       title: '删除评价',
-      content: '将扣除10积分，重新评价可再获得积分',
+      content: '将扣除' + reviewPoints + '积分，重新评价可再获得积分',
       confirmColor: '#ff4d4f',
       success: async (res) => {
         if (!res.confirm) return;
@@ -227,8 +229,8 @@ Page({
 
         if (userInfo) {
           await pointsUtil.addRecord({
-            userId: userInfo._id, type: 'use', category: '消耗', points: -10,
-            description: `删除"${this.data.eventName}"评价，扣减10积分`,
+            userId: userInfo._id, type: 'use', category: '消耗', points: -reviewPoints,
+            description: `删除"${this.data.eventName}"评价，扣减${reviewPoints}积分`,
             images: [], earnDate: new Date(), expireDate: null, status: 'approved',
           });
           const balance = await pointsUtil.getBalance(userInfo._id);
@@ -242,7 +244,7 @@ Page({
           data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
         });
 
-        wx.showToast({ title: '已删除，-10积分', icon: 'success' });
+        wx.showToast({ title: '已删除，-' + reviewPoints + '积分', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 1500);
       }
     });

@@ -499,7 +499,8 @@ Page({
 
   async onDelMyReview(e) {
     const id = e.currentTarget.dataset.id;
-    wx.showModal({ title: '删除评价', content: '将同时扣除10积分，之后重新评价可再次获得积分', confirmColor: '#ff4d4f', success: async (res) => {
+    const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励', 10);
+    wx.showModal({ title: '删除评价', content: '将同时扣除' + reviewPoints + '积分，之后重新评价可再次获得积分', confirmColor: '#ff4d4f', success: async (res) => {
       if (!res.confirm) return;
       const db = require('../../../utils/db').db;
       const userInfo = wx.getStorageSync('userInfo');
@@ -515,8 +516,8 @@ Page({
           userId: userInfo._id,
           type: 'use',
           category: '消耗',
-          points: -10,
-          description: `删除"${this.data.event.name}"赛事评价，扣减10积分`,
+          points: -reviewPoints,
+          description: `删除"${this.data.event.name}"赛事评价，扣减${reviewPoints}积分`,
           images: [],
           earnDate: new Date(),
           expireDate: null,
@@ -536,7 +537,7 @@ Page({
         data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
       });
 
-      wx.showToast({ title: '已删除，-10积分', icon: 'success' });
+      wx.showToast({ title: '已删除，-' + reviewPoints + '积分', icon: 'success' });
       this.setData({ myReview: null, myStatus: '', isMine: false });
       this.loadEvent();
     }});

@@ -10,17 +10,72 @@
 
   <!-- 规则管理 -->
   <block wx:if="{{tab === 'rules'}}">
+    <view wx:if="{{isSuperAdmin}}" class="rule-add-btn" bindtap="onAddRule">+ 新增规则</view>
     <view wx:for="{{rules}}" wx:key="_id" class="card rule-card">
       <view class="rule-row">
         <view class="rule-info">
           <text class="rule-name">{{item.name}}</text>
-          <text class="rule-meta">+{{item.points}}分{{item.monthlyLimit ? '，月上限'+item.monthlyLimit : ''}}</text>
+          <text class="rule-meta">+{{item.points}}分{{item.limitText ? ' · ' + item.limitText : ''}}</text>
         </view>
-        <text wx:if="{{isSuperAdmin}}"
-              class="rule-status {{item.status === 'active' ? 'on' : 'off'}}"
-              data-id="{{item._id}}" data-status="{{item.status}}"
-              bindtap="onToggleRuleStatus">{{item.status === 'active' ? '已启用' : '已禁用'}}</text>
+        <view class="rule-ops" wx:if="{{isSuperAdmin}}">
+          <text class="rule-op" data-id="{{item._id}}" bindtap="onEditRule">编辑</text>
+          <text class="rule-op del" data-id="{{item._id}}" bindtap="onDeleteRule">删除</text>
+          <text class="rule-status {{item.status === 'active' ? 'on' : 'off'}}"
+                data-id="{{item._id}}" data-status="{{item.status}}"
+                bindtap="onToggleRuleStatus">{{item.status === 'active' ? '已启用' : '已禁用'}}</text>
+        </view>
         <text wx:else class="rule-status {{item.status === 'active' ? 'on' : 'off'}}">{{item.status === 'active' ? '已启用' : '已禁用'}}</text>
+      </view>
+    </view>
+
+    <!-- 规则编辑弹窗 -->
+    <view class="modal-mask" wx:if="{{showRuleForm}}" catchtap="onHideRuleForm"></view>
+    <view class="modal-box rule-modal" wx:if="{{showRuleForm}}">
+      <text class="modal-title">{{editingRuleId ? '编辑规则' : '新增规则'}}</text>
+      <scroll-view scroll-y style="flex:1;">
+        <view class="form-group">
+          <text class="form-label">规则名称 *</text>
+          <input class="form-input" placeholder="如：邀请跑友加入" value="{{ruleForm.name}}" data-k="name" bindinput="onRuleInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">分类名称 *（用于提交选择和统计）</text>
+          <input class="form-input" placeholder="如：拉新" value="{{ruleForm.category}}" data-k="category" bindinput="onRuleInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">积分值 *</text>
+          <input class="form-input" type="number" placeholder="正整数" value="{{ruleForm.points}}" data-k="points" bindinput="onRuleInput" />
+        </view>
+        <view class="form-group" wx:if="{{ruleForm.category === '注册赠送'}}">
+          <text class="form-label">注册赠送随机范围（可选，填写后每次注册赠送在该区间内随机，抢红包效果）</text>
+          <view class="rule-range-row">
+            <input class="form-input" type="number" placeholder="最小值" value="{{ruleForm.minPoints}}" data-k="minPoints" bindinput="onRuleInput" />
+            <text class="rule-range-sep">~</text>
+            <input class="form-input" type="number" placeholder="最大值" value="{{ruleForm.maxPoints}}" data-k="maxPoints" bindinput="onRuleInput" />
+          </view>
+        </view>
+        <view class="form-group">
+          <text class="form-label">提交周期</text>
+          <view class="rule-period-row">
+            <text wx:for="{{periodOptions}}" wx:key="v"
+                  class="rule-period {{ruleForm.period === item.v ? 'on' : ''}}"
+                  data-v="{{item.v}}" bindtap="onRulePeriod">{{item.t}}</text>
+          </view>
+        </view>
+        <view class="form-group" wx:if="{{ruleForm.period}}">
+          <text class="form-label">次数限制（1~10）</text>
+          <input class="form-input" type="number" placeholder="如：4" value="{{ruleForm.limitCount}}" data-k="limitCount" bindinput="onRuleInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">状态</text>
+          <view class="rule-period-row">
+            <text class="rule-period {{ruleForm.status === 'active' ? 'on' : ''}}" data-v="active" bindtap="onRuleStatus">启用</text>
+            <text class="rule-period {{ruleForm.status === 'disabled' ? 'on' : ''}}" data-v="disabled" bindtap="onRuleStatus">禁用</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="rule-modal-actions">
+        <button class="btn-outline" bindtap="onHideRuleForm" style="flex:1;">取消</button>
+        <button class="btn-primary" bindtap="onSaveRule" style="flex:1; margin-left:20rpx;">保存</button>
       </view>
     </view>
   </block>

@@ -9,8 +9,9 @@ Page({
     description: '',
     images: [],
     quantity: 1,
-    monthlyCount: 0,
-    monthlyLimit: 0,
+    usedCount: 0,
+    limitCount: 0,
+    periodText: '',
     submitting: false,
     userId: '',
     isAdmin: false,
@@ -28,7 +29,7 @@ Page({
       if (r.category === '集体活动') return false;
       if (r.category === '赛事评分奖励') return false;
       return true;
-    });
+    }).map(r => ({ ...r, limitText: pointsUtil.getRuleLimitText(r) }));
     this.setData({ rules: userRules });
   },
 
@@ -36,7 +37,7 @@ Page({
     const cat = e.currentTarget.dataset.cat;
     const rule = this.data.rules.find(r => r.category === cat);
     this.setData({ selectedCat: cat, quantity: 1, selectedPoints: rule ? rule.points : 3 });
-    if (cat !== '拉新' && cat !== '自媒体') this.loadMonthlyCount(cat);
+    this.loadRuleLimit(cat);
   },
 
   onQtyDown() {
@@ -51,10 +52,16 @@ Page({
     this.setData({ quantity: quantity + 1 });
   },
 
-  async loadMonthlyCount(cat) {
+  async loadRuleLimit(cat) {
     const rule = this.data.rules.find(r => r.category === cat);
-    const count = await pointsUtil.getMonthlyCount(this.data.userId, cat);
-    this.setData({ monthlyCount: count, monthlyLimit: rule ? rule.monthlyLimit : 0 });
+    const { period, limitCount } = pointsUtil.parseRuleLimit(rule);
+    if (!period || !limitCount) {
+      this.setData({ usedCount: 0, limitCount: 0, periodText: '' });
+      return;
+    }
+    const used = await pointsUtil.getPeriodCount(this.data.userId, cat, period);
+    const pText = { day: '今天', week: '本周', month: '本月' }[period] || '';
+    this.setData({ usedCount: used, limitCount, periodText: pText });
   },
 
   onDescInput(e) {
@@ -79,10 +86,12 @@ Page({
   },
 
   async onSubmit() {
-    const { selectedCat, description, images, submitting, monthlyCount, monthlyLimit, quantity } = this.data;
+    const { selectedCat, description, images, submitting, usedCount, limitCount, quantity } = this.data;
     if (submitting) return;
     if (!selectedCat) return wx.showToast({ title: '请选择类型', icon: 'none' });
-    if (selectedCat !== '拉新' && selectedCat !== '自媒体' && monthlyLimit && monthlyCount >= monthlyLimit) return wx.showToast({ title: '本月已达上限', icon: 'none' });
+    if (limitCount && usedCount >= limitCount) {
+      return wx.showToast({ title: (this.data.periodText || '') + '已达上限，无法提交', icon: 'none' });
+    }
     if (images.length === 0) return wx.showToast({ title: '请上传图片', icon: 'none' });
 
     this.setData({ submitting: true });
@@ -112,7 +121,7 @@ Page({
         qty: isMulti ? quantity : 1,
         description: isMulti ? `${selectedCat} ×${quantity}（${description || ''}）`.trim() : (description || selectedCat),
         images: fileIDs,
-        monthlyIndex: monthlyCount + quantity,
+        monthlyIndex: usedCount + quantity,
         earnDate: new Date(),
         expireDate: new Date(Date.now() + 365 * 86400000),
         status: this.data.isAdmin ? 'approved' : 'pending',

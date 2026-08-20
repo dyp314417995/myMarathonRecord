@@ -174,22 +174,36 @@ function computeState(a, regCount, now) {
   return { cls: 'state-s1', text: '报名中' };
 }
 
-// 完成活动并发放积分
+// 完成活动并发放积分（积分从规则表读取，默认3）
+async function getCollectivePoints() {
+  try {
+    const res = await db.collection('points_rules')
+      .where({ category: '集体活动', status: 'active' })
+      .limit(1)
+      .get();
+    if (res.data && res.data.length > 0 && res.data[0].points != null) {
+      return res.data[0].points;
+    }
+  } catch (e) { console.warn('getCollectivePoints error', e); }
+  return 3;
+}
+
 async function finishActivity(activityId) {
   await db.collection('activities').doc(activityId).update({ data: { status: 'finished' } });
   const act = await db.collection('activities').doc(activityId).get();
   const regs = await db.collection('activity_registrations').where({ activityId, status: 'active' }).get();
+  const points = await getCollectivePoints();
   for (const r of regs.data) {
     await db.collection('points_records').add({
       data: {
-        userId: r.userId, type: 'earn', category: '集体活动', points: 3,
+        userId: r.userId, type: 'earn', category: '集体活动', points,
         description: `参加活动：${act.data.name}`, status: 'approved',
         createTime: new Date(), earnDate: new Date(),
         expireDate: new Date(Date.now() + 365 * 86400000),
       },
     });
     const user = await db.collection('users').doc(r.userId).get();
-    const balance = (user.data.points || 0) + 3;
+    const balance = (user.data.points || 0) + points;
     await db.collection('users').doc(r.userId).update({ data: { points: balance } });
   }
   return regs.data.length;

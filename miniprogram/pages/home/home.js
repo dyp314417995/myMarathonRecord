@@ -58,14 +58,15 @@ Page({
         }
       }
 
-      // V1.0 老用户补发 50 积分
+      // V1.0 老用户补发注册赠送积分（从规则表读取）
       const pointsUtil = require('../../utils/points');
       const oldBonus = await dbUtil.db.collection('points_records')
         .where({ userId: user._id, category: '注册赠送' }).count();
       if (oldBonus.total === 0) {
+        const regPoints = await pointsUtil.getRulePoints('注册赠送', 50);
         pointsUtil.addRecord({
           userId: user._id, type: 'earn', category: '注册赠送',
-          points: 50, description: '新用户注册赠送（补发）',
+          points: regPoints, description: '新用户注册赠送（补发）',
           images: [], earnDate: user.createTime || new Date(),
           expireDate: new Date((user.createTime ? new Date(user.createTime).getTime() : Date.now()) + 365 * 86400000),
           status: 'approved',

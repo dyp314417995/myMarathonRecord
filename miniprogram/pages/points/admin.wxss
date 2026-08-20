@@ -61,3 +61,18 @@
 .race-actions { display: flex; gap: 16rpx; }
 .act { font-size: 32rpx; padding: 8rpx; }
 .act.del { color: #ff4d4f; }
+
+/* 规则管理 */
+.rule-add-btn { margin: 24rpx 24rpx 0; padding: 20rpx; text-align: center; background: #1aad19; color: #fff; border-radius: 12rpx; font-size: 28rpx; }
+.rule-ops { display: flex; align-items: center; gap: 16rpx; }
+.rule-op { font-size: 24rpx; color: #1aad19; padding: 6rpx 12rpx; border: 2rpx solid #1aad19; border-radius: 8rpx; }
+.rule-op.del { color: #ff4d4f; border-color: #ff4d4f; }
+.rule-modal { top: 12%; bottom: 12%; }
+.rule-period-row { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.rule-period { padding: 12rpx 28rpx; border: 2rpx solid #ddd; border-radius: 10rpx; font-size: 26rpx; color: #666; }
+.rule-period.on { border-color: #1aad19; color: #1aad19; background: #e8f5e9; }
+.rule-modal-actions { display: flex; margin-top: 24rpx; }
+
+.rule-range-row { display: flex; align-items: center; gap: 12rpx; }
+.rule-range-row .form-input { flex: 1; }
+.rule-range-sep { font-size: 28rpx; color: #999; flex-shrink: 0; }

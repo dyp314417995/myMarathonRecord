@@ -221,11 +221,12 @@ Page({
         }
       } else {
         // 新用户注册（已注册用户会被 getCurrentUser() 在 onLoad/onSubmit 前置拦截）
+        const regPoints = await pointsUtil.getRulePoints('注册赠送', 50);
         const userData = {
           openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
-          groupIds: selectedGroupIds, points: 50,
+          groupIds: selectedGroupIds, points: regPoints,
         };
         const addRes = await dbUtil.createUser(userData);
         const fullUser = await dbUtil.db.collection('users').doc(addRes._id).get();
@@ -235,7 +236,7 @@ Page({
         }
         await pointsUtil.addRecord({
           userId: addRes._id, type: 'earn', category: '注册赠送',
-          points: 50, description: '新用户注册赠送',
+          points: regPoints, description: '新用户注册赠送',
           images: [], earnDate: new Date(),
           expireDate: new Date(Date.now() + 365 * 86400000),
           status: 'approved',
