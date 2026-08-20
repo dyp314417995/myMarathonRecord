@@ -181,7 +181,10 @@ Page({
       confirmText: '驳回',
       success: async (res) => {
         if (!res.confirm) return;
-        const reason = res.content || '';
+        const reason = (res.content || '').trim();
+        if (!reason) {
+          return wx.showToast({ title: '请填写驳回原因', icon: 'none' });
+        }
         const reviewer = wx.getStorageSync('userInfo');
         await dbUtil.db.collection('points_records').doc(id).update({
           data: { status: 'rejected', rejectReason: reason, reviewerId: reviewer?._id, reviewTime: new Date() }

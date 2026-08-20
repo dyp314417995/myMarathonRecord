@@ -394,12 +394,12 @@ Page({
         }
       }
 
-      if (!silent) wx.hideLoading();
+      wx.hideLoading();
       wx.showToast({ title: '已标记', icon: 'success' });
       this.setData({ showForm: false });
       this.loadData();
     } catch (err) {
-      if (!silent) wx.hideLoading();
+      wx.hideLoading();
       console.error('标记失败:', err);
       wx.showToast({ title: '保存失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
     }
