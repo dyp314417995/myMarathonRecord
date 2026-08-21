@@ -55,11 +55,24 @@ Page({
 
   async loadRules() {
     const res = await pointsUtil.getRules();
-    this.setData({ rules: res.data.filter(r => r.status === 'active') });
+    const rules = (res.data || []).filter(r => r.status === 'active').map(r => ({
+      ...r,
+      limitText: pointsUtil.getRuleLimitText(r),
+    }));
+    this.setData({ rules });
   },
 
-  onToggleRules() {
-    this.setData({ showRules: !this.data.showRules });
+  // 点击规则名弹窗显示规则描述
+  onRuleTap(e) {
+    const id = e.currentTarget.dataset.id;
+    const r = this.data.rules.find(x => x._id === id);
+    if (!r) return;
+    wx.showModal({
+      title: r.name,
+      content: r.description || '暂无规则描述',
+      showCancel: false,
+      confirmText: '知道了',
+    });
   },
 
   async onWithdraw(e) {

@@ -32,7 +32,7 @@ Page({
     // 规则编辑表单
     showRuleForm: false,
     editingRuleId: '',
-    ruleForm: { name: '', category: '', points: '', minPoints: '', maxPoints: '', period: '', limitCount: '', status: 'active' },
+    ruleForm: { name: '', description: '', points: '', minPoints: '', maxPoints: '', maxQty: '1', period: '', limitCount: '', status: 'active', needSubmit: true },
     periodOptions: [
       { v: '', t: '不限制' },
       { v: 'day', t: '每天' },
@@ -47,7 +47,7 @@ Page({
       isSuperAdmin: userInfo.role === 'super_admin',
       isAdmin: userInfo.role === 'super_admin' || userInfo.role === 'admin',
     });
-    await pointsUtil.initDefaultRules();
+    await pointsUtil.migrateRules();
     await Promise.all([this.loadRules(), this.loadPending(true), this.loadUsers()]);
   },
 
@@ -78,6 +78,7 @@ Page({
     const rules = (res.data || []).map(r => ({
       ...r,
       limitText: pointsUtil.getRuleLimitText(r),
+      submitText: pointsUtil.isNeedSubmit(r) ? '用户可提交' : '无需提交',
     }));
     this.setData({ rules });
   },
@@ -94,7 +95,7 @@ Page({
     this.setData({
       showRuleForm: true,
       editingRuleId: '',
-      ruleForm: { name: '', category: '', points: '', minPoints: '', maxPoints: '', period: '', limitCount: '', status: 'active' },
+      ruleForm: { name: '', description: '', points: '', minPoints: '', maxPoints: '', maxQty: '1', period: '', limitCount: '', status: 'active', needSubmit: true },
     });
   },
 
@@ -107,13 +108,15 @@ Page({
       editingRuleId: r._id,
       ruleForm: {
         name: r.name || '',
-        category: r.category || '',
+        description: r.description || '',
         points: String(r.points != null ? r.points : ''),
         minPoints: String(r.minPoints != null ? r.minPoints : ''),
         maxPoints: String(r.maxPoints != null ? r.maxPoints : ''),
+        maxQty: String(r.maxQty != null ? r.maxQty : '1'),
         period: r.period || (r.monthlyLimit ? 'month' : ''),
         limitCount: String(r.limitCount || r.monthlyLimit || ''),
         status: r.status || 'active',
+        needSubmit: pointsUtil.isNeedSubmit(r),
       },
     });
   },
@@ -123,6 +126,10 @@ Page({
   onRuleInput(e) {
     const k = e.currentTarget.dataset.k;
     this.setData({ ['ruleForm.' + k]: e.detail.value });
+  },
+
+  onRuleNeedSubmit(e) {
+    this.setData({ 'ruleForm.needSubmit': e.currentTarget.dataset.v === '1' });
   },
 
   onRulePeriod(e) {
@@ -135,8 +142,8 @@ Page({
 
   async onSaveRule() {
     const f = this.data.ruleForm;
-    if (!f.name.trim()) return wx.showToast({ title: '请填写规则名称', icon: 'none' });
-    if (!f.category.trim()) return wx.showToast({ title: '请填写分类名称', icon: 'none' });
+    const name = f.name.trim();
+    if (!name) return wx.showToast({ title: '请填写规则名称', icon: 'none' });
     const points = parseInt(f.points, 10);
     if (isNaN(points) || points <= 0) return wx.showToast({ title: '请填写有效积分值', icon: 'none' });
     let limitCount = 0;
@@ -146,35 +153,45 @@ Page({
         return wx.showToast({ title: '次数限制需在1~10之间', icon: 'none' });
       }
     }
+    // 随机范围仅「注册赠送」规则支持（抢红包效果），其他规则不校验也不保存
     let minPoints = 0, maxPoints = 0;
-    if (f.minPoints || f.maxPoints) {
+    if (name === '注册赠送' && (f.minPoints || f.maxPoints)) {
       minPoints = parseInt(f.minPoints, 10);
       maxPoints = parseInt(f.maxPoints, 10);
       if (isNaN(minPoints) || isNaN(maxPoints) || minPoints < 1 || maxPoints < minPoints) {
         return wx.showToast({ title: '随机范围不合法（最大值需大于等于最小值）', icon: 'none' });
       }
     }
+    const maxQty = parseInt(f.maxQty, 10) || 1;
+    if (maxQty < 1 || maxQty > 100) {
+      return wx.showToast({ title: '单次可提交数量需在1~100之间', icon: 'none' });
+    }
+    const needSubmit = f.needSubmit !== false;
     const data = {
-      name: f.name.trim(),
-      category: f.category.trim(),
+      name,
+      description: (f.description || '').trim().slice(0, 50),
       points,
-      minPoints: minPoints || 0,
-      maxPoints: maxPoints || 0,
-      period: f.period,
-      limitCount: f.period ? limitCount : 0,
+      needSubmit,
+      // 无需用户提交的规则不配置周期/次数/数量（表单已隐藏，保存时强制清空）
+      maxQty: needSubmit ? maxQty : 1,
+      // 随机范围仅注册赠送保存，其他规则清空
+      minPoints: name === '注册赠送' ? (minPoints || 0) : 0,
+      maxPoints: name === '注册赠送' ? (maxPoints || 0) : 0,
+      period: needSubmit ? f.period : '',
+      limitCount: needSubmit && f.period ? limitCount : 0,
       status: f.status,
     };
     wx.showLoading({ title: '保存中' });
     try {
+      // 规则名称不允许重复（新增和编辑都校验）
+      const dup = this.data.rules.find(r => r.name === name && r._id !== this.data.editingRuleId);
+      if (dup) {
+        wx.hideLoading();
+        return wx.showToast({ title: '规则名称已存在', icon: 'none' });
+      }
       if (this.data.editingRuleId) {
         await pointsUtil.updateRule(this.data.editingRuleId, data);
       } else {
-        // 同名分类不允许重复
-        const dup = this.data.rules.find(r => r.category === data.category && r._id !== this.data.editingRuleId);
-        if (dup) {
-          wx.hideLoading();
-          return wx.showToast({ title: '分类名称已存在', icon: 'none' });
-        }
         await pointsUtil.addRule(data);
       }
       wx.hideLoading();

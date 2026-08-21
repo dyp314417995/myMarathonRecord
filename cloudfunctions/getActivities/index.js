@@ -178,7 +178,7 @@ function computeState(a, regCount, now) {
 async function getCollectivePoints() {
   try {
     const res = await db.collection('points_rules')
-      .where({ category: '集体活动', status: 'active' })
+      .where({ name: '集体活动', status: 'active' })
       .limit(1)
       .get();
     if (res.data && res.data.length > 0 && res.data[0].points != null) {

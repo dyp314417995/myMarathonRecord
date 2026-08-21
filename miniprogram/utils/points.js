@@ -5,47 +5,14 @@ const _ = dbUtil._;
 
 // ============ 积分规则 ============
 
-/** 获取所有积分规则（含禁用） */
+/** 获取所有积分规则（含禁用，不含已删除） */
 async function getRules() {
-  return await db.collection('points_rules').get();
+  // 查询时即排除已删除规则，避免软删除记录累积挤占客户端 20 条查询上限
+  const res = await db.collection('points_rules').where({ status: _.neq('deleted') }).get();
+  return { data: (res.data || []).filter(r => r.status !== 'deleted') };
 }
 
-/** 初始化或更新默认积分规则 */
-async function initDefaultRules() {
-  const defaults = [
-    { category: '拉新', name: '邀请跑友加入', points: 3, period: '', limitCount: 0, status: 'active' },
-    { category: '团服参赛', name: '穿团服参加赛事', points: 5, period: '', limitCount: 0, status: 'active' },
-    { category: '自媒体', name: '带话题并@九州战马联盟', points: 3, period: '', limitCount: 0, status: 'active' },
-    { category: '天天跑完赛', name: '必迈天天跑完成10次打卡', points: 10, period: '', limitCount: 0, status: 'active' },
-    { category: '赛事评分奖励', name: '完成赛事体验评分（审核通过后自动发放）', points: 10, period: '', limitCount: 0, status: 'active' },
-    { category: '集体活动', name: '赛前聚餐、赛前合影、线下集体活动（管理员录入）', points: 3, period: '', limitCount: 0, status: 'active' },
-    { category: '注册赠送', name: '新用户注册赠送', points: 50, minPoints: 30, maxPoints: 60, period: '', limitCount: 0, status: 'active' },
-  ];
-  const count = await db.collection('points_rules').count();
-  if (count.total === 0) {
-    for (const r of defaults) {
-      await db.collection('points_rules').add({ data: r });
-    }
-    return;
-  }
-  // 只补缺失规则，不覆盖已有规则（保留超管自定义）
-  for (const d of defaults) {
-    const existRes = await db.collection('points_rules').where({ category: d.category }).limit(1).get();
-    if (existRes.data.length === 0) {
-      await db.collection('points_rules').add({ data: d });
-    } else {
-      // 已存在但缺少新字段时补充（不覆盖已有值）：旧规则无随机区间时补入默认值
-      const existRule = existRes.data[0];
-      const patch = {};
-      if (d.minPoints != null && existRule.minPoints == null) patch.minPoints = d.minPoints;
-      if (d.maxPoints != null && existRule.maxPoints == null) patch.maxPoints = d.maxPoints;
-      if (Object.keys(patch).length > 0) {
-        await db.collection('points_rules').doc(existRule._id).update({ data: patch });
-      }
-    }
-  }
-}
-
+// 不再自动生成默认规则：积分规则全部由超管手工配置，避免删掉的规则被重新创建
 /** 更新规则 */
 async function updateRule(ruleId, data) {
   return await db.collection('points_rules').doc(ruleId).update({ data });
@@ -58,9 +25,46 @@ async function addRule(data) {
   });
 }
 
-/** 删除积分规则 */
+/** 删除积分规则（软删除，已删除规则不再展示且不会被重新创建） */
 async function deleteRule(ruleId) {
-  return await db.collection('points_rules').doc(ruleId).remove();
+  return await db.collection('points_rules').doc(ruleId).update({
+    data: { status: 'deleted', updateTime: new Date() },
+  });
+}
+
+/**
+ * 旧数据迁移：去掉 category 字段，三个固定自动发放类型改用规则名称取值
+ * （注册赠送 / 集体活动 / 赛事评分奖励 规则名称需为固定值），不覆盖超管已配置
+ */
+async function migrateRules() {
+  const fixedNames = ['注册赠送', '集体活动', '赛事评分奖励'];
+  const res = await db.collection('points_rules').where({ status: _.neq('deleted') }).get();
+  for (const r of res.data || []) {
+    try {
+      const patch = {};
+      // 旧规则 category 是固定类型但规则名称不是时，用 category 补成固定规则名称
+      if (r.category && fixedNames.includes(r.category) && !fixedNames.includes(r.name)) {
+        patch.name = r.category;
+      }
+      // 移除遗留的 category 字段
+      if (r.category != null) {
+        patch.category = _.remove();
+      }
+      if (Object.keys(patch).length > 0) {
+        await db.collection('points_rules').doc(r._id).update({ data: patch });
+      }
+    } catch (e) { console.warn('migrateRules skip', r._id, e); }
+  }
+}
+
+/** 判断规则是否需要用户提交（兼容旧数据：三个固定自动发放类型默认无需提交） */
+function isNeedSubmit(rule) {
+  if (!rule) return false;
+  if (rule.needSubmit === true) return true;
+  if (rule.needSubmit === false) return false;
+  // 旧数据无 needSubmit 时按规则名称（或遗留 category）判断
+  const legacyKey = rule.name || rule.category || '';
+  return !['注册赠送', '集体活动', '赛事评分奖励'].includes(legacyKey);
 }
 
 /** 解析规则限制（兼容旧 monthlyLimit 字段） */
@@ -122,17 +126,17 @@ async function checkRuleLimit(userId, category, rule) {
   return { ok: used < limitCount, used, limit: limitCount };
 }
 
-/** 获取指定分类的有效规则积分值（未找到或禁用时返回默认值） */
-async function getRulePoints(category, fallback) {
+/** 获取指定规则名称的有效积分值（未找到或禁用时返回默认值；三个固定自动发放类型按规则名称取值） */
+async function getRulePoints(name, fallback) {
   try {
     const res = await db.collection('points_rules')
-      .where({ category, status: 'active' })
+      .where({ name, status: 'active' })
       .limit(1)
       .get();
     if (res.data && res.data.length > 0) {
       const rule = res.data[0];
       // 仅注册赠送支持随机范围（minPoints/maxPoints 都有效时在区间内随机取整数，抢红包效果）
-      if (category === '注册赠送') {
+      if (name === '注册赠送') {
         const min = parseInt(rule.minPoints, 10);
         const max = parseInt(rule.maxPoints, 10);
         if (!isNaN(min) && !isNaN(max) && min > 0 && max >= min) {
@@ -143,7 +147,7 @@ async function getRulePoints(category, fallback) {
         return rule.points;
       }
     }
-  } catch (e) { console.warn('getRulePoints error', category, e); }
+  } catch (e) { console.warn('getRulePoints error', name, e); }
   return fallback;
 }
 
@@ -245,8 +249,8 @@ async function expireOverduePoints() {
 }
 
 module.exports = {
-  getRules, initDefaultRules, addRule, deleteRule, updateRule,
-  parseRuleLimit, getRuleLimitText, getPeriodRange, getPeriodCount, checkRuleLimit, getRulePoints,
+  getRules, addRule, deleteRule, updateRule, migrateRules,
+  isNeedSubmit, parseRuleLimit, getRuleLimitText, getPeriodRange, getPeriodCount, checkRuleLimit, getRulePoints,
   getBalance, getExpiringSoon, getRecords, addRecord,
   getMonthlyCount, reviewRecord, getPendingRecords, withdrawRecord,
   expireOverduePoints,

@@ -11,10 +11,14 @@
   <!-- 规则管理 -->
   <block wx:if="{{tab === 'rules'}}">
     <view wx:if="{{isSuperAdmin}}" class="rule-add-btn" bindtap="onAddRule">+ 新增规则</view>
+    <view wx:if="{{isSuperAdmin}}" class="rule-tip">自动发放类规则（注册赠送 / 集体活动 / 赛事评分奖励）被禁用或删除后，对应发放仍会按兜底积分（50/3/10）执行，不会自动停发。</view>
     <view wx:for="{{rules}}" wx:key="_id" class="card rule-card">
       <view class="rule-row">
         <view class="rule-info">
-          <text class="rule-name">{{item.name}}</text>
+          <view class="rule-title-row">
+            <text class="rule-name">{{item.name}}</text>
+            <text class="rule-submit {{item.submitText === '用户可提交' ? '' : 'off'}}">{{item.submitText}}</text>
+          </view>
           <text class="rule-meta">+{{item.points}}分{{item.limitText ? ' · ' + item.limitText : ''}}</text>
         </view>
         <view class="rule-ops" wx:if="{{isSuperAdmin}}">
@@ -32,20 +36,32 @@
     <view class="modal-mask" wx:if="{{showRuleForm}}" catchtap="onHideRuleForm"></view>
     <view class="modal-box rule-modal" wx:if="{{showRuleForm}}">
       <text class="modal-title">{{editingRuleId ? '编辑规则' : '新增规则'}}</text>
-      <scroll-view scroll-y style="flex:1;">
+      <scroll-view scroll-y style="flex:1; height:0; min-height:0;">
         <view class="form-group">
-          <text class="form-label">规则名称 *</text>
+          <text class="form-label">规则名称 *（三个固定自动发放类型：注册赠送 / 集体活动 / 赛事评分奖励）</text>
           <input class="form-input" placeholder="如：邀请跑友加入" value="{{ruleForm.name}}" data-k="name" bindinput="onRuleInput" />
+          <text wx:if="{{ruleForm.name === '注册赠送' || ruleForm.name === '集体活动' || ruleForm.name === '赛事评分奖励'}}" class="form-tip">固定自动发放类型，请勿改名，否则对应发放将按兜底积分执行</text>
         </view>
         <view class="form-group">
-          <text class="form-label">分类名称 *（用于提交选择和统计）</text>
-          <input class="form-input" placeholder="如：拉新" value="{{ruleForm.category}}" data-k="category" bindinput="onRuleInput" />
+          <text class="form-label">规则描述（详细阐述，用户点击规则名可查看）</text>
+          <textarea class="form-textarea" maxlength="50" placeholder="详细说明该规则的获取方式、条件等（50字以内）" value="{{ruleForm.description}}" data-k="description" bindinput="onRuleInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">是否需要用户提交</text>
+          <view class="rule-period-row">
+            <text class="rule-period {{ruleForm.needSubmit ? 'on' : ''}}" data-v="1" bindtap="onRuleNeedSubmit">需要（申请页可选）</text>
+            <text class="rule-period {{!ruleForm.needSubmit ? 'on' : ''}}" data-v="0" bindtap="onRuleNeedSubmit">不需要（自动发放/管理员录入）</text>
+          </view>
         </view>
         <view class="form-group">
           <text class="form-label">积分值 *</text>
           <input class="form-input" type="number" placeholder="正整数" value="{{ruleForm.points}}" data-k="points" bindinput="onRuleInput" />
         </view>
-        <view class="form-group" wx:if="{{ruleForm.category === '注册赠送'}}">
+        <view class="form-group" wx:if="{{ruleForm.needSubmit}}">
+          <text class="form-label">单次可提交数量（默认1；大于1时申请页可选择数量）</text>
+          <input class="form-input" type="number" placeholder="如：10" value="{{ruleForm.maxQty}}" data-k="maxQty" bindinput="onRuleInput" />
+        </view>
+        <view class="form-group" wx:if="{{ruleForm.name === '注册赠送'}}">
           <text class="form-label">注册赠送随机范围（可选，填写后每次注册赠送在该区间内随机，抢红包效果）</text>
           <view class="rule-range-row">
             <input class="form-input" type="number" placeholder="最小值" value="{{ruleForm.minPoints}}" data-k="minPoints" bindinput="onRuleInput" />
@@ -53,7 +69,7 @@
             <input class="form-input" type="number" placeholder="最大值" value="{{ruleForm.maxPoints}}" data-k="maxPoints" bindinput="onRuleInput" />
           </view>
         </view>
-        <view class="form-group">
+        <view class="form-group" wx:if="{{ruleForm.needSubmit}}">
           <text class="form-label">提交周期</text>
           <view class="rule-period-row">
             <text wx:for="{{periodOptions}}" wx:key="v"
@@ -61,7 +77,7 @@
                   data-v="{{item.v}}" bindtap="onRulePeriod">{{item.t}}</text>
           </view>
         </view>
-        <view class="form-group" wx:if="{{ruleForm.period}}">
+        <view class="form-group" wx:if="{{ruleForm.needSubmit && ruleForm.period}}">
           <text class="form-label">次数限制（1~10）</text>
           <input class="form-input" type="number" placeholder="如：4" value="{{ruleForm.limitCount}}" data-k="limitCount" bindinput="onRuleInput" />
         </view>

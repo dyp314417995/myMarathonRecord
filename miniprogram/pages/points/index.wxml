@@ -21,12 +21,12 @@
 
   <!-- 积分规则（可折叠） -->
   <block wx:if="{{showRules}}">
-    <view class="card" wx:for="{{rules}}" wx:key="_id">
+    <view class="card rule-item" wx:for="{{rules}}" wx:key="_id" data-id="{{item._id}}" bindtap="onRuleTap">
       <view class="rule-row">
-        <text class="rule-cat">{{item.category}}</text>
-        <text class="rule-detail">+{{item.points}}分{{item.monthlyLimit ? '，月上限'+item.monthlyLimit+'次' : ''}}</text>
+        <text class="rule-cat">{{item.name}}</text>
+        <text class="rule-detail">+{{item.points}}分{{item.limitText ? ' · ' + item.limitText : ''}}</text>
       </view>
-      <text class="rule-desc">{{item.name}}</text>
+      <text class="rule-desc">点击查看规则说明 ▸</text>
     </view>
   </block>
 

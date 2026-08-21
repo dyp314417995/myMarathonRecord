@@ -36,6 +36,7 @@
 .record-points .use { font-size: 34rpx; font-weight: 700; color: #ff4d4f; display: block; }
 
 /* 规则 */
+.rule-item { padding: 20rpx 28rpx; margin: 12rpx; }
 .rule-row { display: flex; justify-content: space-between; align-items: center; }
 .rule-cat { font-size: 28rpx; font-weight: 600; }
 .rule-detail { font-size: 26rpx; color: #1aad19; }

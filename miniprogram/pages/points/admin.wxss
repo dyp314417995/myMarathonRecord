@@ -9,7 +9,10 @@
 
 .rule-card { padding: 20rpx 28rpx; margin: 12rpx; }
 .rule-row { display: flex; justify-content: space-between; align-items: center; }
-.rule-name { font-size: 28rpx; font-weight: 600; display: block; }
+.rule-title-row { display: flex; align-items: center; }
+.rule-name { font-size: 28rpx; font-weight: 600; display: block; margin-right: 12rpx; }
+.rule-submit { font-size: 20rpx; color: #1aad19; background: #e8f5e9; padding: 2rpx 12rpx; border-radius: 6rpx; flex-shrink: 0; }
+.rule-submit.off { color: #999; background: #f2f2f2; }
 .rule-meta { font-size: 24rpx; color: #999; margin-top: 4rpx; display: block; }
 .rule-status { font-size: 26rpx; padding: 8rpx 20rpx; border-radius: 8rpx; }
 .rule-status.on { background: #e8f5e9; color: #1aad19; }
@@ -72,6 +75,9 @@
 .rule-period { padding: 12rpx 28rpx; border: 2rpx solid #ddd; border-radius: 10rpx; font-size: 26rpx; color: #666; }
 .rule-period.on { border-color: #1aad19; color: #1aad19; background: #e8f5e9; }
 .rule-modal-actions { display: flex; margin-top: 24rpx; }
+.form-textarea { width: 100%; min-height: 140rpx; background: #f7f7f7; border-radius: 12rpx; padding: 20rpx; font-size: 26rpx; box-sizing: border-box; }
+.form-tip { font-size: 22rpx; color: #ff9800; margin-top: 8rpx; display: block; }
+.rule-tip { font-size: 22rpx; color: #ff9800; background: #fff7e6; border: 2rpx solid #ffe7ba; border-radius: 10rpx; padding: 12rpx 20rpx; margin: 12rpx; line-height: 1.5; }
 
 .rule-range-row { display: flex; align-items: center; gap: 12rpx; }
 .rule-range-row .form-input { flex: 1; }

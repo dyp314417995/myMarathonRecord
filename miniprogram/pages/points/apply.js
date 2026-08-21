@@ -9,6 +9,7 @@ Page({
     description: '',
     images: [],
     quantity: 1,
+    maxQty: 1,
     usedCount: 0,
     limitCount: 0,
     periodText: '',
@@ -26,18 +27,19 @@ Page({
     const res = await pointsUtil.getRules();
     const userRules = res.data.filter(r => {
       if (r.status !== 'active') return false;
-      if (r.category === '集体活动') return false;
-      if (r.category === '赛事评分奖励') return false;
+      // 无需用户提交（自动发放/管理员录入）的规则不出现在申请页
+      if (!pointsUtil.isNeedSubmit(r)) return false;
       return true;
     }).map(r => ({ ...r, limitText: pointsUtil.getRuleLimitText(r) }));
     this.setData({ rules: userRules });
   },
 
   onSelectCat(e) {
-    const cat = e.currentTarget.dataset.cat;
-    const rule = this.data.rules.find(r => r.category === cat);
-    this.setData({ selectedCat: cat, quantity: 1, selectedPoints: rule ? rule.points : 3 });
-    this.loadRuleLimit(cat);
+    const name = e.currentTarget.dataset.cat;
+    const rule = this.data.rules.find(r => r.name === name);
+    const maxQty = rule && rule.maxQty > 1 ? rule.maxQty : 1;
+    this.setData({ selectedCat: name, quantity: 1, maxQty, selectedPoints: rule ? rule.points : 3 });
+    this.loadRuleLimit(name);
   },
 
   onQtyDown() {
@@ -46,14 +48,13 @@ Page({
     this.setData({ quantity: quantity - 1 });
   },
   onQtyUp() {
-    const { quantity, selectedCat } = this.data;
-    const max = selectedCat === '拉新' ? 10 : 4;
-    if (quantity >= max) return;
+    const { quantity, maxQty } = this.data;
+    if (quantity >= maxQty) return;
     this.setData({ quantity: quantity + 1 });
   },
 
   async loadRuleLimit(cat) {
-    const rule = this.data.rules.find(r => r.category === cat);
+    const rule = this.data.rules.find(r => r.name === cat);
     const { period, limitCount } = pointsUtil.parseRuleLimit(rule);
     if (!period || !limitCount) {
       this.setData({ usedCount: 0, limitCount: 0, periodText: '' });
@@ -89,8 +90,8 @@ Page({
     const { selectedCat, description, images, submitting, usedCount, limitCount, quantity } = this.data;
     if (submitting) return;
     if (!selectedCat) return wx.showToast({ title: '请选择类型', icon: 'none' });
-    if (limitCount && usedCount >= limitCount) {
-      return wx.showToast({ title: (this.data.periodText || '') + '已达上限，无法提交', icon: 'none' });
+    if (limitCount && usedCount + quantity > limitCount) {
+      return wx.showToast({ title: (this.data.periodText || '') + '已达上限（本次提交 ' + quantity + ' 次将超限）', icon: 'none' });
     }
     if (images.length === 0) return wx.showToast({ title: '请上传图片', icon: 'none' });
 
@@ -108,10 +109,11 @@ Page({
         fileIDs.push(res.fileID);
       }
 
-      // 获取规则积分值，拉新/自媒体 × 数量
-      const rule = this.data.rules.find(r => r.category === selectedCat);
+      // 获取规则积分值，单次可提交数量>1 时按数量累计
+      const rule = this.data.rules.find(r => r.name === selectedCat);
       const perPoint = rule ? rule.points : 3;
-      const isMulti = selectedCat === '拉新' || selectedCat === '自媒体';
+      const maxQty = rule && rule.maxQty > 1 ? rule.maxQty : 1;
+      const isMulti = maxQty > 1;
       const points = isMulti ? perPoint * quantity : perPoint;
 
       await pointsUtil.addRecord({

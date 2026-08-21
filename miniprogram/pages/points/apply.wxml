@@ -3,15 +3,15 @@
   <view class="card">
     <text class="card-title">选择类型</text>
     <view class="cat-options">
-      <view wx:for="{{rules}}" wx:key="category"
-            class="cat-option {{selectedCat === item.category ? 'active' : ''}}"
-            data-cat="{{item.category}}" bindtap="onSelectCat">
-        <text>{{item.category}}</text>
+      <view wx:for="{{rules}}" wx:key="name"
+            class="cat-option {{selectedCat === item.name ? 'active' : ''}}"
+            data-cat="{{item.name}}" bindtap="onSelectCat">
+        <text>{{item.name}}</text>
         <text class="cat-desc">+{{item.points}}分{{item.limitText ? '('+item.limitText+')' : ''}}</text>
       </view>
     </view>
-    <!-- 数量选择（拉新/自媒体） -->
-    <view wx:if="{{selectedCat && (selectedCat === '拉新' || selectedCat === '自媒体')}}" class="qty-row">
+    <!-- 数量选择（单次可提交数量>1 的规则） -->
+    <view wx:if="{{selectedCat && maxQty > 1}}" class="qty-row">
       <text class="qty-label">数量</text>
       <view class="qty-stepper">
         <text class="qty-btn" bindtap="onQtyDown">−</text>
