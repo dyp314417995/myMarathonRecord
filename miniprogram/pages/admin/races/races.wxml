@@ -2,6 +2,11 @@
 <view class="races-page">
   <view wx:if="{{!isAdmin}}" class="empty-state"><text>仅管理员可操作</text></view>
   <view wx:else>
+    <!-- 状态页签 -->
+    <view class="tab-row">
+      <text class="tab {{tab === 'published' ? 'on' : ''}}" data-t="published" bindtap="onTab">已发布</text>
+      <text class="tab {{tab === 'draft' ? 'on' : ''}}" data-t="draft" bindtap="onTab">草稿</text>
+    </view>
     <!-- 筛选栏 -->
     <view class="admin-filter">
       <input class="filter-input" placeholder="搜索赛事名称" value="{{adminSearch}}" bindinput="onAdminSearch" />
@@ -33,7 +38,8 @@
         <text class="race-meta">{{item.fmtDate}} · {{item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{!(item.raceTypes && item.raceTypes.length === 1 && item.raceTypes[0] === 'trail')}}"> · {{item.raceLevel}}级{{item.label ? ' · ' + item.label : ''}}</text>{{item.scale ? ' · ' + item.scale : ''}}</text>
         <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
         <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
-        <text class="tag tag-draft" wx:if="{{!item.confirmed}}">草稿</text>
+        <text class="tag tag-draft" wx:if="{{item.publishStatus === 'draft'}}">⏳ 草稿</text>
+        <text class="tag tag-blue" wx:if="{{item.sourceSite}}">🛰 {{item.sourceSite}}</text>
       </view>
       <view class="race-actions">
         <text class="act" data-id="{{item._id}}" catchtap="onEdit">✏️</text>
@@ -41,6 +47,10 @@
         <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onShare">📱</text>
         <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onManageReviews">📝</text>
         <text class="act del" data-id="{{item._id}}" catchtap="onDel">🗑</text>
+      </view>
+      <view class="draft-bar" wx:if="{{item.publishStatus === 'draft'}}">
+        <text class="pub-btn" data-id="{{item._id}}" catchtap="onPublish">✅ 确认发布</text>
+        <text class="draft-tip">发布后对用户可见，定时任务不再自动修改</text>
       </view>
     </view>
     <view wx:if="{{adminHasMore}}" class="load-more" bindtap="onLoadMoreRaces">加载更多</view>

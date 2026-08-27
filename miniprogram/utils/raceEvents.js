@@ -20,8 +20,16 @@ async function getAll(params = {}) {
   if (params.raceLevel !== undefined) data.raceLevel = params.raceLevel;
   if (params.raceLabel !== undefined) data.raceLabel = params.raceLabel;
   if (params.userId !== undefined) data.userId = params.userId;
+  if (params.publishFilter !== undefined) data.publishFilter = params.publishFilter;
   const res = await wx.cloud.callFunction({ name: 'getRaceEvents', data });
   return res.result || { list: [], total: 0, hasMore: false };
+}
+
+/** 确认发布（草稿 → 已发布） */
+async function publishRace(id, user) {
+  return await db.collection('race_events').doc(id).update({
+    data: { publishStatus: 'published', confirmedBy: (user && user._id) || '', confirmedAt: new Date(), updateTime: new Date() }
+  });
 }
 
 /** 加载更多赛事 */
@@ -94,7 +102,7 @@ async function getReviewStats(eventId) {
 }
 
 module.exports = {
-  getList, getAll, create, update, remove,
+  getList, getAll, create, update, remove, publishRace,
   markEvent, unmarkEvent, getMyMarkers,
   getReviewStats, getEventDetail,
 };

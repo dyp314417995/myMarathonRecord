@@ -17,7 +17,7 @@ const db = cloud.database();
 const _ = db.command;
 
 exports.main = async (event) => {
-  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId } = event || {};
+  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published' } = event || {};
   const wxContext = cloud.getWXContext();
 
   // 1. 构建动态查询条件（推送到数据库层面过滤）
@@ -44,6 +44,14 @@ exports.main = async (event) => {
   // 等级/标牌
   if (raceLevel) conds.push({ raceLevel });
   if (raceLabel) conds.push({ label: raceLabel });
+
+  // 审核状态过滤：默认仅已发布（老数据无 publishStatus 字段=视为已发布）
+  if (publishFilter === 'published') {
+    conds.push(_.or([{ publishStatus: 'published' }, { publishStatus: _.exists(false) }]));
+  } else if (publishFilter === 'draft') {
+    conds.push({ publishStatus: 'draft' });
+  }
+  // publishFilter='all' 不过滤（管理端看全部）
 
   const query = conds.length ? _.and(conds) : {};
 

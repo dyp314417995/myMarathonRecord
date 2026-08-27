@@ -5,13 +5,17 @@ const db = cloud.database();
 const _ = db.command;
 
 exports.main = async (event) => {
-  const { eventId, userId } = event;
+  const { eventId, userId, includeDrafts } = event;
   if (!eventId) return { error: '缺少 eventId' };
 
   // 1. 查赛事
   const evtRes = await db.collection('race_events').doc(eventId).get();
   const evt = evtRes.data;
   if (!evt) return { error: '赛事不存在' };
+  // 草稿仅管理员（includeDrafts）可见，用户端视为不存在
+  if (evt.publishStatus === 'draft' && !includeDrafts) {
+    return { error: '赛事不存在' };
+  }
 
   // 2. 查同 raceGroup 的评分统计
   const raceGroup = evt.raceGroup;

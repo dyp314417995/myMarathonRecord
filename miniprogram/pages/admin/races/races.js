@@ -4,6 +4,7 @@ const raceUtil = require('../../../utils/raceEvents');
 Page({
   data: {
     isAdmin: false,
+    tab: 'published',       // published | draft
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
@@ -49,12 +50,20 @@ Page({
     if (this.data.isAdmin) this.loadRaces();
   },
 
+  onTab(e) {
+    const t = e.currentTarget.dataset.t;
+    if (this.data.tab === t) return;
+    this.setData({ tab: t, adminPage: 0, allRaceList: [], raceList: [] });
+    this.loadRaces();
+  },
+
   async loadRaces() {
     const userInfo = wx.getStorageSync('userInfo');
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
     const skip = this.data.adminPage * 20;
     const search = this.data.adminSearch || '';
-    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined });
+    const publishFilter = this.data.tab === 'draft' ? 'draft' : 'published';
+    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined, publishFilter });
     const all = res.list;
     all.forEach(r => {
       if (r.raceType && !r.raceTypes) r.raceTypes = [r.raceType];
@@ -64,7 +73,7 @@ Page({
       ...r, fmtDate: this.fmtDate(r.date),
       raceTypesStr: r.raceTypes.map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('/'),
       countdown: this.calcCountdown(r.date, r.status, r.timeline, r.gunTimes),
-      confirmed: r.confirmed || false,
+      publishStatus: r.publishStatus || 'published',
     }));
         const merged = skip === 0 ? list : [...this.data.allRaceList, ...list];
     this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
@@ -78,6 +87,9 @@ Page({
 
   applyAdminFilter() {
     let list = [...this.data.allRaceList];
+    // 按当前页签过滤草稿/已发布
+    if (this.data.tab === 'draft') list = list.filter(r => (r.publishStatus || 'published') === 'draft');
+    else list = list.filter(r => (r.publishStatus || 'published') !== 'draft');
     if (this.data.adminSearch) list = list.filter(r => (r.name||'').includes(this.data.adminSearch));
     if (this.data.adminType) list = list.filter(r => (r.raceTypes || [r.raceType]).includes(this.data.adminType));
     if (this.data.adminLevel) list = list.filter(r => r.raceLevel === this.data.adminLevel);
@@ -98,9 +110,35 @@ Page({
     this.applyAdminFilter();
   },
 
+  // 草稿点击卡片直接进入编辑；已发布跳用户详情
   onRaceDetailAdmin(e) {
     const id = e.currentTarget.dataset.id;
+    const r = this.data.raceList.find(x => x._id === id);
+    if (r && (r.publishStatus || 'published') === 'draft') {
+      this.onEdit(e);
+      return;
+    }
     wx.navigateTo({ url: `/pages/tools/calendar/detail?id=${id}` });
+  },
+
+  // 确认发布（草稿 → 已发布，此后定时任务冻结）
+  onPublish(e) {
+    const id = e.currentTarget.dataset.id;
+    const r = this.data.raceList.find(x => x._id === id);
+    wx.showModal({
+      title: '确认发布',
+      content: r ? `发布「${r.name}」？发布后对用户可见，定时任务将不再自动修改。` : '确定发布该赛事？',
+      confirmText: '发布',
+      success: async (res) => {
+        if (!res.confirm) return;
+        const userInfo = wx.getStorageSync('userInfo') || {};
+        wx.showLoading({ title: '发布中' });
+        await raceUtil.publishRace(id, userInfo);
+        wx.hideLoading();
+        wx.showToast({ title: '已发布', icon: 'success' });
+        this.loadRaces();
+      },
+    });
   },
 
   calcCountdown(d, status, timeline, gunTimes) {
@@ -636,7 +674,11 @@ Page({
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
       certs: (f.raceTypes || []).includes('trail') ? f.certs : {},
       tags: (f.tagsStr || '').split(/[,，]/).map(s => s.trim()).filter(Boolean), tagStats: {}, reviewCount: 0, avgScore: 0,
-      confirmed: f.confirmed || false,
+      confirmed: true,
+      publishStatus: this.data.editingId
+        ? (((this.data.allRaceList.find(r => r._id === this.data.editingId) || {}).publishStatus || 'published') === 'draft' ? 'draft' : 'published')
+        : 'published',
+      source: 'manual',
     };
     if (this.data.editingId) {
       await raceUtil.update(this.data.editingId, data);

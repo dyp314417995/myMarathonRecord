@@ -7,14 +7,16 @@ const _ = db.command;
 
 exports.main = async (event) => {
   const search = (event.search || '').trim();
+  const includeDrafts = !!event.includeDrafts;
   if (!search) return { error: '缺少 search 参数' };
 
   const regex = db.RegExp({ regexp: search, options: 'i' });
+  const conds = [_.or([{ name: regex }, { city: regex }])];
+  if (!includeDrafts) {
+    conds.push(_.or([{ publishStatus: 'published' }, { publishStatus: _.exists(false) }]));
+  }
   const res = await db.collection('race_events')
-    .where(_.or([
-      { name: regex },
-      { city: regex },
-    ]))
+    .where(_.and(conds))
     .orderBy('date', 'desc')
     .get();
 
