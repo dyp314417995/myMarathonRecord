@@ -1,0 +1,105 @@
+<!-- pages/tools/ledger/index.wxml -->
+<view class="ledger-page">
+  <!-- 汇总 -->
+  <view class="summary-card">
+    <view class="summary-main">
+      <text class="summary-label">当前筛选支出</text>
+      <text class="summary-num">¥{{stats.sumText}}</text>
+      <text class="summary-count">共 {{stats.total}} 笔</text>
+    </view>
+    <view class="summary-split">
+      <view class="summary-item">
+        <text class="summary-item-label">日常开支</text>
+        <text class="summary-item-num">¥{{stats.dailyText}}</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-item-label">比赛开支</text>
+        <text class="summary-item-num">¥{{stats.raceText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 筛选 -->
+  <view class="filter-card">
+    <view class="filter-row">
+      <text class="chip {{period === 'month' ? 'on' : ''}}" data-p="month" bindtap="onPeriodTap">本月</text>
+      <text class="chip {{period === 'year' ? 'on' : ''}}" data-p="year" bindtap="onPeriodTap">本年</text>
+      <text class="chip {{period === 'range' ? 'on' : ''}}" data-p="range" bindtap="onPeriodTap">自定义</text>
+    </view>
+
+    <view class="filter-row" wx:if="{{period === 'month'}}">
+      <picker mode="date" fields="month" value="{{month}}" bindchange="onMonthChange">
+        <view class="picker-box">📅 {{month}} ▾</view>
+      </picker>
+    </view>
+    <view class="filter-row" wx:elif="{{period === 'year'}}">
+      <picker mode="date" fields="year" value="{{year}}" bindchange="onYearChange">
+        <view class="picker-box">📅 {{year}} 年 ▾</view>
+      </picker>
+    </view>
+    <view class="filter-row range-row" wx:else>
+      <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+        <view class="picker-box sm">{{startDate || '开始日期'}} ▾</view>
+      </picker>
+      <text class="range-sep">至</text>
+      <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+        <view class="picker-box sm">{{endDate || '结束日期'}} ▾</view>
+      </picker>
+    </view>
+
+    <view class="filter-row">
+      <text class="chip {{selectedBigs.indexOf('daily') >= 0 ? 'on' : ''}}" data-v="daily" bindtap="onBigTap">日常开支</text>
+      <text class="chip {{selectedBigs.indexOf('race') >= 0 ? 'on' : ''}}" data-v="race" bindtap="onBigTap">比赛开支</text>
+      <text class="chip link" bindtap="onClearFilter" wx:if="{{selectedBigs.length > 0 || selectedSmalls.daily.length > 0 || selectedSmalls.race.length > 0}}">清除筛选</text>
+    </view>
+
+    <view class="big-sub" wx:if="{{expanded.daily}}">
+      <text class="sub-title">日常开支 · 小类（多选，不选=全部）</text>
+      <view class="sub-chips">
+        <text class="chip sm {{selectedSmalls.daily.indexOf(item) >= 0 ? 'on' : ''}}" wx:for="{{smallCatsByBig.daily}}" wx:key="*this" data-big="daily" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
+        <text class="chip sm none" wx:if="{{smallCatsByBig.daily.length === 0}}">该分类暂无小类数据</text>
+      </view>
+    </view>
+    <view class="big-sub" wx:if="{{expanded.race}}">
+      <text class="sub-title">比赛开支 · 小类（多选，不选=全部）</text>
+      <view class="sub-chips">
+        <text class="chip sm {{selectedSmalls.race.indexOf(item) >= 0 ? 'on' : ''}}" wx:for="{{smallCatsByBig.race}}" wx:key="*this" data-big="race" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
+        <text class="chip sm none" wx:if="{{smallCatsByBig.race.length === 0}}">该分类暂无小类数据</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 列表 -->
+  <block wx:for="{{groups}}" wx:key="date" wx:for-item="g">
+    <view class="date-header">
+      <text class="date-text">{{g.date}}</text>
+      <text class="date-sum">¥{{g.sumText}}</text>
+    </view>
+    <view class="card entry-card" wx:for="{{g.items}}" wx:key="_id" data-id="{{item._id}}" bindtap="onItemTap">
+      <view class="entry-row">
+        <view class="entry-left">
+          <text class="entry-cat">{{item.smallCategory}}</text>
+          <text class="entry-note">{{item.note || '无备注'}}</text>
+          <text class="entry-event" wx:if="{{item.bigCategory === 'race' && item.eventName}}">🏁 {{item.eventName}}</text>
+        </view>
+        <view class="entry-right">
+          <text class="entry-amount">-¥{{item._amount}}</text>
+          <text class="entry-big {{item.bigCategory === 'race' ? 'race' : 'daily'}}">{{item._bigLabel}}</text>
+        </view>
+      </view>
+      <view class="entry-imgs" wx:if="{{item._images.length > 0}}">
+        <image class="entry-img" wx:for="{{item._images}}" wx:key="*this" wx:for-item="img" wx:for-index="idx"
+          src="{{img}}" mode="aspectFill" data-id="{{item._id}}" data-idx="{{idx}}" catchtap="onPreviewImg" />
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{!loading && groups.length === 0}}" class="empty">
+    <text class="empty-icon">📒</text>
+    <text class="empty-text">还没有记账，点右下角记一笔吧～</text>
+  </view>
+  <view wx:if="{{hasMore}}" class="load-more" bindtap="onLoadMore">加载更多</view>
+
+  <!-- 记一笔 -->
+  <view class="fab" bindtap="onAdd">＋ 记一笔</view>
+</view>

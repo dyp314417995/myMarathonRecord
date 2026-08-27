@@ -166,6 +166,10 @@ Page({
     wx.navigateTo({ url: '/pages/points/index' });
   },
   // 每日签到
+  onLedger() {
+    wx.navigateTo({ url: '/pages/tools/ledger/index' });
+  },
+
   onSignin() {
     wx.navigateTo({ url: '/pages/signin/index' });
   },

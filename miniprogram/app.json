@@ -25,6 +25,8 @@
     "pages/admin/activities/activities",
     "pages/admin/lotteries/lotteries",
     "pages/tools/activity/lottery-detail",
+    "pages/tools/ledger/index",
+    "pages/tools/ledger/add",
     "pages/signin/index",
     "pages/signin/cards"
   ],

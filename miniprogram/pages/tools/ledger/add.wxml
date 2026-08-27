@@ -1,0 +1,61 @@
+<!-- pages/tools/ledger/add.wxml -->
+<view class="add-page">
+  <view class="card">
+    <text class="page-title">记一笔<text wx:if="{{isEdit}}" class="edit-badge">（编辑）</text></text>
+
+    <text class="form-label">支出大类</text>
+    <view class="opt-row">
+      <text class="opt-btn {{bigCategory === 'daily' ? 'on' : ''}}" data-v="daily" bindtap="onBigTap">日常开支</text>
+      <text class="opt-btn {{bigCategory === 'race' ? 'on' : ''}}" data-v="race" bindtap="onBigTap">比赛开支</text>
+    </view>
+
+
+    <block wx:if="{{bigCategory === 'race'}}">
+      <text class="form-label">赛事</text>
+      <picker mode="selector" range="{{raceNames}}" value="{{raceIdx}}" bindchange="onRaceChange">
+        <view class="picker-box">{{raceNames[raceIdx] || '选择赛事'}} ▾</view>
+      </picker>
+      <view class="race-custom-row" wx:if="{{raceIdx === raceNames.length - 1}}">
+        <input class="form-input" placeholder="输入赛事名称（如：XX山地马拉松）" value="{{customRace}}" bindinput="onCustomRaceInput" maxlength="30" />
+      </view>
+      <view class="go-mark-row" bindtap="onGoMark">
+        <text class="go-mark-text">🏁 去我的赛事补充标记 ›</text>
+      </view>
+    </block>
+    <text class="form-label">小类</text>
+    <view class="sub-grid">
+      <text class="sub-btn {{smallCategory === item ? 'on' : ''}}" wx:for="{{subs}}" wx:key="*this" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
+    </view>
+    <view wx:if="{{smallCategory === '其他'}}" class="custom-row">
+      <input class="form-input" placeholder="输入自定义小类（如：能量胶、私兔红包）" value="{{customSmall}}" bindinput="onCustomInput" maxlength="20" />
+    </view>
+
+    <text class="form-label">金额（元）</text>
+    <input class="form-input amount-input" type="digit" placeholder="0.00" value="{{amount}}" bindinput="onAmountInput" />
+
+    <text class="form-label">日期</text>
+    <picker mode="date" value="{{date}}" bindchange="onDateChange">
+      <view class="picker-box">📅 {{date}} ▾</view>
+    </picker>
+
+    <text class="form-label">备注</text>
+    <textarea class="desc-input" placeholder="这笔钱花在哪了？（选填）" value="{{note}}" bindinput="onNoteInput" maxlength="200" auto-height />
+
+    <text class="form-label">附图（{{images.length}}/3，最多3张）</text>
+    <view class="img-grid">
+      <view class="img-wrap" wx:for="{{images}}" wx:key="fileID" data-idx="{{index}}" bindtap="onPreviewImage">
+        <image class="img-item" src="{{item.url}}" mode="aspectFill" />
+        <text class="img-del" data-idx="{{index}}" catchtap="onRemoveImage">✕</text>
+      </view>
+      <view class="img-add" wx:if="{{images.length < 3}}" bindtap="onChooseImage">
+        <text class="img-add-icon">＋</text>
+        <text class="img-add-text">添加图片</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="btn-area">
+    <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{isEdit ? '保存修改' : '保存'}}</button>
+    <button wx:if="{{isEdit}}" class="btn-reject" bindtap="onDelete" style="margin-top:16rpx;">🗑 删除这笔</button>
+  </view>
+</view>

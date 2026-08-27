@@ -229,6 +229,10 @@
       <text class="menu-icon">✅</text>
       <text class="menu-text">每日签到</text>
     </view>
+    <view class="menu-item card" bindtap="onLedger">
+      <text class="menu-icon">💰</text>
+      <text class="menu-text">跑步账本</text>
+    </view>
   </view>
 </view>
 </view>
