@@ -1,13 +1,13 @@
 <!-- pages/tools/ledger/index.wxml -->
 <view class="ledger-page">
   <!-- 汇总 -->
-  <view class="summary-card">
+  <view class="summary-card {{typeFilter === 'income' ? 'income' : ''}}">
     <view class="summary-main">
-      <text class="summary-label">当前筛选支出</text>
-      <text class="summary-num">¥{{stats.sumText}}</text>
+      <text class="summary-label">{{typeFilter === 'income' ? '当前筛选收入' : '当前筛选支出'}}</text>
+      <text class="summary-num">¥{{typeFilter === 'income' ? stats.incomeText : stats.expenseText}}</text>
       <text class="summary-count">共 {{stats.total}} 笔</text>
     </view>
-    <view class="summary-split">
+    <view class="summary-split" wx:if="{{typeFilter !== 'income'}}">
       <view class="summary-item">
         <text class="summary-item-label">日常开支</text>
         <text class="summary-item-num">¥{{stats.dailyText}}</text>
@@ -48,22 +48,27 @@
     </view>
 
     <view class="filter-row">
-      <text class="chip {{selectedBigs.indexOf('daily') >= 0 ? 'on' : ''}}" data-v="daily" bindtap="onBigTap">日常开支</text>
-      <text class="chip {{selectedBigs.indexOf('race') >= 0 ? 'on' : ''}}" data-v="race" bindtap="onBigTap">比赛开支</text>
+      <text class="chip {{typeFilter === 'expense' ? 'on' : ''}}" data-v="expense" bindtap="onTypeTap">支出</text>
+      <text class="chip {{typeFilter === 'income' ? 'income-on' : ''}}" data-v="income" bindtap="onTypeTap">收入</text>
+    </view>
+
+    <view class="filter-row" wx:if="{{typeFilter !== 'income'}}">
+      <text class="chip {{bigSel.daily ? 'on' : ''}}" data-v="daily" bindtap="onBigTap">日常开支</text>
+      <text class="chip {{bigSel.race ? 'on' : ''}}" data-v="race" bindtap="onBigTap">比赛开支</text>
       <text class="chip link" bindtap="onClearFilter" wx:if="{{selectedBigs.length > 0 || selectedSmalls.daily.length > 0 || selectedSmalls.race.length > 0}}">清除筛选</text>
     </view>
 
-    <view class="big-sub" wx:if="{{expanded.daily}}">
+    <view class="big-sub" wx:if="{{typeFilter !== 'income' && expanded.daily}}">
       <text class="sub-title">日常开支 · 小类（多选，不选=全部）</text>
       <view class="sub-chips">
-        <text class="chip sm {{selectedSmalls.daily.indexOf(item) >= 0 ? 'on' : ''}}" wx:for="{{smallCatsByBig.daily}}" wx:key="*this" data-big="daily" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
+        <text class="chip sm {{smallSel.daily[item] ? 'on' : ''}}" wx:for="{{smallCatsByBig.daily}}" wx:key="*this" data-big="daily" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
         <text class="chip sm none" wx:if="{{smallCatsByBig.daily.length === 0}}">该分类暂无小类数据</text>
       </view>
     </view>
-    <view class="big-sub" wx:if="{{expanded.race}}">
+    <view class="big-sub" wx:if="{{typeFilter !== 'income' && expanded.race}}">
       <text class="sub-title">比赛开支 · 小类（多选，不选=全部）</text>
       <view class="sub-chips">
-        <text class="chip sm {{selectedSmalls.race.indexOf(item) >= 0 ? 'on' : ''}}" wx:for="{{smallCatsByBig.race}}" wx:key="*this" data-big="race" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
+        <text class="chip sm {{smallSel.race[item] ? 'on' : ''}}" wx:for="{{smallCatsByBig.race}}" wx:key="*this" data-big="race" data-v="{{item}}" bindtap="onSmallTap">{{item}}</text>
         <text class="chip sm none" wx:if="{{smallCatsByBig.race.length === 0}}">该分类暂无小类数据</text>
       </view>
     </view>
@@ -78,13 +83,13 @@
     <view class="card entry-card" wx:for="{{g.items}}" wx:key="_id" data-id="{{item._id}}" bindtap="onItemTap">
       <view class="entry-row">
         <view class="entry-left">
-          <text class="entry-cat">{{item.smallCategory}}</text>
+          <text class="entry-cat">{{item._catLabel}}</text>
           <text class="entry-note">{{item.note || '无备注'}}</text>
           <text class="entry-event" wx:if="{{item.bigCategory === 'race' && item.eventName}}">🏁 {{item.eventName}}</text>
         </view>
         <view class="entry-right">
-          <text class="entry-amount">-¥{{item._amount}}</text>
-          <text class="entry-big {{item.bigCategory === 'race' ? 'race' : 'daily'}}">{{item._bigLabel}}</text>
+          <text class="entry-amount {{item.entryType === 'income' ? 'income' : ''}}">{{item._signedAmount}}</text>
+          <text class="entry-big {{item._bigCls}}">{{item._bigLabel}}</text>
         </view>
       </view>
       <view class="entry-imgs" wx:if="{{item._images.length > 0}}">

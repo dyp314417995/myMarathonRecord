@@ -94,3 +94,11 @@
 .sub-chips { display: flex; flex-wrap: wrap; gap: 12rpx; }
 .chip.link { color: #999; background: transparent; text-decoration: underline; }
 .chip.none { background: transparent; color: #ccc; }
+/* 收入 */
+.entry-amount.income { color: #1aad19; }
+.entry-big.income { background: #e3f2fd; color: #2196f3; }
+.summary-item-label.income { color: #a5d6a7; }
+.summary-item-num.income { color: #c8e6c9; }
+/* 收入：橙色主题 */
+.summary-card.income { background: linear-gradient(135deg, #ff9800, #f57c00); }
+.chip.income-on { background: #fff3e0; color: #ff9800; font-weight: 600; }

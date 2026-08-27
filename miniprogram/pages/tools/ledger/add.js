@@ -1,14 +1,22 @@
 // pages/tools/ledger/add.js - 记一笔 / 编辑
+// 先选类型：支出（默认）/ 收入；收入不分大类小类，内置收入类型（比赛奖金等）
 const ledger = require('../../../utils/ledger');
 
 Page({
   data: {
     id: '',
     isEdit: false,
+    entryType: 'expense',        // expense(支出) | income(收入)
+    // 收入
+    incomeTypes: ['比赛奖金', '其他'],
+    incomeType: '',
+    customIncome: '',
+    // 支出
     bigCategory: 'daily',
     subs: ledger.DAILY_SUBS,
     smallCategory: '',
     customSmall: '',
+    // 通用
     amount: '',
     date: '',
     note: '',
@@ -36,7 +44,7 @@ Page({
 
   onShow() {
     // 从「我的赛事」补标记后返回时刷新赛事列表
-    if (this.data.bigCategory === 'race') this.loadMyRaces();
+    if (this.data.entryType === 'expense' && this.data.bigCategory === 'race') this.loadMyRaces();
   },
 
   async loadDetail(id) {
@@ -48,21 +56,50 @@ Page({
       return;
     }
     const it = res.item;
-    const subs = ledger.subsOf(it.bigCategory);
-    this.setData({
-      bigCategory: it.bigCategory,
-      subs,
-      smallCategory: subs.includes(it.smallCategory) ? it.smallCategory : '其他',
-      customSmall: subs.includes(it.smallCategory) ? '' : it.smallCategory,
+    const entryType = it.entryType === 'income' ? 'income' : 'expense';
+    const patch = {
+      entryType,
       amount: String(it.amount),
       date: it.date,
       note: it.note || '',
       images: (it.images || []).map((fid, i) => ({ fileID: fid, url: (it._imageUrls || [])[i] || fid })),
-      eventName: it.eventName || '',
-      eventId: it.eventId || '',
-    });
-    if (it.bigCategory === 'race') this.loadMyRaces();
+    };
+    if (entryType === 'income') {
+      patch.incomeType = it.incomeType || '比赛奖金';
+      patch.customIncome = (it.incomeType && !this.data.incomeTypes.includes(it.incomeType)) ? it.incomeType : '';
+    } else {
+      const subs = ledger.subsOf(it.bigCategory || 'daily');
+      patch.bigCategory = it.bigCategory || 'daily';
+      patch.subs = subs;
+      patch.smallCategory = subs.includes(it.smallCategory) ? it.smallCategory : '其他';
+      patch.customSmall = subs.includes(it.smallCategory) ? '' : it.smallCategory;
+      patch.eventName = it.eventName || '';
+      patch.eventId = it.eventId || '';
+    }
+    this.setData(patch);
+    if (entryType === 'expense' && (it.bigCategory || 'daily') === 'race') this.loadMyRaces();
   },
+
+  // 类型切换：支出 / 收入
+  onTypeTap(e) {
+    const v = e.currentTarget.dataset.v;
+    if (this.data.entryType === v) return;
+    const patch = { entryType: v };
+    if (v === 'income') {
+      patch.incomeType = this.data.incomeType || '比赛奖金';
+    } else {
+      patch.incomeType = '';
+      patch.customIncome = '';
+    }
+    this.setData(patch);
+  },
+
+  onIncomeTypeTap(e) {
+    const v = e.currentTarget.dataset.v;
+    this.setData({ incomeType: v });
+  },
+
+  onCustomIncomeInput(e) { this.setData({ customIncome: e.detail.value }); },
 
   // 加载我的赛事（已标记）
   async loadMyRaces() {
@@ -70,7 +107,6 @@ Page({
     const res = await ledger.call('myRaces', { userId: userInfo ? userInfo._id : '' });
     const fallback = ['不选（通用比赛开支）', '自定义赛事…'];
     if (!res.ok) {
-      // 云函数未更新（旧版无 myRaces 接口）或查询失败：给兜底选项，仍可自定义
       console.warn('loadMyRaces failed:', res.msg);
       this.setData({ raceOptions: [], raceNames: fallback, raceIdx: 0 });
       wx.showToast({ title: '赛事列表加载失败', icon: 'none' });
@@ -82,7 +118,6 @@ Page({
     this.syncRaceIdx();
   },
 
-  // 根据已存 eventName/eventId 对齐 picker 索引
   syncRaceIdx() {
     const { eventId, eventName, raceOptions, raceNames } = this.data;
     if (!raceNames.length) return;
@@ -197,29 +232,36 @@ Page({
     const amount = parseFloat(this.data.amount);
     if (!(amount > 0)) { wx.showToast({ title: '请输入正确的金额', icon: 'none' }); return; }
 
-    let smallCategory = this.data.smallCategory;
-    if (smallCategory === '其他') {
-      smallCategory = this.data.customSmall.trim() || '其他';
-    }
-    if (!smallCategory) { wx.showToast({ title: '请选择小类', icon: 'none' }); return; }
-
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) { wx.navigateTo({ url: '/pages/login/login' }); return; }
 
-    this.setData({ submitting: true });
-    wx.showLoading({ title: '保存中' });
     const payload = {
-      bigCategory: this.data.bigCategory,
-      smallCategory,
+      entryType: this.data.entryType,
       amount,
       date: this.data.date,
       note: this.data.note,
       images: this.data.images.map(i => i.fileID),
     };
-    if (this.data.bigCategory === 'race') {
+
+    if (this.data.entryType === 'income') {
+      let incomeType = this.data.incomeType;
+      if (incomeType === '其他') incomeType = this.data.customIncome.trim() || '其他';
+      if (!incomeType) { wx.showToast({ title: '请选择收入类型', icon: 'none' }); return; }
+      payload.incomeType = incomeType;
+    } else {
+      let smallCategory = this.data.smallCategory;
+      if (smallCategory === '其他') {
+        smallCategory = this.data.customSmall.trim() || '其他';
+      }
+      if (!smallCategory) { wx.showToast({ title: '请选择小类', icon: 'none' }); return; }
+      payload.bigCategory = this.data.bigCategory;
+      payload.smallCategory = smallCategory;
       payload.eventName = this.data.eventName;
       payload.eventId = this.data.eventId;
     }
+
+    this.setData({ submitting: true });
+    wx.showLoading({ title: '保存中' });
     const res = this.data.isEdit
       ? await ledger.call('update', { id: this.data.id, ...payload })
       : await ledger.call('add', payload);

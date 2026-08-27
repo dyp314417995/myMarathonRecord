@@ -3,6 +3,13 @@
   <view class="card">
     <text class="page-title">记一笔<text wx:if="{{isEdit}}" class="edit-badge">（编辑）</text></text>
 
+    <text class="form-label">类型</text>
+    <view class="opt-row">
+      <text class="opt-btn {{entryType === 'expense' ? 'on' : ''}}" data-v="expense" bindtap="onTypeTap">支出</text>
+      <text class="opt-btn {{entryType === 'income' ? 'on' : ''}}" data-v="income" bindtap="onTypeTap">收入</text>
+    </view>
+
+    <block wx:if="{{entryType === 'expense'}}">
     <text class="form-label">支出大类</text>
     <view class="opt-row">
       <text class="opt-btn {{bigCategory === 'daily' ? 'on' : ''}}" data-v="daily" bindtap="onBigTap">日常开支</text>
@@ -29,6 +36,17 @@
     <view wx:if="{{smallCategory === '其他'}}" class="custom-row">
       <input class="form-input" placeholder="输入自定义小类（如：能量胶、私兔红包）" value="{{customSmall}}" bindinput="onCustomInput" maxlength="20" />
     </view>
+    </block>
+
+    <block wx:if="{{entryType === 'income'}}">
+      <text class="form-label">收入类型</text>
+      <view class="sub-grid">
+        <text class="sub-btn {{incomeType === item ? 'on' : ''}}" wx:for="{{incomeTypes}}" wx:key="*this" data-v="{{item}}" bindtap="onIncomeTypeTap">{{item}}</text>
+      </view>
+      <view wx:if="{{incomeType === '其他'}}" class="custom-row">
+        <input class="form-input" placeholder="输入收入类型（如：赞助、退款）" value="{{customIncome}}" bindinput="onCustomIncomeInput" maxlength="20" />
+      </view>
+    </block>
 
     <text class="form-label">金额（元）</text>
     <input class="form-input amount-input" type="digit" placeholder="0.00" value="{{amount}}" bindinput="onAmountInput" />

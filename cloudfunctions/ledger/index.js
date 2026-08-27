@@ -60,6 +60,8 @@ async function withTempUrls(items) {
 
 async function list(event, uid) {
   const cond = { userId: uid };
+  if (event.entryType === 'income') cond.entryType = 'income';
+  else if (event.entryType === 'expense') cond.entryType = _.or([{ entryType: 'expense' }, { entryType: _.exists(false) }]);
   if (event.startDate || event.endDate) {
     if (event.startDate && event.endDate) cond.date = _.gte(event.startDate).and(_.lte(event.endDate));
     else if (event.startDate) cond.date = _.gte(event.startDate);
@@ -98,9 +100,10 @@ async function list(event, uid) {
   filtered.sort((a, b) => (b.date || '').localeCompare(a.date || '') || ((b.createTime || 0) - (a.createTime || 0)));
 
   const total = filtered.length;
-  const sum = round2(filtered.reduce((s, r) => s + (r.amount || 0), 0));
+  const expenseSum = round2(filtered.filter(r => r.entryType !== 'income').reduce((s, r) => s + (r.amount || 0), 0));
   const dailySum = round2(filtered.filter(r => r.bigCategory === 'daily').reduce((s, r) => s + (r.amount || 0), 0));
   const raceSum = round2(filtered.filter(r => r.bigCategory === 'race').reduce((s, r) => s + (r.amount || 0), 0));
+  const incomeSum = round2(filtered.filter(r => r.entryType === 'income').reduce((s, r) => s + (r.amount || 0), 0));
 
   const page = parseInt(event.page, 10) || 1;
   const pageSize = parseInt(event.pageSize, 10) || 20;
@@ -111,7 +114,7 @@ async function list(event, uid) {
   return {
     ok: true,
     list: listWithUrls,
-    total, sum, dailySum, raceSum, smallCatsByBig,
+    total, expenseSum, dailySum, raceSum, incomeSum, smallCatsByBig,
     hasMore: start + pageSize < total,
     page, pageSize,
   };
@@ -120,20 +123,28 @@ async function list(event, uid) {
 async function add(event, uid) {
   const amount = round2(event.amount);
   if (!(amount > 0)) return { ok: false, msg: '金额必须大于 0' };
-  if (!BIG_CATS.includes(event.bigCategory)) return { ok: false, msg: '大类不正确' };
-  const smallCategory = String(event.smallCategory || '').trim();
-  if (!smallCategory) return { ok: false, msg: '请选择小类' };
+  const entryType = event.entryType === 'income' ? 'income' : 'expense';
   const images = Array.isArray(event.images)
     ? event.images.slice(0, MAX_IMAGES).filter(f => typeof f === 'string' && f.startsWith('cloud://'))
     : [];
   const date = /^\d{4}-\d{2}-\d{2}$/.test(event.date || '') ? event.date : todayStr();
   const note = String(event.note || '').trim().slice(0, 200);
-  const eventName = String(event.eventName || '').trim().slice(0, 50);
-  const eventId = String(event.eventId || '').trim().slice(0, 64);
   const now = new Date();
-  const res = await db.collection(COLL).add({
-    data: { userId: uid, bigCategory: event.bigCategory, smallCategory, amount, note, images, date, eventName, eventId, createTime: now, updateTime: now },
-  });
+
+  const data = { userId: uid, entryType, amount, note, images, date, createTime: now, updateTime: now };
+  if (entryType === 'income') {
+    // 收入：不分大类小类，内置收入类型
+    data.incomeType = String(event.incomeType || '').trim().slice(0, 20) || '比赛奖金';
+  } else {
+    if (!BIG_CATS.includes(event.bigCategory)) return { ok: false, msg: '大类不正确' };
+    const smallCategory = String(event.smallCategory || '').trim();
+    if (!smallCategory) return { ok: false, msg: '请选择小类' };
+    data.bigCategory = event.bigCategory;
+    data.smallCategory = smallCategory;
+    data.eventName = String(event.eventName || '').trim().slice(0, 50);
+    data.eventId = String(event.eventId || '').trim().slice(0, 64);
+  }
+  const res = await db.collection(COLL).add({ data });
   return { ok: true, id: res._id };
 }
 
@@ -156,6 +167,13 @@ async function update(event, uid) {
   if (event.smallCategory != null) patch.smallCategory = String(event.smallCategory).trim();
   if (event.date) patch.date = /^\d{4}-\d{2}-\d{2}$/.test(event.date) ? event.date : doc.data.date;
   if (event.note != null) patch.note = String(event.note).trim().slice(0, 200);
+  if (event.entryType != null) {
+    const et = event.entryType === 'income' ? 'income' : 'expense';
+    patch.entryType = et;
+    if (et === 'income') { patch.bigCategory = ''; patch.smallCategory = ''; patch.eventName = ''; patch.eventId = ''; }
+    else { patch.incomeType = ''; }
+  }
+  if (event.incomeType != null) patch.incomeType = String(event.incomeType).trim().slice(0, 20);
   if (event.eventName != null) patch.eventName = String(event.eventName).trim().slice(0, 50);
   if (event.eventId != null) patch.eventId = String(event.eventId).trim().slice(0, 64);
   if (Array.isArray(event.images)) {
