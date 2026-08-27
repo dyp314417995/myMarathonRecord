@@ -46,3 +46,31 @@
   font-size: 22rpx; color: #ff4d4f; padding: 4rpx 12rpx;
   border: 1rpx solid #ff4d4f; border-radius: 6rpx; margin-top: 8rpx; display: inline-block;
 }
+
+.action-row.sub { padding-top: 0; }
+.action-row .btn-signin {
+  flex: 1;
+  background: #ff6b00; color: #fff;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0;
+}
+.action-row .btn-signin::after { border: none; }
+.action-row .btn-exchange {
+  flex: 1;
+  background: #fdeaea; color: #ff4d4f;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0;
+}
+.action-row .btn-exchange::after { border: none; }
+
+/* 规则说明展开区 */
+.rule-expanded {
+  margin-top: 12rpx; padding-top: 12rpx;
+  border-top: 1rpx solid #f0f0f0;
+}

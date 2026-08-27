@@ -126,8 +126,8 @@ async function checkRuleLimit(userId, category, rule) {
   return { ok: used < limitCount, used, limit: limitCount };
 }
 
-/** 获取指定规则名称的有效积分值（未找到或禁用时返回默认值；三个固定自动发放类型按规则名称取值） */
-async function getRulePoints(name, fallback) {
+/** 获取指定规则名称的积分值：仅「启用」的规则发分，禁用/删除/未配置一律返回 0（不发分） */
+async function getRulePoints(name) {
   try {
     const res = await db.collection('points_rules')
       .where({ name, status: 'active' })
@@ -144,21 +144,40 @@ async function getRulePoints(name, fallback) {
         }
       }
       if (rule.points != null) {
-        return rule.points;
+        return parseInt(rule.points, 10) || 0;
       }
     }
   } catch (e) { console.warn('getRulePoints error', name, e); }
-  return fallback;
+  return 0;
 }
 
 // ============ 积分流水 ============
 
-/** 获取用户积分余额 */
+/** 统计用户已通过流水总积分（分页拉全，避免小程序端单次查询 20 条上限） */
+async function sumApprovedPoints(userId) {
+  const PAGE = 20;
+  let total = 0;
+  let skip = 0;
+  while (true) {
+    const res = await db.collection('points_records').where({
+      userId, status: 'approved',
+    }).skip(skip).limit(PAGE).get();
+    const list = res.data || [];
+    if (list.length === 0) break;
+    total += list.reduce((s, r) => s + r.points, 0);
+    if (list.length < PAGE) break;
+    skip += PAGE;
+  }
+  return total;
+}
+
+/** 获取用户积分余额（优先直接读 users.points 余额字段；老用户字段缺失时回退统计流水） */
 async function getBalance(userId) {
-  const res = await db.collection('points_records').where({
-    userId, status: 'approved',
-  }).get();
-  return res.data.reduce((sum, r) => sum + r.points, 0);
+  try {
+    const u = await db.collection('users').doc(userId).get();
+    if (u.data && typeof u.data.points === 'number') return u.data.points;
+  } catch (e) { /* 用户不存在或读取失败，回退统计 */ }
+  return await sumApprovedPoints(userId);
 }
 
 /** 即将过期的积分 */
@@ -177,12 +196,24 @@ async function getRecords(userId, skip = 0, limit = 20) {
     .orderBy('createTime', 'desc').skip(skip).limit(limit).get();
 }
 
+/** 增量更新用户余额：有字段用原子自增；老用户无 points 字段时按流水重算回填 */
+async function incUserPoints(userId, delta) {
+  try {
+    const u = await db.collection('users').doc(userId).get();
+    if (u.data && typeof u.data.points === 'number') {
+      await db.collection('users').doc(userId).update({ data: { points: _.inc(delta) } });
+      return;
+    }
+  } catch (e) { /* 用户不存在则忽略 */ }
+  const balance = await sumApprovedPoints(userId);
+  await db.collection('users').doc(userId).update({ data: { points: balance } });
+}
+
 /** 添加积分记录 */
 async function addRecord(data) {
   const idRes = await db.collection('points_records').add({ data: { ...data, createTime: new Date() } });
-  // 同步更新用户积分余额
-  const balance = await getBalance(data.userId);
-  await db.collection('users').doc(data.userId).update({ data: { points: balance } });
+  // 增量同步用户积分余额（原子自增，避免重算受客户端查询条数限制）
+  await incUserPoints(data.userId, data.points || 0);
   return idRes._id;
 }
 
@@ -203,11 +234,10 @@ async function reviewRecord(recordId, status, reviewerId) {
   await db.collection('points_records').doc(recordId).update({
     data: { status, reviewerId, reviewTime: new Date() },
   });
-  // 审批通过后同步更新用户积分
+  // 审批通过后按本次积分增量同步用户余额
   if (status === 'approved') {
     const rec = await db.collection('points_records').doc(recordId).get();
-    const balance = await getBalance(rec.data.userId);
-    await db.collection('users').doc(rec.data.userId).update({ data: { points: balance } });
+    await incUserPoints(rec.data.userId, rec.data.points || 0);
   }
 }
 
@@ -244,6 +274,8 @@ async function expireOverduePoints() {
     });
     // 标记原记录为已过期
     await db.collection('points_records').doc(r._id).update({ data: { status: 'expired' } });
+    // 同步扣减用户余额（避免余额字段与流水不一致）
+    await db.collection('users').doc(r.userId).update({ data: { points: _.inc(-r.points) } });
   }
   return overdue.data.length;
 }

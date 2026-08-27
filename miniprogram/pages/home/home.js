@@ -1,5 +1,6 @@
 // pages/home/home.js - 首页（角色面板）
 const dbUtil = require('../../utils/db');
+const shareUtil = require('../../utils/share');
 const app = getApp();
 
 Page({
@@ -13,7 +14,15 @@ Page({
   },
 
   async onShow() {
+    shareUtil.enableShareMenu();
     await this.loadUserInfo();
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '九州战马跑团｜一起跑步，记录每一公里',
+      path: '/pages/home/home',
+    };
   },
 
   async loadUserInfo() {
@@ -63,16 +72,36 @@ Page({
       const oldBonus = await dbUtil.db.collection('points_records')
         .where({ userId: user._id, category: '注册赠送' }).count();
       if (oldBonus.total === 0) {
-        const regPoints = await pointsUtil.getRulePoints('注册赠送', 50);
-        pointsUtil.addRecord({
-          userId: user._id, type: 'earn', category: '注册赠送',
-          points: regPoints, description: '新用户注册赠送（补发）',
-          images: [], earnDate: user.createTime || new Date(),
-          expireDate: new Date((user.createTime ? new Date(user.createTime).getTime() : Date.now()) + 365 * 86400000),
-          status: 'approved',
-        }).catch(() => {});
+        const regPoints = await pointsUtil.getRulePoints('注册赠送');
+        if (regPoints > 0) {
+          pointsUtil.addRecord({
+            userId: user._id, type: 'earn', category: '注册赠送',
+            points: regPoints, description: '新用户注册赠送（补发）',
+            images: [], earnDate: user.createTime || new Date(),
+            expireDate: new Date((user.createTime ? new Date(user.createTime).getTime() : Date.now()) + 365 * 86400000),
+            status: 'approved',
+          }).catch(() => {});
+        }
       }
 
+      // 签到功能上线：老用户（无 signin_cards_granted 标记）补发 2 张补签卡（仅一次）
+      if (!user.signin_cards_granted) {
+        const cardCount = await dbUtil.db.collection('makeup_card')
+          .where({ userId: user._id }).count().catch(() => ({ total: 0 }));
+        if (cardCount.total === 0) {
+          const now = new Date();
+          const expireAt = new Date(now.getTime() + 30 * 86400000);
+          for (let i = 0; i < 2; i++) {
+            dbUtil.db.collection('makeup_card').add({
+              data: {
+                userId: user._id, source: 1, expire_at: expireAt,
+                status: 0, used_at: null, created_at: now,
+              },
+            }).catch(() => {});
+          }
+        }
+        dbUtil.updateUser(user._id, { signin_cards_granted: true }).catch(() => {});
+      }
       // 兼容旧数据：groupId → groupIds
       if (!user.groupIds && user.groupId) {
         user.groupIds = [user.groupId];
@@ -136,6 +165,11 @@ Page({
   onPoints() {
     wx.navigateTo({ url: '/pages/points/index' });
   },
+  // 每日签到
+  onSignin() {
+    wx.navigateTo({ url: '/pages/signin/index' });
+  },
+
   onPointsAdmin() {
     wx.navigateTo({ url: '/pages/points/admin' });
   },

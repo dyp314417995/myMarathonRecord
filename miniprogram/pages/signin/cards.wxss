@@ -1,0 +1,38 @@
+/* pages/signin/cards.wxss - 补签卡列表 */
+.cards-page { padding: 24rpx 24rpx 60rpx; }
+.card { background: #fff; border-radius: 20rpx; margin-top: 20rpx; padding: 28rpx; }
+
+.summary { text-align: center; }
+.summary-num { font-size: 80rpx; font-weight: 700; color: #ff6b00; display: block; }
+.summary-label { font-size: 28rpx; color: #333; display: block; margin-top: 4rpx; }
+.summary-tip { font-size: 22rpx; color: #999; display: block; margin-top: 12rpx; }
+
+.section-title { font-size: 30rpx; font-weight: 600; padding: 28rpx 8rpx 8rpx; }
+
+.card-item { display: flex; justify-content: space-between; align-items: center; }
+.card-item.disabled { opacity: 0.55; }
+.card-left { flex: 1; }
+.card-source { font-size: 30rpx; font-weight: 600; color: #333; display: block; }
+.card-date { font-size: 24rpx; color: #999; margin-top: 8rpx; display: block; }
+.card-date.warn { color: #ff6b00; }
+.card-right { text-align: right; }
+.tag {
+  font-size: 22rpx; padding: 6rpx 16rpx; border-radius: 8rpx;
+  display: inline-block;
+}
+.tag-green { background: #e8f8e8; color: #1aad19; }
+.tag-gray { background: #f0f0f0; color: #888; }
+.tag-red { background: #fdeaea; color: #ff4d4f; }
+.use-btn {
+  margin-top: 14rpx;
+  background: #1aad19; color: #fff;
+  font-size: 26rpx;
+  border-radius: 999rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  padding: 0 32rpx;
+}
+.use-btn::after { border: none; }
+
+.empty-state { text-align: center; padding: 120rpx 0; color: #999; font-size: 28rpx; }
+.empty-sub { display: block; font-size: 24rpx; color: #bbb; margin-top: 16rpx; }

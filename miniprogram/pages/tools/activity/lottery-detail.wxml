@@ -17,6 +17,9 @@
         <text class="lot-name">{{lottery.name}}</text>
         <text class="tag {{lottery.stateTag.cls}}">{{lottery.stateTag.text}}</text>
       </view>
+      <view class="share-bar">
+        <button class="share-btn" open-type="share">转发给好友</button>
+      </view>
     </view>
 
     <view class="card">

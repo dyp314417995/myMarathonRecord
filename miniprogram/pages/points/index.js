@@ -1,5 +1,6 @@
 // pages/points/index.js - 积分首页
 const pointsUtil = require('../../utils/points');
+const shareUtil = require('../../utils/share');
 
 Page({
   data: {
@@ -13,6 +14,7 @@ Page({
   },
 
   async onShow() {
+    shareUtil.enableShareMenu();
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) return;
     this.setData({ userId: userInfo._id });
@@ -58,20 +60,19 @@ Page({
     const rules = (res.data || []).filter(r => r.status === 'active').map(r => ({
       ...r,
       limitText: pointsUtil.getRuleLimitText(r),
+      _expanded: false,
     }));
     this.setData({ rules });
   },
 
-  // 点击规则名弹窗显示规则描述
+  // 点击规则：展开/收起下方规则说明（不再弹窗）
   onRuleTap(e) {
     const id = e.currentTarget.dataset.id;
-    const r = this.data.rules.find(x => x._id === id);
-    if (!r) return;
-    wx.showModal({
-      title: r.name,
-      content: r.description || '暂无规则描述',
-      showCancel: false,
-      confirmText: '知道了',
+    this.setData({
+      rules: this.data.rules.map(r => ({
+        ...r,
+        _expanded: r._id === id ? !r._expanded : false,
+      })),
     });
   },
 
@@ -91,6 +92,22 @@ Page({
         this.loadBalance();
       },
     });
+  },
+
+  onShareAppMessage() {
+    const u = wx.getStorageSync('userInfo');
+    return {
+      title: u && u.nickName ? `${u.nickName} 的九州战马积分` : '九州战马积分中心',
+      path: '/pages/points/index',
+    };
+  },
+
+  onSignin() {
+    wx.navigateTo({ url: '/pages/signin/index' });
+  },
+
+  onExchangeCard() {
+    wx.navigateTo({ url: '/pages/signin/index?exchange=1' });
   },
 
   onApply() {

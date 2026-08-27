@@ -28,6 +28,8 @@ exports.main = async () => {
     });
     // 标记原记录过期
     await db.collection('points_records').doc(r._id).update({ data: { status: 'expired' } });
+    // 同步扣减用户余额（避免余额字段与流水不一致）
+    await db.collection('users').doc(r.userId).update({ data: { points: _.inc(-r.points) } });
   }
   results.expired = overdueRes.data.length;
 

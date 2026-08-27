@@ -1,5 +1,6 @@
 // pages/tools/calendar/index.js - 赛事日历
 const raceUtil = require('../../../utils/raceEvents');
+const shareUtil = require('../../../utils/share');
 
 Page({
   data: {
@@ -37,9 +38,17 @@ Page({
   },
 
   onLoad() {
+    shareUtil.enableShareMenu();
     // 恢复上次的 tab
     const saved = wx.getStorageSync('calendar_tab');
     if (saved) this.setData({ tab: saved });
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '九州战马赛事日历｜查赛事、看评分、打标记',
+      path: '/pages/tools/calendar/index',
+    };
   },
 
   onShow() {

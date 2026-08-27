@@ -1,4 +1,6 @@
 // pages/tools/activity/lottery-detail.js
+const shareUtil = require('../../../utils/share');
+
 Page({
   data: {
     loading: true,
@@ -17,11 +19,22 @@ Page({
       return;
     }
     this.setData({ lotteryId: id });
+    shareUtil.enableShareMenu();
     this.loadDetail();
   },
 
   onShow() {
     if (this.data.lotteryId) this.loadDetail();
+  },
+
+  // 转发（右上角菜单 + 页面按钮）
+  onShareAppMessage() {
+    const lot = this.data.lottery;
+    return {
+      title: lot ? `【抽奖】${lot.name}` : '九州战马跑团抽奖',
+      path: `/pages/tools/activity/lottery-detail?id=${this.data.lotteryId}`,
+      imageUrl: (lot && lot.images && lot.images[0]) || '',
+    };
   },
 
   async loadDetail() {

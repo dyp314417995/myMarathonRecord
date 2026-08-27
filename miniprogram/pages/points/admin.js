@@ -18,6 +18,7 @@ Page({
     users: [],
     selectedUserIds: {},
     selectedUserNames: {},
+    selectedUserBalances: {},
     selectedNamesText: '',
     selectedNamesMore: '',
     selectedNamesAll: '',
@@ -345,9 +346,19 @@ Page({
   },
 
   // ========== 手动录入/扣减 ==========
+  /** 给用户列表附加积分展示字段（直接读 users.points 余额字段） */
+  decorateUsers(list) {
+    return (list || []).map(u => ({
+      ...u,
+      pointsNum: typeof u.points === 'number' ? u.points : 0,
+      balanceText: `积分${typeof u.points === 'number' ? u.points : 0}`,
+    }));
+  },
+
   async loadUsers() {
     const res = await dbUtil.getUserList({}, 0, 20);
-    this.setData({ users: res.data });
+    const users = this.decorateUsers(res.data);
+    this.setData({ users, filteredUsers: users });
   },
 
   onSearchUser(e) {
@@ -357,7 +368,7 @@ Page({
     this._searchTimer = setTimeout(async () => {
       if (kw) {
         const res = await dbUtil.getUserList({ nickName: dbUtil.db.RegExp({ regexp: kw, options: 'i' }) }, 0, 20);
-        this.setData({ filteredUsers: res.data });
+        this.setData({ filteredUsers: this.decorateUsers(res.data) });
       } else {
         this.setData({ filteredUsers: this.data.users });
       }
@@ -372,19 +383,39 @@ Page({
     const { id, name } = e.currentTarget.dataset;
     const ids = { ...this.data.selectedUserIds };
     const namesObj = { ...(this.data.selectedUserNames || {}) };
-    if (ids[id]) { delete ids[id]; delete namesObj[id]; }
-    else { ids[id] = true; namesObj[id] = name || ''; }
-    const vals = Object.values(namesObj).filter(Boolean);
-    const count = vals.length;
+    const balancesObj = { ...(this.data.selectedUserBalances || {}) };
+    if (ids[id]) {
+      delete ids[id]; delete namesObj[id]; delete balancesObj[id];
+    } else {
+      ids[id] = true;
+      namesObj[id] = name || '';
+      const u = (this.data.filteredUsers || []).find(x => x._id === id);
+      balancesObj[id] = (u && typeof u.points === 'number') ? u.points : 0;
+    }
+    const labels = Object.keys(ids).map(uid => {
+      const nm = namesObj[uid];
+      const bal = balancesObj[uid];
+      return nm ? `${nm}（${bal != null ? bal : 0}分）` : '';
+    }).filter(Boolean);
+    const count = labels.length;
     const max = 5;
-    let text = vals.slice(0, max).join('、');
+    let text = labels.slice(0, max).join('、');
     let more = '';
     if (count > max) {
       text += ' ...';
       more = `等${count}人`;
     }
-    const all = vals.join('、');
-    this.setData({ selectedUserIds: ids, selectedUserNames: namesObj, selectedCount: count, selectedNamesText: text, selectedNamesMore: more, selectedNamesAll: all, showAllNames: false });
+    const all = labels.join('、');
+    this.setData({
+      selectedUserIds: ids,
+      selectedUserNames: namesObj,
+      selectedUserBalances: balancesObj,
+      selectedCount: count,
+      selectedNamesText: text,
+      selectedNamesMore: more,
+      selectedNamesAll: all,
+      showAllNames: false,
+    });
   },
 
   hideUserPicker() { this.setData({ showUserPicker: false }); },
@@ -401,11 +432,25 @@ Page({
     if (isNaN(pts) || pts === 0) return wx.showToast({ title: '请输入积分数量', icon: 'none' });
     if (!deductReason.trim()) return wx.showToast({ title: '请输入原因', icon: 'none' });
 
-    // 扣减时检查余额
+    // 扣减时检查余额：余额不足弹窗提醒（含当前实时余额）
     if (pts < 0) {
+      const need = Math.abs(pts);
+      const poor = [];
       for (const uid of userIds) {
         const balance = await pointsUtil.getBalance(uid);
-        if (balance < Math.abs(pts)) return wx.showToast({ title: `${this.data.allUsers.find(u => u._id === uid)?.nickName || uid} 余额不足`, icon: 'none' });
+        if (balance < need) {
+          const nm = (this.data.selectedUserNames && this.data.selectedUserNames[uid]) || uid;
+          poor.push(`${nm}（当前 ${balance} 分）`);
+        }
+      }
+      if (poor.length > 0) {
+        wx.showModal({
+          title: '余额不足，无法扣减',
+          content: `本次扣减 ${need} 分，以下用户余额不足：\n${poor.slice(0, 5).join('\n')}${poor.length > 5 ? `\n等 ${poor.length} 人` : ''}`,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+        return;
       }
     }
 
@@ -437,7 +482,7 @@ Page({
       }
       wx.hideLoading();
       wx.showToast({ title: `已为 ${userIds.length} 人操作成功`, icon: 'success' });
-      this.setData({ deductPoints: '', deductReason: '', deductImages: [], selectedUserIds: {}, selectedUserNames: {}, selectedCount: 0, selectedNamesText: '' });
+      this.setData({ deductPoints: '', deductReason: '', deductImages: [], selectedUserIds: {}, selectedUserNames: {}, selectedUserBalances: {}, selectedCount: 0, selectedNamesText: '' });
     } catch (err) {
       wx.hideLoading();
       wx.showToast({ title: '操作失败', icon: 'none' });
@@ -448,7 +493,7 @@ Page({
     const v = String(e.detail.value || '').replace(/[^-\d]/g, '');
     const isNum = v !== '' && parseInt(v) !== 0;
     if (!isNum) {
-      this.setData({ deductPoints: v, selectedUserIds: {}, selectedUserNames: {}, selectedCount: 0, selectedNamesText: '' });
+      this.setData({ deductPoints: v, selectedUserIds: {}, selectedUserNames: {}, selectedUserBalances: {}, selectedCount: 0, selectedNamesText: '' });
     } else {
       this.setData({ deductPoints: v });
     }

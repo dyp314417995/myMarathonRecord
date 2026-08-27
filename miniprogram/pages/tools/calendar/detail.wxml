@@ -33,6 +33,7 @@
       <text class="dtl-meta-label">官网</text>
       <text class="dtl-meta-link">{{event.website}}</text>
     </view>
+
   </view>
 
   <!-- 时间轴 -->

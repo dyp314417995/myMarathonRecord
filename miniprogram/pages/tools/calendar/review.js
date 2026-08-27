@@ -181,18 +181,20 @@ Page({
           data: { ...updateData, eventId: this.data.eventId, userId: userInfo._id, raceGroup: this.data.raceGroup, status: 'approved', createTime: new Date() }
         });
 
-        const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励', 10);
-        await pointsUtil.addRecord({
-          userId: userInfo._id,
-          type: 'earn',
-          category: '赛事评分奖励',
-          points: reviewPoints,
-          description: `赛事"${this.data.eventName}"体验评分奖励`,
-          images: [],
-          earnDate: new Date(),
-          expireDate: new Date(Date.now() + 365 * 86400000),
-          status: 'approved',
-        });
+        const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励');
+        if (reviewPoints > 0) {
+          await pointsUtil.addRecord({
+            userId: userInfo._id,
+            type: 'earn',
+            category: '赛事评分奖励',
+            points: reviewPoints,
+            description: `赛事"${this.data.eventName}"体验评分奖励`,
+            images: [],
+            earnDate: new Date(),
+            expireDate: new Date(Date.now() + 365 * 86400000),
+            status: 'approved',
+          });
+        }
       }
 
       // 更新统计
@@ -204,7 +206,7 @@ Page({
       });
 
       wx.hideLoading();
-      wx.showToast({ title: this.data.isEdit ? '已更新' : '提交成功，+' + reviewPoints + '积分', icon: 'success' });
+      wx.showToast({ title: this.data.isEdit ? '已更新' : (reviewPoints > 0 ? '提交成功，+' + reviewPoints + '积分' : '提交成功'), icon: 'success' });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();
@@ -215,10 +217,10 @@ Page({
   },
 
   async onDelete() {
-    const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励', 10);
+    const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励');
     wx.showModal({
       title: '删除评价',
-      content: '将扣除' + reviewPoints + '积分，重新评价可再获得积分',
+      content: reviewPoints > 0 ? '将扣除' + reviewPoints + '积分，重新评价可再获得积分' : '删除评价后，重新评价将不再获得积分',
       confirmColor: '#ff4d4f',
       success: async (res) => {
         if (!res.confirm) return;
@@ -227,7 +229,7 @@ Page({
 
         await db.collection('race_reviews').doc(this.data.existingId).remove();
 
-        if (userInfo) {
+        if (userInfo && reviewPoints > 0) {
           await pointsUtil.addRecord({
             userId: userInfo._id, type: 'use', category: '消耗', points: -reviewPoints,
             description: `删除"${this.data.eventName}"评价，扣减${reviewPoints}积分`,
@@ -244,7 +246,7 @@ Page({
           data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
         });
 
-        wx.showToast({ title: '已删除，-' + reviewPoints + '积分', icon: 'success' });
+        wx.showToast({ title: reviewPoints > 0 ? '已删除，-' + reviewPoints + '积分' : '已删除', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 1500);
       }
     });

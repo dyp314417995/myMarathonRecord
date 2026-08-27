@@ -1,0 +1,28 @@
+<!-- pages/signin/cards.wxml - 补签卡列表 -->
+<view class="cards-page">
+  <view class="summary card">
+    <text class="summary-num">{{usable}}</text>
+    <text class="summary-label">张可用补签卡</text>
+    <text class="summary-tip">补签卡仅限补签昨天 · 有效期 30 天</text>
+  </view>
+
+  <view class="section-title">我的补签卡</view>
+  <view wx:if="{{list.length === 0 && !loading}}" class="empty-state">
+    <text>暂无补签卡</text>
+    <text class="empty-sub">连续签到满 7 天可获赠，也可用 30 积分兑换</text>
+  </view>
+
+  <block wx:for="{{list}}" wx:key="_id">
+    <view class="card card-item {{item.is_usable ? '' : 'disabled'}}">
+      <view class="card-left">
+        <text class="card-source">{{item.source_text}}</text>
+        <text class="card-date">获得：{{item.fmt_create}}</text>
+        <text class="card-date {{item.is_usable ? 'warn' : ''}}">过期：{{item.fmt_expire}}</text>
+      </view>
+      <view class="card-right">
+        <text class="tag {{item.status === 0 ? 'tag-green' : (item.status === 1 ? 'tag-gray' : 'tag-red')}}">{{item.status_text}}</text>
+        <button wx:if="{{item.is_usable}}" class="use-btn" data-id="{{item._id}}" bindtap="onUse" disabled="{{using}}">使用</button>
+      </view>
+    </view>
+  </block>
+</view>

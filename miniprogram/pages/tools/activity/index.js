@@ -1,4 +1,6 @@
 // pages/tools/activity/index.js
+const shareUtil = require('../../../utils/share');
+
 Page({
   data: {
     tab: 'all',
@@ -14,9 +16,18 @@ Page({
   },
 
   async onShow() {
+    shareUtil.enableShareMenu();
     this.setData({ page: 1, allLoaded: [], hasMore: false, lotPage: 1, allLotteries: [] });
     this.loadData();
     this.loadLotteries();
+  },
+
+  // 转发（右上角菜单）
+  onShareAppMessage() {
+    return {
+      title: '九州战马跑团活动｜报名、抽奖、组队一起跑',
+      path: '/pages/tools/activity/index',
+    };
   },
 
   // ---------- 活动 ----------

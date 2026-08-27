@@ -1,0 +1,101 @@
+<!-- pages/signin/index.wxml - 每日签到 -->
+<view class="signin-page">
+  <!-- 顶部连续天数 -->
+  <view class="hero">
+    <view class="hero-inner">
+      <text class="hero-label">已连续签到</text>
+      <view class="hero-num-row">
+        <text class="hero-num">{{continuousDays}}</text>
+        <text class="hero-unit">天</text>
+      </view>
+      <text class="hero-sub">历史最高 {{maxDays}} 天</text>
+      <view class="hero-tip" wx:if="{{ruleDisabled && !signed}}">签到积分已停用，签到不再获得积分</view>
+      <view class="hero-tip" wx:elif="{{!signed && reward.gap === 0}}">🎉 今天签到可触发连续奖励 +{{reward.bonus}}！</view>
+      <view class="hero-tip" wx:elif="{{!signed}}">再连续签到 {{reward.gap}} 天可得额外 +{{reward.bonus}} 积分</view>
+      <view class="hero-tip" wx:else>今日已签到，明天 0 点后可继续</view>
+    </view>
+  </view>
+
+  <!-- 签到按钮 + 今日预览 -->
+  <view class="card sign-area">
+    <button class="sign-btn {{signed ? 'signed' : ''}}" bindtap="onSign" disabled="{{signed || signing}}">
+      {{signing ? '签到中...' : (signed ? '今日已签到 ✓' : '立即签到')}}
+    </button>
+    <view class="preview" wx:if="{{!signed && ruleDisabled}}">
+      <text class="preview-main">签到不再获得积分</text>
+    </view>
+    <view class="preview" wx:elif="{{!signed}}">
+      <text class="preview-main">今日可得 <text class="preview-num">+{{preview.total}}</text> 积分</text>
+      <text class="preview-sub" wx:if="{{preview.bonus > 0}}">含连续签到奖励 +{{preview.bonus}}</text>
+      <text class="preview-sub" wx:else>基础分 +{{preview.base}}</text>
+    </view>
+    <view class="preview" wx:else>
+      <text class="preview-main">今日已签到，明天再来吧</text>
+    </view>
+  </view>
+
+  <!-- 月历 -->
+  <view class="card calendar-card">
+    <view class="cal-header">
+      <text class="cal-title">{{calTitle}}</text>
+      <view class="cal-legend">
+        <view class="legend-item"><view class="dot dot-signed"></view>已签</view>
+        <view class="legend-item"><view class="dot dot-makeup"></view>补签</view>
+      </view>
+    </view>
+    <view class="cal-week-row">
+      <text class="cal-week" wx:for="{{weeks}}" wx:key="*this">{{item}}</text>
+    </view>
+    <view class="cal-grid">
+      <view class="cal-cell" wx:for="{{calendarDays}}" wx:key="date">
+        <view wx:if="{{item.empty}}" class="cal-day empty"></view>
+        <view wx:else class="cal-day {{item.signed ? 'signed' : ''}} {{item.makeup ? 'makeup' : ''}} {{item.isToday ? 'today' : ''}}">
+          <text>{{item.day}}</text>
+          <view wx:if="{{item.isToday}}" class="today-bar"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 补签卡入口 -->
+  <view class="card cards-entry" bindtap="onGoCards">
+    <view class="cards-left">
+      <text class="cards-title">🎫 补签卡</text>
+      <text class="cards-sub">持有 {{usableCards}} / {{holdLimit}} 张 · 仅限补签昨天</text>
+    </view>
+    <view class="cards-right">
+      <view wx:if="{{expiringCards > 0}}" class="red-dot"></view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 积分余额 + 兑换 -->
+  <view class="card balance-row">
+    <view class="balance-left">
+      <text class="balance-label">当前积分</text>
+      <text class="balance-num">{{balance}}</text>
+      <text class="balance-unit">分</text>
+    </view>
+    <button class="exchange-btn" bindtap="onOpenExchange">兑换补签卡</button>
+  </view>
+
+  <!-- 规则说明 -->
+  <view class="rule-note" wx:if="{{ruleDescription}}">
+    <text>📖 {{ruleDescription}}</text>
+  </view>
+
+  <!-- 兑换弹窗 -->
+  <view wx:if="{{showExchange}}" class="mask" bindtap="onCloseExchange">
+    <view class="modal" catchtap="noop">
+      <text class="modal-title">兑换补签卡</text>
+      <view class="modal-row"><text class="row-label">兑换价格</text><text class="row-value">{{exchange.cost}} 积分 / 张</text></view>
+      <view class="modal-row"><text class="row-label">本月已兑换</text><text class="row-value">{{exchange.used}} / {{exchange.limit}} 张</text></view>
+      <view class="modal-row"><text class="row-label">当前持有</text><text class="row-value">{{usableCards}} / {{holdLimit}} 张</text></view>
+      <text class="modal-tip">兑换后有效期 30 天，过期自动作废</text>
+      <view class="modal-btns">
+        <button class="btn-cancel" bindtap="onCloseExchange">取消</button>
+        <button class="btn-confirm" bindtap="onConfirmExchange" loading="{{exchangeBusy}}" disabled="{{exchangeBusy}}">确认兑换</button>
+      </view>
+    </view>
+  </view>
+</view>

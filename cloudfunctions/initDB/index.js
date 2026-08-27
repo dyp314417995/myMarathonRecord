@@ -52,5 +52,15 @@ exports.main = async () => {
     results.push(`join_requests 集合检查: ${err.message}`);
   }
 
+  // 5. 签到功能集合（createCollection 幂等，已存在会抛错则忽略）
+  const signinCols = ['user_signin', 'signin_detail', 'makeup_card', 'score_exchange'];
+  for (const col of signinCols) {
+    try {
+      await db.createCollection(col);
+      results.push(`${col} 集合已创建`);
+    } catch (err) {
+      results.push(`${col} 集合已存在或创建失败: ${err.message}`);
+    }
+  }
   return { success: true, results };
 };

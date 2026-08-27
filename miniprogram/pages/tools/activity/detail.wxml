@@ -13,6 +13,9 @@
 <view wx:elif="{{activity}}" class="page"><!-- 原有内容从下面开始 -->
   <view class="card">
     <text class="act-name">{{activity.name}}</text>
+    <view class="share-bar">
+      <button class="share-btn" open-type="share">转发给好友</button>
+    </view>
   </view>
 
   <!-- 按创建顺序：时间、地点、费用、截止、人数 -->

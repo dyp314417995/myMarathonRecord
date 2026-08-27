@@ -1,5 +1,6 @@
 // pages/tools/calendar/detail.js - 赛事详情
 const raceUtil = require('../../../utils/raceEvents');
+const shareUtil = require('../../../utils/share');
 
 Page({
   data: {
@@ -47,6 +48,7 @@ Page({
     const eventId = options.scene ? decodeURIComponent(options.scene) : options.id;
     if (!eventId) return;
     this.setData({ eventId });
+    shareUtil.enableShareMenu();
     // onShow 会负责加载数据，避免重复请求
   },
 
@@ -499,8 +501,8 @@ Page({
 
   async onDelMyReview(e) {
     const id = e.currentTarget.dataset.id;
-    const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励', 10);
-    wx.showModal({ title: '删除评价', content: '将同时扣除' + reviewPoints + '积分，之后重新评价可再次获得积分', confirmColor: '#ff4d4f', success: async (res) => {
+    const reviewPoints = await pointsUtil.getRulePoints('赛事评分奖励');
+    wx.showModal({ title: '删除评价', content: reviewPoints > 0 ? '将同时扣除' + reviewPoints + '积分，之后重新评价可再次获得积分' : '删除评价后，重新评价将不再获得积分', confirmColor: '#ff4d4f', success: async (res) => {
       if (!res.confirm) return;
       const db = require('../../../utils/db').db;
       const userInfo = wx.getStorageSync('userInfo');
@@ -510,7 +512,7 @@ Page({
       await db.collection('race_reviews').doc(id).remove();
 
       // 扣减积分
-      if (userInfo && review.data) {
+      if (userInfo && review.data && reviewPoints > 0) {
         const pointsUtil = require('../../../utils/points');
         await pointsUtil.addRecord({
           userId: userInfo._id,
@@ -537,7 +539,7 @@ Page({
         data: { avgScore: stats.avgScore, reviewCount: stats.count, tagStats }
       });
 
-      wx.showToast({ title: '已删除，-' + reviewPoints + '积分', icon: 'success' });
+      wx.showToast({ title: reviewPoints > 0 ? '已删除，-' + reviewPoints + '积分' : '已删除', icon: 'success' });
       this.setData({ myReview: null, myStatus: '', isMine: false });
       this.loadEvent();
     }});

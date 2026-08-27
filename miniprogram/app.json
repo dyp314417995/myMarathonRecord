@@ -24,7 +24,9 @@
     "pages/tools/activity/detail",
     "pages/admin/activities/activities",
     "pages/admin/lotteries/lotteries",
-    "pages/tools/activity/lottery-detail"
+    "pages/tools/activity/lottery-detail",
+    "pages/signin/index",
+    "pages/signin/cards"
   ],
   "usingComponents": {},
   "window": {

@@ -221,12 +221,13 @@ Page({
         }
       } else {
         // 新用户注册（已注册用户会被 getCurrentUser() 在 onLoad/onSubmit 前置拦截）
-        const regPoints = await pointsUtil.getRulePoints('注册赠送', 50);
+        const regPoints = await pointsUtil.getRulePoints('注册赠送');
         const userData = {
           openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
-          groupIds: selectedGroupIds, points: regPoints,
+          // 初始余额为 0：注册赠送积分只通过下方 addRecord -> incUserPoints 发放一次，避免重复加积分
+          groupIds: selectedGroupIds, points: 0,
         };
         const addRes = await dbUtil.createUser(userData);
         const fullUser = await dbUtil.db.collection('users').doc(addRes._id).get();
@@ -234,13 +235,27 @@ Page({
         for (const gid of selectedGroupIds) {
           dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
-        await pointsUtil.addRecord({
-          userId: addRes._id, type: 'earn', category: '注册赠送',
-          points: regPoints, description: '新用户注册赠送',
-          images: [], earnDate: new Date(),
-          expireDate: new Date(Date.now() + 365 * 86400000),
-          status: 'approved',
-        });
+        if (regPoints > 0) {
+          await pointsUtil.addRecord({
+            userId: addRes._id, type: 'earn', category: '注册赠送',
+            points: regPoints, description: '新用户注册赠送',
+            images: [], earnDate: new Date(),
+            expireDate: new Date(Date.now() + 365 * 86400000),
+            status: 'approved',
+          });
+        }
+        // 新用户注册赠送 2 张补签卡（仅首次注册发放，有效期 30 天）
+        const cardNow = new Date();
+        const cardExpire = new Date(cardNow.getTime() + 30 * 86400000);
+        for (let i = 0; i < 2; i++) {
+          await dbUtil.db.collection('makeup_card').add({
+            data: {
+              userId: addRes._id, source: 1, expire_at: cardExpire,
+              status: 0, used_at: null, created_at: cardNow,
+            },
+          }).catch(() => {});
+        }
+        await dbUtil.updateUser(addRes._id, { signin_cards_granted: true }).catch(() => {});
       }
 
       // 保存到全局和本地

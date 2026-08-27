@@ -11,7 +11,7 @@
   <!-- 规则管理 -->
   <block wx:if="{{tab === 'rules'}}">
     <view wx:if="{{isSuperAdmin}}" class="rule-add-btn" bindtap="onAddRule">+ 新增规则</view>
-    <view wx:if="{{isSuperAdmin}}" class="rule-tip">自动发放类规则（注册赠送 / 集体活动 / 赛事评分奖励）被禁用或删除后，对应发放仍会按兜底积分（50/3/10）执行，不会自动停发。</view>
+    <view wx:if="{{isSuperAdmin}}" class="rule-tip">自动发放类规则（注册赠送 / 集体活动 / 赛事评分奖励）被禁用或删除后，对应发放即停发（不再按兜底积分执行）。</view>
     <view wx:for="{{rules}}" wx:key="_id" class="card rule-card">
       <view class="rule-row">
         <view class="rule-info">
@@ -175,6 +175,7 @@
           <text wx:if="{{selectedNamesMore && !showAllNames}}" class="selected-more" catchtap="onToggleShowAll">展开</text>
           <text wx:if="{{showAllNames}}" class="selected-more" catchtap="onToggleShowAll">收起</text>
         </view>
+        <text class="form-tip" wx:if="{{selectedCount > 0}}">已选 {{selectedCount}} 人，括号内为用户当前积分，扣减不能超过余额</text>
       </view>
       <view class="form-group">
         <text class="form-label">上传图片</text>
@@ -207,7 +208,8 @@
         <block wx:for="{{filteredUsers}}" wx:key="_id">
           <view class="picker-item" data-id="{{item._id}}" data-name="{{item.nickName}}" bindtap="onSelectUser">
             <text class="picker-check">{{selectedUserIds[item._id] ? '☑' : '☐'}}</text>
-            <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
+            <text class="picker-name">{{item.nickName}}（{{item.city || '未知'}}）</text>
+            <text class="picker-balance">{{item.balanceText}}</text>
           </view>
         </block>
       </scroll-view>

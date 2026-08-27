@@ -27,3 +27,8 @@
 
 .btn-primary { width: 100%; background: #1aad19; color: #fff; border-radius: 12rpx; padding: 16rpx; font-size: 30rpx; border: none; }
 .btn-outline { width: 100%; background: #fff; color: #ff4d4f; border: 2rpx solid #ff4d4f; border-radius: 12rpx; padding: 16rpx; font-size: 30rpx; }
+
+/* 转发 */
+.share-bar { display: flex; align-items: center; margin-top: 20rpx; }
+.share-btn { font-size: 24rpx; background: #1aad19; color: #fff; border-radius: 8rpx; padding: 10rpx 28rpx; line-height: 1.5; margin: 0; flex-shrink: 0; }
+.share-btn::after { border: none; }

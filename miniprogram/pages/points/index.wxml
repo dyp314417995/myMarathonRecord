@@ -14,6 +14,10 @@
   <!-- 操作区 -->
   <view class="action-row">
     <button class="btn-primary" bindtap="onApply">提交积分申请</button>
+    <button class="btn-signin" bindtap="onSignin">每日签到</button>
+  </view>
+  <view class="action-row sub">
+    <button class="btn-exchange" bindtap="onExchangeCard">兑换补签卡</button>
     <view class="admin-entry" bindtap="onToggleRules">
       <text>积分规则 {{showRules ? '▲ 收起' : '▼ 展开'}}</text>
     </view>
@@ -26,7 +30,10 @@
         <text class="rule-cat">{{item.name}}</text>
         <text class="rule-detail">+{{item.points}}分{{item.limitText ? ' · ' + item.limitText : ''}}</text>
       </view>
-      <text class="rule-desc">点击查看规则说明 ▸</text>
+      <text class="rule-desc">{{item._expanded ? '点击收起规则说明 ▲' : '点击查看规则说明 ▸'}}</text>
+      <view wx:if="{{item._expanded}}" class="rule-expanded">
+        <text class="rule-desc">{{item.description || '暂无规则描述'}}</text>
+      </view>
     </view>
   </block>
 

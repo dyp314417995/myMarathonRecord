@@ -28,3 +28,8 @@
 .my-codes { margin-top: 20rpx; }
 .my-code-item { font-size: 28rpx; font-family: monospace; color: #1aad19; background: #e8f5e9; display: inline-block; padding: 8rpx 20rpx; border-radius: 8rpx; margin: 6rpx; }
 .my-code-item.winner { background: #fff3e0; color: #ff6b00; border: 2rpx solid #ff6b00; font-weight: 700; }
+
+/* 转发 */
+.share-bar { display: flex; align-items: center; margin-top: 20rpx; }
+.share-btn { font-size: 24rpx; background: #1aad19; color: #fff; border-radius: 8rpx; padding: 10rpx 28rpx; line-height: 1.5; margin: 0; flex-shrink: 0; }
+.share-btn::after { border: none; }

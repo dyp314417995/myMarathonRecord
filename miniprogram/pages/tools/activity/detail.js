@@ -1,4 +1,6 @@
 // pages/tools/activity/detail.js
+const shareUtil = require('../../../utils/share');
+
 Page({
   data: {
     loading: true,
@@ -15,9 +17,20 @@ Page({
     // QR扫码: scene, 直接跳转: id
     const activityId = options.scene ? decodeURIComponent(options.scene) : options.id;
     this.setData({ activityId, fromAdmin: options.from === 'admin' });
+    shareUtil.enableShareMenu();
     await this.loadDetail();
   },
   async onShow() { if (this.data.activityId) await this.loadDetail(); },
+
+  // 转发（右上角菜单 + 页面按钮）
+  onShareAppMessage() {
+    const a = this.data.activity;
+    return {
+      title: a ? `【活动】${a.name}` : '九州战马跑团活动',
+      path: `/pages/tools/activity/detail?id=${this.data.activityId}`,
+      imageUrl: (a && a.images && a.images[0]) || '',
+    };
+  },
 
   // 带超时的云函数调用（默认15s客户端超时）
   async callFunctionWithTimeout(params, timeoutMs = 15000) {

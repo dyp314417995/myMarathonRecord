@@ -174,7 +174,7 @@ function computeState(a, regCount, now) {
   return { cls: 'state-s1', text: '报名中' };
 }
 
-// 完成活动并发放积分（积分从规则表读取，默认3）
+// 完成活动并发放积分：仅「集体活动」规则启用时发分，禁用/删除/未配置返回 0 不发分
 async function getCollectivePoints() {
   try {
     const res = await db.collection('points_rules')
@@ -182,10 +182,10 @@ async function getCollectivePoints() {
       .limit(1)
       .get();
     if (res.data && res.data.length > 0 && res.data[0].points != null) {
-      return res.data[0].points;
+      return parseInt(res.data[0].points, 10) || 0;
     }
   } catch (e) { console.warn('getCollectivePoints error', e); }
-  return 3;
+  return 0;
 }
 
 async function finishActivity(activityId) {
@@ -193,6 +193,8 @@ async function finishActivity(activityId) {
   const act = await db.collection('activities').doc(activityId).get();
   const regs = await db.collection('activity_registrations').where({ activityId, status: 'active' }).get();
   const points = await getCollectivePoints();
+  // 规则未启用（禁用/删除/未配置）时不发积分
+  if (points <= 0) return 0;
   for (const r of regs.data) {
     await db.collection('points_records').add({
       data: {
