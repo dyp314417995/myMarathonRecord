@@ -1,6 +1,14 @@
 // pages/profile/profile.js - 个人资料
 const dbUtil = require('../../utils/db');
 
+// 时间字符串转秒：格式非法或 0 秒返回 0
+const toSec = (t) => {
+  if (typeof t !== 'string') return 0;
+  const p = t.split(':');
+  if (p.length !== 3) return 0;
+  return (+p[0] || 0) * 3600 + (+p[1] || 0) * 60 + (+p[2] || 0);
+};
+
 Page({
   data: {
     userInfo: {},
@@ -96,7 +104,14 @@ Page({
     const val = this.data.userInfo[field] || def;
     this.setData({ showTimePicker: true, timeField: field, timeLabel: label, timeDefault: def, timeValue: val });
   },
-  onTimeConfirm(e) { this.setData({ [`userInfo.${this.data.timeField}`]: e.detail.value, showTimePicker: false }); },
+  onTimeConfirm(e) {
+    const v = e.detail.value;
+    const sec = toSec(v);
+    // 类型阈值：10K≥28分、半马≥1小时、全马≥2小时，低于即非法
+    const minSec = { pb10k: 1680, pbHalf: 3600, pbFull: 7200 }[this.data.timeField] || 0;
+    if (!(sec > 0 && sec >= minSec)) { wx.showToast({ title: '成绩无效（10K≥28分/半马≥1小时/全马≥2小时）', icon: 'none' }); return; }
+    this.setData({ [`userInfo.${this.data.timeField}`]: v, showTimePicker: false });
+  },
   onTimeCancel() { this.setData({ showTimePicker: false }); },
 
   async onSave() {

@@ -23,7 +23,7 @@ Component({
   methods: {
     init() {
       // 生成选项列表
-      const hours = Array.from({ length: 10 }, (_, i) => String(i));
+      const hours = Array.from({ length: 24 }, (_, i) => String(i));
       const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
       const seconds = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
@@ -32,8 +32,8 @@ Component({
       const parts = timeStr.split(':');
       let h = parseInt(parts[0]) || 0;
       let m = parseInt(parts[1]) || 0;
-      let s = this.data.value ? (parseInt(parts[2]) || 0) : 30;
-      h = Math.min(h, 9);
+      let s = parseInt(parts[2]) || 0;
+      h = Math.min(h, 23);
       m = Math.min(m, 59);
       s = Math.min(s, 59);
 

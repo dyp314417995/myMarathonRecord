@@ -3,6 +3,15 @@ const dbUtil = require('../../utils/db');
 const db = dbUtil.db;
 const raceUtil = require('../../utils/raceEvents');
 
+// 成绩合法性：10K≥28分、半马≥1小时、全马≥2小时；越野无下限（>0 即可）
+const MIN_RESULT_SEC = { '10k': 1680, half: 3600, full: 7200 };
+const isValidTime = (type, t) => {
+  const p = (t || '').split(':');
+  const sec = (+p[0] || 0) * 3600 + (+p[1] || 0) * 60 + (+p[2] || 0);
+  const min = MIN_RESULT_SEC[type] || 0;
+  return sec > 0 && sec >= min;
+};
+
 Page({
   data: {
     tab: 'full',
@@ -176,7 +185,11 @@ Page({
 
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onPickTime() { this.setData({ showTimePicker: true }); },
-  onTimeChange(e) { this.setData({ 'form.result': e.detail.value, showTimePicker: false }); },
+  onTimeChange(e) {
+    const v = e.detail.value;
+    if (!isValidTime(this.data.form.raceType, v)) { wx.showToast({ title: '成绩无效（10K≥28分/半马≥1小时/全马≥2小时）', icon: 'none' }); return; }
+    this.setData({ 'form.result': v, showTimePicker: false });
+  },
 
   onImageAdd() {
     wx.chooseMedia({ count: 9 - this.data.formImages.length, mediaType: ['image'], success: (res) => {
@@ -258,6 +271,9 @@ Page({
 
     if (!f.date) return wx.showToast({ title: '请选日期', icon: 'none' });
     if (f.status === 'finished' && !f.result) return wx.showToast({ title: '请填写成绩', icon: 'none' });
+    if (f.status === 'finished' && !isValidTime(f.raceType, f.result)) {
+      return wx.showToast({ title: '成绩无效（10K≥28分/半马≥1小时/全马≥2小时）', icon: 'none' });
+    }
     wx.showLoading({ title: '保存中' });
     // 上传新图片
     const images = [];
@@ -315,6 +331,7 @@ Page({
     const current = u[field];
     const toSec = (t) => { const p = t.split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);
+    if (!(newSec > 0)) return; // 无效/0秒成绩不写入 PB
     if (!current || newSec < toSec(current)) {
       await dbUtil.updateUser(u._id, { [field]: result });
       u[field] = result;
