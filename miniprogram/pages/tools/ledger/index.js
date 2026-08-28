@@ -21,6 +21,10 @@ Page({
     smallCatsByBig: { daily: [], race: [] },               // 每个大类可用小类（含自定义）
     stats: { total: 0, expenseSum: 0, dailySum: 0, raceSum: 0, incomeSum: 0, expenseText: '0.00', dailyText: '0.00', raceText: '0.00', incomeText: '0.00' },
     groups: [],
+    // 赛事筛选（支出/收入通用）
+    raceOptions: [],
+    raceNames: [],
+    raceIdx: 0,
     hasMore: false,
     page: 1,
     pageSize: 20,
@@ -37,6 +41,7 @@ Page({
 
   onShow() {
     this.load(true);
+    this.loadRaceOptions(); // 新增记账后返回时刷新赛事下拉
   },
 
   async load(reset) {
@@ -66,6 +71,14 @@ Page({
         if ((selectedSmalls[b] || []).length) smalls[b] = selectedSmalls[b];
       });
       if (Object.keys(smalls).length) params.smalls = smalls;
+    }
+    // 按赛事筛选（支出/收入通用）
+    if (this.data.raceIdx > 0) {
+      const r = this.data.raceOptions[this.data.raceIdx - 1];
+      if (r) {
+        if (r.eventId) params.eventId = r.eventId;
+        else params.eventName = r.eventName;
+      }
     }
 
     const res = await ledger.call('list', params);
@@ -218,6 +231,28 @@ Page({
       smallSel: { daily: {}, race: {} },
       page: 1,
     });
+    this.load(true);
+  },
+
+  // 赛事筛选（支出/收入通用）：只列记过账的赛事
+  async loadRaceOptions() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo) return;
+    const res = await ledger.call('raceOptions', { userId: userInfo._id });
+    if (!res.ok) return;
+    const raceOptions = res.list || [];
+    const raceNames = ['全部赛事', ...raceOptions.map(r => r.eventName || '未命名赛事')];
+    this.setData({ raceOptions, raceNames });
+  },
+
+  onRaceFilterChange(e) {
+    const idx = Number(e.detail.value);
+    this.setData({ raceIdx: idx, page: 1 });
+    this.load(true);
+  },
+
+  onClearRaceFilter() {
+    this.setData({ raceIdx: 0, page: 1 });
     this.load(true);
   },
 

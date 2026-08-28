@@ -52,6 +52,13 @@
       <text class="chip {{typeFilter === 'income' ? 'income-on' : ''}}" data-v="income" bindtap="onTypeTap">收入</text>
     </view>
 
+    <view class="filter-row">
+      <picker mode="selector" range="{{raceNames}}" value="{{raceIdx}}" bindchange="onRaceFilterChange">
+        <view class="picker-box">🏁 {{raceNames[raceIdx] || '全部赛事'}} ▾</view>
+      </picker>
+      <text class="chip link" wx:if="{{raceIdx > 0}}" bindtap="onClearRaceFilter">清除赛事</text>
+    </view>
+
     <view class="filter-row" wx:if="{{typeFilter !== 'income'}}">
       <text class="chip {{bigSel.daily ? 'on' : ''}}" data-v="daily" bindtap="onBigTap">日常开支</text>
       <text class="chip {{bigSel.race ? 'on' : ''}}" data-v="race" bindtap="onBigTap">比赛开支</text>
@@ -85,7 +92,7 @@
         <view class="entry-left">
           <text class="entry-cat">{{item._catLabel}}</text>
           <text class="entry-note">{{item.note || '无备注'}}</text>
-          <text class="entry-event" wx:if="{{item.bigCategory === 'race' && item.eventName}}">🏁 {{item.eventName}}</text>
+          <text class="entry-event" wx:if="{{item.eventName}}">🏁 {{item.eventName}}</text>
         </view>
         <view class="entry-right">
           <text class="entry-amount {{item.entryType === 'income' ? 'income' : ''}}">{{item._signedAmount}}</text>
