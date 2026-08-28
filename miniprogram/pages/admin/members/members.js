@@ -62,6 +62,10 @@ Page({
       if (by === 'name') return asc ? (a.nickName||'').localeCompare(b.nickName||'') : (b.nickName||'').localeCompare(a.nickName||'');
       if (by === 'pb10k' || by === 'pbHalf' || by === 'pbFull') {
         const pa = a[by] || '', pb = b[by] || '';
+        const ha = !!pa, hb = !!pb;
+        // 没成绩的不参与排名：有成绩的排前，没成绩的恒排最后
+        if (ha !== hb) return ha ? -1 : 1;
+        if (!ha) return (a.createTime || 0) - (b.createTime || 0) || (a._id || '').localeCompare(b._id || '');
         return asc ? pa.localeCompare(pb) : pb.localeCompare(pa);
       }
       return asc ? a.createTime - b.createTime : b.createTime - a.createTime;

@@ -26,6 +26,11 @@ function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+/** 转义正则特殊字符（按赛事名模糊查询用） */
+function escapeReg(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** 按条件分页拉全（个人数据量小，全量后内存汇总/分页） */
 async function queryAll(cond) {
   const list = [];
@@ -67,6 +72,9 @@ async function list(event, uid) {
     else if (event.startDate) cond.date = _.gte(event.startDate);
     else cond.date = _.lte(event.endDate);
   }
+  // 按赛事查询：eventId 精确 / eventName 包含（支出、收入通用）
+  if (event.eventId) cond.eventId = event.eventId;
+  else if (event.eventName) cond.eventName = db.RegExp({ regexp: escapeReg(event.eventName), options: 'i' });
 
   const all = await queryAll(cond);
 
@@ -132,6 +140,9 @@ async function add(event, uid) {
   const now = new Date();
 
   const data = { userId: uid, entryType, amount, note, images, date, createTime: now, updateTime: now };
+  // 赛事关联：支出/收入都支持（收入也可关联赛事）
+  data.eventName = String(event.eventName || '').trim().slice(0, 50);
+  data.eventId = String(event.eventId || '').trim().slice(0, 64);
   if (entryType === 'income') {
     // 收入：不分大类小类，内置收入类型
     data.incomeType = String(event.incomeType || '').trim().slice(0, 20) || '比赛奖金';
@@ -141,9 +152,8 @@ async function add(event, uid) {
     if (!smallCategory) return { ok: false, msg: '请选择小类' };
     data.bigCategory = event.bigCategory;
     data.smallCategory = smallCategory;
-    data.eventName = String(event.eventName || '').trim().slice(0, 50);
-    data.eventId = String(event.eventId || '').trim().slice(0, 64);
   }
+
   const res = await db.collection(COLL).add({ data });
   return { ok: true, id: res._id };
 }
@@ -170,8 +180,14 @@ async function update(event, uid) {
   if (event.entryType != null) {
     const et = event.entryType === 'income' ? 'income' : 'expense';
     patch.entryType = et;
-    if (et === 'income') { patch.bigCategory = ''; patch.smallCategory = ''; patch.eventName = ''; patch.eventId = ''; }
-    else { patch.incomeType = ''; }
+    if (et === 'income') {
+      // 收入：清空大类/小类；保留赛事关联（收入也支持关联赛事）
+      patch.bigCategory = '';
+      patch.smallCategory = '';
+    } else {
+      patch.incomeType = '';
+      if (!event.bigCategory && !doc.data.bigCategory) patch.bigCategory = 'daily';
+    }
   }
   if (event.incomeType != null) patch.incomeType = String(event.incomeType).trim().slice(0, 20);
   if (event.eventName != null) patch.eventName = String(event.eventName).trim().slice(0, 50);
@@ -220,6 +236,24 @@ async function myRaces(event, uid) {
   return { ok: true, list };
 }
 
+/** 记过账的赛事列表（按 eventId/eventName 去重，供赛事筛选；未记过账的赛事不出现） */
+async function raceOptions(event, uid) {
+  const all = await queryAll({ userId: uid });
+  const map = {};
+  all.forEach(r => {
+    if (!r.eventName && !r.eventId) return;
+    const key = r.eventId || r.eventName;
+    const cur = map[key];
+    if (!cur || (r.date || '') > (cur.date || '')) {
+      map[key] = { eventId: r.eventId || '', eventName: r.eventName || '', date: r.date || '' };
+    }
+  });
+  const list = Object.values(map)
+    .filter(r => r.eventName)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.eventName.localeCompare(b.eventName));
+  return { ok: true, list };
+}
+
 /** 确保 ledger 集合存在（不存在则自动创建，避免首次查询报错） */
 async function ensureCollection() {
   try {
@@ -242,6 +276,7 @@ exports.main = async (event = {}) => {
       case 'remove': return await remove(event, uid);
       case 'detail': return await detail(event, uid);
       case 'myRaces': return await myRaces(event, uid);
+      case 'raceOptions': return await raceOptions(event, uid);
       default: return { ok: false, msg: '未知操作' };
     }
   } catch (e) {

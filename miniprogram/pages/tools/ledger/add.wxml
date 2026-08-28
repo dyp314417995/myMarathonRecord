@@ -46,6 +46,17 @@
       <view wx:if="{{incomeType === '其他'}}" class="custom-row">
         <input class="form-input" placeholder="输入收入类型（如：赞助、退款）" value="{{customIncome}}" bindinput="onCustomIncomeInput" maxlength="20" />
       </view>
+
+      <text class="form-label">关联赛事（选填）</text>
+      <picker mode="selector" range="{{raceNames}}" value="{{raceIdx}}" bindchange="onRaceChange">
+        <view class="picker-box">{{raceNames[raceIdx] || '选择赛事'}} ▾</view>
+      </picker>
+      <view class="race-custom-row" wx:if="{{raceIdx === raceNames.length - 1}}">
+        <input class="form-input" placeholder="输入赛事名称（如：XX山地马拉松）" value="{{customRace}}" bindinput="onCustomRaceInput" maxlength="30" />
+      </view>
+      <view class="go-mark-row" bindtap="onGoMark">
+        <text class="go-mark-text">🏁 去我的赛事补充标记 ›</text>
+      </view>
     </block>
 
     <text class="form-label">金额（元）</text>
@@ -57,7 +68,7 @@
     </picker>
 
     <text class="form-label">备注</text>
-    <textarea class="desc-input" placeholder="这笔钱花在哪了？（选填）" value="{{note}}" bindinput="onNoteInput" maxlength="200" auto-height />
+    <textarea class="desc-input" placeholder="{{entryType === 'income' ? '这笔钱是哪来的？（选填）' : '这笔钱花在哪了？（选填）'}}" value="{{note}}" bindinput="onNoteInput" maxlength="200" auto-height />
 
     <text class="form-label">附图（{{images.length}}/3，最多3张）</text>
     <view class="img-grid">

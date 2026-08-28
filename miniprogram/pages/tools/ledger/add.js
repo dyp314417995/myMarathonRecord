@@ -43,8 +43,8 @@ Page({
   },
 
   onShow() {
-    // 从「我的赛事」补标记后返回时刷新赛事列表
-    if (this.data.entryType === 'expense' && this.data.bigCategory === 'race') this.loadMyRaces();
+    // 从「我的赛事」补标记后返回时刷新赛事列表（支出-比赛开支 / 收入 都有关联赛事入口）
+    if ((this.data.entryType === 'expense' && this.data.bigCategory === 'race') || this.data.entryType === 'income') this.loadMyRaces();
   },
 
   async loadDetail(id) {
@@ -67,6 +67,8 @@ Page({
     if (entryType === 'income') {
       patch.incomeType = it.incomeType || '比赛奖金';
       patch.customIncome = (it.incomeType && !this.data.incomeTypes.includes(it.incomeType)) ? it.incomeType : '';
+      patch.eventName = it.eventName || '';
+      patch.eventId = it.eventId || '';
     } else {
       const subs = ledger.subsOf(it.bigCategory || 'daily');
       patch.bigCategory = it.bigCategory || 'daily';
@@ -77,7 +79,7 @@ Page({
       patch.eventId = it.eventId || '';
     }
     this.setData(patch);
-    if (entryType === 'expense' && (it.bigCategory || 'daily') === 'race') this.loadMyRaces();
+    if ((entryType === 'expense' && (it.bigCategory || 'daily') === 'race') || entryType === 'income') this.loadMyRaces();
   },
 
   // 类型切换：支出 / 收入
@@ -90,8 +92,17 @@ Page({
     } else {
       patch.incomeType = '';
       patch.customIncome = '';
+      // 切到支出且非比赛开支时清掉赛事关联（收入带来的关联不带到日常支出）
+      if (this.data.bigCategory !== 'race') {
+        patch.eventName = '';
+        patch.eventId = '';
+        patch.customRace = '';
+        patch.raceIdx = 0;
+      }
     }
     this.setData(patch);
+    // 收入也支持关联赛事，切到收入时刷新赛事选项（含「不关联赛事」文案）
+    if (v === 'income') this.loadMyRaces();
   },
 
   onIncomeTypeTap(e) {
@@ -113,7 +124,8 @@ Page({
       return;
     }
     const raceOptions = res.list || [];
-    const raceNames = ['不选（通用比赛开支）', ...raceOptions.map(r => r.name), '自定义赛事…'];
+    const noneLabel = this.data.entryType === 'income' ? '不关联赛事' : '不选（通用比赛开支）';
+    const raceNames = [noneLabel, ...raceOptions.map(r => r.name), '自定义赛事…'];
     this.setData({ raceOptions, raceNames });
     this.syncRaceIdx();
   },
@@ -248,6 +260,9 @@ Page({
       if (incomeType === '其他') incomeType = this.data.customIncome.trim() || '其他';
       if (!incomeType) { wx.showToast({ title: '请选择收入类型', icon: 'none' }); return; }
       payload.incomeType = incomeType;
+      // 收入也支持关联赛事
+      payload.eventName = this.data.eventName;
+      payload.eventId = this.data.eventId;
     } else {
       let smallCategory = this.data.smallCategory;
       if (smallCategory === '其他') {

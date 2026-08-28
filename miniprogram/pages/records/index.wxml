@@ -6,6 +6,7 @@
     <text class="tab {{tab === 'full' ? 'active' : ''}}" data-t="full" bindtap="onTab">全马</text>
     <text class="tab {{tab === '10k' ? 'active' : ''}}" data-t="10k" bindtap="onTab">10K</text>
     <text class="tab {{tab === 'trail' ? 'active' : ''}}" data-t="trail" bindtap="onTab">越野</text>
+    <text class="tab-gear" bindtap="onShowDefault" hover-class="none">⚙️</text>
   </view>
 
   <!-- 成绩变化 -->
@@ -193,6 +194,25 @@
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideForm">取消</button>
       <button class="btn-primary" bindtap="onSave">保存</button>
+    </view>
+  </view>
+
+  <!-- 默认 Tab 设置 -->
+  <view class="modal-mask" wx:if="{{showDefaultModal}}" bindtap="onHideDefault"></view>
+  <view class="modal-box" wx:if="{{showDefaultModal}}">
+    <view class="modal-header">
+      <text>默认Tab</text>
+      <text class="modal-close" bindtap="onHideDefault">✕</text>
+    </view>
+    <text class="form-label">进入页面时默认显示</text>
+    <view class="btn-row wrap">
+      <text class="opt-btn {{defaultTab === 'half' ? 'on' : ''}}" data-t="half" bindtap="onSetDefault">半马</text>
+      <text class="opt-btn {{defaultTab === 'full' ? 'on' : ''}}" data-t="full" bindtap="onSetDefault">全马</text>
+      <text class="opt-btn {{defaultTab === '10k' ? 'on' : ''}}" data-t="10k" bindtap="onSetDefault">10K</text>
+      <text class="opt-btn {{defaultTab === 'trail' ? 'on' : ''}}" data-t="trail" bindtap="onSetDefault">越野</text>
+    </view>
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onHideDefault">取消</button>
     </view>
   </view>
 

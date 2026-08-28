@@ -6,6 +6,8 @@ const raceUtil = require('../../utils/raceEvents');
 Page({
   data: {
     tab: 'full',
+    defaultTab: 'full',          // 用户自定义默认 Tab
+    showDefaultModal: false,
     records: [],
     filteredRecords: [],
     showForm: false,
@@ -21,6 +23,14 @@ Page({
     searchResults: [],
     showSearchResults: false,
     searching: false,
+  },
+
+  onLoad() {
+    // 读取用户自定义默认 Tab
+    const t = wx.getStorageSync('records_default_tab');
+    if (['half', 'full', '10k', 'trail'].includes(t)) {
+      this.setData({ tab: t, defaultTab: t });
+    }
   },
 
   onShow() { this.loadRecords(); },
@@ -59,6 +69,19 @@ Page({
   // 切换 Tab
   onTab(e) {
     this.setData({ tab: e.currentTarget.dataset.t, showForm: false });
+    this.updateFiltered();
+    this.updateChart();
+  },
+
+  // 默认 Tab 设置
+  onShowDefault() { this.setData({ showDefaultModal: true }); },
+
+  onHideDefault() { this.setData({ showDefaultModal: false }); },
+
+  onSetDefault(e) {
+    const t = e.currentTarget.dataset.t;
+    wx.setStorageSync('records_default_tab', t);
+    this.setData({ defaultTab: t, tab: t, showDefaultModal: false });
     this.updateFiltered();
     this.updateChart();
   },
