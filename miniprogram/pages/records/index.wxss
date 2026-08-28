@@ -3,6 +3,7 @@
 .tabs { display: flex; background: #fff; position: sticky; top: 0; z-index: 10; }
 .tab { flex: 1; text-align: center; padding: 24rpx; font-size: 28rpx; color: #666; border-bottom: 4rpx solid transparent; }
 .tab.active { color: #1aad19; border-color: #1aad19; font-weight: bold; }
+.tab-gear { flex: 0 0 72rpx; text-align: center; padding: 24rpx 0; font-size: 30rpx; border-bottom: 4rpx solid transparent; }
 
 .chart-panel { margin: 16rpx 24rpx; padding: 24rpx; background: #fff; border-radius: 16rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,.04); }
 .chart-title { font-size: 28rpx; color: #333; font-weight: 600; display: block; margin-bottom: 20rpx; }
