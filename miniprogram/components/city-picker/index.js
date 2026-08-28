@@ -63,7 +63,7 @@ Component({
       const cityList = cityData[pi].children.map(c => c.name);
       const districtList = (cityData[pi].children[ci].children || []).map(d => d.name);
 
-      const result = provinces[pi] + '-' + cityList[ci] + '-' + (districtList[di] || '');
+      const result = this.joinResult(provinces[pi], cityList[ci], districtList[di]);
 
       this.setData({
         provinces,
@@ -90,20 +90,25 @@ Component({
         pickerValue[2] = 0;
         const cityList = cityData[newValues[0]].children.map(c => c.name);
         const districtList = (cityData[newValues[0]].children[0].children || []).map(d => d.name);
-        const result = this.data.provinces[newValues[0]] + '-' + cityList[0] + '-' + (districtList[0] || '');
+        const result = this.joinResult(this.data.provinces[newValues[0]], cityList[0], districtList[0]);
         this.setData({ cities: cityList, districts: districtList, pickerValue, result });
       } else if (col === 1) {
         pickerValue[2] = 0;
         const pi = pickerValue[0];
         const districtList = (cityData[pi].children[newValues[1]].children || []).map(d => d.name);
-        const result = this.data.provinces[pi] + '-' + this.data.cities[newValues[1]] + '-' + (districtList[0] || '');
+        const result = this.joinResult(this.data.provinces[pi], this.data.cities[newValues[1]], districtList[0]);
         this.setData({ districts: districtList, pickerValue, result });
       } else {
         const pi = pickerValue[0];
         const ci = pickerValue[1];
-        const result = this.data.provinces[pi] + '-' + this.data.cities[ci] + '-' + (this.data.districts[newValues[2]] || '');
+        const result = this.joinResult(this.data.provinces[pi], this.data.cities[ci], this.data.districts[newValues[2]]);
         this.setData({ pickerValue, result });
       }
+    },
+
+    // 拼接结果：区县为空时省略（如东莞、中山等直筒子市无区县数据）
+    joinResult(province, city, district) {
+      return province + '-' + city + (district ? '-' + district : '');
     },
 
     // 取消
