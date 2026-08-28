@@ -24,6 +24,7 @@ Page({
     showResultModal: false,
     resultInput: '',
     resultRaceType: 'full',
+    resultTypeOptions: [],
     showResultTimePicker: false,
     showMarkSheet: false,
   },
@@ -379,10 +380,13 @@ Page({
       const evt = this.data.event || {};
       const rt = evt.raceTypes || [evt.raceType || 'full'];
       const primaryType = rt.includes('full') ? 'full' : rt[0];
+      // 可选类型：赛事声明的类型 + 兜底 全马/半马/10K（避免赛事类型不全导致全马/半马混淆）
+      const resultTypeOptions = [...new Set([...rt, 'full', 'half', '10k'])];
       this.setData({
         showResultModal: true,
         resultInput: '',
         resultRaceType: primaryType,
+        resultTypeOptions,
       });
       return;
     }
@@ -407,6 +411,8 @@ Page({
 
   onHideMarkSheet() { this.setData({ showMarkSheet: false }); },
 
+  onResultTypeTap(e) { this.setData({ resultRaceType: e.currentTarget.dataset.t }); },
+
   onCancelResult() { this.setData({ showResultModal: false }); },
   onPickResultTime() { this.setData({ showResultTimePicker: true }); },
   onResultTimeChange(e) { this.setData({ resultInput: e.detail.value, showResultTimePicker: false }); },
@@ -420,6 +426,11 @@ Page({
     // 验证成绩格式 H:MM:SS
     if (!resultInput || !/^\d{1,2}:\d{2}:\d{2}$/.test(resultInput.trim())) {
       return wx.showToast({ title: '请输入有效成绩（H:MM:SS）', icon: 'none' });
+    }
+    {
+      const p = resultInput.trim().split(':'); const sec = (+p[0]||0)*3600 + (+p[1]||0)*60 + (+p[2]||0);
+      const minSec = { '10k': 1680, half: 3600, full: 7200 }[this.data.resultRaceType] || 0;
+      if (!(sec > 0 && sec >= minSec)) return wx.showToast({ title: '成绩无效（10K≥28分/半马≥1小时/全马≥2小时）', icon: 'none' });
     }
 
     wx.showLoading({ title: '保存中' });
@@ -487,6 +498,7 @@ Page({
     const current = userInfo[field];
     const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);
+    if (!(newSec > 0)) return; // 无效/0秒成绩不写入 PB
     if (!current || newSec < toSec(current)) {
       await dbUtil.updateUser(userInfo._id, { [field]: result });
       userInfo[field] = result;

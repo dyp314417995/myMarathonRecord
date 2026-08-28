@@ -239,6 +239,10 @@
       <text>录入完赛成绩</text>
       <text class="modal-close" bindtap="onCancelResult">✕</text>
     </view>
+    <text class="form-label">参赛类型</text>
+    <view class="btn-row wrap">
+      <text wx:for="{{resultTypeOptions}}" wx:key="*this" class="opt-btn {{resultRaceType === item ? 'on' : ''}}" data-t="{{item}}" bindtap="onResultTypeTap">{{item === 'full' ? '全马' : item === 'half' ? '半马' : item === '10k' ? '10K' : '越野'}}</text>
+    </view>
     <text class="form-label">完赛成绩</text>
     <view class="form-input time-trigger" catchtap="onPickResultTime">
       <text class="{{resultInput ? '' : 'placeholder'}}">{{resultInput || '点此选择'}}</text>

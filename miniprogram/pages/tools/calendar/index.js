@@ -350,6 +350,9 @@ Page({
     if (!userInfo) return wx.navigateTo({ url: '/pages/login/login' });
     const { markingEventId, selectedStatus, markingEvent, notifyEnabled, hours, minutes, seconds, raceHIdx, raceMIdx, raceSIdx } = this.data;
     const raceResult = `${hours[raceHIdx]}:${minutes[raceMIdx]}:${seconds[raceSIdx]}`;
+    const resultSec = (+hours[raceHIdx]||0)*3600 + (+minutes[raceMIdx]||0)*60 + (+seconds[raceSIdx]||0);
+    const minSec = { '10k': 1680, half: 3600, full: 7200 }[this.data.markRaceType] || 0;
+    if (selectedStatus === 'finished' && !(resultSec > 0 && resultSec >= minSec)) return wx.showToast({ title: '成绩无效（10K≥28分/半马≥1小时/全马≥2小时）', icon: 'none' });
     // 开启通知时申请订阅消息授权
     if (notifyEnabled) {
       try {
@@ -374,7 +377,7 @@ Page({
         if (existRecord.data.length === 0) {
           const recordData = {
             userId: userInfo._id,
-            raceType: markingEvent.raceType || 'full',
+            raceType: this.data.markRaceType || markingEvent.raceType || 'full',
             raceLevel: markingEvent.raceLevel || 'B',
             status: 'finished',
             date: eventDate,
@@ -399,7 +402,7 @@ Page({
           }
 
           // 检查 PB
-          await this.checkPB(markingEvent.raceType, raceResult, userInfo);
+          await this.checkPB(this.data.markRaceType || markingEvent.raceType, raceResult, userInfo);
         }
       }
 
@@ -427,6 +430,7 @@ Page({
     const current = userInfo[field];
     const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);
+    if (!(newSec > 0)) return; // 无效/0秒成绩不写入 PB
     if (!current || newSec < toSec(current)) {
       await dbUtil.updateUser(userInfo._id, { [field]: result });
       userInfo[field] = result;
