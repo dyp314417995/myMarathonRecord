@@ -13,7 +13,7 @@ Page({
     showForm: false,
     editingId: '',
     // 表单数据
-    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', distance: '', elevation: '', itra: '', certs: { itra: false, utmb: false, utmbws: false }, note: '', isPublic: true },
+    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', note: '', isPublic: true },
     formImages: [],
     showTimePicker: false,
     showChart: false,
@@ -28,7 +28,7 @@ Page({
   onLoad() {
     // 读取用户自定义默认 Tab
     const t = wx.getStorageSync('records_default_tab');
-    if (['half', 'full', '10k', 'trail'].includes(t)) {
+    if (['half', 'full', '10k'].includes(t)) {
       this.setData({ tab: t, defaultTab: t });
     }
   },
@@ -91,7 +91,6 @@ Page({
     const filtered = this.data.records.filter(r => {
       if (tab === '10k') return r.raceType === '10k';
       if (tab === 'half') return r.raceType === 'half';
-      if (tab === 'trail') return r.raceType === 'trail';
       return r.raceType === 'full';
     });
     this.setData({ filteredRecords: filtered });
@@ -120,10 +119,10 @@ Page({
 
   // 添加
   onAdd() {
-    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00', trail: '5:00:00' };
+    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00' };
     this.setData({
       showForm: true, editingId: '',
-      form: { raceType: this.data.tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[this.data.tab] || '3:30:00', distance: '', elevation: '', itra: '', certs: { itra: false, utmb: false, utmbws: false }, note: '', isPublic: true },
+      form: { raceType: this.data.tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[this.data.tab] || '3:30:00', note: '', isPublic: true },
       formImages: [],
     });
   },
@@ -145,7 +144,7 @@ Page({
     }
     this.setData({
       showForm: true, editingId: r._id,
-      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', distance: r.distance || '', elevation: r.elevation || '', itra: r.itra || '', certs: r.certs || { itra: false, utmb: false, utmbws: false }, note: r.note || '', isPublic: r.isPublic !== false },
+      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', note: r.note || '', isPublic: r.isPublic !== false },
       formImages: images,
       searchText: r.city || '',
     });
@@ -165,11 +164,6 @@ Page({
   // 表单变更
   onFormType(e) { this.setData({ 'form.raceType': e.currentTarget.dataset.v }); },
   onFormLevel(e) { this.setData({ 'form.raceLevel': e.currentTarget.dataset.v }); },
-  onToggleCert(e) {
-    const k = e.currentTarget.dataset.k;
-    const certs = { ...this.data.form.certs, [k]: !this.data.form.certs[k] };
-    this.setData({ 'form.certs': certs });
-  },
   onFormStatus(e) { this.setData({ 'form.status': e.currentTarget.dataset.v }); },
   onFormInput(e) { this.setData({ [`form.${e.currentTarget.dataset.k}`]: e.detail.value }); },
   onFormPublic() { this.setData({ 'form.isPublic': !this.data.form.isPublic }); },
@@ -218,7 +212,7 @@ Page({
       const res = await raceUtil.getAll({ search: text, limit: 10 });
       const list = (res.list || []).map(r => ({
         ...r,
-        raceTypesStr: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('/'),
+        raceTypesStr: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K' }[t] || t)).join('/'),
       }));
       this.setData({ searchResults: list, showSearchResults: true });
     } catch (err) {
@@ -232,15 +226,12 @@ Page({
     if (!race) return;
     const rt = race.raceTypes || [race.raceType || 'full'];
     const primaryType = rt.includes('full') ? 'full' : rt[0];
-    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00', trail: '5:00:00' };
+    const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00' };
     this.setData({
       'form.date': this.fmtDate(race.date),
       'form.city': race.name || '',
       'form.raceType': primaryType,
       'form.raceLevel': race.raceLevel || 'B',
-      'form.distance': race.distance || '',
-      'form.elevation': race.elevation || '',
-      'form.certs': race.certs || { itra: false, utmb: false, utmbws: false },
       'form.result': defaults[primaryType] || '3:30:00',
       searchText: race.name || '',
       showSearchResults: false,
@@ -272,7 +263,6 @@ Page({
     const data = {
       raceType: f.raceType, raceLevel: f.raceLevel, status: f.status,
       date: f.date, city: f.city.trim(), result: f.status === 'finished' ? f.result : '',
-      distance: f.raceType === 'trail' ? f.distance : '', elevation: f.raceType === 'trail' ? f.elevation : '', itra: f.raceType === 'trail' && f.status === 'finished' ? f.itra : '', certs: f.raceType === 'trail' ? f.certs : undefined,
       note: f.note.trim(), isPublic: f.isPublic, images,
     };
     const newImgUrls = this.data.formImages.map(img => img.previewUrl || img.local || '').filter(Boolean);

@@ -5,7 +5,6 @@
     <text class="tab {{tab === 'half' ? 'active' : ''}}" data-t="half" bindtap="onTab">半马</text>
     <text class="tab {{tab === 'full' ? 'active' : ''}}" data-t="full" bindtap="onTab">全马</text>
     <text class="tab {{tab === '10k' ? 'active' : ''}}" data-t="10k" bindtap="onTab">10K</text>
-    <text class="tab {{tab === 'trail' ? 'active' : ''}}" data-t="trail" bindtap="onTab">越野</text>
     <text class="tab-gear" bindtap="onShowDefault" hover-class="none">⚙️</text>
   </view>
 
@@ -33,25 +32,12 @@
     <block wx:for="{{filteredRecords}}" wx:key="_id">
       <view class="card">
         <view class="card-header">
-          <view wx:if="{{item.raceType === 'trail' && item.certs}}" class="cert-tags">
-            <text class="tag cert-tag" wx:for="{{item.certs.itra ? ['ITRA'] : []}}" wx:key="*this">ITRA</text>
-            <text class="tag cert-tag" wx:for="{{item.certs.utmb ? ['UTMB'] : []}}" wx:key="*this">UTMB</text>
-            <text class="tag cert-tag" wx:for="{{item.certs.utmbws ? ['UTMB WS'] : []}}" wx:key="*this">UTMB WS</text>
-          </view>
-          <text wx:else class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
-          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : item.raceType === 'trail' ? '越野跑' : '全程马拉松'}}</text>
+          <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
+          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : '全程马拉松'}}</text>
           <text class="status-tag {{item.status}}">{{item.status === 'planned' ? '计划报名' : item.status === 'finished' ? '已完赛' : item.status === 'dnf' ? '未完赛' : item.status === 'dns' ? '弃赛' : item.status === 'won' ? '已中签' : '已报名'}}</text>
         </view>
         <view class="card-body">
           <view class="card-row"><text class="label">赛事</text><text class="value">{{item.city || '未知'}}{{item.date ? ' · ' + item.date : ''}}</text></view>
-          <view class="card-row" wx:if="{{item.raceType === 'trail' && (item.distance || item.elevation)}}">
-            <text class="label">路线</text>
-            <text class="value">{{item.distance ? item.distance + 'km' : ''}}{{item.distance && item.elevation ? ' · 爬升' + item.elevation + 'm' : ''}}{{item.elevation && !item.distance ? '爬升' + item.elevation + 'm' : ''}}</text>
-          </view>
-          <view class="card-row" wx:if="{{item.raceType === 'trail' && item.status === 'finished' && item.itra}}">
-            <text class="label">ITRA</text>
-            <text class="value itra-score">{{item.itra}}分</text>
-          </view>
           <view class="card-row" wx:if="{{item.status === 'finished' && item.result}}"><text class="label">成绩</text><text class="value result">{{item.result}} <text class="pb-badge" wx:if="{{item.isPB}}">🏆PB</text></text></view>
           <view class="card-row" wx:if="{{item.note}}"><text class="value note">"{{item.note}}"</text></view>
         </view>
@@ -71,7 +57,7 @@
 
   <!-- 空状态 -->
   <view class="empty" wx:if="{{filteredRecords.length === 0}}">
-    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : tab === 'trail' ? '越野跑' : '全马'}} 记录</text>
+    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : '全马'}} 记录</text>
   </view>
 
   <!-- 添加按钮 -->
@@ -106,19 +92,10 @@
       <text class="opt-btn {{form.raceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
       <text class="opt-btn {{form.raceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
       <text class="opt-btn {{form.raceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
-      <text class="opt-btn {{form.raceType === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onFormType">越野</text>
     </view>
 
     <!-- 赛事等级 -->
-    <block wx:if="{{form.raceType === 'trail'}}">
-      <text class="form-label">赛事认证（可多选）</text>
-      <view class="btn-row">
-        <text class="opt-btn {{form.certs.itra ? 'on' : ''}}" data-k="itra" bindtap="onToggleCert">ITRA认证</text>
-        <text class="opt-btn {{form.certs.utmb ? 'on' : ''}}" data-k="utmb" bindtap="onToggleCert">UTMB认证</text>
-        <text class="opt-btn {{form.certs.utmbws ? 'on' : ''}}" data-k="utmbws" bindtap="onToggleCert">UTMB世界系列赛</text>
-      </view>
-    </block>
-    <block wx:else>
+    <block>
       <text class="form-label">赛事等级</text>
       <view class="btn-row">
         <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
@@ -150,17 +127,6 @@
     <text class="form-label">城市</text>
     <input class="form-input" placeholder="如：北京" value="{{form.city}}" data-k="city" bindinput="onFormInput" />
 
-    <!-- 越野跑额外字段 -->
-    <block wx:if="{{form.raceType === 'trail'}}">
-      <text class="form-label">距离(km)</text>
-      <input class="form-input" type="digit" placeholder="如：50" value="{{form.distance}}" data-k="distance" bindinput="onFormInput" />
-      <text class="form-label">爬升(m)</text>
-      <input class="form-input" type="digit" placeholder="如：2500" value="{{form.elevation}}" data-k="elevation" bindinput="onFormInput" />
-      <block wx:if="{{form.status === 'finished'}}">
-        <text class="form-label">ITRA表现分</text>
-        <input class="form-input" type="number" placeholder="如：650" value="{{form.itra}}" data-k="itra" bindinput="onFormInput" />
-      </block>
-    </block>
 
     <!-- 成绩（仅已完赛） -->
     <block wx:if="{{form.status === 'finished'}}">
@@ -209,7 +175,6 @@
       <text class="opt-btn {{defaultTab === 'half' ? 'on' : ''}}" data-t="half" bindtap="onSetDefault">半马</text>
       <text class="opt-btn {{defaultTab === 'full' ? 'on' : ''}}" data-t="full" bindtap="onSetDefault">全马</text>
       <text class="opt-btn {{defaultTab === '10k' ? 'on' : ''}}" data-t="10k" bindtap="onSetDefault">10K</text>
-      <text class="opt-btn {{defaultTab === 'trail' ? 'on' : ''}}" data-t="trail" bindtap="onSetDefault">越野</text>
     </view>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideDefault">取消</button>

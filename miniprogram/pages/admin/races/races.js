@@ -12,12 +12,12 @@ Page({
     showQRText: true, // 合成海报后隐藏重复文字
     nameDupStatus: '', // '' | 'checking' | 'ok' | 'dup'
     showPoster: false, posterIdx: 0, posterPreviewUrl: '',
-    typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
+    typeFull: true, typeHalf: false, type10k: false,
     showForm: false,
     gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
     editingId: '',
-    form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'B', distance: '', elevation: '', website: '', scale: '', fee: '', mechanism: '抽签', label: '普通标', posters: [], certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
+    form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '普通标', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '先缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
     posterTemp: [],
     showPaste: false,    // 粘贴全文面板
     pasteText: '',       // 粘贴的全文
@@ -71,7 +71,7 @@ Page({
     });
     const list = all.map(r => ({
       ...r, fmtDate: this.fmtDate(r.date),
-      raceTypesStr: r.raceTypes.map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('/'),
+      raceTypesStr: r.raceTypes.map(t => ({ full: '全马', half: '半马', '10k': '10K' }[t] || t)).join('/'),
       countdown: this.calcCountdown(r.date, r.status, r.timeline, r.gunTimes),
       publishStatus: r.publishStatus || 'published',
     }));
@@ -207,8 +207,8 @@ Page({
   onAdd() {
     this.setData({
       showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false, nameDupStatus: '',
-      typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
-      form: { name: '', date: '', city: '', province: '', raceTypes: ['full'], raceGroup: '', raceLevel: 'A', distance: '', elevation: '', website: '', scale: '', fee: '', scaleFull: '', scaleHalf: '', feeFull: '', feeHalf: '', mechanism: '抽签', label: '普通标', posters: [], certs: { itra: false, utmb: false, utmbws: false }, payment: '先缴费', tagsStr: '', timeline: [] },
+      typeFull: true, typeHalf: false, type10k: false,
+      form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '普通标', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '先缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
       timelineNodes: [
@@ -264,8 +264,8 @@ Page({
     })();
     this.setData({
       showForm: true, editingId: r._id, nameDupStatus: '',
-      typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'), typeTrail: raceTypes.includes('trail'),
-      form: { name: r.name, date: this.fmtDate(r.date), city: r.city||'', province: r.province||'', raceTypes, raceGroup: r.raceGroup || '', raceLevel: r.raceLevel||'B', distance: r.distance||'', elevation: r.elevation||'', website: r.website||'', scale: r.scale||'', fee: r.fee||'', scaleFull: r.scaleFull||'', scaleHalf: r.scaleHalf||'', feeFull: r.feeFull||'', feeHalf: r.feeHalf||'', mechanism: r.mechanism||'抽签', label: r.label||'普通标', posters: initPosters, certs: r.certs || { itra: false, utmb: false, utmbws: false }, payment: r.payment||'先缴费', confirmed: r.confirmed || false, tagsStr: (r.tags || []).join(', '), timeline: existingTimeline },
+      typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
+      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'A', label: r.label||'普通标', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'抽签', payment: r.payment||'先缴费', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       timelineNodes: tNodes,
     });
@@ -289,27 +289,38 @@ Page({
     // 构建复制数据，名称后加"2"
     const dupData = {
       name: r.name + '2',
+      raceGroup: r.raceGroup || '',
       date: r.date,
       city: r.city || '',
       province: r.province || '',
-      raceType: r.raceType || 'full',
-      raceLevel: r.raceLevel || 'B',
-      label: r.label || '',
-      distance: r.distance || '',
-      elevation: r.elevation || '',
-      website: r.website || '',
+      raceTypes: r.raceTypes || [r.raceType || 'full'],
+      raceLevel: r.raceLevel || 'A',
+      label: r.label || '普通标',
       scale: r.scale || '',
+      subScale: r.subScale || '',
       fee: r.fee || '',
+      organizer: r.organizer || '',
+      operator: r.operator || '',
+      contactPhone: r.contactPhone || '',
+      contactEmail: r.contactEmail || '',
+      wechatAccount: r.wechatAccount || '',
+      website: r.website || '',
       mechanism: r.mechanism || '抽签',
       payment: r.payment || '先缴费',
+      signupChannels: r.signupChannels || '',
+      medicalReport: r.medicalReport || '',
+      finishRequirement: r.finishRequirement || '',
+      refundRule: r.refundRule || '',
+      startPoint: r.startPoint || '',
+      medalImage: r.medalImage || '',
+      routeMap: r.routeMap || '',
+      regStatus: r.regStatus || '',
       posters: r.posters || (r.poster ? [r.poster] : []),
-      certs: r.certs || {},
       timeline: (r.timeline || []).map(t => ({ label: t.label, date: t.date, time: t.time || '' })),
       status: r.status || 'upcoming',
-      tags: r.tags || [],
-      tagStats: {},
-      reviewCount: 0,
-      avgScore: 0,
+      source: 'manual',
+      publishStatus: 'published',
+      tagStats: {}, reviewCount: 0, avgScore: 0,
     };
 
     wx.showLoading({ title: '复制中' });
@@ -517,7 +528,7 @@ Page({
     });
 
     // 顺便提取赛事名
-    const nameMatch = text.match(/(.{2,20})(?:马拉松|越野赛|半程马拉松)/);
+    const nameMatch = text.match(/(.{2,20})(?:马拉松|半程马拉松)/);
     if (nameMatch) name = nameMatch[0].trim();
 
     const filled = nodes.filter(n => n.date).length;
@@ -532,7 +543,7 @@ Page({
     const v = e.currentTarget.dataset.v;
     const types = [...(this.data.form.raceTypes || ['full'])];
     if (v === 'full' || v === 'half') {
-      // 全马半马多选：先清掉 10K/越野，然后切换
+      // 全马半马多选：先清掉 10K，然后切换
       const filtered = types.filter(t => t === 'full' || t === 'half');
       const idx = filtered.indexOf(v);
       if (idx >= 0) filtered.splice(idx, 1);
@@ -541,19 +552,19 @@ Page({
       this.setData({
         'form.raceTypes': result,
         typeFull: result.includes('full'), typeHalf: result.includes('half'),
-        type10k: false, typeTrail: false,
+        type10k: false,
       });
     } else {
-      // 10K/越野：已选中则取消回到全马，否则单选
+      // 10K：已选中则取消回到全马，否则单选
       if (types.length === 1 && types[0] === v) {
         this.setData({
           'form.raceTypes': ['full'],
-          typeFull: true, typeHalf: false, type10k: false, typeTrail: false,
+          typeFull: true, typeHalf: false, type10k: false,
         });
       } else {
         this.setData({
           'form.raceTypes': [v],
-          typeFull: false, typeHalf: false, type10k: v === '10k', typeTrail: v === 'trail',
+          typeFull: false, typeHalf: false, type10k: v === '10k',
         });
       }
     }
@@ -562,7 +573,6 @@ Page({
   onFormMechanism(e) { this.setData({ 'form.mechanism': e.currentTarget.dataset.v }); },
   onFormLabel(e) { this.setData({ 'form.label': e.currentTarget.dataset.v }); },
   onFormPayment(e) { this.setData({ 'form.payment': e.currentTarget.dataset.v }); },
-  onToggleConfirm() { this.setData({ 'form.confirmed': !this.data.form.confirmed }); },
 
   onAddGunTime() {
     const list = this.data.gunTimes;
@@ -638,11 +648,7 @@ Page({
       this.setData({ timelineNodes: nodes });
     }
   },
-  onToggleCert(e) {
-    const k = e.currentTarget.dataset.k;
-    const certs = { ...this.data.form.certs, [k]: !this.data.form.certs[k] };
-    this.setData({ 'form.certs': certs });
-  },
+    onFormRegStatus(e) { this.setData({ 'form.regStatus': e.currentTarget.dataset.v }); },
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onHideForm() { this.setData({ showForm: false }); },
 
@@ -652,29 +658,29 @@ Page({
     if (this.data.nameDupStatus === 'dup') return wx.showToast({ title: '同名赛事已存在，请修改名称', icon: 'none' });
     if (!f.date) return wx.showToast({ title: '请选择鸣枪开跑日期', icon: 'none' });
     const raceDate = new Date(f.date);
-    if (raceDate < new Date(new Date().toDateString())) return wx.showToast({ title: '赛事日期不能早于今天', icon: 'none' });
+    if (!this.data.editingId && raceDate < new Date(new Date().toDateString())) return wx.showToast({ title: '赛事日期不能早于今天', icon: 'none' });
     wx.showLoading({ title: '保存中' });
 
     // 海报使用 posters 数组
     const posters = (f.posters || []).filter(Boolean) || [];
 
     const data = {
-      name: f.name.trim(), date: new Date(f.date), city: f.city.trim(), province: f.province.trim(),
-      raceTypes: (f.raceTypes || ['full']).filter(Boolean), raceGroup: (f.raceGroup || '').trim(),
-      raceLevel: f.raceLevel,
-      distance: (f.raceTypes || []).includes('trail') ? f.distance : '', elevation: (f.raceTypes || []).includes('trail') ? f.elevation : '',
-      website: f.website.trim(),
-      scale: f.scale.trim(), fee: f.fee.trim(),
-      scaleFull: f.scaleFull || '', scaleHalf: f.scaleHalf || '',
-      feeFull: f.feeFull || '', feeHalf: f.feeHalf || '',
+      name: f.name.trim(), raceGroup: (f.raceGroup || '').trim() || f.name.trim().replace(/^20\d{2}\s*/, '').replace(/[「·\s]?(20\d{2})$/, '').trim(),
+      date: new Date(f.date), province: f.province.trim(), city: f.city.trim(),
+      raceTypes: (f.raceTypes || ['full']).filter(Boolean),
+      raceLevel: f.raceLevel, label: f.label,
+      scale: (f.scale || '').toString().trim(), subScale: (f.subScale || '').toString().trim(), fee: (f.fee || '').toString().trim(),
+      organizer: (f.organizer || '').trim(), operator: (f.operator || '').trim(),
+      contactPhone: (f.contactPhone || '').trim(), contactEmail: (f.contactEmail || '').trim(), wechatAccount: (f.wechatAccount || '').trim(), website: f.website.trim(),
+      mechanism: f.mechanism, payment: f.payment, signupChannels: (f.signupChannels || '').trim(),
+      medicalReport: (f.medicalReport || '').trim(), finishRequirement: (f.finishRequirement || '').trim(), refundRule: (f.refundRule || '').trim(), startPoint: (f.startPoint || '').trim(),
+      medalImage: (f.medalImage || '').trim(), routeMap: (f.routeMap || '').trim(),
+      regStatus: f.regStatus,
       gunTimes: this.data.gunTimes.filter(g => g.time),
-      mechanism: f.mechanism, label: f.label,
-      payment: f.payment, timeline: this.data.timelineNodes.filter(n => n.date).map(n => ({ label: n.label, date: n.date, time: n.time || '' })),
+      timeline: this.data.timelineNodes.filter(n => n.date).map(n => ({ label: n.label, date: n.date, time: n.time || '' })),
       posters,
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
-      certs: (f.raceTypes || []).includes('trail') ? f.certs : {},
-      tags: (f.tagsStr || '').split(/[,，]/).map(s => s.trim()).filter(Boolean), tagStats: {}, reviewCount: 0, avgScore: 0,
-      confirmed: true,
+      tagStats: {}, reviewCount: 0, avgScore: 0,
       publishStatus: this.data.editingId
         ? (((this.data.allRaceList.find(r => r._id === this.data.editingId) || {}).publishStatus || 'published') === 'draft' ? 'draft' : 'published')
         : 'published',
@@ -686,14 +692,14 @@ Page({
       const list = this.data.allRaceList.slice();
       const idx = list.findIndex(r => r._id === this.data.editingId);
       if (idx > -1) {
-        list[idx] = { ...list[idx], ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K', trail:'越野' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
+        list[idx] = { ...list[idx], ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
         this.setData({ allRaceList: list, showForm: false });
         this.applyAdminFilter();
       }
     } else {
       const addRes = await raceUtil.create(data);
       // 新记录加到本地缓存
-      const newItem = { _id: addRes._id, ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K', trail:'越野' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
+      const newItem = { _id: addRes._id, ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
       const list = [newItem, ...this.data.allRaceList];
       this.setData({ allRaceList: list, showForm: false });
       this.applyAdminFilter();
@@ -786,8 +792,8 @@ Page({
     const name = r ? r.name : (e.currentTarget.dataset.name || '');
     const city = r ? (r.city || '') : '';
     const dateStr = r ? r.fmtDate || this.fmtDate(r.date) : '';
-    const rtStr = r ? r.raceTypesStr || (r.raceTypes || [r.raceType || 'full']).map(t => ({ full:'全马', half:'半马', '10k':'10K', trail:'越野' }[t]||t)).join('/') : '';
-    const levelStr = r && !(r.raceTypes && r.raceTypes.length === 1 && r.raceTypes[0] === 'trail') ? (r.raceLevel || '') : '';
+    const rtStr = r ? r.raceTypesStr || (r.raceTypes || [r.raceType || 'full']).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/') : '';
+    const levelStr = r ? (r.raceLevel || '') : '';
     const labelStr = r && r.label ? r.label : '';
     const raceInfo = { name, city, date: dateStr, type: rtStr, level: levelStr, label: labelStr };
     wx.showLoading({ title: '生成中' });

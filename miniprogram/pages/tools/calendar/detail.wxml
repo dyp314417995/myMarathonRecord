@@ -13,13 +13,7 @@
       <text class="countdown">{{event.countdown}}</text>
     </view>
     <view class="dtl-meta">
-      <text class="dtl-meta-item">{{event.city || '未知'}} · {{event.raceTypeName}}<text wx:if="{{event.raceType !== 'trail'}}"> · {{event.raceLevel}}级</text><text wx:if="{{event.label}}"> · {{event.label}}</text></text>
-    </view>
-    <view wx:if="{{event.distance}}" class="dtl-meta">
-      <text class="dtl-meta-item">距离 {{event.distance}}km<text wx:if="{{event.elevation}}"> · 爬升 {{event.elevation}}m</text></text>
-    </view>
-    <view wx:if="{{event.certs && (event.certs.itra || event.certs.utmb || event.certs.utmbws)}}" class="dtl-meta">
-      <text class="dtl-meta-item">认证：{{event.certs.itra ? 'ITRA ' : ''}}{{event.certs.utmb ? 'UTMB ' : ''}}{{event.certs.utmbws ? 'UTMB世界系列赛' : ''}}</text>
+      <text class="dtl-meta-item">{{event.city || '未知'}} · {{event.raceTypeName}}<text wx:if="{{event.raceLevel}}"> · {{event.raceLevel}}级</text><text wx:if="{{event.label}}"> · {{event.label}}</text></text>
     </view>
     <view wx:if="{{event._scaleDisplay}}" class="dtl-meta">
       <text class="dtl-meta-label">规模</text>
@@ -36,6 +30,23 @@
 
   </view>
 
+  <!-- 赛事信息（表格字段） -->
+  <view class="card" wx:if="{{event.organizer || event.operator || event.regStatus || event.startPoint || event.signupChannels || event.medicalReport || event.finishRequirement || event.refundRule || event.contactPhone || event.contactEmail || event.wechatAccount || event.medalImage || event.routeMap}}">
+    <view class="section-title"><text>🏅 赛事信息</text></view>
+    <view wx:if="{{event.regStatus}}" class="dtl-meta"><text class="dtl-meta-label">报名状态</text><text class="dtl-meta-value">{{event.regStatus}}</text></view>
+    <view wx:if="{{event.organizer}}" class="dtl-meta"><text class="dtl-meta-label">主办单位</text><text class="dtl-meta-value">{{event.organizer}}</text></view>
+    <view wx:if="{{event.operator}}" class="dtl-meta"><text class="dtl-meta-label">运营单位</text><text class="dtl-meta-value">{{event.operator}}</text></view>
+    <view wx:if="{{event.startPoint}}" class="dtl-meta"><text class="dtl-meta-label">起点</text><text class="dtl-meta-value">{{event.startPoint}}</text></view>
+    <view wx:if="{{event.signupChannels}}" class="dtl-meta"><text class="dtl-meta-label">报名渠道</text><text class="dtl-meta-value">{{event.signupChannels}}</text></view>
+    <view wx:if="{{event.medicalReport}}" class="dtl-meta"><text class="dtl-meta-label">体检报告</text><text class="dtl-meta-value">{{event.medicalReport}}</text></view>
+    <view wx:if="{{event.finishRequirement}}" class="dtl-meta"><text class="dtl-meta-label">完赛经历</text><text class="dtl-meta-value">{{event.finishRequirement}}</text></view>
+    <view wx:if="{{event.refundRule}}" class="dtl-meta"><text class="dtl-meta-label">退出机制</text><text class="dtl-meta-value">{{event.refundRule}}</text></view>
+    <view wx:if="{{event.contactPhone}}" class="dtl-meta"><text class="dtl-meta-label">联系电话</text><text class="dtl-meta-value">{{event.contactPhone}}</text></view>
+    <view wx:if="{{event.contactEmail}}" class="dtl-meta"><text class="dtl-meta-label">官方邮箱</text><text class="dtl-meta-value">{{event.contactEmail}}</text></view>
+    <view wx:if="{{event.wechatAccount}}" class="dtl-meta"><text class="dtl-meta-label">公众号</text><text class="dtl-meta-value">{{event.wechatAccount}}</text></view>
+    <image wx:if="{{event.medalImage}}" src="{{event.medalImage}}" mode="widthFix" class="poster-img" />
+    <image wx:if="{{event.routeMap}}" src="{{event.routeMap}}" mode="widthFix" class="poster-img" />
+  </view>
   <!-- 时间轴 -->
   <view class="card" wx:if="{{event.timeline && event.timeline.length > 0}}">
     <view class="section-title"><text>⏱ 赛事时间轴</text></view>

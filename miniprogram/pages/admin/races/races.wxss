@@ -1,6 +1,7 @@
 /* pages/admin/races/races.wxss */
 .races-page { padding-bottom: 40rpx; }
-.race-card { padding: 20rpx 28rpx; margin: 8rpx 12rpx; display: flex; justify-content: space-between; align-items: center; }
+.race-card { padding: 20rpx 28rpx; margin: 8rpx 12rpx; }
+.race-card-row { display: flex; justify-content: space-between; align-items: center; }
 .race-info { flex: 1; }
 .race-name { font-size: 28rpx; font-weight: 600; display: block; }
 .race-meta { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }
@@ -64,10 +65,6 @@
 .result-sep { font-size: 32rpx; color: #666; }
 .result-row .form-input { margin-top: 0 !important; }
 
-.confirm-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20rpx; }
-.confirm-toggle { font-size: 26rpx; padding: 8rpx 20rpx; border-radius: 8rpx; background: #f0f0f0; color: #999; }
-.confirm-toggle.on { background: #e8f5e9; color: #1aad19; font-weight: 600; }
-.tag-draft { background: #fff3e0; color: #e65100; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 6rpx; }
 
 .empty-state { padding: 80rpx 0; text-align: center; font-size: 28rpx; color: #bbb; }
 .btn-area { padding: 24rpx; }

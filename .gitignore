@@ -1,0 +1,7 @@
+﻿# 敏感文件：登录态 cookie，切勿提交
+赛事数据/cookies.txt
+
+# 临时/可再生成
+赛事数据/snapshot.json
+赛事数据/races_import.json
+赛事数据/races_import_backup.json

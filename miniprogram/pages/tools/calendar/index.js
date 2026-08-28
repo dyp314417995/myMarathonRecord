@@ -143,7 +143,7 @@ Page({
       const now = new Date();
       races = races.map(r => ({
         ...r,
-        raceTypeName: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K', trail: '越野' }[t] || t)).join('·'),
+        raceTypeName: (r.raceTypes || [r.raceType || 'full']).map(t => ({ full: '全马', half: '半马', '10k': '10K' }[t] || t)).join('·'),
         countdown: this.calcCountdown(r.date, r.timeline, r.gunTimes),
         _nearestMs: this.getNearestMs(r, now),
         isMine: r.isMarked || false,
@@ -333,7 +333,7 @@ Page({
     const existingMarker = event.myMarkInfo || null;
     // 根据赛事类型设完赛时间默认值
     const primaryType = (event.raceTypes || [event.raceType || 'full'])[0];
-    const defaults = { full: { h: 3, m: 30, s: 0 }, half: { h: 2, m: 0, s: 0 }, '10k': { h: 0, m: 50, s: 0 }, trail: { h: 3, m: 30, s: 0 } };
+    const defaults = { full: { h: 3, m: 30, s: 0 }, half: { h: 2, m: 0, s: 0 }, '10k': { h: 0, m: 50, s: 0 } };
     const d = defaults[primaryType] || defaults.full;
     this.setData({
       showForm: true, markingEventId: id, markingEventName: event.name || '',

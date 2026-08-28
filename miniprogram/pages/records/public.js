@@ -55,7 +55,6 @@ Page({
     const filtered = this.data.records.filter(r => {
       if (tab === '10k') return r.raceType === '10k';
       if (tab === 'half') return r.raceType === 'half';
-      if (tab === 'trail') return r.raceType === 'trail';
       return r.raceType === 'full';
     });
     this.setData({ filteredRecords: filtered });

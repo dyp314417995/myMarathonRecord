@@ -53,6 +53,9 @@ exports.main = async (event) => {
   }
   // publishFilter='all' 不过滤（管理端看全部）
 
+  // 全站不再做越野赛事：历史自动采集的越野数据也一并过滤
+  conds.push(_.nor([{ raceTypes: 'trail' }, { raceType: 'trail' }]));
+
   const query = conds.length ? _.and(conds) : {};
 
   // 2. 查询总数 + 分页数据（一次查询）

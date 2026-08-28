@@ -48,7 +48,6 @@
       <text class="filter-chip {{raceTypeFilter === 'full' ? 'on' : ''}}" data-v="full" bindtap="onRaceTypeFilter">全马</text>
       <text class="filter-chip {{raceTypeFilter === 'half' ? 'on' : ''}}" data-v="half" bindtap="onRaceTypeFilter">半马</text>
       <text class="filter-chip {{raceTypeFilter === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onRaceTypeFilter">10K</text>
-      <text class="filter-chip {{raceTypeFilter === 'trail' ? 'on' : ''}}" data-v="trail" bindtap="onRaceTypeFilter">越野</text>
     </view>
     <view class="filter-row">
       <text class="filter-chip {{raceLevelFilter === '' ? 'on' : ''}}" data-v="" bindtap="onRaceLevelFilter">全部</text>
