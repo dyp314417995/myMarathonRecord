@@ -41,7 +41,7 @@ function parseDate(v){ const m=/(\d{4})-(\d{1,2})-(\d{1,2})/.exec(v||""); if(m) 
 function parseTime(v){ const m=/(\d{1,2}):(\d{2})/.exec(v||""); if(m) return m[1].padStart(2,"0")+":"+m[2]; return ""; }
 function parseTypes(text){ const t=text||""; const out=[]; if(/全程|马拉松(?!半)|全马/.test(t)) out.push("full"); if(/半程|半马|半马拉松/.test(t)) out.push("half"); if(/10km|10k|10公里|短距离/.test(t)) out.push("10k"); return out.length?out:["full"]; }
 function parseLevel(text){ const t=text||""; if(/A1|A类|(^|\/|\s)A($|\/|\s)/.test(t)) return "A"; if(/B类|(^|\/|\s)B($|\/|\s)/.test(t)) return "B"; if(/(^|\/|\s)C($|\/|\s)/.test(t)) return "C"; return ""; }
-function parseLabel(text){ const t=text||""; if(t.indexOf("白金标")>=0) return "白金标"; if(t.indexOf("金标")>=0) return "金标"; if(t.indexOf("精英")>=0) return "精英标"; if(t.indexOf("标牌")>=0||/WA|AIMS/.test(t)) return "普通标"; return ""; }
+function parseLabel(text){ const t=text||""; if(/白金/.test(t)) return "白金标"; if(/金标/.test(t)) return "金标"; if(/精英/.test(t)) return "精英标"; if(/标牌|WA|AIMS/.test(t)) return "普通标"; return ""; }
 function parseMechanism(text){ const t=text||""; if(t.indexOf("✔")>=0||t.indexOf("✓")>=0) return "抽签"; if(t.indexOf("✘")>=0||t.indexOf("✗")>=0||t.indexOf("❌")>=0) return "先到先得"; return ""; }
 function parsePayment(v){
   // 直接取原值（表格「缴费时间」列：报名时缴费 / 中签后缴费）

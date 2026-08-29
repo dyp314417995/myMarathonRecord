@@ -13,7 +13,11 @@
       <text class="countdown">{{event.countdown}}</text>
     </view>
     <view class="dtl-meta">
-      <text class="dtl-meta-item">{{event.city ? event.city + ' · ' : ''}}{{event.raceTypeName}}<text wx:if="{{event.raceLevel}}"> · {{event.raceLevel}}级</text><text wx:if="{{event.label}}"> · {{event.label}}</text></text>
+      <text class="dtl-meta-item">{{event.city ? event.city + ' · ' : ''}}{{event.raceTypeName}}<text wx:if="{{event.raceLevel}}"> · {{event.raceLevel}}级</text></text>
+    </view>
+    <view class="badge-row" wx:if="{{event.label}}">
+      <text class="badge badge-label {{event.label === '白金标' ? 'lb-baijin' : event.label === '金标' ? 'lb-jin' : event.label === '精英标' ? 'lb-jingying' : 'lb-putong'}}">{{event.label}}</text>
+      <text class="badge badge-source" wx:if="{{event.sourceSite}}">🛰 {{event.sourceSite}}</text>
     </view>
     <view wx:if="{{event._scaleDisplay}}" class="dtl-meta">
       <text class="dtl-meta-label">规模</text>

@@ -166,3 +166,16 @@
 .action-sheet-item:active { background: #f5f5f5; }
 .action-sheet-cancel { text-align: center; font-size: 32rpx; color: #999; padding: 28rpx; margin-top: 12rpx; }
 .action-sheet-cancel:active { background: #f5f5f5; }
+
+/* 标牌标签 */
+.badge-row { display: flex; align-items: center; gap: 12rpx; margin-top: 12rpx; flex-wrap: wrap; }
+.badge { font-size: 22rpx; padding: 6rpx 18rpx; border-radius: 24rpx; line-height: 1.4; }
+.badge-label { color: #fff; font-weight: 600; }
+.badge-label:empty { display: none; }
+/* 白金标 / 金标 / 精英标 / 普通标 */
+.badge-source { color: #888; background: #f0f0f0; }
+/* 标牌等级配色 */
+.lb-baijin { background: linear-gradient(135deg, #7a5cff, #b48cff); } /* 白金标：紫金 */
+.lb-jin { background: linear-gradient(135deg, #f5a623, #ffd75e); color: #7a4d00; } /* 金标 */
+.lb-jingying { background: linear-gradient(135deg, #e05a5a, #ff9a76); } /* 精英标 */
+.lb-putong { background: #9aa5b1; } /* 普通标 */
