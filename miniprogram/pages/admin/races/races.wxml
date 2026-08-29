@@ -136,6 +136,8 @@
         <text class="opt-btn {{form.payment === '报名时缴费' ? 'on' : ''}}" data-v="报名时缴费" bindtap="onFormPayment">报名时缴费</text>
         <text class="opt-btn {{form.payment === '中签后缴费' ? 'on' : ''}}" data-v="中签后缴费" bindtap="onFormPayment">中签后缴费</text>
       </view>
+      <text class="form-label">缴费时间（表格原值，可空）</text>
+      <input class="form-input" placeholder="如：报名时缴费 / 中签后缴费 / 2026-01-11 00:00" value="{{form.feeDeadline}}" data-k="feeDeadline" bindinput="onInput" />
       <text class="form-label">报名渠道</text>
       <input class="form-input" placeholder="如：官网/微信/小程序 / 数字心动 / 马拉马拉" value="{{form.signupChannels}}" data-k="signupChannels" bindinput="onInput" />
       <text class="form-label">体检报告</text>

@@ -10,7 +10,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 // 表格数据里可能写入的字段（不含系统字段）
-const TABLE_FIELDS = ["name","raceGroup","date","province","city","raceTypes","raceLevel","label","scale","subScale","fee","organizer","operator","contactPhone","contactEmail","wechatAccount","website","mechanism","payment","signupChannels","medicalReport","finishRequirement","refundRule","startPoint","medalImage","routeMap","regStatus","timeline","status","source","sourceSite","sourceUrl","sourceId"];
+const TABLE_FIELDS = ["name","raceGroup","date","province","city","raceTypes","raceLevel","label","scale","subScale","fee","organizer","operator","contactPhone","contactEmail","wechatAccount","website","mechanism","payment","feeDeadline","signupChannels","medicalReport","finishRequirement","refundRule","startPoint","medalImage","routeMap","regStatus","timeline","status","source","sourceSite","sourceUrl","sourceId"];
 
 function isEmpty(v) {
   if (v === undefined || v === null) return true;

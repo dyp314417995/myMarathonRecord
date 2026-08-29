@@ -16,7 +16,7 @@ Page({
     gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
     editingId: '',
-    form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
+    form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', feeDeadline: '', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
     posterTemp: [],
     showPaste: false,    // 粘贴全文面板
     pasteText: '',       // 粘贴的全文
@@ -174,7 +174,7 @@ Page({
     this.setData({
       showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false, nameDupStatus: '',
       typeFull: true, typeHalf: false, type10k: false,
-      form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
+      form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', feeDeadline: '', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
       timelineNodes: [
@@ -231,7 +231,7 @@ Page({
     this.setData({
       showForm: true, editingId: r._id, nameDupStatus: '',
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
-      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline },
+      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', feeDeadline: r.feeDeadline||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       timelineNodes: tNodes,
     });
@@ -273,6 +273,7 @@ Page({
       website: r.website || '',
       mechanism: r.mechanism || '',
       payment: r.payment || '',
+      feeDeadline: r.feeDeadline || '',
       signupChannels: r.signupChannels || '',
       medicalReport: r.medicalReport || '',
       finishRequirement: r.finishRequirement || '',
@@ -638,7 +639,7 @@ Page({
       scale: (f.scale || '').toString().trim(), subScale: (f.subScale || '').toString().trim(), fee: (f.fee || '').toString().trim(),
       organizer: (f.organizer || '').trim(), operator: (f.operator || '').trim(),
       contactPhone: (f.contactPhone || '').trim(), contactEmail: (f.contactEmail || '').trim(), wechatAccount: (f.wechatAccount || '').trim(), website: f.website.trim(),
-      mechanism: f.mechanism, payment: f.payment, signupChannels: (f.signupChannels || '').trim(),
+      mechanism: f.mechanism, payment: f.payment, feeDeadline: (f.feeDeadline || '').trim(), signupChannels: (f.signupChannels || '').trim(),
       medicalReport: (f.medicalReport || '').trim(), finishRequirement: (f.finishRequirement || '').trim(), refundRule: (f.refundRule || '').trim(), startPoint: (f.startPoint || '').trim(),
       medalImage: (f.medalImage || '').trim(), routeMap: (f.routeMap || '').trim(),
       regStatus: f.regStatus,
@@ -657,7 +658,7 @@ Page({
     if (this.data.editingId) {
       const old = this.data.allRaceList.find(r => r._id === this.data.editingId) || {};
       const manual = new Set(old.manualFields || []);
-      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters'];
+      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','feeDeadline','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters'];
       const toStr = (v) => {
         if (v instanceof Date) {
           const p = n => String(n).padStart(2, '0');
