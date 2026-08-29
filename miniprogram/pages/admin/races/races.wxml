@@ -2,7 +2,12 @@
 <view class="races-page">
   <view wx:if="{{!isAdmin}}" class="empty-state"><text>仅管理员可操作</text></view>
   <view wx:else>
+    <view class="admin-tabs">
+      <text class="admin-tab {{tab === 'races' ? 'on' : ''}}" data-t="races" bindtap="onAdminTab">赛事管理</text>
+      <text class="admin-tab {{tab === 'logs' ? 'on' : ''}}" data-t="logs" bindtap="onAdminTab">日志管理</text>
+    </view>
 
+<block wx:if="{{tab === 'races'}}">
     <view class="admin-filter">
       <input class="filter-input" placeholder="搜索赛事名称" value="{{adminSearch}}" bindinput="onAdminSearch" />
       <view class="filter-row">
@@ -55,6 +60,32 @@
     </view>
 
     <view wx:if="{{adminHasMore}}" class="load-more" bindtap="onLoadMoreRaces">加载更多</view>
+</block>
+    <view class="btn-area" style="padding:24rpx;">
+      <button class="btn-primary" bindtap="onAdd">+ 添加赛事</button>
+    </view>
+
+    <!-- 日志管理 -->
+    <view wx:elif="{{tab === 'logs'}}" class="log-panel">
+      <view class="log-tabs">
+        <text class="log-tab {{logTab === 'import' ? 'on' : ''}}" data-lt="import" bindtap="onLogTab">导入日志</text>
+        <text class="log-tab {{logTab === 'update' ? 'on' : ''}}" data-lt="update" bindtap="onLogTab">更新日志</text>
+      </view>
+      <view wx:if="{{logList.length === 0}}" class="empty-state"><text>暂无日志</text></view>
+      <view class="log-item" wx:for="{{logList}}" wx:key="_id">
+        <view class="log-head">
+          <text class="log-time">{{item.fmtTime}}</text>
+          <text class="log-badge {{item._type === 'import' ? 'import' : 'update'}}">{{item._type === 'import' ? '导入' : '更新'}}</text>
+        </view>
+        <view class="log-body">
+          <text wx:if="{{item._type === 'import'}}">抓取 {{item.fetched || item.total || 0}} · 新建 {{item.created || 0}} · 更新 {{item.updated || 0}} · 跳过 {{item.skipped || 0}} · 失败 {{item.failed || 0}}</text>
+          <block wx:else>
+            <text class="log-items">{{item.itemNames || ''}}</text>
+          </block>
+        </view>
+      </view>
+      <view wx:if="{{logHasMore}}" class="load-more" bindtap="onLoadMoreLogs">加载更多</view>
+    </view>
 
     <!-- 赛事表单弹窗 -->
     <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>

@@ -47,6 +47,15 @@ exports.main = async (event) => {
     return { ok: true, updated, processed: evts.length, nextSkip: skipAll + evts.length, done: evts.length < batchSize };
   }
 
+  // 查询导入/更新日志（管理端日志管理 Tab）
+  if (action === 'logs') {
+    const { type = 'import', skip = 0, limit = 20 } = event || {};
+    const col = type === 'update' ? 'race_import_log' : 'race_fetch_log';
+    const res = await db.collection(col).orderBy('createTime', 'desc').skip(skip).limit(limit).get();
+    const countRes = await db.collection(col).count();
+    return { list: res.data.map(x => ({ ...x, _type: type === 'update' ? 'update' : 'import' })), total: countRes.total, hasMore: skip + res.data.length < countRes.total };
+  }
+
   // 一次性：把所有草稿(publishStatus='draft')升级为已发布（方案B：信任表格，不再有草稿）
   if (action === 'publishAllDrafts') {
     const batchSize = parseInt(event.batchSize, 10) > 0 ? parseInt(event.batchSize, 10) : 100;
