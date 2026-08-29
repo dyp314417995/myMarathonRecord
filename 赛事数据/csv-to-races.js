@@ -106,7 +106,7 @@ function buildRace(row, header, sheetYear){
     regStatus, timeline,
     status: new Date(dateStr) < new Date(new Date().toDateString()) ? "finished" : "upcoming",
     source: "table", sourceSite: "国内路跑认证赛事", sourceUrl: "", sourceId: "",
-    publishStatus: "draft", source: "table",
+    publishStatus: "published", source: "table",
   };
 }
 function main(){

@@ -729,11 +729,28 @@ Page({
       posters,
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
       tagStats: {}, reviewCount: 0, avgScore: 0,
-      publishStatus: this.data.editingId
-        ? (((this.data.allRaceList.find(r => r._id === this.data.editingId) || {}).publishStatus || 'published') === 'draft' ? 'draft' : 'published')
-        : 'published',
-      source: 'manual',
+      publishStatus: 'published',
+      source: this.data.editingId
+        ? (((this.data.allRaceList.find(r => r._id === this.data.editingId) || {}).source) || 'manual')
+        : 'manual',
     };
+
+    // 字段级保护：编辑时对比新旧值，把人工改过的字段写入 manualFields（导入时保留，不覆盖）
+    if (this.data.editingId) {
+      const old = this.data.allRaceList.find(r => r._id === this.data.editingId) || {};
+      const manual = new Set(old.manualFields || []);
+      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters'];
+      const norm = (v) => {
+        if (v instanceof Date) return v.getTime();
+        if (Array.isArray(v)) return JSON.stringify(v);
+        return v === undefined || v === null ? '' : v;
+      };
+      COMPARE_FIELDS.forEach(k => {
+        if (norm(old[k]) !== norm(data[k])) manual.add(k);
+      });
+      data.manualFields = [...manual];
+    }
+
     if (this.data.editingId) {
       await raceUtil.update(this.data.editingId, data);
       // 直接更新本地缓存

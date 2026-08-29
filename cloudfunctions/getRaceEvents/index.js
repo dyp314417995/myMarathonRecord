@@ -47,6 +47,22 @@ exports.main = async (event) => {
     return { ok: true, updated, processed: evts.length, nextSkip: skipAll + evts.length, done: evts.length < batchSize };
   }
 
+  // 一次性：把所有草稿(publishStatus='draft')升级为已发布（方案B：信任表格，不再有草稿）
+  if (action === 'publishAllDrafts') {
+    const batchSize = parseInt(event.batchSize, 10) > 0 ? parseInt(event.batchSize, 10) : 100;
+    const skipAll = parseInt(event.skip, 10) > 0 ? parseInt(event.skip, 10) : 0;
+    const drRes = await db.collection('race_events').where({ publishStatus: 'draft' }).skip(skipAll).limit(batchSize).get();
+    const drafts = drRes.data;
+    let updated = 0;
+    for (const d of drafts) {
+      try {
+        await db.collection('race_events').doc(d._id).update({ data: { publishStatus: 'published', updateTime: new Date() } });
+        updated++;
+      } catch (err) { console.warn('publish draft failed', d._id, err.message); }
+    }
+    return { ok: true, updated, processed: drafts.length, nextSkip: skipAll + drafts.length, done: drafts.length < batchSize };
+  }
+
 
   // 1. 构建动态查询条件（推送到数据库层面过滤）
   const conds = [];
