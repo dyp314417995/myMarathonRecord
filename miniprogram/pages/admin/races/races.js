@@ -3,11 +3,6 @@ const raceUtil = require('../../../utils/raceEvents');
 
 Page({
   data: {
-    tab: 'races',       // races | logs
-    logTab: 'import',   // import | update
-    logList: [],
-    logPage: 0,
-    logHasMore: false,
     isAdmin: false,
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
@@ -51,56 +46,7 @@ Page({
     const userInfo = wx.getStorageSync('userInfo') || {};
     const role = userInfo.role || 'user';
     this.setData({ isAdmin: role === 'super_admin' || role === 'admin', tab: 'races', adminPage: 0, adminHasMore: true, allRaceList: [], raceList: [] });
-    if (this.data.isAdmin) { this.loadRaces(); this.loadLogs(); }
-  },
-
-  onAdminTab(e) {
-    const t = e.currentTarget.dataset.t;
-    if (this.data.tab === t) return;
-    this.setData({ tab: t });
-    if (t === 'logs') this.loadLogs();
-  },
-
-  onLogTab(e) {
-    const lt = e.currentTarget.dataset.lt;
-    if (this.data.logTab === lt) return;
-    this.setData({ logTab: lt, logPage: 0, logList: [] });
-    this.loadLogs();
-  },
-
-  async loadLogs() {
-    const skip = this.data.logPage * 20;
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'getRaceEvents',
-        data: { action: 'logs', type: this.data.logTab, skip, limit: 20 }
-      });
-      const r = res.result || {};
-      const list = (r.list || []).map(x => ({
-        ...x,
-        _type: x._type || this.data.logTab,
-        fmtTime: this.fmtLogTime(x.createTime),
-        itemNames: (x.items || []).slice(0, 20).map(i => i.name).join('、')
-      }));
-      const merged = this.data.logPage === 0 ? list : [...this.data.logList, ...list];
-      this.setData({ logList: merged, logHasMore: r.hasMore || false });
-    } catch (e) {
-      console.error('loadLogs error:', e);
-      this.setData({ logList: [], logHasMore: false });
-    }
-  },
-
-  onLoadMoreLogs() {
-    if (!this.data.logHasMore) return;
-    this.setData({ logPage: this.data.logPage + 1 }, () => this.loadLogs());
-  },
-
-  fmtLogTime(d) {
-    if (!d) return '';
-    const dt = d instanceof Date ? d : new Date(d);
-    if (isNaN(dt.getTime())) return '';
-    const p = n => String(n).padStart(2, '0');
-    return dt.getFullYear() + '-' + p(dt.getMonth()+1) + '-' + p(dt.getDate()) + ' ' + p(dt.getHours()) + ':' + p(dt.getMinutes());
+    if (this.data.isAdmin) this.loadRaces();
   },
 
   async loadRaces() {

@@ -185,22 +185,3 @@
 .poster-full-close { color: #fff; font-size: 44rpx; line-height: 1; padding: 8rpx; }
 .poster-full-swiper { flex: 1; width: 100%; }
 .poster-full-img { width: 100%; height: 100%; display: block; }
-
-/* 管理端 Tab */
-.admin-tabs { display: flex; padding: 20rpx 24rpx 0; gap: 16rpx; }
-.admin-tab { flex: 1; text-align: center; padding: 16rpx 0; border-radius: 12rpx; background: #f5f5f5; color: #666; font-size: 28rpx; }
-.admin-tab.on { background: #1aad19; color: #fff; font-weight: 600; }
-
-/* 日志管理 */
-.log-panel { padding: 16rpx 24rpx; }
-.log-tabs { display: flex; gap: 12rpx; padding: 8rpx 0 16rpx; }
-.log-tab { font-size: 24rpx; color: #666; padding: 10rpx 24rpx; border-radius: 24rpx; background: #f0f0f0; }
-.log-tab.on { background: #1aad19; color: #fff; font-weight: 600; }
-.log-item { background: #fff; border-radius: 12rpx; padding: 20rpx; margin-bottom: 12rpx; }
-.log-head { display: flex; justify-content: space-between; align-items: center; }
-.log-time { font-size: 24rpx; color: #999; }
-.log-badge { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 12rpx; }
-.log-badge.import { background: #e8f5e9; color: #2e7d32; }
-.log-badge.update { background: #e3f2fd; color: #1565c0; }
-.log-body { margin-top: 8rpx; font-size: 24rpx; color: #555; }
-.log-items { color: #666; }
