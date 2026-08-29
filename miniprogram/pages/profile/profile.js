@@ -19,9 +19,19 @@ Page({
 
   async onLoad() {
     let userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo) {
-      wx.navigateTo({ url: '/pages/login/login' });
-      return;
+    // 缓存缺失/无效：先尝试从数据库恢复登录态，避免误跳登录页闪一下
+    if (!userInfo || !userInfo._id) {
+      try {
+        const fresh = await dbUtil.getCurrentUser();
+        if (fresh && fresh._id) {
+          userInfo = fresh;
+          wx.setStorageSync('userInfo', fresh);
+        }
+      } catch (e) { console.warn('恢复登录态失败', e); }
+      if (!userInfo || !userInfo._id) {
+        wx.navigateTo({ url: '/pages/login/login' });
+        return;
+      }
     }
     // 先同步渲染缓存（避免首帧闪'未设置'），再异步刷新
     this.setData({ userInfo });

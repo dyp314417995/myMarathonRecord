@@ -15,9 +15,17 @@ Page({
 
   async onShow() {
     shareUtil.enableShareMenu();
-    // 先用缓存同步渲染（避免闪'未设置'），再异步刷新
+    // 先用缓存同步渲染（避免闪'未设置'/游客页），再异步刷新
     const cached = wx.getStorageSync('userInfo');
-    if (cached) this.setData({ userInfo: cached, role: cached.role || '' });
+    if (cached && cached._id) {
+      // 有有效缓存：清除可能残留的退出标记，避免误闪游客页
+      if (wx.getStorageSync('_logged_out')) wx.removeStorageSync('_logged_out');
+      if (app.globalData.isGuest) app.globalData.isGuest = false;
+      this.setData({ userInfo: cached, role: cached.role || '', isGuest: false });
+    } else {
+      // 无有效缓存：按退出标记同步判定游客态，避免先闪已登录页
+      this.setData({ isGuest: !!wx.getStorageSync('_logged_out') });
+    }
     await this.loadUserInfo();
   },
 
@@ -30,16 +38,20 @@ Page({
 
   async loadUserInfo() {
     try {
-      // 退出标记：退出过的用户不自动登录
+      const cached = wx.getStorageSync('userInfo');
+
+      // 退出标记：有有效缓存视为已登录（清除残留标记），无缓存才进入游客态
       if (wx.getStorageSync('_logged_out')) {
-        this.setData({ isGuest: true });
-        return;
+        if (cached && cached._id) {
+          wx.removeStorageSync('_logged_out');
+        } else {
+          this.setData({ isGuest: true });
+          return;
+        }
       }
 
-      // 退出标记：不清除则不重新登录，保持游客状态
+      // 全局游客标记：有有效缓存视为已重新登录，否则保持游客状态
       if (app.globalData.isGuest) {
-        // 登录页自动登录后会重新写入缓存，此时应清除退出标记
-        const cached = wx.getStorageSync('userInfo');
         if (cached && cached._id) {
           app.globalData.isGuest = false;
         } else {
@@ -47,6 +59,7 @@ Page({
           return;
         }
       }
+
       // 始终从数据库拉最新数据
       let user = await dbUtil.getCurrentUser();
       if (!user) {
