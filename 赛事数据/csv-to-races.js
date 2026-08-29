@@ -101,7 +101,7 @@ function buildRace(row, header, sheetYear){
     scale: num(g(["总规模"])), subScale: g(["分项规模"]).trim(), fee: g(["报名费"]).trim(),
     organizer: g(["主办单位"]).trim(), operator: g(["运营单位"]).trim(),
     contactPhone: g(["联系电话"]).trim(), contactEmail: g(["官方邮箱"]).trim(), wechatAccount: g(["微信公众号"]).trim(), website: g(["官网"]).trim(),
-    mechanism: parseMechanism(g(["抽签"])), payment: parsePayment(g(["缴费时间"])), feeDeadline: g(["缴费时间"]).trim(), signupChannels: g(["报名渠道"]).trim(),
+    mechanism: parseMechanism(g(["抽签"])), payment: parsePayment(g(["缴费时间"])), signupChannels: g(["报名渠道"]).trim(),
     medicalReport: g(["体检报告"]).trim(), finishRequirement: g(["完赛经历要求"]).trim(), refundRule: g(["退出机制"]).trim(), startPoint: g(["起点"]).trim(),
     medalImage: g(["奖牌"]).trim(), routeMap: g(["比赛路线"]).trim(),
     regStatus, timeline,
