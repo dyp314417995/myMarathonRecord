@@ -58,10 +58,6 @@ Page({
   async loadInfo(forceRefresh) {
     this.setData({ loading: true });
     const res = await signinUtil.getInfo(forceRefresh);
-
-  async loadInfo() {
-    this.setData({ loading: true });
-    const res = await signinUtil.getInfo();
     if (!res || !res.ok) {
       this.setData({ loading: false });
       wx.showToast({ title: (res && res.msg) || '加载失败', icon: 'none' });
@@ -175,7 +171,6 @@ Page({
   onOpenExchange() {
     const { exchange, usableCards, holdLimit, balance } = this.data;
     if (!exchange.in_window) {
-      wx.showToast({ title: `补签卡仅限每月 ${exchange.day_from}-${exchange.day_to} 号兑换`, icon: 'none' });
       return;
     }
     if (usableCards >= holdLimit) {

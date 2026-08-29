@@ -58,6 +58,7 @@
   padding: 0;
 }
 .action-row .btn-signin::after { border: none; }
+.action-row .btn-signin.done { background: #1aad19; }
 .action-row .btn-exchange {
   flex: 1;
   background: #fdeaea; color: #ff4d4f;

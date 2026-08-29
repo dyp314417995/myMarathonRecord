@@ -14,9 +14,9 @@
     <text class="section-title">二、奖励说明</text>
     <view class="rule-item">首签奖励：首次签到打卡可领 5 积分，每个账号仅限一次</view>
     <view class="rule-item">常规奖励：连续签到满 7 天后，每 3 天可领取一次</view>
-    <view class="rule-sub">· 连续 < 30 天：常规奖励 1 积分</view>
-    <view class="rule-sub">· 连续 30~60 天：常规奖励 2 积分</view>
-    <view class="rule-sub">· 连续 > 60 天：常规奖励 3 积分</view>
+    <view class="rule-sub">· 连续不足 30 天：常规奖励 1 积分</view>
+    <view class="rule-sub">· 连续 30 至 60 天：常规奖励 2 积分</view>
+    <view class="rule-sub">· 连续超过 60 天：常规奖励 3 积分</view>
     <view class="rule-item">目标奖励：完成首轮 88 天签到，第 88 天可领 25 积分；从第二轮起每轮额外加 5 积分</view>
     <view class="rule-item">每日签到基础分 1 分</view>
   </view>

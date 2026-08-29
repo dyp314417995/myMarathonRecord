@@ -80,7 +80,7 @@
       <text class="balance-num">{{balance}}</text>
       <text class="balance-unit">分</text>
     </view>
-    <button class="exchange-btn" bindtap="onOpenExchange">{{exchange.in_window ? '兑换补签卡' : '每月1-10号可兑换'}}</button>
+    <button class="exchange-btn {{exchange.in_window ? '' : 'disabled'}}" bindtap="onOpenExchange">{{exchange.in_window ? '兑换补签卡' : '每月1-10号可兑换'}}</button>
   </view>
 
   <!-- 规则说明 -->

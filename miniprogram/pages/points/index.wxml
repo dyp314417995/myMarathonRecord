@@ -14,7 +14,7 @@
   <!-- 操作区 -->
   <view class="action-row">
     <button class="btn-primary" bindtap="onApply">提交积分申请</button>
-    <button class="btn-signin" bindtap="onSignin">每日签到</button>
+    <button class="btn-signin {{signedToday ? 'done' : ''}}" bindtap="onSignin">{{signedToday ? '已签到 ✓' : '去签到'}}</button>
   </view>
   <view class="action-row sub">
     <button class="btn-exchange" bindtap="onExchangeCard">兑换补签卡</button>

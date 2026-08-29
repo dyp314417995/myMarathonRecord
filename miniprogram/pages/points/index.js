@@ -1,6 +1,7 @@
 // pages/points/index.js - 积分首页
 const pointsUtil = require('../../utils/points');
 const shareUtil = require('../../utils/share');
+const signinUtil = require('../../utils/signin');
 
 Page({
   data: {
@@ -11,6 +12,7 @@ Page({
     rules: [],
     showRules: true,
     userId: '',
+    signedToday: false,
   },
 
   async onShow() {
@@ -18,7 +20,14 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) return;
     this.setData({ userId: userInfo._id });
-    await Promise.all([this.loadBalance(), this.loadExpiring(), this.loadRecords(), this.loadRules()]);
+    await Promise.all([this.loadBalance(), this.loadExpiring(), this.loadRecords(), this.loadRules(), this.loadSigninStatus()]);
+  },
+
+  async loadSigninStatus() {
+    try {
+      const res = await signinUtil.getInfo(false);
+      if (res && res.ok) this.setData({ signedToday: !!res.signed });
+    } catch (e) { /* 忽略 */ }
   },
 
   async loadBalance() {

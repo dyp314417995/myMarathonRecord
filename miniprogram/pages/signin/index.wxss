@@ -131,6 +131,7 @@
   margin: 0;
 }
 .exchange-btn::after { border: none; }
+.exchange-btn.disabled { background: #ccc; color: #fff; }
 
 /* 规则说明 */
 .rule-note {
