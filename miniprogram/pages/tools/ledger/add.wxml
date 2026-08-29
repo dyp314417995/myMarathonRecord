@@ -85,7 +85,6 @@
 
   <view class="btn-area">
     <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{isEdit ? '保存修改' : '保存'}}</button>
-    <button wx:if="{{showShareBtn}}" class="btn-share" open-type="share" style="margin-top:16rpx;">📤 分享这笔账</button>
     <button wx:if="{{isEdit}}" class="btn-reject" bindtap="onDelete" style="margin-top:16rpx;">🗑 删除这笔</button>
   </view>
 </view>

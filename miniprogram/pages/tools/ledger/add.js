@@ -1,7 +1,6 @@
 // pages/tools/ledger/add.js - 记一笔 / 编辑
 // 先选类型：支出（默认）/ 收入；收入不分大类小类，内置收入类型（比赛奖金等）
 const ledger = require('../../../utils/ledger');
-const shareUtil = require('../../../utils/share');
 
 Page({
   data: {
@@ -30,11 +29,9 @@ Page({
     customRace: '',
     eventName: '',
     eventId: '',
-    showShareBtn: false,
   },
 
   onLoad(options) {
-    shareUtil.enableShareMenu();
     const now = new Date();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -290,23 +287,7 @@ Page({
     this.setData({ submitting: false });
     if (!res.ok) { wx.showToast({ title: res.msg || '保存失败', icon: 'none' }); return; }
     wx.showToast({ title: '已保存', icon: 'success' });
-    // 保存成功：显示分享按钮，不自动返回
-    this.setData({ showShareBtn: true });
-  },
-
-  onShareAppMessage() {
-    const race = this.data.eventName;
-    return shareUtil.buildShare({
-      title: race ? `快来看看「${race}」你花了多少钱` : '我用跑步账本记录跑步开销，你也试试',
-      path: '/pages/tools/ledger/index',
-    });
-  },
-
-  onShareTimeline() {
-    const race = this.data.eventName;
-    return shareUtil.buildTimeline({
-      title: race ? `快来看看「${race}」你花了多少钱` : '我用跑步账本记录跑步开销，你也试试',
-    });
+    setTimeout(() => wx.navigateBack(), 800);
   },
 
   onDelete() {

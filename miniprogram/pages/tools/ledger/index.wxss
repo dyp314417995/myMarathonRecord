@@ -10,6 +10,16 @@
   color: #fff;
 }
 .summary-main { text-align: center; }
+.share-btn {
+  position: absolute; top: 24rpx; right: 24rpx;
+  background: rgba(255,255,255,0.2); color: #fff;
+  border: 1rpx solid rgba(255,255,255,0.4);
+  border-radius: 999rpx; font-size: 24rpx;
+  padding: 0 24rpx; height: 56rpx; line-height: 56rpx;
+  margin: 0;
+}
+.share-btn::after { border: none; }
+.summary-card { position: relative; }
 .summary-label { font-size: 24rpx; opacity: 0.8; display: block; }
 .summary-num { font-size: 64rpx; font-weight: 700; display: block; margin: 8rpx 0; }
 .summary-count { font-size: 24rpx; opacity: 0.8; }

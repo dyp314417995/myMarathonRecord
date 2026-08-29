@@ -1,6 +1,7 @@
 // pages/tools/ledger/index.js - 跑步账本（列表/筛选/汇总）
 // 类型筛选：全部/支出/收入；支出可按大类多选、点击大类展开小类（小类可多选）
 const ledger = require('../../../utils/ledger');
+const shareUtil = require('../../../utils/share');
 
 Page({
   data: {
@@ -31,12 +32,38 @@ Page({
   },
 
   onLoad() {
+    shareUtil.enableShareMenu();
     const now = new Date();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     this.setData({
       month: `${now.getFullYear()}-${m}`,
       year: String(now.getFullYear()),
     });
+  },
+
+  onShareAppMessage() {
+    return shareUtil.buildShare({
+      title: this.buildShareTitle(),
+      path: '/pages/tools/ledger/index',
+    });
+  },
+
+  onShareTimeline() {
+    return shareUtil.buildTimeline({ title: this.buildShareTitle() });
+  },
+
+  buildShareTitle() {
+    // 选了某场比赛 → 显示该场花费；否则通用文案
+    let raceName = '';
+    if (this.data.raceIdx > 0) {
+      const r = this.data.raceOptions[this.data.raceIdx - 1];
+      if (r) raceName = r.eventName || '';
+    }
+    if (raceName) {
+      const sum = (this.data.stats.raceSum || 0).toFixed(2);
+      return `「${raceName}」我花了${sum}元，你也来记账吧`;
+    }
+    return '快来和我一起用跑步账本记账吧';
   },
 
   onShow() {
