@@ -2,7 +2,6 @@
 <view class="ledger-page">
   <!-- 汇总 -->
   <view class="summary-card {{typeFilter === 'income' ? 'income' : ''}}">
-    <button class="share-btn" open-type="share">📤 分享账本</button>
     <view class="summary-main">
       <text class="summary-label">{{typeFilter === 'income' ? '当前筛选收入' : '当前筛选支出'}}</text>
       <text class="summary-num">¥{{typeFilter === 'income' ? stats.incomeText : stats.expenseText}}</text>
