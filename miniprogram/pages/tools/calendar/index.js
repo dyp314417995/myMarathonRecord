@@ -300,7 +300,9 @@ Page({
 
   onTab(e) {
     const t = e.currentTarget.dataset.t;
-    this.setData({ tab: t, _dateSet: false });
+    // 所有赛事默认按热度，我的赛事/评价默认按日期
+    const sb = t === 'all' ? 'hot' : 'date';
+    this.setData({ tab: t, sortBy: sb, sortAsc: sb === 'date', _dateSet: false });
     wx.setStorageSync('calendar_tab', t);
     this.setDefaultDates();
     this.loadData();

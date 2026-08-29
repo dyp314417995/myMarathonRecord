@@ -78,7 +78,7 @@ Page({
 
   applyAdminFilter() {
     let list = [...this.data.allRaceList];
-    // 方案B：不再有草稿，全部已发布
+    // 方案B：全部已发布，无草稿过滤
     if (this.data.adminSearch) list = list.filter(r => (r.name||'').includes(this.data.adminSearch));
     if (this.data.adminType) list = list.filter(r => (r.raceTypes || [r.raceType]).includes(this.data.adminType));
     if (this.data.adminLevel) list = list.filter(r => r.raceLevel === this.data.adminLevel);
@@ -100,7 +100,7 @@ Page({
     this.applyAdminFilter();
   },
 
-  // 草稿点击卡片直接进入编辑；已发布跳用户详情
+  // 点击卡片跳用户详情
   onRaceDetailAdmin(e) {
     const id = e.currentTarget.dataset.id;
     const r = this.data.raceList.find(x => x._id === id);
@@ -658,9 +658,26 @@ Page({
       const old = this.data.allRaceList.find(r => r._id === this.data.editingId) || {};
       const manual = new Set(old.manualFields || []);
       const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters'];
+      const toStr = (v) => {
+        if (v instanceof Date) {
+          const p = n => String(n).padStart(2, '0');
+          return v.getFullYear() + '-' + p(v.getMonth()+1) + '-' + p(v.getDate());
+        }
+        return v;
+      };
       const norm = (v) => {
-        if (v instanceof Date) return v.getTime();
-        if (Array.isArray(v)) return JSON.stringify(v);
+        if (v instanceof Date) return toStr(v);
+        if (Array.isArray(v)) {
+          return JSON.stringify(v.map(x => {
+            if (x instanceof Date) return toStr(x);
+            if (x && typeof x === 'object') {
+              const o = {};
+              for (const k of Object.keys(x)) o[k] = x[k] instanceof Date ? toStr(x[k]) : x[k];
+              return o;
+            }
+            return x;
+          }));
+        }
         return v === undefined || v === null ? '' : v;
       };
       COMPARE_FIELDS.forEach(k => {
