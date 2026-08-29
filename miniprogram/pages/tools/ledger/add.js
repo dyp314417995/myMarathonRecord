@@ -30,6 +30,7 @@ Page({
     customRace: '',
     eventName: '',
     eventId: '',
+    showShareBtn: false,
   },
 
   onLoad(options) {
@@ -289,21 +290,8 @@ Page({
     this.setData({ submitting: false });
     if (!res.ok) { wx.showToast({ title: res.msg || '保存失败', icon: 'none' }); return; }
     wx.showToast({ title: '已保存', icon: 'success' });
-    // 邀请分享：账单
-    this.shareEntryId = res.id || this.data.id || '';
-    wx.showModal({
-      title: '已记录',
-      content: '快来看看这场比赛你花了多少钱，邀请好友一起记录？',
-      confirmText: '分享',
-      cancelText: '完成',
-      success: (r) => { if (r.confirm) this.inviteShare(); },
-    });
-    setTimeout(() => wx.navigateBack(), 800);
-  },
-
-  inviteShare() {
-    // 触发分享（通过右上角或 button open-type=share）
-    wx.showToast({ title: '请点击右上角转发', icon: 'none' });
+    // 保存成功：显示分享按钮，不自动返回
+    this.setData({ showShareBtn: true });
   },
 
   onShareAppMessage() {

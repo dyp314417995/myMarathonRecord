@@ -21,6 +21,8 @@ App({
     this.fixOpenid();
     this.fixUserRole();
     this.checkLaunchScene();
+    // 预加载分享默认图（cloud:// → https 临时链接）
+    require('./utils/share').preloadDefaultImage();
   },
 
   // 补存 openid（已有用户）
