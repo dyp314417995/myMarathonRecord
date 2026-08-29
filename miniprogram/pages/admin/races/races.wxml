@@ -2,16 +2,7 @@
 <view class="races-page">
   <view wx:if="{{!isAdmin}}" class="empty-state"><text>仅管理员可操作</text></view>
   <view wx:else>
-    <!-- 状态页签 -->
-    <view class="tab-row">
-      <text class="tab {{tab === 'published' ? 'on' : ''}}" data-t="published" bindtap="onTab">已发布</text>
-      <text class="tab {{tab === 'draft' ? 'on' : ''}}" data-t="draft" bindtap="onTab">草稿</text>
-    </view>
-    <!-- v2.6 草稿操作栏：批量发布 -->
-    <view class="draft-ops" wx:if="{{tab === 'draft'}}">
-      <text class="op-btn {{batchMode ? 'on' : ''}}" bindtap="onToggleBatch">{{batchMode ? '取消批量' : '批量发布'}}</text>
-    </view>
-    <!-- 筛选栏 -->
+
     <view class="admin-filter">
       <input class="filter-input" placeholder="搜索赛事名称" value="{{adminSearch}}" bindinput="onAdminSearch" />
       <view class="filter-row">
@@ -33,12 +24,19 @@
         <text class="filter-chip {{adminLabel === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onAdminFilter" data-field="label">精英标</text>
         <text class="filter-chip {{adminLabel === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onAdminFilter" data-field="label">普通标</text>
       </view>
+      <view class="filter-row">
+        <text class="filter-chip {{adminRegStatus === '' ? 'on' : ''}}" data-v="" bindtap="onAdminFilter" data-field="regStatus">状态全部</text>
+        <text class="filter-chip {{adminRegStatus === '待确定' ? 'on' : ''}}" data-v="待确定" bindtap="onAdminFilter" data-field="regStatus">待确定</text>
+        <text class="filter-chip {{adminRegStatus === '报名中' ? 'on' : ''}}" data-v="报名中" bindtap="onAdminFilter" data-field="regStatus">报名中</text>
+        <text class="filter-chip {{adminRegStatus === '待报名' ? 'on' : ''}}" data-v="待报名" bindtap="onAdminFilter" data-field="regStatus">待报名</text>
+        <text class="filter-chip {{adminRegStatus === '待开赛' ? 'on' : ''}}" data-v="待开赛" bindtap="onAdminFilter" data-field="regStatus">待开赛</text>
+        <text class="filter-chip {{adminRegStatus === '待出签' ? 'on' : ''}}" data-v="待出签" bindtap="onAdminFilter" data-field="regStatus">待出签</text>
+        <text class="filter-chip {{adminRegStatus === '已结束' ? 'on' : ''}}" data-v="已结束" bindtap="onAdminFilter" data-field="regStatus">已结束</text>
+        <text class="filter-chip {{adminRegStatus === '取消' ? 'on' : ''}}" data-v="取消" bindtap="onAdminFilter" data-field="regStatus">取消</text>
+      </view>
     </view>
     <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
-    <view class="card race-card {{batchMode && item.publishStatus === 'draft' ? 'batch-on' : ''}}" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
-      <view class="batch-check" wx:if="{{batchMode && item.publishStatus === 'draft'}}" catchtap="onSelectBatch" data-id="{{item._id}}">
-        <text class="batch-check-box {{selectedIds.indexOf(item._id) > -1 ? 'checked' : ''}}">{{selectedIds.indexOf(item._id) > -1 ? '✓' : ''}}</text>
-      </view>
+    <view class="card race-card" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
       <view class="race-card-row">
         <view class="race-info">
           <text class="race-name">{{item.name}}</text>
@@ -55,19 +53,9 @@
           <text class="act del" data-id="{{item._id}}" catchtap="onDel">🗑</text>
         </view>
       </view>
-      <view class="draft-bar" wx:if="{{item.publishStatus === 'draft'}}">
-        <text class="pub-btn" data-id="{{item._id}}" catchtap="onPublish">✅ 确认发布</text>
-        <text class="draft-tip">发布后对用户可见，定时任务不再自动修改</text>
-      </view>
     </view>
+
     <view wx:if="{{adminHasMore}}" class="load-more" bindtap="onLoadMoreRaces">加载更多</view>
-    <view class="batch-bar" wx:if="{{tab === 'draft' && batchMode}}">
-      <text class="batch-bar-btn" bindtap="onSelectAllBatch">全选/反选</text>
-      <text class="batch-bar-pub" bindtap="onBatchPublish">✅ 发布选中（{{selectedIds.length}}）</text>
-    </view>
-    <view class="btn-area" style="padding:24rpx;">
-      <button class="btn-primary" bindtap="onAdd">+ 添加赛事</button>
-    </view>
 
     <!-- 赛事表单弹窗 -->
     <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>

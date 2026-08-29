@@ -4,12 +4,9 @@ const raceUtil = require('../../../utils/raceEvents');
 Page({
   data: {
     isAdmin: false,
-    tab: 'published',       // published | draft
-    batchMode: false,        // 批量发布选择模式
-    selectedIds: [],
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
-    adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
+    adminSearch: '', adminType: '', adminLevel: '', adminLabel: '', adminRegStatus: '',
     showQR: false, qrFileID: '', sharingRaceName: '', sharingRaceInfo: {},
     showQRText: true, // 合成海报后隐藏重复文字
     nameDupStatus: '', // '' | 'checking' | 'ok' | 'dup'
@@ -52,20 +49,12 @@ Page({
     if (this.data.isAdmin) this.loadRaces();
   },
 
-  onTab(e) {
-    const t = e.currentTarget.dataset.t;
-    if (this.data.tab === t) return;
-    this.setData({ tab: t, adminPage: 0, allRaceList: [], raceList: [] });
-    this.loadRaces();
-  },
-
   async loadRaces() {
     const userInfo = wx.getStorageSync('userInfo');
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
     const skip = this.data.adminPage * 20;
     const search = this.data.adminSearch || '';
-    const publishFilter = this.data.tab === 'draft' ? 'draft' : 'published';
-    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined, publishFilter });
+    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined, publishFilter: 'all' });
     const all = res.list;
     all.forEach(r => {
       if (r.raceType && !r.raceTypes) r.raceTypes = [r.raceType];
@@ -89,13 +78,12 @@ Page({
 
   applyAdminFilter() {
     let list = [...this.data.allRaceList];
-    // 按当前页签过滤草稿/已发布
-    if (this.data.tab === 'draft') list = list.filter(r => (r.publishStatus || 'published') === 'draft');
-    else list = list.filter(r => (r.publishStatus || 'published') !== 'draft');
+    // 方案B：不再有草稿，全部已发布
     if (this.data.adminSearch) list = list.filter(r => (r.name||'').includes(this.data.adminSearch));
     if (this.data.adminType) list = list.filter(r => (r.raceTypes || [r.raceType]).includes(this.data.adminType));
     if (this.data.adminLevel) list = list.filter(r => r.raceLevel === this.data.adminLevel);
     if (this.data.adminLabel) list = list.filter(r => r.label === this.data.adminLabel);
+    if (this.data.adminRegStatus) list = list.filter(r => r.regStatus === this.data.adminRegStatus);
     this.setData({ raceList: list });
   },
 
@@ -107,7 +95,7 @@ Page({
 
   onAdminFilter(e) {
     const { field, v } = e.currentTarget.dataset;
-    const key = field === 'type' ? 'adminType' : field === 'level' ? 'adminLevel' : 'adminLabel';
+    const key = field === 'type' ? 'adminType' : field === 'level' ? 'adminLevel' : field === 'regStatus' ? 'adminRegStatus' : 'adminLabel';
     this.setData({ [key]: this.data[key] === v ? '' : v });
     this.applyAdminFilter();
   },
@@ -116,77 +104,7 @@ Page({
   onRaceDetailAdmin(e) {
     const id = e.currentTarget.dataset.id;
     const r = this.data.raceList.find(x => x._id === id);
-    if (this.data.batchMode && r && (r.publishStatus || 'published') === 'draft') {
-      this.onSelectBatch(e);
-      return;
-    }
-    if (r && (r.publishStatus || 'published') === 'draft') {
-      this.onEdit(e);
-      return;
-    }
     wx.navigateTo({ url: `/pages/tools/calendar/detail?id=${id}` });
-  },
-
-  // 确认发布（草稿 → 已发布，此后定时任务冻结）
-  onPublish(e) {
-    const id = e.currentTarget.dataset.id;
-    const r = this.data.raceList.find(x => x._id === id);
-    wx.showModal({
-      title: '确认发布',
-      content: r ? `发布「${r.name}」？发布后对用户可见，定时任务将不再自动修改。` : '确定发布该赛事？',
-      confirmText: '发布',
-      success: async (res) => {
-        if (!res.confirm) return;
-        const userInfo = wx.getStorageSync('userInfo') || {};
-        wx.showLoading({ title: '发布中' });
-        await raceUtil.publishRace(id, userInfo);
-        wx.hideLoading();
-        wx.showToast({ title: '已发布', icon: 'success' });
-        this.loadRaces();
-      },
-    });
-  },
-
-  // 批量发布：切换选择模式
-  onToggleBatch() {
-    this.setData({ batchMode: !this.data.batchMode, selectedIds: [] });
-  },
-
-  // 勾选/取消（仅草稿）
-  onSelectBatch(e) {
-    const id = e.currentTarget.dataset.id;
-    let sel = this.data.selectedIds.slice();
-    const i = sel.indexOf(id);
-    if (i > -1) sel.splice(i, 1); else sel.push(id);
-    this.setData({ selectedIds: sel });
-  },
-
-  // 全选当前页草稿
-  onSelectAllBatch() {
-    const ids = this.data.raceList.filter(r => (r.publishStatus || 'published') === 'draft').map(r => r._id);
-    const allSelected = ids.length && ids.every(id => this.data.selectedIds.includes(id));
-    this.setData({ selectedIds: allSelected ? [] : ids });
-  },
-
-  // 批量发布选中草稿
-  async onBatchPublish() {
-    const ids = this.data.selectedIds;
-    if (!ids.length) return wx.showToast({ title: '请先勾选赛事', icon: 'none' });
-    wx.showModal({
-      title: '批量发布',
-      content: `确认发布选中的 ${ids.length} 场赛事？发布后对用户可见，定时任务将不再自动修改。`,
-      confirmText: '发布',
-      success: async (res) => {
-        if (!res.confirm) return;
-        const userInfo = wx.getStorageSync('userInfo') || {};
-        wx.showLoading({ title: '发布中' });
-        const r = await raceUtil.publishMany(ids, userInfo);
-        wx.hideLoading();
-        wx.showToast({ title: `已发布 ${r.ok} 场${r.fail ? '，失败 ' + r.fail : ''}`, icon: r.fail ? 'none' : 'success' });
-        this.setData({ batchMode: false, selectedIds: [] });
-        this.loadRaces();
-      },
-    });
   },
 
   calcCountdown(d, status, timeline, gunTimes) {
