@@ -87,7 +87,7 @@ exports.main = async (event) => {
     try {
       const [mkRes, rvRes] = await Promise.all([
         db.collection('race_markers').where({ userId, eventId }).limit(1).get(),
-        db.collection('race_reviews').where({ userId, eventId }).limit(1).get(),
+        raceGroup ? db.collection('race_reviews').where({ userId, raceGroup }).limit(1).get() : db.collection('race_reviews').where({ userId, eventId }).limit(1).get(),
       ]);
       myMarker = mkRes.data[0] || null;
       myReview = rvRes.data[0] || null;
