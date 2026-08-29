@@ -44,10 +44,9 @@ function parseLevel(text){ const t=text||""; if(/A1|A类|(^|\/|\s)A($|\/|\s)/.te
 function parseLabel(text){ const t=text||""; if(t.indexOf("白金标")>=0) return "白金标"; if(t.indexOf("金标")>=0) return "金标"; if(t.indexOf("精英")>=0) return "精英标"; if(t.indexOf("标牌")>=0||/WA|AIMS/.test(t)) return "普通标"; return ""; }
 function parseMechanism(text){ const t=text||""; if(t.indexOf("✔")>=0||t.indexOf("✓")>=0) return "抽签"; if(t.indexOf("✘")>=0||t.indexOf("✗")>=0||t.indexOf("❌")>=0) return "先到先得"; return ""; }
 function parsePayment(v){
-  const t = v || '';
-  if (/中签后/.test(t)) return '中签后缴费';
-  if (/报名时|缴费/.test(t)) return '先缴费';
-  return '';
+  // 直接取原值（表格「缴费时间」列：报名时缴费 / 中签后缴费）
+  const t = (v || '').trim();
+  return (/报名时|中签后/.test(t)) ? t : '';
 }
 function cleanCity(s){
   s = String(s || '').trim();
