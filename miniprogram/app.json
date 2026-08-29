@@ -28,7 +28,8 @@
     "pages/tools/ledger/index",
     "pages/tools/ledger/add",
     "pages/signin/index",
-    "pages/signin/cards"
+    "pages/signin/cards",
+    "pages/admin/makeup-cards/makeup-cards"
   ],
   "usingComponents": {},
   "window": {

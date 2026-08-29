@@ -1,6 +1,7 @@
 // pages/tools/calendar/detail.js - 赛事详情
 const raceUtil = require('../../../utils/raceEvents');
 const shareUtil = require('../../../utils/share');
+const cache = require('../../../utils/cache');
 
 Page({
   data: {
@@ -398,6 +399,7 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: '已标记', icon: 'success' });
       this.setData({ myStatus: status, isMine: true });
+      cache.invalidate('calendar'); // 列表缓存失效，返回后重新查库
     }).catch(err => {
       wx.hideLoading();
       console.error('标记赛事失败:', err);
@@ -462,12 +464,16 @@ Page({
         }
 
         // 检查 PB
-        await this.checkPB(resultRaceType, resultTime, userInfo);
+        const pbChanged = await this.checkPB(resultRaceType, resultTime, userInfo);
+        if (pbChanged) { cache.invalidate('members'); cache.invalidate('users'); }
+        // 新增了跑马记录，让跑马记录缓存失效
+        cache.invalidate('records');
       }
 
       wx.hideLoading();
       wx.showToast({ title: '已标记并记录成绩', icon: 'success' });
       this.setData({ showResultModal: false, myStatus: 'finished', isMine: true });
+      cache.invalidate('calendar'); // 列表缓存失效，返回后重新查库
       this.loadEvent();
     } catch (err) {
       wx.hideLoading();
@@ -480,7 +486,7 @@ Page({
     const dbUtil = require('../../../utils/db');
     const fields = { '10k': 'pb10k', half: 'pbHalf', full: 'pbFull' };
     const field = fields[type];
-    if (!field) return;
+    if (!field) return false;
     const current = userInfo[field];
     const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);
@@ -489,7 +495,9 @@ Page({
       userInfo[field] = result;
       wx.setStorageSync('userInfo', userInfo);
       wx.showToast({ title: '🏆 新PB！', icon: 'success', duration: 2000 });
+      return true;
     }
+    return false;
   },
 
   onScoreDetail() {

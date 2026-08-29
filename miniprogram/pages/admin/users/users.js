@@ -1,6 +1,22 @@
 // pages/admin/users/users.js - 用户管理（搜索/详情/移除）
 const dbUtil = require('../../../utils/db');
+const cache = require('../../../utils/cache');
 const pointsUtil = require('../../../utils/points');
+
+const LIST_CACHE_KEY = 'users_all_users';
+const LIST_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
+
+const PAGE_SIZE = 20;
+
+// 成绩字符串转秒（支持 H:MM:SS / MM:SS / 纯秒），非法返回 null
+function toSeconds(t) {
+  if (!t || typeof t !== 'string') return null;
+  const p = t.trim().split(':').map(x => parseInt(x, 10));
+  if (p.length === 0 || p.some(x => isNaN(x))) return null;
+  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+  if (p.length === 2) return p[0] * 60 + p[1];
+  return p[0];
+}
 
 Page({
   data: {
@@ -18,7 +34,7 @@ Page({
     detailPoints: 0,
     totalCount: 0,
     hasMore: false,
-    _allLoaded: false,
+    visibleCount: PAGE_SIZE,
   },
 
   async onShow() {
@@ -27,39 +43,55 @@ Page({
     await this.loadUsers();
   },
 
-  async loadUsers() {
-    this.setData({ loading: true });
-    this.setData({ loading: true });
+  // 拉取全部用户（客户端单次最多20条，循环取完），保证排序是全局排序
+  // 缓存未过期时直接使用本地缓存，不查库；只有查库成功才更新缓存
+  async loadUsers(force = false) {
+    // 缓存命中时直接展示，避免闪加载
+    const cached = !force ? cache.get(LIST_CACHE_KEY) : null;
+    this.setData({ loading: !cached, visibleCount: PAGE_SIZE });
     try {
-      const res = await dbUtil.getUserList({}, 0, 20);
-      const groupsRes = await dbUtil.getGroups();
-      const groupMap = {};
-      groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
+      const { data } = await cache.load(LIST_CACHE_KEY, async () => {
+        const [groupsRes, totalCount] = await Promise.all([dbUtil.getGroups(), dbUtil.getUserCount()]);
+        const groupMap = {};
+        groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
 
-      // 批量转换 cloud:// 头像（云函数绕过权限）
-      const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-      let urlMap = {};
-      if (cloudIds.length) {
-        try {
-          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        } catch {}
-      }
+        const all = [];
+        const seen = new Set();
+        let skip = 0;
+        for (;;) {
+          const res = await dbUtil.getUserList({}, skip, PAGE_SIZE);
+          if (!res.data.length) break;
+          res.data.forEach(u => { if (u._id && !seen.has(u._id)) { seen.add(u._id); all.push(u); } });
+          if (res.data.length < PAGE_SIZE) break;
+          skip += PAGE_SIZE;
+        }
 
-      const users = res.data.map(u => {
-        const raw = u.avatarUrl || '';
-        let avatar = '';
-        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
-        // 其他格式（wxfile://、temp https、过期云链接等）清空走默认头像
-        return {
-          ...u, avatarUrl: avatar,
-          groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-        };
-      });
-      const totalCount = await dbUtil.getUserCount();
-      const hasMore = res.data.length >= 20;
-      this.setData({ allUsers: users, hasMore, totalCount, loading: false });
+        // 批量转换 cloud:// 头像（云函数绕过权限，50 个一批）
+        const allCloudIds = all.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+        const urlMap = {};
+        for (let i = 0; i < allCloudIds.length; i += 50) {
+          try {
+            const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: allCloudIds.slice(i, i + 50) } });
+            (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+          } catch {}
+        }
+
+        const users = all.map(u => {
+          const raw = u.avatarUrl || '';
+          let avatar = '';
+          if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+          else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+          // 其他格式（wxfile://、temp https、过期云链接等）清空走默认头像
+          return {
+            ...u, avatarUrl: avatar,
+            groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
+          };
+        });
+
+        return { list: users, total: totalCount };
+      }, { ttl: LIST_CACHE_TTL, force, versionKey: 'users' });
+
+      this.setData({ allUsers: data.list, totalCount: data.total, loading: false });
       this.applyFilter();
     } catch (err) {
       this.setData({ loading: false });
@@ -78,126 +110,7 @@ Page({
     }
   },
 
-  async loadMore() {
-    const skip = this.data.allUsers.length;
-    const res = await dbUtil.getUserList({}, skip, 20);
-    if (res.data.length === 0) return this.setData({ hasMore: false });
-
-    const groupsRes = await dbUtil.getGroups();
-    const groupMap = {};
-    groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-
-    const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-    let urlMap = {};
-    if (cloudIds.length) {
-      try {
-        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-      } catch {}
-    }
-    const newUsers = res.data.map(u => {
-      let avatar = u.avatarUrl || '';
-      if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
-      else if (!avatar.startsWith('https://') || avatar.includes('tcb.qcloud.la')) avatar = '';
-      return {
-        ...u, avatarUrl: avatar,
-        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-      };
-    });
-    const all = [...this.data.allUsers, ...newUsers];
-    const hasMore = res.data.length >= 20;
-    this.setData({ allUsers: all, hasMore });
-    this.applyFilter();
-  },
-
-  // 搜索
-  onSearchBlur(e) {
-    this.onSearchInput(e);
-  },
-
-  onSearchInput(e) {
-    const kw = e.detail.value || '';
-    this.setData({ searchKey: kw });
-    if (kw) { this.searchUsers(kw); }
-    else { this.loadUsers(); }
-  },
-
-  async searchUsers(kw) {
-    this.setData({ loading: true });
-    try {
-      const res = await wx.cloud.callFunction({ name: 'searchUsers', data: { kw } });
-      const list = (res.result || {}).list || [];
-      const groupsRes = await dbUtil.getGroups();
-      const groupMap = {};
-      groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-      const cloudIds = list.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-      let urlMap = {};
-      if (cloudIds.length) {
-        try {
-          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        } catch {}
-      }
-      const all = list.map(u => {
-        const raw = u.avatarUrl || '';
-        let avatar = '';
-        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
-        return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
-      });
-      this.setData({ allUsers: all, hasMore: false, loading: false });
-      this.applyFilter();
-    } catch (e) {
-      console.error('[users] searchUsers error:', e);
-      this.setData({ loading: false });
-    }
-  },
-
-  async loadAllUsers() {
-    this.setData({ loading: true });
-    const groupsRes = await dbUtil.getGroups();
-    const groupMap = {};
-    groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-    let all = [];
-    // 最多加载 100 条（5 页），再多就走分页
-    for (let p = 0; p < 5; p++) {
-      const res = await dbUtil.getUserList({}, p * 20, 20);
-      if (res.data.length === 0) break;
-      all = all.concat(res.data.map(u => ({
-        ...u,
-        groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入',
-      })));
-    }
-    // 批量转换头像（每批最多50个，微信限制）
-    const allCloudIds = all.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-    const urlMap = {};
-    for (let i = 0; i < allCloudIds.length; i += 50) {
-      try {
-        const batch = allCloudIds.slice(i, i + 50);
-        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: batch } });
-        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-      } catch {}
-    }
-    all = all.map(u => {
-      const raw = u.avatarUrl || '';
-      if (raw.startsWith('cloud://')) return { ...u, avatarUrl: urlMap[raw] || '' };
-      if (raw.includes('tcb.qcloud.la')) return { ...u, avatarUrl: '' };
-      return u;
-    });
-    this.setData({ allUsers: all, hasMore: false, _allLoaded: true });
-  },
-
-  // 排序
-  onSortBy(e) {
-    const by = e.currentTarget.dataset.by;
-    if (this.data.sortBy === by) {
-      this.setData({ sortAsc: !this.data.sortAsc });
-    } else {
-      this.setData({ sortBy: by, sortAsc: false });
-    }
-    this.applyFilter();
-  },
-
+  // 全局过滤 + 排序 + 切片分页（allUsers 含全部用户，因此排序是全局的）
   applyFilter() {
     let list = [...this.data.allUsers];
     // 搜索
@@ -213,16 +126,44 @@ Page({
     const sortBy = this.data.sortBy;
     const asc = this.data.sortAsc;
     if (sortBy === 'name') {
-      list.sort((a, b) => (a.nickName || '').localeCompare(b.nickName || ''));
-    } else if (sortBy === 'pb10k') {
-      list.sort((a, b) => (a.pb10k || '9').localeCompare(b.pb10k || '9'));
-    } else if (sortBy === 'pbHalf') {
-      list.sort((a, b) => (a.pbHalf || '9').localeCompare(b.pbHalf || '9'));
-    } else if (sortBy === 'pbFull') {
-      list.sort((a, b) => (a.pbFull || '9').localeCompare(b.pbFull || '9'));
+      list.sort((a, b) => asc ? (b.nickName || '').localeCompare(a.nickName || '') : (a.nickName || '').localeCompare(b.nickName || ''));
+    } else if (sortBy === 'pb10k' || sortBy === 'pbHalf' || sortBy === 'pbFull') {
+      list.sort((a, b) => {
+        const sa = toSeconds(a[sortBy]), sb = toSeconds(b[sortBy]);
+        const ha = sa !== null, hb = sb !== null;
+        // 没成绩（或成绩非法）的不参与排名：有成绩的排前，没成绩的恒排最后
+        if (ha !== hb) return ha ? -1 : 1;
+        if (!ha) return (a.createTime || 0) - (b.createTime || 0) || (a._id || '').localeCompare(b._id || '');
+        return asc ? sb - sa : sa - sb;
+      });
+    } else {
+      list.sort((a, b) => asc ? (a.createTime || 0) - (b.createTime || 0) : (b.createTime || 0) - (a.createTime || 0));
     }
-    if (asc) list.reverse();
-    this.setData({ users: list, loading: false });
+    const visible = list.slice(0, this.data.visibleCount);
+    this.setData({ users: visible, hasMore: visible.length < list.length, loading: false });
+  },
+
+  // 搜索（本地全量过滤）
+  onSearchBlur(e) {
+    this.onSearchInput(e);
+  },
+
+  onSearchInput(e) {
+    const kw = e.detail.value || '';
+    this.setData({ searchKey: kw, visibleCount: PAGE_SIZE });
+    this.applyFilter();
+  },
+
+  // 排序
+  onSortBy(e) {
+    const by = e.currentTarget.dataset.by;
+    if (this.data.sortBy === by) {
+      this.setData({ sortAsc: !this.data.sortAsc });
+    } else {
+      this.setData({ sortBy: by, sortAsc: false });
+    }
+    this.setData({ visibleCount: PAGE_SIZE });
+    this.applyFilter();
   },
 
   // 用户详情
@@ -251,6 +192,13 @@ Page({
     if (this.data.hasMore) this.loadMore();
   },
 
+  // 加载更多：从已排序的全局结果里多展示一页（切片方式，天然不会重复）
+  loadMore() {
+    if (!this.data.hasMore) return;
+    this.setData({ visibleCount: this.data.visibleCount + PAGE_SIZE });
+    this.applyFilter();
+  },
+
   async onDemoteAdmin(e) {
     const { id, name } = e.currentTarget.dataset;
     wx.showModal({
@@ -265,7 +213,8 @@ Page({
         // 改用户角色
         await dbUtil.updateUser(id, { role: 'user' });
         wx.showToast({ title: '已解除', icon: 'success' });
-        this.loadUsers();
+        cache.invalidate('users'); cache.invalidate('members');
+        this.loadUsers(true);
       }
     });
   },
@@ -297,7 +246,8 @@ Page({
         }
         await dbUtil.db.collection('users').doc(id).remove();
         wx.showToast({ title: '已删除', icon: 'success' });
-        this.loadUsers();
+        cache.invalidate('users'); cache.invalidate('members');
+        this.loadUsers(true);
       }
     });
   },

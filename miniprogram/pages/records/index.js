@@ -1,7 +1,10 @@
 // pages/records/index.js - 跑马记录
 const dbUtil = require('../../utils/db');
+const cache = require('../../utils/cache');
 const db = dbUtil.db;
 const raceUtil = require('../../utils/raceEvents');
+
+const RECORDS_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
 
 Page({
   data: {
@@ -35,35 +38,39 @@ Page({
 
   onShow() { this.loadRecords(); },
 
-  async loadRecords() {
+  // 缓存未过期时直接使用本地缓存，不查库；只有查库成功才更新缓存
+  async loadRecords(force = false) {
     const u = wx.getStorageSync('userInfo');
     const userId = u?._id;
     if (!userId) return;
-    const res = await db.collection('race_records').where({ userId }).orderBy('date', 'desc').get();
-    const records = res.data.map(r => ({
-      ...r,
-      imgUrls: [],
-    }));
-    // 转换图片
-    const allCloudIds = records.reduce((arr, r) => arr.concat(r.images || []), []);
-    const urlMap = {};
-    for (let i = 0; i < allCloudIds.length; i += 50) {
-      try {
-        const batch = allCloudIds.slice(i, i + 50);
-        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: batch } });
-        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-      } catch {}
-    }
-    // 标记当前 PB
-    const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
-    const pbFields = { '10k': u?.pb10k, half: u?.pbHalf, full: u?.pbFull };
-    records.forEach(r => {
-      r.imgUrls = (r.images || []).map(id => urlMap[id] || '').filter(Boolean);
-      r.isPB = r.status === 'finished' && r.result && toSec(r.result) <= toSec(pbFields[r.raceType]) && r.result === pbFields[r.raceType];
-    });
-    this.setData({ records });
-    this.updateFiltered();
-    this.updateChart();
+    const cacheKey = 'records_' + userId;
+    try {
+      const { data } = await cache.load(cacheKey, async () => {
+        const res = await db.collection('race_records').where({ userId }).orderBy('date', 'desc').get();
+        const records = res.data.map(r => ({ ...r, imgUrls: [] }));
+        // 转换图片
+        const allCloudIds = records.reduce((arr, r) => arr.concat(r.images || []), []);
+        const urlMap = {};
+        for (let i = 0; i < allCloudIds.length; i += 50) {
+          try {
+            const batch = allCloudIds.slice(i, i + 50);
+            const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: batch } });
+            (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+          } catch {}
+        }
+        records.forEach(r => { r.imgUrls = (r.images || []).map(id => urlMap[id] || '').filter(Boolean); });
+        return records;
+      }, { ttl: RECORDS_CACHE_TTL, force, versionKey: 'records' });
+      // PB 标记成本低，按最新 PB 重算，避免缓存导致 PB 标记不准
+      const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
+      const pbFields = { '10k': u?.pb10k, half: u?.pbHalf, full: u?.pbFull };
+      data.forEach(r => {
+        r.isPB = r.status === 'finished' && r.result && toSec(r.result) <= toSec(pbFields[r.raceType]) && r.result === pbFields[r.raceType];
+      });
+      this.setData({ records: data });
+      this.updateFiltered();
+      this.updateChart();
+    } catch (e) {}
   },
 
   // 切换 Tab
@@ -159,7 +166,7 @@ Page({
       if (!r.confirm) return;
       await db.collection('race_records').doc(id).remove();
       wx.showToast({ title: '已删除', icon: 'success' });
-      this.loadRecords();
+      this.loadRecords(true);
     }});
   },
 
@@ -297,8 +304,12 @@ Page({
     }
     // 检查是否刷新 PB
     if (f.status === 'finished' && f.result) {
-      await this.checkPB(f.raceType, f.result);
+      const pbChanged = await this.checkPB(f.raceType, f.result);
+      if (pbChanged) { cache.invalidate('members'); cache.invalidate('users'); }
     }
+    // 同步本地缓存，避免下次切回来读到旧数据
+    const curU = wx.getStorageSync('userInfo');
+    if (curU && curU._id) cache.set('records_' + curU._id, this.data.records, RECORDS_CACHE_TTL, 'records');
     wx.hideLoading();
     wx.showToast({ title: '已保存', icon: 'success' });
   },
@@ -306,10 +317,10 @@ Page({
   // 检查并更新 PB
   async checkPB(type, result) {
     const u = wx.getStorageSync('userInfo');
-    if (!u?._id) return;
+    if (!u?._id) return false;
     const fields = { '10k': 'pb10k', half: 'pbHalf', full: 'pbFull' };
     const field = fields[type];
-    if (!field) return; // 自定义距离(custom)不参与 PB
+    if (!field) return false; // 自定义距离(custom)不参与 PB
     const current = u[field];
     const toSec = (t) => { const p = t.split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);
@@ -318,6 +329,8 @@ Page({
       u[field] = result;
       wx.setStorageSync('userInfo', u);
       wx.showToast({ title: '🏆 新PB！', icon: 'success', duration: 2000 });
+      return true;
     }
+    return false;
   },
 });

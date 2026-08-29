@@ -507,11 +507,18 @@ async function actionUseCard(event, openid) {
     } catch (e) {
       signin = { continuous_days: 0, last_sign_date: '' };
     }
-    if (signin.last_sign_date === todayStr) {
-      await transaction.rollback();
-      return { ok: false, code: 'ALREADY', msg: '今天已签到，无需补签' };
+    // 补签资格：昨天是唯一断签日
+    // ① 前天已签、昨天未签、今天未签：直接可补签昨天（补签后今天签到即连续）
+    // ② 前天已签、昨天未签、今天已签：同样可补签昨天（需确认前天确有签到记录，避免无历史新用户刷分）
+    let canMakeup = false;
+    if (signin.last_sign_date === dayBeforeStr) {
+      canMakeup = true;
+    } else if (signin.last_sign_date === todayStr) {
+      const dayBeforeRes = await transaction.collection('signin_detail')
+        .where({ userId, sign_date: dayBeforeStr }).get();
+      canMakeup = !!(dayBeforeRes.data && dayBeforeRes.data.length > 0);
     }
-    if (signin.last_sign_date !== dayBeforeStr) {
+    if (!canMakeup) {
       await transaction.rollback();
       return { ok: false, code: 'NOT_MAKEUP_DAY', msg: '补签卡仅限补签昨天' };
     }
@@ -546,9 +553,18 @@ async function actionUseCard(event, openid) {
         data: { points: _.inc(base) },
       });
     }
+    // 补签后更新汇总：
+    // - 今天未签：last_sign_date 置为昨天，今天签到即为连续（continuous_days 不变）
+    // - 今天已签：last_sign_date 保持今天（避免回退导致可重复签到），连续天数补齐为「昨天+今天」=2
+    const signedToday = signin.last_sign_date === todayStr;
+    const newContinuous = signedToday
+      ? Math.max(parseInt(signin.continuous_days, 10) || 0, 2)
+      : (parseInt(signin.continuous_days, 10) || 0);
     await transaction.collection('user_signin').doc(userId).update({
       data: {
-        last_sign_date: yesterdayStr,   // 补签后视为「昨天已签」，今天签到即为连续
+        last_sign_date: signedToday ? todayStr : yesterdayStr,
+        continuous_days: newContinuous,
+        max_continuous_days: Math.max(signin.max_continuous_days || 0, newContinuous),
         total_score: _.inc(base),
         updated_at: now,
       },

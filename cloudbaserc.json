@@ -1,0 +1,20 @@
+{
+  "envId": "cloud1-d5gy0iuiba5f9300f",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "importRaceSheet",
+      "timeout": 300,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
+      "name": "grantMakeupCard",
+      "timeout": 120,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    }
+  ]
+}

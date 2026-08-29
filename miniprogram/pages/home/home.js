@@ -214,6 +214,10 @@ Page({
   onManageLotteries() {
     wx.navigateTo({ url: '/pages/admin/lotteries/lotteries' });
   },
+  // 补签卡补发（管理员）
+  onMakeupCards() {
+    wx.navigateTo({ url: '/pages/admin/makeup-cards/makeup-cards' });
+  },
   onCalendar() {
     wx.navigateTo({ url: '/pages/tools/calendar/index' });
   },

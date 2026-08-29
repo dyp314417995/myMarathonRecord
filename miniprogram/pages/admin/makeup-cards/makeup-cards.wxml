@@ -1,0 +1,74 @@
+<!-- pages/admin/makeup-cards/makeup-cards.wxml - 手动补发补签卡 -->
+<view class="mc-page">
+  <view class="mc-tip card">
+    <text class="mc-tip-title">补签卡说明</text>
+    <text class="mc-tip-line">· 每人最多持有 {{holdLimit}} 张有效补签卡，已达上限者自动跳过</text>
+    <text class="mc-tip-line">· 有效期 {{expireDays}} 天，补发来源记为「运营活动」</text>
+  </view>
+
+  <!-- 指定用户补发 -->
+  <view class="section-title">指定用户补发</view>
+  <view class="card mc-form">
+    <view class="form-group">
+      <text class="form-label">选择用户</text>
+      <view class="form-input user-trigger" wx:if="{{selectedCount === 0}}" bindtap="showUserPicker">
+        <text class="placeholder">点击选择用户</text>
+      </view>
+      <view class="form-input user-trigger selected-box" wx:else bindtap="showUserPicker">
+        <text class="selected-names" wx:if="{{!showAllNames}}">{{selectedNamesText}}</text>
+        <text class="selected-names" wx:else>{{selectedNamesAll}}</text>
+        <text wx:if="{{selectedNamesMore && !showAllNames}}" class="selected-more" catchtap="onToggleShowAll">展开</text>
+        <text wx:if="{{showAllNames}}" class="selected-more" catchtap="onToggleShowAll">收起</text>
+      </view>
+      <text class="form-tip" wx:if="{{selectedCount > 0}}">已选 {{selectedCount}} 人，将各补发 {{userCount}} 张</text>
+    </view>
+    <view class="form-group">
+      <text class="form-label">发放数量（张/人）</text>
+      <input class="form-input" type="number" placeholder="1" value="{{userCount}}" bindinput="onUserCountInput" />
+    </view>
+    <button class="btn-primary" bindtap="onGrantToUsers" disabled="{{userGranting}}">确认补发</button>
+  </view>
+
+  <!-- 全员补发 -->
+  <view class="section-title">全员补发</view>
+  <view class="card mc-form">
+    <view class="form-group">
+      <text class="form-label">发放数量（张/人）</text>
+      <input class="form-input" type="number" placeholder="1" value="{{allCount}}" bindinput="onAllCountInput" />
+    </view>
+    <button class="btn-primary btn-danger" bindtap="onGrantToAll" disabled="{{allGranting}}">给全员补发</button>
+  </view>
+
+  <!-- 发放记录 -->
+  <view class="section-title">发放记录</view>
+  <view wx:if="{{logsLoading && logs.length === 0}}" class="empty-tight"><text>加载中...</text></view>
+  <block wx:for="{{logs}}" wx:key="_id">
+    <view class="card log-card">
+      <view class="log-row">
+        <text class="log-op">{{item.opName}}</text>
+        <text class="log-target">{{item.targetText}}</text>
+      </view>
+      <text class="log-detail">{{item.detail}}</text>
+      <text class="log-time">{{item.fmtTime}}</text>
+    </view>
+  </block>
+  <view wx:if="{{logs.length === 0 && !logsLoading}}" class="empty-tight"><text>暂无发放记录</text></view>
+  <view wx:if="{{hasMoreLogs}}" class="load-more" bindtap="loadMoreLogs"><text>查看更多</text></view>
+
+  <!-- 用户选择器 -->
+  <view class="modal-mask" wx:if="{{showUserPicker}}" catchtap="hideUserPicker"></view>
+  <view class="modal-box" wx:if="{{showUserPicker}}">
+    <text class="modal-title">选择用户</text>
+    <input class="form-input" placeholder="搜索昵称" value="{{userFilter}}" bindinput="onSearchUser" focus />
+    <scroll-view scroll-y class="user-list">
+      <block wx:for="{{filteredUsers}}" wx:key="_id">
+        <view class="picker-item" data-id="{{item._id}}" data-name="{{item.nickName}}" bindtap="onSelectUser">
+          <text class="picker-check">{{selectedUserIds[item._id] ? '☑' : '☐'}}</text>
+          <text class="picker-name">{{item.nickName}}（{{item.city || '未知'}}）</text>
+        </view>
+      </block>
+      <view wx:if="{{filteredUsers.length === 0}}" class="empty-tight"><text>暂无匹配用户</text></view>
+    </scroll-view>
+    <button class="btn-outline" bindtap="hideUserPicker" style="margin-top:24rpx;">完成</button>
+  </view>
+</view>

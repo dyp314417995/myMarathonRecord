@@ -1,6 +1,7 @@
 // pages/tools/calendar/index.js - 赛事日历
 const raceUtil = require('../../../utils/raceEvents');
 const shareUtil = require('../../../utils/share');
+const cache = require('../../../utils/cache');
 
 Page({
   data: {
@@ -62,9 +63,13 @@ Page({
       this.setData({ sortBy: sb, sortAsc: sb === 'date', _loaded: true });
     }
     if (!this.data._dateSet) this.setDefaultDates();
-    if (this.data.races.length > 0) {
-      this.loadData(false, true); // 有缓存，后台静默刷新
-    } else {
+    // 标记/评价等数据变更会 invalidate('calendar')：版本变化才重新查库，否则直接用内存数据，不再查库
+    const ver = cache.getVer('calendar');
+    if (ver !== this._calVer) {
+      this._calVer = ver;
+      this._viewCache = {};
+      this.loadData(false, this.data.races.length > 0);
+    } else if (!this.data.races.length) {
       this.loadData(false);
     }
   },
@@ -116,7 +121,17 @@ Page({
   // 年份切换
   onYearPrev() { this.setData({ yearSel: (this.data.yearSel || new Date().getFullYear()) - 1 }, () => { this.setDefaultDates(); this.loadData(); }); },
   onYearNext() { this.setData({ yearSel: (this.data.yearSel || new Date().getFullYear()) + 1 }, () => { this.setDefaultDates(); this.loadData(); }); },
-  async loadData(isLoadMore = false, silent = false) {
+  async loadData(isLoadMore = false, silent = false, force = false) {
+    // 切 tab / 返回页面：同一查询条件且未强制刷新时，直接用内存缓存，不再查库
+    if (!isLoadMore && !force) {
+      const ck = this.viewCacheKey();
+      const st = this._viewCache && this._viewCache[ck];
+      if (st) {
+        this.setData({ allRaces: st.allRaces, allTags: st.allTags || [], page: st.page || 0, total: st.total || 0, hasMore: st.hasMore || false });
+        this.applyFilter();
+        return;
+      }
+    }
     if (!isLoadMore && !silent) {
       this.setData({ page: 0, allRaces: [], races: [], hasMore: false });
     }
@@ -142,6 +157,8 @@ Page({
       const all = res.list;
       if (all.length === 0 && !isLoadMore) {
         if (!silent) wx.hideLoading();
+        this._viewCache = this._viewCache || {};
+        this._viewCache[this.viewCacheKey()] = { allRaces: [], allTags: [], page: 0, total: 0, hasMore: false };
         this.setData({ races: [], allRaces: [], allTags: [], total: 0, hasMore: false });
         return;
       }
@@ -151,7 +168,16 @@ Page({
       const to = new Date(this.data.dateTo);
       this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}`, total: res.total || 0, hasMore: this.data.tab === 'mine' ? false : (res.hasMore || false) });
 
-      let races = [...this.data.allRaces, ...all];
+      // 加载更多时追加；非加载更多：第一页整体替换（避免重复），已翻页的静默刷新按追加处理（避免丢页）
+      let races = (isLoadMore || this.data.page > 0) ? [...this.data.allRaces, ...all] : [...all];
+      // 按 _id 去重（保留最新数据），防止静默刷新/重复请求导致同一赛事出现多次
+      const seenIds = new Set();
+      races = races.reverse().filter(r => {
+        if (!r._id) return true;
+        if (seenIds.has(r._id)) return false;
+        seenIds.add(r._id);
+        return true;
+      }).reverse();
 
       const tagSet = new Set();
       races.forEach(r => (r.tags || []).forEach(t => tagSet.add(t)));
@@ -185,12 +211,26 @@ Page({
         hasReviewed: r.hasReviewed || false,
       }));
 
+      // 只有查库成功才更新内存缓存
+      this._viewCache = this._viewCache || {};
+      this._viewCache[this.viewCacheKey()] = {
+        allRaces: races,
+        allTags,
+        page: this.data.page,
+        total: res.total || 0,
+        hasMore: this.data.tab === 'mine' ? false : (res.hasMore || false),
+      };
       this.setData({ allRaces: races, allTags });
       this.applyFilter();
       if (!silent) wx.hideLoading();
     } catch (err) {
       if (!silent) wx.hideLoading();
     }
+  },
+
+  viewCacheKey() {
+    const d = this.data;
+    return [d.tab, d.dateFrom, d.dateTo, d.searchKey, d.raceTypeFilter, d.raceLevelFilter, d.raceLabelFilter, d.sortBy].join('|');
   },
 
   getNearestMs(r, now) {
@@ -436,14 +476,21 @@ Page({
           }
 
           // 检查 PB
-          await this.checkPB(markingEvent.raceType, raceResult, userInfo);
+          const pbChanged = await this.checkPB(markingEvent.raceType, raceResult, userInfo);
+          if (pbChanged) { cache.invalidate('members'); cache.invalidate('users'); }
+          // 新增了跑马记录，让跑马记录缓存失效
+          cache.invalidate('records');
         }
       }
 
       wx.hideLoading();
       wx.showToast({ title: '已标记', icon: 'success' });
       this.setData({ showForm: false });
-      this.loadData();
+      // 标记会改变标记状态/标记数：失效缓存并强制查库
+      cache.invalidate('calendar');
+      this._calVer = cache.getVer('calendar');
+      this._viewCache = {};
+      this.loadData(false, false, true);
     } catch (err) {
       wx.hideLoading();
       console.error('标记失败:', err);
@@ -460,7 +507,7 @@ Page({
     const dbUtil = require('../../../utils/db');
     const fields = { '10k': 'pb10k', half: 'pbHalf', full: 'pbFull' };
     const field = fields[type];
-    if (!field) return;
+    if (!field) return false;
     const current = userInfo[field];
     const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);
@@ -469,7 +516,9 @@ Page({
       userInfo[field] = result;
       wx.setStorageSync('userInfo', userInfo);
       wx.showToast({ title: '🏆 新PB！', icon: 'success', duration: 2000 });
+      return true;
     }
+    return false;
   },
 
   async onUnmark() {
@@ -478,7 +527,11 @@ Page({
     await raceUtil.unmarkEvent(userInfo._id, id);
     wx.showToast({ title: '已取消标记', icon: 'success' });
     this.setData({ showForm: false });
-    this.loadData();
+    // 取消标记会改变标记状态/标记数：失效缓存并强制查库
+    cache.invalidate('calendar');
+    this._calVer = cache.getVer('calendar');
+    this._viewCache = {};
+    this.loadData(false, false, true);
   },
 
   onHideForm() { this.setData({ showForm: false }); },

@@ -1,5 +1,20 @@
 // pages/admin/members/members.js - 跑友名录
 const dbUtil = require('../../../utils/db');
+const cache = require('../../../utils/cache');
+
+const PAGE_SIZE = 20;
+const LIST_CACHE_KEY = 'members_all_users';
+const LIST_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
+
+// 成绩字符串转秒（支持 H:MM:SS / MM:SS / 纯秒），非法返回 null
+function toSeconds(t) {
+  if (!t || typeof t !== 'string') return null;
+  const p = t.trim().split(':').map(x => parseInt(x, 10));
+  if (p.length === 0 || p.some(x => isNaN(x))) return null;
+  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+  if (p.length === 2) return p[0] * 60 + p[1];
+  return p[0];
+}
 
 Page({
   data: {
@@ -8,33 +23,56 @@ Page({
     totalCount: 0,
     showDetail: false, detailUser: {}, detailGroups: '', detailRaces: [],
     hasMore: false,
+    visibleCount: PAGE_SIZE,
   },
 
   async onShow() { this.loadUsers(); },
 
-  async loadUsers() {
-    this.setData({ loading: true });
+  // 拉取全部用户（客户端单次最多20条，循环取完），保证排序是全局排序
+  // 缓存未过期时直接使用本地缓存，不查库；只有查库成功才更新缓存
+  async loadUsers(force = false) {
+    // 缓存命中时直接展示，避免闪加载
+    const cached = !force ? cache.get(LIST_CACHE_KEY) : null;
+    this.setData({ loading: !cached, visibleCount: PAGE_SIZE });
     try {
-      const [usersRes, groupsRes] = await Promise.all([dbUtil.getUserList({}, 0, 20), dbUtil.getGroups()]);
-      const groupMap = {};
-      groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-      const cloudIds = usersRes.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-      let urlMap = {};
-      if (cloudIds.length) {
-        try {
-          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        } catch {}
-      }
-      const allUsers = usersRes.data.map(u => {
-        const raw = u.avatarUrl || '';
-        let avatar = '';
-        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
-        return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
-      });
-      const totalCount = await dbUtil.getUserCount();
-      this.setData({ allUsers, totalCount, loading: false, hasMore: usersRes.data.length >= 20 });
+      const { data } = await cache.load(LIST_CACHE_KEY, async () => {
+        const [groupsRes, totalCount] = await Promise.all([dbUtil.getGroups(), dbUtil.getUserCount()]);
+        const groupMap = {};
+        groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
+
+        const all = [];
+        const seen = new Set();
+        let skip = 0;
+        for (;;) {
+          const page = await dbUtil.getUserList({}, skip, PAGE_SIZE);
+          if (!page.data.length) break;
+          page.data.forEach(u => { if (u._id && !seen.has(u._id)) { seen.add(u._id); all.push(u); } });
+          if (page.data.length < PAGE_SIZE) break;
+          skip += PAGE_SIZE;
+        }
+
+        // 批量转换 cloud:// 头像（云函数绕过权限，50 个一批）
+        const allCloudIds = all.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
+        const urlMap = {};
+        for (let i = 0; i < allCloudIds.length; i += 50) {
+          try {
+            const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: allCloudIds.slice(i, i + 50) } });
+            (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+          } catch {}
+        }
+
+        const allUsers = all.map(u => {
+          const raw = u.avatarUrl || '';
+          let avatar = '';
+          if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
+          else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
+          return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
+        });
+
+        return { list: allUsers, total: totalCount };
+      }, { ttl: LIST_CACHE_TTL, force, versionKey: 'members' });
+
+      this.setData({ allUsers: data.list, totalCount: data.total, loading: false });
       this.applyFilter();
     } catch { this.setData({ loading: false }); }
   },
@@ -47,6 +85,7 @@ Page({
     }
   },
 
+  // 全局过滤 + 排序 + 切片分页（allUsers 含全部用户，因此排序是全局的）
   applyFilter() {
     let users = [...this.data.allUsers];
     const kw = this.data.searchKey.toLowerCase();
@@ -61,61 +100,39 @@ Page({
     users.sort((a, b) => {
       if (by === 'name') return asc ? (a.nickName||'').localeCompare(b.nickName||'') : (b.nickName||'').localeCompare(a.nickName||'');
       if (by === 'pb10k' || by === 'pbHalf' || by === 'pbFull') {
-        const pa = a[by] || '', pb = b[by] || '';
-        const ha = !!pa, hb = !!pb;
-        // 没成绩的不参与排名：有成绩的排前，没成绩的恒排最后
+        const sa = toSeconds(a[by]), sb = toSeconds(b[by]);
+        const ha = sa !== null, hb = sb !== null;
+        // 没成绩（或成绩非法）的不参与排名：有成绩的排前，没成绩的恒排最后
         if (ha !== hb) return ha ? -1 : 1;
         if (!ha) return (a.createTime || 0) - (b.createTime || 0) || (a._id || '').localeCompare(b._id || '');
-        return asc ? pa.localeCompare(pb) : pb.localeCompare(pa);
+        return asc ? sa - sb : sb - sa;
       }
       return asc ? a.createTime - b.createTime : b.createTime - a.createTime;
     });
-    this.setData({ users });
+    const visible = users.slice(0, this.data.visibleCount);
+    this.setData({ users: visible, hasMore: visible.length < users.length });
   },
 
   onSearchBlur(e) { this.onSearchInput(e); },
 
   onSearchInput(e) {
     const kw = e.detail.value || '';
-    this.setData({ searchKey: kw });
-    if (kw) { this.searchUsers(kw); }
-    else { this.loadUsers(); }
-  },
-
-  async searchUsers(kw) {
-    console.log('[client] searchUsers kw=', kw);
-    this.setData({ loading: true });
-    try {
-      const res = await wx.cloud.callFunction({ name: 'searchUsers', data: { kw } });
-      console.log('[client] searchUsers result=', res.result);
-      const list = (res.result || {}).list || [];
-      const groupsRes = await dbUtil.getGroups();
-      const groupMap = {};
-      groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-      const cloudIds = list.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-      let urlMap = {};
-      if (cloudIds.length) {
-        try {
-          const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-          (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        } catch {}
-      }
-      const all = list.map(u => {
-        const raw = u.avatarUrl || '';
-        let avatar = '';
-        if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-        else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
-        return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
-      });
-      this.setData({ allUsers: all, hasMore: false, loading: false });
-      this.applyFilter();
-    } catch { this.setData({ loading: false }); }
+    this.setData({ searchKey: kw, visibleCount: PAGE_SIZE });
+    this.applyFilter();
   },
 
   onSortBy(e) {
     const by = e.currentTarget.dataset.by;
-    if (this.data.sortBy === by) { this.setData({ sortAsc: !this.data.sortAsc }); }
-    else { this.setData({ sortBy: by, sortAsc: false }); }
+    const patch = { visibleCount: PAGE_SIZE };
+    if (this.data.sortBy === by) {
+      patch.sortAsc = !this.data.sortAsc;
+    } else {
+      // PB 成绩默认最快在前（升序），其他保持原有默认
+      const isPb = by === 'pb10k' || by === 'pbHalf' || by === 'pbFull';
+      patch.sortBy = by;
+      patch.sortAsc = isPb ? true : false;
+    }
+    this.setData(patch);
     this.applyFilter();
   },
 
@@ -144,31 +161,10 @@ Page({
 
   onReachBottom() { if (this.data.hasMore) this.loadMore(); },
 
-  async loadMore() {
-    if (this.data.searchKey) return;
-    const existingIds = new Set(this.data.allUsers.map(u => u._id));
-    const skip = this.data.allUsers.length;
-    const res = await dbUtil.getUserList({}, skip, 20);
-    if (res.data.length === 0) return this.setData({ hasMore: false });
-    const groupsRes = await dbUtil.getGroups();
-    const groupMap = {};
-    groupsRes.data.forEach(g => { groupMap[g._id] = g.name; });
-    const cloudIds = res.data.filter(u => u.avatarUrl && u.avatarUrl.startsWith('cloud://')).map(u => u.avatarUrl);
-    let urlMap = {};
-    if (cloudIds.length) {
-      try {
-        const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
-        (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-      } catch {}
-    }
-    const newUsers = res.data.filter(u => !existingIds.has(u._id)).map(u => {
-      const raw = u.avatarUrl || '';
-      let avatar = '';
-      if (raw.startsWith('cloud://')) avatar = urlMap[raw] || '';
-      else if (raw.startsWith('https://') && !raw.includes('tmp') && !raw.includes('tcb.qcloud.la')) avatar = raw;
-      return { ...u, avatarUrl: avatar, groupName: (u.groupIds || []).map(id => groupMap[id] || '').filter(Boolean).join('、') || '未加入' };
-    });
-    this.setData({ allUsers: [...this.data.allUsers, ...newUsers], hasMore: res.data.length >= 20 });
+  // 加载更多：从已排序的全局结果里多展示一页（切片方式，天然不会重复）
+  loadMore() {
+    if (!this.data.hasMore) return;
+    this.setData({ visibleCount: this.data.visibleCount + PAGE_SIZE });
     this.applyFilter();
   },
 });
