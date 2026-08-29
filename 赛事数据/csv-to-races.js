@@ -93,7 +93,8 @@ function buildRace(row, header, sheetYear){
   const finalName = raceGroup + String(year);
   const levelTxt = g(["赛事等级"]);
   const timeline = [timelineItem("报名开启", g(["报名开启时间"])), timelineItem("报名截止", g(["报名截止时间"])), timelineItem("出签时间", g(["出签日期"])), timelineItem("缴费截止", g(["缴费时间"])), timelineItem("鸣枪开跑", dateStr)].filter(Boolean);
-  const regStatus = g(["状态"]).trim();
+  let regStatus = g(["状态"]).trim();
+  if (/取消|推迟|熔断/.test(regStatus)) regStatus = "取消";
   return {
     name: finalName, raceGroup, date: dateStr, province: g(["省份"]).trim(), city: extractCity(name),
     raceTypes: parseTypes(g(["比赛项目"])), raceLevel: parseLevel(levelTxt), label: parseLabel(levelTxt),
