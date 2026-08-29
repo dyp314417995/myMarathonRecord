@@ -43,7 +43,6 @@
           <text class="race-meta">{{item.fmtDate}} · {{item.province || item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · 规模' + item.scale : ''}}<text wx:if="{{item.regStatus}}"> · {{item.regStatus}}</text></text>
           <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
           <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
-          <text class="tag tag-blue" wx:if="{{item.sourceSite}}">🛰 {{item.sourceSite}}</text>
         </view>
         <view class="race-actions">
           <text class="act" data-id="{{item._id}}" catchtap="onEdit">✏️</text>

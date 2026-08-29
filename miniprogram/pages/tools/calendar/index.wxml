@@ -13,6 +13,11 @@
   </view>
   <!-- 月份筛选：默认当月~年底，可单选某月（1-12 两排） -->
   <view class="month-picker">
+    <view class="year-row">
+      <text class="year-arrow" bindtap="onYearPrev">‹</text>
+      <text class="year-chip on">{{yearSel}}年</text>
+      <text class="year-arrow" bindtap="onYearNext">›</text>
+    </view>
     <view class="month-row">
       <text class="month-chip {{monthSel === 0 ? 'on' : ''}}" data-m="0" bindtap="onMonthSel">默认</text>
       <text class="month-chip {{monthSel === 1 ? 'on' : ''}}" data-m="1" bindtap="onMonthSel">1月</text>

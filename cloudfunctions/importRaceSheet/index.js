@@ -37,7 +37,9 @@ exports.main = async (event = {}) => {
   const totalAll = list.length;
   list = list.slice(startIdx, startIdx + BATCH);
   const stat = { total: totalAll, batch: list.length, created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
+  const logEntries = [];   // 更新日志（逐条）
   const now = new Date();
+  const startTime = Date.now();
   for (const race of list) {
     try {
       if (!race.name || !race.date) { stat.failed++; stat.errors.push("缺名称/日期: " + (race.name || "")); continue; }
@@ -60,6 +62,7 @@ exports.main = async (event = {}) => {
         delete doc._id;
         await db.collection("race_events").add({ data: doc });
         stat.created++;
+        if (!dryRun) logEntries.push({ name: race.name, action: "created" });
         continue;
       }
 
@@ -81,7 +84,23 @@ exports.main = async (event = {}) => {
       if (existing.source !== "table") patch.source = "table";
       await db.collection("race_events").doc(existing._id).update({ data: patch });
       stat.updated++;
+      if (!dryRun) logEntries.push({ name: race.name, action: "updated" });
     } catch (e) { stat.failed++; stat.errors.push((e.message || String(e)).slice(0, 200)); }
+  }
+  // 写导入日志 + 更新日志（非 dryRun）
+  if (!dryRun) {
+    try {
+      await db.collection("race_fetch_log").add({
+        data: { date: new Date().toISOString().slice(0, 10), source: "table", dryRun: false, fetched: totalAll, created: stat.created, updated: stat.updated, skipped: stat.skipped, failed: stat.failed, errors: stat.errors, durationMs: Date.now() - startTime, createTime: new Date() }
+      });
+      // 更新日志逐条（限制最多记录 500 条避免超时）
+      const logSlice = logEntries.slice(0, 500);
+      if (logSlice.length) {
+        await db.collection("race_import_log").add({
+          data: { batchStart: startIdx, batchEnd: startIdx + list.length, items: logSlice, createTime: new Date() }
+        });
+      }
+    } catch (e) { stat.errors.push("日志写入失败: " + (e.message || String(e)).slice(0, 120)); }
   }
   return { ...stat, batchStart: startIdx, batchEnd: startIdx + list.length, done: startIdx + list.length >= totalAll };
 };

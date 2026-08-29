@@ -32,6 +32,7 @@ Page({
     dateTo: '',
     dateRangeText: '',
     monthSel: 0,           // 0=默认(当月~年底) | 1-12=指定月
+    yearSel: new Date().getFullYear(),  // 年份筛选（默认今年）
     _dateSet: false,       // 用户是否手动设置了时间范围
     _loaded: false,        // 是否已按 tab 设置过默认排序
     page: 0,
@@ -81,14 +82,15 @@ Page({
     const today = new Date();
     const pad = n => String(n).padStart(2, "0");
     const fmt = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
-    // 默认：当月 1 号 ~ 当年 12-31（需求 v2.6）
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    const to = new Date(today.getFullYear(), 11, 31);
+    // 默认：所选年份 1 月 ~ 12 月（默认今年，可切年）
+    const year = this.data.yearSel || today.getFullYear();
+    const from = new Date(year, 0, 1);
+    const to = new Date(year, 11, 31);
     this.setData({
       monthSel: 0,
       dateFrom: fmt(from),
       dateTo: fmt(to),
-      dateRangeText: "本月起 ~ 年底",
+      dateRangeText: year + "年",
     });
   },
 
@@ -96,7 +98,7 @@ Page({
   onMonthSel(e) {
     const m = parseInt(e.currentTarget.dataset.m, 10);
     if (m === 0) { this.setDefaultDates(); this.loadData(); return; }
-    const year = new Date().getFullYear();
+    const year = this.data.yearSel || new Date().getFullYear();
     const pad = n => String(n).padStart(2, "0");
     const fmt = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
     const from = new Date(year, m - 1, 1);
@@ -110,6 +112,10 @@ Page({
     });
     this.loadData();
   },
+
+  // 年份切换
+  onYearPrev() { this.setData({ yearSel: (this.data.yearSel || new Date().getFullYear()) - 1 }, () => { this.setDefaultDates(); this.loadData(); }); },
+  onYearNext() { this.setData({ yearSel: (this.data.yearSel || new Date().getFullYear()) + 1 }, () => { this.setDefaultDates(); this.loadData(); }); },
   async loadData(isLoadMore = false, silent = false) {
     if (!isLoadMore && !silent) {
       this.setData({ page: 0, allRaces: [], races: [], hasMore: false });

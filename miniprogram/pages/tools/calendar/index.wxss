@@ -90,3 +90,8 @@
 }
 .month-chip.on { background: #1aad19; color: #fff; font-weight: 600; }
 .month-range { padding: 6rpx 0 2rpx; font-size: 22rpx; color: #999; }
+
+/* 年份切换 */
+.year-row { display: flex; align-items: center; justify-content: center; gap: 24rpx; padding: 6rpx 0; }
+.year-arrow { font-size: 40rpx; color: #1aad19; padding: 0 20rpx; font-weight: 700; }
+.year-chip { font-size: 28rpx; color: #1aad19; font-weight: 700; }

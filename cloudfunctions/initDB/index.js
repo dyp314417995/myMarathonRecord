@@ -53,7 +53,7 @@ exports.main = async () => {
   }
 
   // 4.5 赛事采集日志集合（v2.6 自动采集）
-  const fetchCols = ['race_fetch_log'];
+  const fetchCols = ['race_fetch_log', 'race_import_log'];
   for (const col of fetchCols) {
     try {
       await db.createCollection(col);
