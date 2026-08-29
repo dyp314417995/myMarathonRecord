@@ -11,6 +11,13 @@
 > - 管理端编辑时，改动的字段自动记入 `manualFields`，下次导入保留你的修改，其余跟随表格
 > - 存量草稿可用 `getRaceEvents` action `publishAllDrafts` 一次性转已发布
 > - 流程：`update_saishi.js`（rev 对比）→ `csv-to-races.js` → `importRaceSheet`（直接发布+字段合并）
+>
+> **2026-08-29 落地**：
+> - 数据已全量导入（1030 条，0 失败），markerCount 热度回填完成
+> - 自动导入链路：`Windows计划任务`（每天10:00，电脑开机）→ `auto_import.ps1`（拉取→转换→上传）→ 云函数定时 `dailyImport`（每天02:00）从云存储全量导入
+> - 导入日志：`race_fetch_log`（汇总）+ `race_import_log`（逐条），管理端日志Tab暂未启用（云函数层保留）
+> - 新增字段：`manualFields`（字段级保护）、`feeDeadline`（缴费时间原值，可空）
+> - 命名规范：name 带年份 / raceGroup 不带年份；city 从赛事名提取；payment 取表格原值；标牌白金/金标/精英/普通
 
 ---
 
