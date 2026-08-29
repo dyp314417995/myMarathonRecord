@@ -13,7 +13,7 @@ Page({
     showForm: false,
     editingId: '',
     // 表单数据
-    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', note: '', isPublic: true },
+    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', note: '', isPublic: true, distanceKm: '' },
     formImages: [],
     showTimePicker: false,
     showChart: false,
@@ -28,7 +28,7 @@ Page({
   onLoad() {
     // 读取用户自定义默认 Tab
     const t = wx.getStorageSync('records_default_tab');
-    if (['half', 'full', '10k'].includes(t)) {
+    if (['half', 'full', '10k', 'custom'].includes(t)) {
       this.setData({ tab: t, defaultTab: t });
     }
   },
@@ -89,6 +89,7 @@ Page({
   updateFiltered() {
     const tab = this.data.tab;
     const filtered = this.data.records.filter(r => {
+      if (tab === 'custom') return r.raceType === 'custom';
       if (tab === '10k') return r.raceType === '10k';
       if (tab === 'half') return r.raceType === 'half';
       return r.raceType === 'full';
@@ -120,9 +121,10 @@ Page({
   // 添加
   onAdd() {
     const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00' };
+    const tab = this.data.tab === 'custom' ? 'custom' : this.data.tab;
     this.setData({
       showForm: true, editingId: '',
-      form: { raceType: this.data.tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[this.data.tab] || '3:30:00', note: '', isPublic: true },
+      form: { raceType: tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[tab] || (tab === 'custom' ? '0:30:00' : '3:30:00'), note: '', isPublic: true, distanceKm: '' },
       formImages: [],
     });
   },
@@ -144,7 +146,7 @@ Page({
     }
     this.setData({
       showForm: true, editingId: r._id,
-      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', note: r.note || '', isPublic: r.isPublic !== false },
+      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', note: r.note || '', isPublic: r.isPublic !== false, distanceKm: r.distanceKm || '' },
       formImages: images,
       searchText: r.city || '',
     });
@@ -162,7 +164,12 @@ Page({
   },
 
   // 表单变更
-  onFormType(e) { this.setData({ 'form.raceType': e.currentTarget.dataset.v }); },
+  onFormType(e) {
+    const v = e.currentTarget.dataset.v;
+    const patch = { 'form.raceType': v };
+    if (v === 'custom' && !this.data.form.result) patch['form.result'] = '0:30:00';
+    this.setData(patch);
+  },
   onFormLevel(e) { this.setData({ 'form.raceLevel': e.currentTarget.dataset.v }); },
   onFormStatus(e) { this.setData({ 'form.status': e.currentTarget.dataset.v }); },
   onFormInput(e) { this.setData({ [`form.${e.currentTarget.dataset.k}`]: e.detail.value }); },
@@ -264,6 +271,7 @@ Page({
       raceType: f.raceType, raceLevel: f.raceLevel, status: f.status,
       date: f.date, city: f.city.trim(), result: f.status === 'finished' ? f.result : '',
       note: f.note.trim(), isPublic: f.isPublic, images,
+      distanceKm: f.raceType === 'custom' ? String(f.distanceKm || '').trim() : '',
     };
     const newImgUrls = this.data.formImages.map(img => img.previewUrl || img.local || '').filter(Boolean);
     if (this.data.editingId) {
@@ -301,7 +309,7 @@ Page({
     if (!u?._id) return;
     const fields = { '10k': 'pb10k', half: 'pbHalf', full: 'pbFull' };
     const field = fields[type];
-    if (!field) return;
+    if (!field) return; // 自定义距离(custom)不参与 PB
     const current = u[field];
     const toSec = (t) => { const p = t.split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const newSec = toSec(result);

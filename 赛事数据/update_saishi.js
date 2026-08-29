@@ -1,3 +1,5 @@
+// 数据源（腾讯文档在线表格，勿公开传播）：
+// https://docs.qq.com/smartsheet/DQlZpdE1QRFhST0dF?tab=sc_fJm8EC
 // 国内路跑认证赛事 - 增量更新脚本
 // 用法: node update_saishi.js
 // 依赖同目录: cookies.txt(登录态), snapshot.json(上次快照,自动生成)
@@ -42,7 +44,9 @@ function extractValue(fd,v){ if(!v) return ""; const type=fd?fd.k31:null; switch
 function fieldOrder(sheet){ let order=(sheet.refData&&sheet.refData.k12&&sheet.refData.k12.k2&&sheet.refData.k12.k2.k1)||[]; if(!order.length) order=Object.keys(sheet.fieldDefs||{}); return order; }
 function buildCsv(tab,sheet,name){
   const fd=sheet.fieldDefs||{};
-  const order=fieldOrder(sheet);
+  // 排除不需要的列：创建时间/最后编辑时间（需求 v2.6）
+  const EXCLUDE = new Set(['创建时间','最后编辑时间']);
+  const order=fieldOrder(sheet).filter(fid=>!(fd[fid]&&EXCLUDE.has(fd[fid].k30)));
   const headers=order.map(fid=>fd[fid]?fd[fid].k30:(fid));
   const lines=[headers.map(csvF).join(",")];
   for(const rid of Object.keys(sheet.records)){ const rv=sheet.records[rid]; const fields=(rv&&rv.k1)||{}; lines.push(order.map(fid=>extractValue(fd[fid],fields[fid])).map(csvF).join(",")); }

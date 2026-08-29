@@ -7,12 +7,9 @@
       <text class="tab {{tab === 'published' ? 'on' : ''}}" data-t="published" bindtap="onTab">已发布</text>
       <text class="tab {{tab === 'draft' ? 'on' : ''}}" data-t="draft" bindtap="onTab">草稿</text>
     </view>
-    <!-- v2.6 草稿操作栏：批量发布 + 立即抓取 -->
+    <!-- v2.6 草稿操作栏：批量发布 -->
     <view class="draft-ops" wx:if="{{tab === 'draft'}}">
       <text class="op-btn {{batchMode ? 'on' : ''}}" bindtap="onToggleBatch">{{batchMode ? '取消批量' : '批量发布'}}</text>
-      <text class="op-btn" data-dryrun="{{true}}" bindtap="onFetchNow" wx:if="{{!fetching}}">🔍 试跑抓取</text>
-      <text class="op-btn" bindtap="onFetchNow" wx:if="{{!fetching}}">🔄 立即抓取</text>
-      <text class="op-btn disabled" wx:if="{{fetching}}">抓取中…</text>
     </view>
     <!-- 筛选栏 -->
     <view class="admin-filter">

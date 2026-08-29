@@ -21,6 +21,7 @@ async function getAll(params = {}) {
   if (params.raceLabel !== undefined) data.raceLabel = params.raceLabel;
   if (params.userId !== undefined) data.userId = params.userId;
   if (params.publishFilter !== undefined) data.publishFilter = params.publishFilter;
+  if (params.sortBy !== undefined) data.sortBy = params.sortBy;
   const res = await wx.cloud.callFunction({ name: 'getRaceEvents', data });
   return res.result || { list: [], total: 0, hasMore: false };
 }
@@ -76,17 +77,31 @@ async function markEvent(userId, eventId, status, notifyEnabled = false, raceTyp
   const exist = await db.collection('race_markers')
     .where({ userId, eventId }).get();
   if (exist.data.length > 0) {
-    return await db.collection('race_markers').doc(exist.data[0]._id).update({ data });
+    await db.collection('race_markers').doc(exist.data[0]._id).update({ data });
+  } else {
+    await db.collection('race_markers').add({
+      data: { userId, eventId, ...data, createTime: new Date() }
+    });
   }
-  return await db.collection('race_markers').add({
-    data: { userId, eventId, ...data, createTime: new Date() }
+  syncMarkerCount(eventId).catch(() => {});
+  return { ok: true };
+}
+
+/** 标记/取消标记后同步 race_events.markerCount（云函数管理员权限，热度排序用） */
+async function syncMarkerCount(eventId) {
+  if (!eventId) return;
+  await wx.cloud.callFunction({
+    name: 'getRaceEvents',
+    data: { action: 'syncMarkerCount', eventId }
   });
 }
 
 /** 取消标记 */
 async function unmarkEvent(userId, eventId) {
-  return await db.collection('race_markers')
+  await db.collection('race_markers')
     .where({ userId, eventId }).remove();
+  syncMarkerCount(eventId).catch(() => {});
+  return { ok: true };
 }
 
 /** 获取用户标记的赛事 */

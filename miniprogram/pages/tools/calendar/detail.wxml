@@ -13,7 +13,7 @@
       <text class="countdown">{{event.countdown}}</text>
     </view>
     <view class="dtl-meta">
-      <text class="dtl-meta-item">{{event.city || '未知'}} · {{event.raceTypeName}}<text wx:if="{{event.raceLevel}}"> · {{event.raceLevel}}级</text><text wx:if="{{event.label}}"> · {{event.label}}</text></text>
+      <text class="dtl-meta-item">{{event.city ? event.city + ' · ' : ''}}{{event.raceTypeName}}<text wx:if="{{event.raceLevel}}"> · {{event.raceLevel}}级</text><text wx:if="{{event.label}}"> · {{event.label}}</text></text>
     </view>
     <view wx:if="{{event._scaleDisplay}}" class="dtl-meta">
       <text class="dtl-meta-label">规模</text>
@@ -59,7 +59,7 @@
         </view>
         <view class="tl-body">
           <text class="tl-label">{{t.label}}</text>
-          <text class="tl-date">{{t.fmtDate}}</text>
+          <text class="tl-date" wx:if="{{t.fmtDate}}">{{t.fmtDate}}</text>
           <!-- 发枪分区 -->
           <view wx:if="{{t.label === '鸣枪开跑' && event.gunTimes && event.gunTimes.length}}" class="gun-subs">
             <text class="gun-sub" wx:for="{{event.gunTimes}}" wx:key="index" wx:for-item="g">{{g.zone}}区 {{g.time}}</text>

@@ -11,16 +11,26 @@
   <view class="search-bar">
     <input class="search-input" placeholder="搜索赛事名称/城市" value="{{searchKey}}" bindinput="onSearch" />
   </view>
-  <view class="date-picker">
-    <view class="date-row">
-      <picker mode="date" value="{{dateFrom}}" bindchange="onDateFrom">
-        <view class="date-input">{{dateFrom || '开始'}}</view>
-      </picker>
-      <text style="color:#999;flex-shrink:0">至</text>
-      <picker mode="date" value="{{dateTo}}" bindchange="onDateTo">
-        <view class="date-input">{{dateTo || '结束'}}</view>
-      </picker>
+  <!-- 月份筛选：默认当月~年底，可单选某月（1-12 两排） -->
+  <view class="month-picker">
+    <view class="month-row">
+      <text class="month-chip {{monthSel === 0 ? 'on' : ''}}" data-m="0" bindtap="onMonthSel">默认</text>
+      <text class="month-chip {{monthSel === 1 ? 'on' : ''}}" data-m="1" bindtap="onMonthSel">1月</text>
+      <text class="month-chip {{monthSel === 2 ? 'on' : ''}}" data-m="2" bindtap="onMonthSel">2月</text>
+      <text class="month-chip {{monthSel === 3 ? 'on' : ''}}" data-m="3" bindtap="onMonthSel">3月</text>
+      <text class="month-chip {{monthSel === 4 ? 'on' : ''}}" data-m="4" bindtap="onMonthSel">4月</text>
+      <text class="month-chip {{monthSel === 5 ? 'on' : ''}}" data-m="5" bindtap="onMonthSel">5月</text>
+      <text class="month-chip {{monthSel === 6 ? 'on' : ''}}" data-m="6" bindtap="onMonthSel">6月</text>
     </view>
+    <view class="month-row">
+      <text class="month-chip {{monthSel === 7 ? 'on' : ''}}" data-m="7" bindtap="onMonthSel">7月</text>
+      <text class="month-chip {{monthSel === 8 ? 'on' : ''}}" data-m="8" bindtap="onMonthSel">8月</text>
+      <text class="month-chip {{monthSel === 9 ? 'on' : ''}}" data-m="9" bindtap="onMonthSel">9月</text>
+      <text class="month-chip {{monthSel === 10 ? 'on' : ''}}" data-m="10" bindtap="onMonthSel">10月</text>
+      <text class="month-chip {{monthSel === 11 ? 'on' : ''}}" data-m="11" bindtap="onMonthSel">11月</text>
+      <text class="month-chip {{monthSel === 12 ? 'on' : ''}}" data-m="12" bindtap="onMonthSel">12月</text>
+    </view>
+    <view class="month-range"><text>{{dateRangeText}}</text></view>
   </view>
 
   <!-- 标签筛选 -->
@@ -32,6 +42,7 @@
   <!-- 排序 -->
   <view class="sort-bar">
     <scroll-view scroll-x class="sort-scroll">
+      <text class="sort-item {{sortBy === 'hot' ? 'on' : ''}}" data-v="hot" bindtap="onSort">🔥热度{{sortBy==='hot'?(sortAsc?'↑':'↓'):''}}</text>
       <text class="sort-item {{sortBy === 'date' ? 'on' : ''}}" data-v="date" bindtap="onSort">日期{{sortAsc?'↑':'↓'}}</text>
       <text class="sort-item {{sortBy === 'score' ? 'on' : ''}}" data-v="score" bindtap="onSort">评分{{sortBy==='score'?(sortAsc?'↑':'↓'):''}}</text>
       <text class="sort-item {{sortBy === 'difficulty' ? 'on' : ''}}" data-v="difficulty" bindtap="onSort">难度{{sortBy==='difficulty'?(sortAsc?'↑':'↓'):''}}</text>
@@ -87,7 +98,10 @@
         <text wx:if="{{item.raceTypeName}}"> · {{item.raceTypeName}}</text>
       </view>
       <view wx:if="{{item.avgScore}}" class="race-score">
-        <text>⭐ {{item.avgScore}} ({{item.reviewCount}}人评){{item.markerCount ? ' · ' + item.markerCount + '人已标记' : ''}}</text>
+        <text>⭐ {{item.avgScore}} ({{item.reviewCount}}人评)</text>
+      </view>
+      <view wx:if="{{item.markerCount}}" class="race-hot">
+        <text>🔥 {{item.markerCount}}人已标记</text>
       </view>
       <view class="race-tags" wx:if="{{item.tags && item.tags.length > 0}}">
         <text class="race-tag" wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>

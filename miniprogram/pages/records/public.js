@@ -53,6 +53,7 @@ Page({
   updateFiltered() {
     const tab = this.data.tab;
     const filtered = this.data.records.filter(r => {
+      if (tab === 'custom') return r.raceType === 'custom';
       if (tab === '10k') return r.raceType === '10k';
       if (tab === 'half') return r.raceType === 'half';
       return r.raceType === 'full';

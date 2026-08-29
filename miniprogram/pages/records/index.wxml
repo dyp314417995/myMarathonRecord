@@ -5,6 +5,7 @@
     <text class="tab {{tab === 'half' ? 'active' : ''}}" data-t="half" bindtap="onTab">半马</text>
     <text class="tab {{tab === 'full' ? 'active' : ''}}" data-t="full" bindtap="onTab">全马</text>
     <text class="tab {{tab === '10k' ? 'active' : ''}}" data-t="10k" bindtap="onTab">10K</text>
+    <text class="tab {{tab === 'custom' ? 'active' : ''}}" data-t="custom" bindtap="onTab">其他</text>
     <text class="tab-gear" bindtap="onShowDefault" hover-class="none">⚙️</text>
   </view>
 
@@ -33,7 +34,7 @@
       <view class="card">
         <view class="card-header">
           <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
-          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : '全程马拉松'}}</text>
+          <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : item.raceType === 'custom' ? (item.distanceKm ? item.distanceKm + '公里' : '自定义') : '全程马拉松'}}</text>
           <text class="status-tag {{item.status}}">{{item.status === 'planned' ? '计划报名' : item.status === 'finished' ? '已完赛' : item.status === 'dnf' ? '未完赛' : item.status === 'dns' ? '弃赛' : item.status === 'won' ? '已中签' : '已报名'}}</text>
         </view>
         <view class="card-body">
@@ -57,7 +58,7 @@
 
   <!-- 空状态 -->
   <view class="empty" wx:if="{{filteredRecords.length === 0}}">
-    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : '全马'}} 记录</text>
+    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : tab === 'custom' ? '其他' : '全马'}} 记录</text>
   </view>
 
   <!-- 添加按钮 -->
@@ -92,7 +93,12 @@
       <text class="opt-btn {{form.raceType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
       <text class="opt-btn {{form.raceType === 'half' ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
       <text class="opt-btn {{form.raceType === '10k' ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
+      <text class="opt-btn {{form.raceType === 'custom' ? 'on' : ''}}" data-v="custom" bindtap="onFormType">自定义</text>
     </view>
+    <block wx:if="{{form.raceType === 'custom'}}">
+      <text class="form-label">距离（公里）</text>
+      <input class="form-input" type="digit" placeholder="如：5 或 20" value="{{form.distanceKm}}" data-k="distanceKm" bindinput="onFormInput" />
+    </block>
 
     <!-- 赛事等级 -->
     <block>
@@ -175,6 +181,7 @@
       <text class="opt-btn {{defaultTab === 'half' ? 'on' : ''}}" data-t="half" bindtap="onSetDefault">半马</text>
       <text class="opt-btn {{defaultTab === 'full' ? 'on' : ''}}" data-t="full" bindtap="onSetDefault">全马</text>
       <text class="opt-btn {{defaultTab === '10k' ? 'on' : ''}}" data-t="10k" bindtap="onSetDefault">10K</text>
+      <text class="opt-btn {{defaultTab === 'custom' ? 'on' : ''}}" data-t="custom" bindtap="onSetDefault">其他</text>
     </view>
     <view class="modal-actions">
       <button class="btn-outline" bindtap="onHideDefault">取消</button>

@@ -7,7 +7,6 @@ Page({
     tab: 'published',       // published | draft
     batchMode: false,        // 批量发布选择模式
     selectedIds: [],
-    fetching: false,          // 立即抓取中
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
@@ -186,36 +185,6 @@ Page({
         wx.showToast({ title: `已发布 ${r.ok} 场${r.fail ? '，失败 ' + r.fail : ''}`, icon: r.fail ? 'none' : 'success' });
         this.setData({ batchMode: false, selectedIds: [] });
         this.loadRaces();
-      },
-    });
-  },
-
-  // 立即抓取（手动触发 raceAutoFetch2，dryRun 为试跑不写库）
-  onFetchNow(e) {
-    const dryRun = !!e.currentTarget.dataset.dryrun;
-    wx.showModal({
-      title: dryRun ? '试跑抓取' : '立即抓取',
-      content: dryRun ? '仅试跑验证采集源，不写入数据库？' : '立即到最酷/中国田径协会抓取最新赛事并写入草稿？',
-      confirmText: '确定',
-      success: async (res) => {
-        if (!res.confirm) return;
-        this.setData({ fetching: true });
-        wx.showLoading({ title: dryRun ? '试跑中' : '抓取中', mask: true });
-        try {
-          const r = await wx.cloud.callFunction({ name: 'raceAutoFetch2', data: { dryRun } });
-          const log = (r.result || {});
-          const parts = (log.sources || []).map(s => `${s.source}：抓${s.fetched}/建${s.created}/更${s.updated}/跳${s.skipped}/败${s.failed}`);
-          wx.hideLoading();
-          wx.showModal({
-            title: dryRun ? '试跑结果' : '抓取完成',
-            content: parts.join('\n') || '无结果',
-            showCancel: false,
-          });
-        } catch (err) {
-          wx.hideLoading();
-          wx.showToast({ title: '抓取失败：' + ((err && err.errMsg) || String(err)).slice(0, 30), icon: 'none' });
-        }
-        this.setData({ fetching: false });
       },
     });
   },

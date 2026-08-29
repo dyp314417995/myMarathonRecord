@@ -2,6 +2,9 @@
 
 > 版本：V2.6 | 状态：迭代六 | 模块：赛事数据自动化
 
+> ⚠️ **采集功能已废弃（2026-08-29）**：定时从最酷/田协等平台爬取的数据质量太差，已删除 `raceAutoFetch2`/`raceSourceProbe`/`raceTest` 云函数及管理端「立即抓取」按钮。
+> **数据来源改为腾讯在线文档《国内路跑认证赛事》**（https://docs.qq.com/smartsheet/DQlZpdE1QRFhST0dF?tab=sc_fJm8EC）：首次全量导入 → 后续 `update_saishi.js` 拉取对比（rev 变化才重拉）→ `csv-to-races.js` 生成 JSON → `importRaceSheet` 增量更新草稿。草稿/已发布规则仍适用。
+
 ---
 
 ## 1. 概述

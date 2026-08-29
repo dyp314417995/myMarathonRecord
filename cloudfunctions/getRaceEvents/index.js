@@ -17,8 +17,36 @@ const db = cloud.database();
 const _ = db.command;
 
 exports.main = async (event) => {
-  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published' } = event || {};
+  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published', sortBy = 'date', action } = event || {};
   const wxContext = cloud.getWXContext();
+  // ===== action: 同步/回填标记人数（markerCount 预计算字段，热度排序用） =====
+  if (action === 'syncMarkerCount') {
+    const { eventId } = event || {};
+    if (!eventId) return { error: '缺少 eventId' };
+    const cntRes = await db.collection('race_markers').where({ eventId }).count();
+    await db.collection('race_events').doc(eventId).update({
+      data: { markerCount: cntRes.total, updateTime: new Date() }
+    });
+    return { ok: true, eventId, markerCount: cntRes.total };
+  }
+
+  // 全量回填：每次处理 batchSize 条（可重复调用直到 done）
+  if (action === 'syncAllMarkerCounts') {
+    const batchSize = parseInt(event.batchSize, 10) > 0 ? parseInt(event.batchSize, 10) : 100;
+    const skipAll = parseInt(event.skip, 10) > 0 ? parseInt(event.skip, 10) : 0;
+    const evtRes = await db.collection('race_events').skip(skipAll).limit(batchSize).get();
+    const evts = evtRes.data;
+    let updated = 0;
+    for (const e of evts) {
+      try {
+        const cnt = await db.collection('race_markers').where({ eventId: e._id }).count();
+        await db.collection('race_events').doc(e._id).update({ data: { markerCount: cnt.total } });
+        updated++;
+      } catch (err) { console.warn('sync markerCount failed', e._id, err.message); }
+    }
+    return { ok: true, updated, processed: evts.length, nextSkip: skipAll + evts.length, done: evts.length < batchSize };
+  }
+
 
   // 1. 构建动态查询条件（推送到数据库层面过滤）
   const conds = [];
@@ -62,7 +90,7 @@ exports.main = async (event) => {
   const ref = db.collection('race_events').where(query);
   const [countRes, dataRes] = await Promise.all([
     ref.count(),
-    ref.orderBy('date', 'desc').skip(skip).limit(limit).get(),
+    ref.orderBy(sortBy === 'hot' ? 'markerCount' : 'date', 'desc').skip(skip).limit(limit).get(),
   ]);
   const total = countRes.total;
   const list = dataRes.data;

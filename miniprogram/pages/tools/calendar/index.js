@@ -9,7 +9,7 @@ Page({
     allRaces: [],
     allTags: [],           // 所有可用标签
     // 标记/评价状态由云函数 getRaceEvents 返回（不再需要客户端额外请求）
-    sortBy: 'date',        // date | score | difficulty | atmosphere | supply | transport | scenery | org | medal | value
+    sortBy: 'hot',         // hot(热度) | date | score | difficulty | atmosphere | supply | transport | scenery | org | medal | value
     sortAsc: true,   // 默认时间从近到远
     tagFilter: '',
     raceTypeFilter: '',   // 类型筛选
@@ -31,7 +31,9 @@ Page({
     dateFrom: '',
     dateTo: '',
     dateRangeText: '',
+    monthSel: 0,           // 0=默认(当月~年底) | 1-12=指定月
     _dateSet: false,       // 用户是否手动设置了时间范围
+    _loaded: false,        // 是否已按 tab 设置过默认排序
     page: 0,
     pageSize: 20,
     hasMore: false,
@@ -52,7 +54,12 @@ Page({
   },
 
   onShow() {
-    // 首次加载或 tab 切换（onTab 里会重置 flag）才设默认日期，从详情页返回时保留用户已选的时间
+    // 首次进入按 tab 设置默认排序（所有赛事=热度，我的赛事/评价=日期），返回时保留用户选择
+    if (!this.data._loaded) {
+      const t = this.data.tab || 'all';
+      const sb = t === 'all' ? 'hot' : 'date';
+      this.setData({ sortBy: sb, sortAsc: sb === 'date', _loaded: true });
+    }
     if (!this.data._dateSet) this.setDefaultDates();
     if (this.data.races.length > 0) {
       this.loadData(false, true); // 有缓存，后台静默刷新
@@ -72,26 +79,37 @@ Page({
 
   setDefaultDates() {
     const today = new Date();
-    const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    let from, to;
-    if (this.data.tab === 'mine') {
-      // 我的赛事：今年一整年
-      from = new Date(today.getFullYear(), 0, 1);
-      to = new Date(today.getFullYear(), 11, 31);
-    } else if (this.data.tab === 'review') {
-      from = new Date(today.getFullYear(), today.getMonth() - 5, 1);
-      to = today;
-    } else {
-      to = new Date(today.getFullYear(), today.getMonth() + 5 + 1, 0);
-      from = today;
-    }
+    const pad = n => String(n).padStart(2, "0");
+    const fmt = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+    // 默认：当月 1 号 ~ 当年 12-31（需求 v2.6）
+    const from = new Date(today.getFullYear(), today.getMonth(), 1);
+    const to = new Date(today.getFullYear(), 11, 31);
     this.setData({
+      monthSel: 0,
       dateFrom: fmt(from),
       dateTo: fmt(to),
-      dateRangeText: `${fmt(from)} ~ ${fmt(to)}`,
+      dateRangeText: "本月起 ~ 年底",
     });
   },
 
+  // 月份选择：0=默认(当月~年底)，1-12=指定月
+  onMonthSel(e) {
+    const m = parseInt(e.currentTarget.dataset.m, 10);
+    if (m === 0) { this.setDefaultDates(); this.loadData(); return; }
+    const year = new Date().getFullYear();
+    const pad = n => String(n).padStart(2, "0");
+    const fmt = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+    const from = new Date(year, m - 1, 1);
+    const to = new Date(year, m, 0); // 该月最后一天
+    this.setData({
+      monthSel: m,
+      dateFrom: fmt(from),
+      dateTo: fmt(to),
+      dateRangeText: year + "年" + m + "月",
+      _dateSet: true,
+    });
+    this.loadData();
+  },
   async loadData(isLoadMore = false, silent = false) {
     if (!isLoadMore && !silent) {
       this.setData({ page: 0, allRaces: [], races: [], hasMore: false });
@@ -111,6 +129,7 @@ Page({
         raceLevel: this.data.tab === 'review' ? '' : this.data.raceLevelFilter,
         raceLabel: this.data.tab === 'review' ? '' : this.data.raceLabelFilter,
         userId,
+        sortBy: this.data.sortBy,
       });
       const all = res.list;
       if (all.length === 0 && !isLoadMore) {
@@ -272,7 +291,8 @@ Page({
     const sb = this.data.sortBy;
     const asc = this.data.sortAsc;
     const dimKeys = ['difficulty','atmosphere','supply','transport','scenery','org','medal','value'];
-    if (sb === 'date') { races.sort((a, b) => asc ? (a._nearestMs || Infinity) - (b._nearestMs || Infinity) : (b._nearestMs || Infinity) - (a._nearestMs || Infinity)); }
+    if (sb === 'hot') { races.sort((a, b) => asc ? (a.markerCount || 0) - (b.markerCount || 0) : (b.markerCount || 0) - (a.markerCount || 0)); }
+    else if (sb === 'date') { races.sort((a, b) => asc ? (a._nearestMs || Infinity) - (b._nearestMs || Infinity) : (b._nearestMs || Infinity) - (a._nearestMs || Infinity)); }
     else if (sb === 'score') { races.sort((a, b) => asc ? (a.avgScore || 0) - (b.avgScore || 0) : (b.avgScore || 0) - (a.avgScore || 0)); }
     else if (dimKeys.includes(sb)) { races.sort((a, b) => asc ? ((a.dimensions||{})[sb] || 0) - ((b.dimensions||{})[sb] || 0) : ((b.dimensions||{})[sb] || 0) - ((a.dimensions||{})[sb] || 0)); }
     this.setData({ races });
