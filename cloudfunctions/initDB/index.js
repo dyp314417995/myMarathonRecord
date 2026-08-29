@@ -52,6 +52,17 @@ exports.main = async () => {
     results.push(`join_requests 集合检查: ${err.message}`);
   }
 
+  // 4.5 赛事采集日志集合（v2.6 自动采集）
+  const fetchCols = ['race_fetch_log'];
+  for (const col of fetchCols) {
+    try {
+      await db.createCollection(col);
+      results.push(col + ' 集合已创建');
+    } catch (err) {
+      results.push(col + ' 集合已存在或创建失败: ' + err.message);
+    }
+  }
+
   // 5. 签到功能集合（createCollection 幂等，已存在会抛错则忽略）
   const signinCols = ['user_signin', 'signin_detail', 'makeup_card', 'score_exchange'];
   for (const col of signinCols) {

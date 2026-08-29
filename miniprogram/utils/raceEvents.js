@@ -32,6 +32,18 @@ async function publishRace(id, user) {
   });
 }
 
+/** 批量发布（草稿 → 已发布，逐个更新，返回成功/失败数） */
+async function publishMany(ids, user) {
+  const arr = Array.isArray(ids) ? ids : [ids];
+  let ok = 0, fail = 0;
+  for (const id of arr) {
+    try {
+      await publishRace(id, user); ok++;
+    } catch (e) { fail++; }
+  }
+  return { ok, fail, total: arr.length };
+}
+
 /** 加载更多赛事 */
 async function loadMore(params = {}) {
   const res = await wx.cloud.callFunction({
@@ -102,7 +114,7 @@ async function getReviewStats(eventId) {
 }
 
 module.exports = {
-  getList, getAll, create, update, remove, publishRace,
+  getList, getAll, create, update, remove, publishRace, publishMany,
   markEvent, unmarkEvent, getMyMarkers,
   getReviewStats, getEventDetail,
 };

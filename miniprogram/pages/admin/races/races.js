@@ -5,6 +5,9 @@ Page({
   data: {
     isAdmin: false,
     tab: 'published',       // published | draft
+    batchMode: false,        // 批量发布选择模式
+    selectedIds: [],
+    fetching: false,          // 立即抓取中
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '',
@@ -114,6 +117,10 @@ Page({
   onRaceDetailAdmin(e) {
     const id = e.currentTarget.dataset.id;
     const r = this.data.raceList.find(x => x._id === id);
+    if (this.data.batchMode && r && (r.publishStatus || 'published') === 'draft') {
+      this.onSelectBatch(e);
+      return;
+    }
     if (r && (r.publishStatus || 'published') === 'draft') {
       this.onEdit(e);
       return;
@@ -137,6 +144,78 @@ Page({
         wx.hideLoading();
         wx.showToast({ title: '已发布', icon: 'success' });
         this.loadRaces();
+      },
+    });
+  },
+
+  // 批量发布：切换选择模式
+  onToggleBatch() {
+    this.setData({ batchMode: !this.data.batchMode, selectedIds: [] });
+  },
+
+  // 勾选/取消（仅草稿）
+  onSelectBatch(e) {
+    const id = e.currentTarget.dataset.id;
+    let sel = this.data.selectedIds.slice();
+    const i = sel.indexOf(id);
+    if (i > -1) sel.splice(i, 1); else sel.push(id);
+    this.setData({ selectedIds: sel });
+  },
+
+  // 全选当前页草稿
+  onSelectAllBatch() {
+    const ids = this.data.raceList.filter(r => (r.publishStatus || 'published') === 'draft').map(r => r._id);
+    const allSelected = ids.length && ids.every(id => this.data.selectedIds.includes(id));
+    this.setData({ selectedIds: allSelected ? [] : ids });
+  },
+
+  // 批量发布选中草稿
+  async onBatchPublish() {
+    const ids = this.data.selectedIds;
+    if (!ids.length) return wx.showToast({ title: '请先勾选赛事', icon: 'none' });
+    wx.showModal({
+      title: '批量发布',
+      content: `确认发布选中的 ${ids.length} 场赛事？发布后对用户可见，定时任务将不再自动修改。`,
+      confirmText: '发布',
+      success: async (res) => {
+        if (!res.confirm) return;
+        const userInfo = wx.getStorageSync('userInfo') || {};
+        wx.showLoading({ title: '发布中' });
+        const r = await raceUtil.publishMany(ids, userInfo);
+        wx.hideLoading();
+        wx.showToast({ title: `已发布 ${r.ok} 场${r.fail ? '，失败 ' + r.fail : ''}`, icon: r.fail ? 'none' : 'success' });
+        this.setData({ batchMode: false, selectedIds: [] });
+        this.loadRaces();
+      },
+    });
+  },
+
+  // 立即抓取（手动触发 raceAutoFetch2，dryRun 为试跑不写库）
+  onFetchNow(e) {
+    const dryRun = !!e.currentTarget.dataset.dryrun;
+    wx.showModal({
+      title: dryRun ? '试跑抓取' : '立即抓取',
+      content: dryRun ? '仅试跑验证采集源，不写入数据库？' : '立即到最酷/中国田径协会抓取最新赛事并写入草稿？',
+      confirmText: '确定',
+      success: async (res) => {
+        if (!res.confirm) return;
+        this.setData({ fetching: true });
+        wx.showLoading({ title: dryRun ? '试跑中' : '抓取中', mask: true });
+        try {
+          const r = await wx.cloud.callFunction({ name: 'raceAutoFetch2', data: { dryRun } });
+          const log = (r.result || {});
+          const parts = (log.sources || []).map(s => `${s.source}：抓${s.fetched}/建${s.created}/更${s.updated}/跳${s.skipped}/败${s.failed}`);
+          wx.hideLoading();
+          wx.showModal({
+            title: dryRun ? '试跑结果' : '抓取完成',
+            content: parts.join('\n') || '无结果',
+            showCancel: false,
+          });
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: '抓取失败：' + ((err && err.errMsg) || String(err)).slice(0, 30), icon: 'none' });
+        }
+        this.setData({ fetching: false });
       },
     });
   },

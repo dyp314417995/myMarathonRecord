@@ -7,6 +7,13 @@
       <text class="tab {{tab === 'published' ? 'on' : ''}}" data-t="published" bindtap="onTab">已发布</text>
       <text class="tab {{tab === 'draft' ? 'on' : ''}}" data-t="draft" bindtap="onTab">草稿</text>
     </view>
+    <!-- v2.6 草稿操作栏：批量发布 + 立即抓取 -->
+    <view class="draft-ops" wx:if="{{tab === 'draft'}}">
+      <text class="op-btn {{batchMode ? 'on' : ''}}" bindtap="onToggleBatch">{{batchMode ? '取消批量' : '批量发布'}}</text>
+      <text class="op-btn" data-dryrun="{{true}}" bindtap="onFetchNow" wx:if="{{!fetching}}">🔍 试跑抓取</text>
+      <text class="op-btn" bindtap="onFetchNow" wx:if="{{!fetching}}">🔄 立即抓取</text>
+      <text class="op-btn disabled" wx:if="{{fetching}}">抓取中…</text>
+    </view>
     <!-- 筛选栏 -->
     <view class="admin-filter">
       <input class="filter-input" placeholder="搜索赛事名称" value="{{adminSearch}}" bindinput="onAdminSearch" />
@@ -31,7 +38,10 @@
       </view>
     </view>
     <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
-    <view class="card race-card" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
+    <view class="card race-card {{batchMode && item.publishStatus === 'draft' ? 'batch-on' : ''}}" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
+      <view class="batch-check" wx:if="{{batchMode && item.publishStatus === 'draft'}}" catchtap="onSelectBatch" data-id="{{item._id}}">
+        <text class="batch-check-box {{selectedIds.indexOf(item._id) > -1 ? 'checked' : ''}}">{{selectedIds.indexOf(item._id) > -1 ? '✓' : ''}}</text>
+      </view>
       <view class="race-card-row">
         <view class="race-info">
           <text class="race-name">{{item.name}}</text>
@@ -54,6 +64,10 @@
       </view>
     </view>
     <view wx:if="{{adminHasMore}}" class="load-more" bindtap="onLoadMoreRaces">加载更多</view>
+    <view class="batch-bar" wx:if="{{tab === 'draft' && batchMode}}">
+      <text class="batch-bar-btn" bindtap="onSelectAllBatch">全选/反选</text>
+      <text class="batch-bar-pub" bindtap="onBatchPublish">✅ 发布选中（{{selectedIds.length}}）</text>
+    </view>
     <view class="btn-area" style="padding:24rpx;">
       <button class="btn-primary" bindtap="onAdd">+ 添加赛事</button>
     </view>

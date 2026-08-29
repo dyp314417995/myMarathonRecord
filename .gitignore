@@ -5,3 +5,6 @@
 赛事数据/snapshot.json
 赛事数据/races_import.json
 赛事数据/races_import_backup.json
+
+# TCB CLI 本地配置/登录态（.codex/tcbhome）
+.codex/
