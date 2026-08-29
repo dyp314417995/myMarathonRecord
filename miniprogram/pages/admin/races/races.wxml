@@ -88,53 +88,21 @@
       <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
         <view class="tl-date-pick"><text class="{{form.date ? '' : 'placeholder'}}">{{form.date || '选择日期'}}</text></view>
       </picker>
-      <view style="display:flex;gap:12rpx;">
-        <view style="flex:1;">
-          <text class="form-label">省份</text>
-          <input class="form-input" placeholder="如：河北省" value="{{form.province}}" data-k="province" bindinput="onInput" />
-        </view>
-        <view style="flex:1;">
-          <text class="form-label">城市</text>
-          <input class="form-input" placeholder="如：石家庄" value="{{form.city}}" data-k="city" bindinput="onInput" />
-        </view>
-      </view>
-      <text class="form-label">报名状态</text>
+      <text class="form-label">赛事等级</text>
       <view class="btn-row">
-        <text class="opt-btn {{form.regStatus === '' ? 'on' : ''}}" data-v="" bindtap="onFormRegStatus">未填</text>
-        <text class="opt-btn {{form.regStatus === '待确定' ? 'on' : ''}}" data-v="待确定" bindtap="onFormRegStatus">待确定</text>
-        <text class="opt-btn {{form.regStatus === '报名中' ? 'on' : ''}}" data-v="报名中" bindtap="onFormRegStatus">报名中</text>
-        <text class="opt-btn {{form.regStatus === '待报名' ? 'on' : ''}}" data-v="待报名" bindtap="onFormRegStatus">待报名</text>
-        <text class="opt-btn {{form.regStatus === '待开赛' ? 'on' : ''}}" data-v="待开赛" bindtap="onFormRegStatus">待开赛</text>
-        <text class="opt-btn {{form.regStatus === '待出签' ? 'on' : ''}}" data-v="待出签" bindtap="onFormRegStatus">待出签</text>
-        <text class="opt-btn {{form.regStatus === '已结束' ? 'on' : ''}}" data-v="已结束" bindtap="onFormRegStatus">已结束</text>
-        <text class="opt-btn {{form.regStatus === '取消' ? 'on' : ''}}" data-v="取消" bindtap="onFormRegStatus">取消</text>
+        <text class="opt-btn {{form.raceLevel === '' ? 'on' : ''}}" data-v="" bindtap="onFormLevel">未填</text>
+        <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
+        <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
+        <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
       </view>
-      <text class="form-label">比赛项目（全马/半马可多选）</text>
+
+      <text class="form-label">标牌</text>
       <view class="btn-row">
-        <text class="opt-btn {{typeFull ? 'on' : ''}}" data-v="full" bindtap="onFormType">全马</text>
-        <text class="opt-btn {{typeHalf ? 'on' : ''}}" data-v="half" bindtap="onFormType">半马</text>
-        <text class="opt-btn {{type10k ? 'on' : ''}}" data-v="10k" bindtap="onFormType">10K</text>
-      </view>
-      <view style="display:flex;gap:12rpx;">
-        <view style="flex:1;">
-          <text class="form-label">赛事等级</text>
-          <view class="btn-row">
-            <text class="opt-btn {{form.raceLevel === '' ? 'on' : ''}}" data-v="" bindtap="onFormLevel">未填</text>
-            <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
-            <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
-            <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
-          </view>
-        </view>
-        <view style="flex:1;">
-          <text class="form-label">标牌</text>
-          <view class="btn-row">
-            <text class="opt-btn {{form.label === '' ? 'on' : ''}}" data-v="" bindtap="onFormLabel">未填</text>
-            <text class="opt-btn {{form.label === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onFormLabel">普通</text>
-            <text class="opt-btn {{form.label === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onFormLabel">精英</text>
-            <text class="opt-btn {{form.label === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onFormLabel">金标</text>
-            <text class="opt-btn {{form.label === '白金标' ? 'on' : ''}}" data-v="白金标" bindtap="onFormLabel">白金</text>
-          </view>
-        </view>
+        <text class="opt-btn {{form.label === '' ? 'on' : ''}}" data-v="" bindtap="onFormLabel">未填</text>
+        <text class="opt-btn {{form.label === '普通标' ? 'on' : ''}}" data-v="普通标" bindtap="onFormLabel">普通</text>
+        <text class="opt-btn {{form.label === '精英标' ? 'on' : ''}}" data-v="精英标" bindtap="onFormLabel">精英</text>
+        <text class="opt-btn {{form.label === '金标' ? 'on' : ''}}" data-v="金标" bindtap="onFormLabel">金标</text>
+        <text class="opt-btn {{form.label === '白金标' ? 'on' : ''}}" data-v="白金标" bindtap="onFormLabel">白金</text>
       </view>
       <text class="form-label">总规模</text>
       <input class="form-input" placeholder="如：35000" value="{{form.scale}}" data-k="scale" bindinput="onInput" />
