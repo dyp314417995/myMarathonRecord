@@ -1,1 +1,10 @@
-{ "timeout": 300, "triggers": [] }
+{
+  "timeout": 300,
+  "triggers": [
+    {
+      "name": "dailyImport",
+      "type": "timer",
+      "config": "0 0 2 * * * *"
+    }
+  ]
+}

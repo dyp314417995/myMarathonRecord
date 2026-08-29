@@ -31,8 +31,8 @@ exports.main = async (event = {}) => {
     }
   }
   if (!Array.isArray(list) || !list.length) return { error: "无数据" };
-  // 分批：默认每批 200 条，支持 skip 续跑（避免云函数超时）
-  const BATCH = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 200;
+  // 分批：显式传 limit 时按批处理（支持 skip 续跑）；定时触发不传 limit 时一次处理 1000（全量）
+  const BATCH = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 1000;
   const startIdx = parseInt(skip, 10) > 0 ? parseInt(skip, 10) : 0;
   const totalAll = list.length;
   list = list.slice(startIdx, startIdx + BATCH);
