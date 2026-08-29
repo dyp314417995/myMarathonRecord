@@ -39,6 +39,9 @@ Page({
     if (options.id) {
       this.setData({ id: options.id, isEdit: true });
       this.loadDetail(options.id);
+    } else if (options.eventId || options.eventName) {
+      // 从「我的赛事」记录开销：自动选中赛事（比赛开支）
+      this.setData({ bigCategory: 'race', subs: ledger.subsOf('race'), smallCategory: '', eventId: options.eventId || '', eventName: options.eventName || '' });
     }
   },
 

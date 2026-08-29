@@ -121,6 +121,7 @@
         <view class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
           {{item.isMine ? '修改状态' : '标记我的赛事'}}
         </view>
+        <view class="ledger-btn" wx:if="{{tab === 'mine' && item.isMine}}" catchtap="onRecordExpense" data-id="{{item._id}}" data-name="{{item.name}}">💰 记录开销</view>
         <text class="notify-icon" wx:if="{{item.isMine && tab === 'mine'}}">{{item.myNotify ? '🔔' : '🔕'}}</text>
       </view>
     </view>

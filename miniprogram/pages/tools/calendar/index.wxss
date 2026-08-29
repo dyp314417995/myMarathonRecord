@@ -95,3 +95,9 @@
 .year-row { display: flex; align-items: center; justify-content: center; gap: 24rpx; padding: 6rpx 0; }
 .year-arrow { font-size: 40rpx; color: #1aad19; padding: 0 20rpx; font-weight: 700; }
 .year-chip { font-size: 28rpx; color: #1aad19; font-weight: 700; }
+
+/* 记录开销按钮 */
+.ledger-btn {
+  font-size: 22rpx; color: #fff; background: #ff9800;
+  padding: 8rpx 18rpx; border-radius: 24rpx; margin-left: 12rpx;
+}

@@ -7,6 +7,8 @@ Page({
     raceList: [],
     allRaceList: [],        // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '', adminRegStatus: '',
+    adminYearSel: new Date().getFullYear(),  // 年份筛选
+    adminMonthSel: 0,                        // 0=全年 | 1-12=指定月
     showQR: false, qrFileID: '', sharingRaceName: '', sharingRaceInfo: {},
     showQRText: true, // 合成海报后隐藏重复文字
     nameDupStatus: '', // '' | 'checking' | 'ok' | 'dup'
@@ -54,7 +56,8 @@ Page({
     const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
     const skip = this.data.adminPage * 20;
     const search = this.data.adminSearch || '';
-    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined, publishFilter: 'all' });
+    const dateRange = this.calcAdminDateRange();
+    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined, publishFilter: 'all', dateFrom: dateRange.from, dateTo: dateRange.to });
     const all = res.list;
     all.forEach(r => {
       if (r.raceType && !r.raceTypes) r.raceTypes = [r.raceType];
@@ -69,6 +72,28 @@ Page({
         const merged = skip === 0 ? list : [...this.data.allRaceList, ...list];
     this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
     this.applyAdminFilter();
+  },
+
+  calcAdminDateRange() {
+    const pad = n => String(n).padStart(2, '0');
+    const fmt = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+    const y = this.data.adminYearSel || new Date().getFullYear();
+    const m = this.data.adminMonthSel;
+    if (m > 0) {
+      return { from: fmt(new Date(y, m-1, 1)), to: fmt(new Date(y, m, 0)) };
+    }
+    return { from: fmt(new Date(y, 0, 1)), to: fmt(new Date(y, 11, 31)) };
+  },
+
+  onAdminYearPrev() {
+    this.setData({ adminYearSel: (this.data.adminYearSel || new Date().getFullYear()) - 1, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
+  },
+  onAdminYearNext() {
+    this.setData({ adminYearSel: (this.data.adminYearSel || new Date().getFullYear()) + 1, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
+  },
+  onAdminMonthSel(e) {
+    const m = parseInt(e.currentTarget.dataset.m, 10);
+    this.setData({ adminMonthSel: this.data.adminMonthSel === m ? 0 : m, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
   },
 
   onLoadMoreRaces() {

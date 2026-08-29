@@ -4,6 +4,26 @@
   <view wx:else>
     <view class="admin-filter">
       <input class="filter-input" placeholder="搜索赛事名称" value="{{adminSearch}}" bindinput="onAdminSearch" />
+      <view class="admin-date-row">
+        <text class="admin-year-arrow" bindtap="onAdminYearPrev">‹</text>
+        <text class="admin-year-chip">{{adminYearSel}}年</text>
+        <text class="admin-year-arrow" bindtap="onAdminYearNext">›</text>
+      </view>
+      <view class="admin-month-row">
+        <text class="admin-month-chip {{adminMonthSel === 0 ? 'on' : ''}}" data-m="0" bindtap="onAdminMonthSel">全年</text>
+        <text class="admin-month-chip {{adminMonthSel === 1 ? 'on' : ''}}" data-m="1" bindtap="onAdminMonthSel">1月</text>
+        <text class="admin-month-chip {{adminMonthSel === 2 ? 'on' : ''}}" data-m="2" bindtap="onAdminMonthSel">2月</text>
+        <text class="admin-month-chip {{adminMonthSel === 3 ? 'on' : ''}}" data-m="3" bindtap="onAdminMonthSel">3月</text>
+        <text class="admin-month-chip {{adminMonthSel === 4 ? 'on' : ''}}" data-m="4" bindtap="onAdminMonthSel">4月</text>
+        <text class="admin-month-chip {{adminMonthSel === 5 ? 'on' : ''}}" data-m="5" bindtap="onAdminMonthSel">5月</text>
+        <text class="admin-month-chip {{adminMonthSel === 6 ? 'on' : ''}}" data-m="6" bindtap="onAdminMonthSel">6月</text>
+        <text class="admin-month-chip {{adminMonthSel === 7 ? 'on' : ''}}" data-m="7" bindtap="onAdminMonthSel">7月</text>
+        <text class="admin-month-chip {{adminMonthSel === 8 ? 'on' : ''}}" data-m="8" bindtap="onAdminMonthSel">8月</text>
+        <text class="admin-month-chip {{adminMonthSel === 9 ? 'on' : ''}}" data-m="9" bindtap="onAdminMonthSel">9月</text>
+        <text class="admin-month-chip {{adminMonthSel === 10 ? 'on' : ''}}" data-m="10" bindtap="onAdminMonthSel">10月</text>
+        <text class="admin-month-chip {{adminMonthSel === 11 ? 'on' : ''}}" data-m="11" bindtap="onAdminMonthSel">11月</text>
+        <text class="admin-month-chip {{adminMonthSel === 12 ? 'on' : ''}}" data-m="12" bindtap="onAdminMonthSel">12月</text>
+      </view>
       <view class="filter-row">
         <text class="filter-chip {{adminType === '' ? 'on' : ''}}" data-v="" bindtap="onAdminFilter" data-field="type">全部</text>
         <text class="filter-chip {{adminType === 'full' ? 'on' : ''}}" data-v="full" bindtap="onAdminFilter" data-field="type">全马</text>

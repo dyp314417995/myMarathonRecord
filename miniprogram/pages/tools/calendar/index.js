@@ -125,9 +125,11 @@ Page({
       const userInfo = wx.getStorageSync('userInfo');
       const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
 
+      // 我的赛事：一次取完今年全部（不分页），其他 tab 保持分页
+      const limit = this.data.tab === 'mine' ? 1000 : this.data.pageSize;
       const skip = this.data.page * this.data.pageSize;
       const res = await raceUtil.getAll({
-        skip, limit: this.data.pageSize,
+        skip, limit,
         search: this.data.searchKey,
         dateFrom: this.data.dateFrom,
         dateTo: this.data.dateTo,
@@ -147,7 +149,7 @@ Page({
       const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const from = new Date(this.data.dateFrom);
       const to = new Date(this.data.dateTo);
-      this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}`, total: res.total || 0, hasMore: res.hasMore || false });
+      this.setData({ dateRangeText: `${fmt(from)} ~ ${fmt(to)}`, total: res.total || 0, hasMore: this.data.tab === 'mine' ? false : (res.hasMore || false) });
 
       let races = [...this.data.allRaces, ...all];
 
@@ -354,6 +356,13 @@ Page({
 
   onDateFrom(e) { this.setData({ dateFrom: e.detail.value, _dateSet: true }); this.loadData(); },
   onDateTo(e) { this.setData({ dateTo: e.detail.value, _dateSet: true }); this.loadData(); },
+
+  // 记录开销：跳转记账页并自动选中该赛事
+  onRecordExpense(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name || '';
+    wx.navigateTo({ url: `/pages/tools/ledger/add?eventId=${id}&eventName=${encodeURIComponent(name)}` });
+  },
 
   onShowMark(e) {
     const id = e.currentTarget.dataset.id;
