@@ -20,14 +20,23 @@ function isEmpty(v) {
 }
 
 exports.main = async (event = {}) => {
-  const { races, storageFileID, dryRun } = event;
+  const { races, storageFileID, dryRun, limit, skip } = event;
   let list = races || [];
   if (storageFileID) {
-    const dl = await cloud.downloadFile({ fileID: storageFileID });
-    list = JSON.parse(dl.fileContent.toString("utf8"));
+    try {
+      const dl = await cloud.downloadFile({ fileID: storageFileID });
+      list = JSON.parse(dl.fileContent.toString("utf8"));
+    } catch (e) {
+      return { error: "下载文件失败: " + ((e && e.errMsg) || e.message || String(e)).slice(0, 200) };
+    }
   }
   if (!Array.isArray(list) || !list.length) return { error: "无数据" };
-  const stat = { total: list.length, created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
+  // 分批：默认每批 200 条，支持 skip 续跑（避免云函数超时）
+  const BATCH = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 200;
+  const startIdx = parseInt(skip, 10) > 0 ? parseInt(skip, 10) : 0;
+  const totalAll = list.length;
+  list = list.slice(startIdx, startIdx + BATCH);
+  const stat = { total: totalAll, batch: list.length, created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
   const now = new Date();
   for (const race of list) {
     try {
@@ -74,5 +83,5 @@ exports.main = async (event = {}) => {
       stat.updated++;
     } catch (e) { stat.failed++; stat.errors.push((e.message || String(e)).slice(0, 200)); }
   }
-  return stat;
+  return { ...stat, batchStart: startIdx, batchEnd: startIdx + list.length, done: startIdx + list.length >= totalAll };
 };

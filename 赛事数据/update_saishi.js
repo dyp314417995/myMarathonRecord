@@ -77,13 +77,14 @@ function diffSheets(oldSnap,newSnap){
   return report;
 }
 async function main(){
-  console.log("== 检查版本号(rev) ==");
+  const FORCE = process.argv.includes('--force');
+  console.log("== 检查版本号(rev) ==" + (FORCE ? '（--force 强制全量）' : ''));
   const revs={};
   for(const [tab,name] of SHEETS){
     try{ revs[tab]=await getRev(tab); console.log("  "+name+": rev="+revs[tab]); }catch(e){ if(e.loginExpired){ console.log("[提示] 登录态已失效，请重新扫码登录后更新 cookies.txt 再运行。"); process.exit(1); } throw e; }
   }
   let oldSnap=null; try{ oldSnap=JSON.parse(fs.readFileSync(SNAP_FILE,"utf8")); }catch(e){}
-  if(oldSnap&&oldSnap.revs){ const same=Object.keys(revs).every(t=>oldSnap.revs[t]===revs[t]); if(same){ console.log("== 无更新：所有子表版本号与上次一致 =="); return; } }
+  if(oldSnap&&oldSnap.revs){ const same=Object.keys(revs).every(t=>oldSnap.revs[t]===revs[t]); if(same && !FORCE){ console.log("== 无更新：所有子表版本号与上次一致 =="); return; } if(same && FORCE){ console.log("== rev 无变化，--force 强制全量重拉 =="); } }
   console.log("== 检测到更新，开始全量拉取 ==");
   const sheets={};
   for(const [tab,name] of SHEETS){
