@@ -24,10 +24,14 @@ Page({
 
   // 转发（右上角菜单）
   onShareAppMessage() {
-    return {
-      title: '九州战马跑团活动｜报名、抽奖、组队一起跑',
+    return shareUtil.buildShare({
+      title: '九州战马联盟活动｜报名、抽奖、组队一起跑',
       path: '/pages/tools/activity/index',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    return shareUtil.buildTimeline({ title: '九州战马联盟活动｜报名、抽奖、组队一起跑' });
   },
 
   // ---------- 活动 ----------

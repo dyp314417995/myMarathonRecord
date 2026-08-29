@@ -105,10 +105,17 @@ Page({
 
   onShareAppMessage() {
     const u = wx.getStorageSync('userInfo');
-    return {
+    return shareUtil.buildShare({
       title: u && u.nickName ? `${u.nickName} 的九州战马积分` : '九州战马积分中心',
       path: '/pages/points/index',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    const u = wx.getStorageSync('userInfo');
+    return shareUtil.buildTimeline({
+      title: u && u.nickName ? `${u.nickName} 的九州战马积分` : '九州战马积分中心',
+    });
   },
 
   onSignin() {

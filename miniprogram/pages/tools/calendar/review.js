@@ -1,6 +1,7 @@
 // pages/tools/calendar/review.js - 赛事评分
 const raceUtil = require('../../../utils/raceEvents');
 const pointsUtil = require('../../../utils/points');
+const shareUtil = require('../../../utils/share');
 
 Page({
   data: {
@@ -30,6 +31,7 @@ Page({
   },
 
   async onLoad(options) {
+    shareUtil.enableShareMenu();
     if (!options.id) return;
     wx.showLoading({ title: '加载中...' });
 
@@ -207,6 +209,14 @@ Page({
 
       wx.hideLoading();
       wx.showToast({ title: this.data.isEdit ? '已更新' : (reviewPoints > 0 ? '提交成功，+' + reviewPoints + '积分' : '提交成功'), icon: 'success' });
+      // 邀请分享：评价
+      wx.showModal({
+        title: '评价成功',
+        content: `邀请好友来评价「${this.data.eventName}」，一起赚积分`,
+        confirmText: '分享',
+        cancelText: '完成',
+        success: (r) => { if (r.confirm) wx.showToast({ title: '请点击右上角转发', icon: 'none' }); },
+      });
       setTimeout(() => wx.navigateBack(), 1500);
     } catch (err) {
       wx.hideLoading();
@@ -249,6 +259,20 @@ Page({
         wx.showToast({ title: reviewPoints > 0 ? '已删除，-' + reviewPoints + '积分' : '已删除', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 1500);
       }
+    });
+  },
+
+  onShareAppMessage() {
+    return shareUtil.buildShare({
+      title: `邀请你来评价「${this.data.eventName}」，还能赚积分`,
+      path: `/pages/tools/calendar/detail?id=${this.data.eventId}`,
+    });
+  },
+
+  onShareTimeline() {
+    return shareUtil.buildTimeline({
+      title: `邀请你来评价「${this.data.eventName}」，还能赚积分`,
+      query: `id=${this.data.eventId}`,
     });
   },
 });

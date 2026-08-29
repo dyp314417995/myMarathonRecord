@@ -788,7 +788,7 @@ Page({
                 // 底部提示
                 ctx.fillStyle = '#aaaaaa';
                 ctx.font = '14px sans-serif';
-                ctx.fillText('扫码查看赛事详情、标记和评分', W / 2, 415);
+                ctx.fillText('扫码查看赛事详情、关注和评分', W / 2, 415);
 
                 // 导出为临时文件
                 wx.canvasToTempFilePath({

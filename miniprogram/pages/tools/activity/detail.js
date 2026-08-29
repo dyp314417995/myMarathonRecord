@@ -25,11 +25,20 @@ Page({
   // 转发（右上角菜单 + 页面按钮）
   onShareAppMessage() {
     const a = this.data.activity;
-    return {
-      title: a ? `【活动】${a.name}` : '九州战马跑团活动',
+    return shareUtil.buildShare({
+      title: a ? `快来报名「${a.name}」活动` : '九州战马联盟活动',
       path: `/pages/tools/activity/detail?id=${this.data.activityId}`,
       imageUrl: (a && a.images && a.images[0]) || '',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    const a = this.data.activity;
+    return shareUtil.buildTimeline({
+      title: a ? `快来报名「${a.name}」活动` : '九州战马联盟活动',
+      query: `id=${this.data.activityId}`,
+      imageUrl: (a && a.images && a.images[0]) || '',
+    });
   },
 
   // 带超时的云函数调用（默认15s客户端超时）

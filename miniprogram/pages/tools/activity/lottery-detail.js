@@ -30,11 +30,20 @@ Page({
   // 转发（右上角菜单 + 页面按钮）
   onShareAppMessage() {
     const lot = this.data.lottery;
-    return {
-      title: lot ? `【抽奖】${lot.name}` : '九州战马跑团抽奖',
+    return shareUtil.buildShare({
+      title: lot ? `快来参与「${lot.name}」抽奖` : '九州战马联盟抽奖',
       path: `/pages/tools/activity/lottery-detail?id=${this.data.lotteryId}`,
       imageUrl: (lot && lot.images && lot.images[0]) || '',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    const lot = this.data.lottery;
+    return shareUtil.buildTimeline({
+      title: lot ? `快来参与「${lot.name}」抽奖` : '九州战马联盟抽奖',
+      query: `id=${this.data.lotteryId}`,
+      imageUrl: (lot && lot.images && lot.images[0]) || '',
+    });
   },
 
   async loadDetail() {

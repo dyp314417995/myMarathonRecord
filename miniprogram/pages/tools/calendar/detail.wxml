@@ -219,18 +219,18 @@
   <view class="card" wx:if="{{isMine}}">
     <view class="section-title"><text>📌 我的状态</text></view>
     <view class="mark-row">
-      <text>{{myStatus === 'planned' ? '📋 计划报名' : myStatus === 'registered' ? '✅ 已报名' : myStatus === 'won' ? '🎉 已中签' : myStatus === 'lost' ? '❌ 未中签' : myStatus === 'finished' ? '🏁 已完赛' : myStatus === 'dnf' ? '💔 未完赛' : myStatus === 'dns' ? '🚫 弃赛' : '未标记'}}</text>
+      <text>{{myStatus === 'planned' ? '📋 计划报名' : myStatus === 'registered' ? '✅ 已报名' : myStatus === 'won' ? '🎉 已中签' : myStatus === 'lost' ? '❌ 未中签' : myStatus === 'finished' ? '🏁 已完赛' : myStatus === 'dnf' ? '💔 未完赛' : myStatus === 'dns' ? '🚫 弃赛' : '未关注'}}</text>
       <text class="act" catchtap="onMark">修改</text>
     </view>
   </view>
   <view class="card" wx:elif="{{!isMine}}">
-    <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">🏷 标记我的赛事</view>
+    <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">⭐ 关注赛事</view>
   </view>
 
-  <!-- 自定义标记操作面板 -->
+  <!-- 自定义关注操作面板 -->
   <view class="action-sheet-mask" wx:if="{{showMarkSheet}}" catchtap="onHideMarkSheet"></view>
   <view class="action-sheet" wx:if="{{showMarkSheet}}">
-    <view class="action-sheet-title">标记我的赛事</view>
+    <view class="action-sheet-title">关注赛事</view>
     <view class="action-sheet-item" catchtap="onMarkSelect" data-status="planned">📋 计划报名</view>
     <view class="action-sheet-item" catchtap="onMarkSelect" data-status="registered">✅ 已报名</view>
     <view class="action-sheet-item" catchtap="onMarkSelect" data-status="won">🎉 已中签</view>
@@ -243,7 +243,7 @@
   <view class="btn-area">
     <button wx:if="{{myReview._id}}" class="btn-primary" catchtap="onReview">✏️ 修改评价</button>
     <button wx:elif="{{myStatus === 'finished'}}" class="btn-primary" catchtap="onReview">⭐ 参与评分</button>
-    <button wx:elif="{{isMine}}" class="btn-primary disabled" disabled>需标记"已完赛"后才可评分</button>
+    <button wx:elif="{{isMine}}" class="btn-primary disabled" disabled>需关注并标记"已完赛"后才可评分</button>
   </view>
 
   <!-- 完赛成绩录入弹窗 -->
@@ -260,7 +260,7 @@
     </view>
     <view class="modal-actions" style="margin-top:32rpx;">
       <button class="btn-outline" catchtap="onCancelResult">取消</button>
-      <button class="btn-primary" catchtap="onConfirmResult">确认标记</button>
+      <button class="btn-primary" catchtap="onConfirmResult">确认</button>
     </view>
   </view>
 

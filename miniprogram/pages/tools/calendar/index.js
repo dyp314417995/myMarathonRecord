@@ -49,10 +49,14 @@ Page({
   },
 
   onShareAppMessage() {
-    return {
-      title: '九州战马赛事日历｜查赛事、看评分、打标记',
+    return shareUtil.buildShare({
+      title: '九州战马赛事日历｜查赛事、看评分、关注比赛',
       path: '/pages/tools/calendar/index',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    return shareUtil.buildTimeline({ title: '九州战马赛事日历｜查赛事、看评分、关注比赛' });
   },
 
   onShow() {
@@ -484,7 +488,7 @@ Page({
       }
 
       wx.hideLoading();
-      wx.showToast({ title: '已标记', icon: 'success' });
+      wx.showToast({ title: '已关注', icon: 'success' });
       this.setData({ showForm: false });
       // 标记会改变标记状态/标记数：失效缓存并强制查库
       cache.invalidate('calendar');
@@ -525,7 +529,7 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     const id = this.data.markingEventId;
     await raceUtil.unmarkEvent(userInfo._id, id);
-    wx.showToast({ title: '已取消标记', icon: 'success' });
+    wx.showToast({ title: '已取消关注', icon: 'success' });
     this.setData({ showForm: false });
     // 取消标记会改变标记状态/标记数：失效缓存并强制查库
     cache.invalidate('calendar');

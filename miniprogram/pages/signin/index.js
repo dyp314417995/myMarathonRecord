@@ -44,10 +44,16 @@ Page({
   },
 
   onShareAppMessage() {
-    return {
-      title: `九州战马每日签到 · 已连续签到 ${this.data.continuousDays} 天`,
+    return shareUtil.buildShare({
+      title: `我已连续签到 ${this.data.continuousDays} 天，邀请你一起来打卡`,
       path: '/pages/signin/index',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    return shareUtil.buildTimeline({
+      title: `我已连续签到 ${this.data.continuousDays} 天，邀请你一起来打卡`,
+    });
   },
 
   async onShow() {
@@ -156,7 +162,20 @@ Page({
     if (res.goal_reward > 0) msg += `\n🏆 目标奖励 +${res.goal_reward}`;
     msg += `\n已连续签到 ${res.continuous} 天`;
     signinUtil.clearCache();
-    wx.showModal({ title: '签到成功 🎉', content: msg, showCancel: false });
+    wx.showModal({
+      title: '签到成功 🎉',
+      content: msg,
+      showCancel: false,
+      success: () => {
+        wx.showModal({
+          title: '邀请好友',
+          content: '邀请好友一起来打卡，坚持每天签到赚积分',
+          confirmText: '分享',
+          cancelText: '完成',
+          success: (r) => { if (r.confirm) wx.showToast({ title: '请点击右上角转发', icon: 'none' }); },
+        });
+      },
+    });
     await this.loadInfo(true);
   },
 

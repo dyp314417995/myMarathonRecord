@@ -45,10 +45,14 @@ Page({
   },
 
   onShareAppMessage() {
-    return {
-      title: '九州战马跑团｜一起跑步，记录每一公里',
+    return shareUtil.buildShare({
+      title: '邀请你加入九州战马联盟，一起畅快奔跑！',
       path: '/pages/home/home',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    return shareUtil.buildTimeline({ title: '邀请你加入九州战马联盟，一起畅快奔跑！' });
   },
 
   async loadUserInfo() {

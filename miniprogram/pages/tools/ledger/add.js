@@ -1,6 +1,7 @@
 // pages/tools/ledger/add.js - 记一笔 / 编辑
 // 先选类型：支出（默认）/ 收入；收入不分大类小类，内置收入类型（比赛奖金等）
 const ledger = require('../../../utils/ledger');
+const shareUtil = require('../../../utils/share');
 
 Page({
   data: {
@@ -32,6 +33,7 @@ Page({
   },
 
   onLoad(options) {
+    shareUtil.enableShareMenu();
     const now = new Date();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -287,7 +289,34 @@ Page({
     this.setData({ submitting: false });
     if (!res.ok) { wx.showToast({ title: res.msg || '保存失败', icon: 'none' }); return; }
     wx.showToast({ title: '已保存', icon: 'success' });
+    // 邀请分享：账单
+    this.shareEntryId = res.id || this.data.id || '';
+    wx.showModal({
+      title: '已记录',
+      content: '快来看看这场比赛你花了多少钱，邀请好友一起记录？',
+      confirmText: '分享',
+      cancelText: '完成',
+      success: (r) => { if (r.confirm) this.inviteShare(); },
+    });
     setTimeout(() => wx.navigateBack(), 800);
+  },
+
+  inviteShare() {
+    // 触发分享（通过右上角或 button open-type=share）
+    wx.showToast({ title: '请点击右上角转发', icon: 'none' });
+  },
+
+  onShareAppMessage() {
+    const race = this.data.eventName || '这场比赛';
+    return shareUtil.buildShare({
+      title: `快来看看「${race}」你花了多少钱`,
+      path: '/pages/tools/ledger/index',
+    });
+  },
+
+  onShareTimeline() {
+    const race = this.data.eventName || '这场比赛';
+    return shareUtil.buildTimeline({ title: `快来看看「${race}」你花了多少钱` });
   },
 
   onDelete() {

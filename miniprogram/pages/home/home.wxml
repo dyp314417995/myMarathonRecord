@@ -52,7 +52,7 @@
 
     <!-- 登录引导 -->
     <view class="guest-login card" bindtap="onGoLogin">
-      <text class="login-text">登录 / 注册，解锁赛事标记、评价、积分等完整功能</text>
+      <text class="login-text">登录 / 注册，解锁赛事关注、评价、积分等完整功能</text>
       <text class="login-arrow">›</text>
     </view>
   </view>

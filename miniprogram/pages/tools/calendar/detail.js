@@ -347,11 +347,22 @@ Page({
 
   onShareAppMessage() {
     const { event } = this.data;
-    return {
-      title: `扫码给${event.name || '这赛事'}打分`,
+    const name = event.name || '这赛事';
+    return shareUtil.buildShare({
+      title: this.data._shareTitle || `快来看看「${name}」马拉松`,
       path: `/pages/tools/calendar/detail?id=${this.data.eventId}`,
       imageUrl: event.poster || '',
-    };
+    });
+  },
+
+  onShareTimeline() {
+    const { event } = this.data;
+    const name = event.name || '这赛事';
+    return shareUtil.buildTimeline({
+      title: this.data._shareTitle || `快来看看「${name}」马拉松`,
+      query: `id=${this.data.eventId}`,
+      imageUrl: event.poster || '',
+    });
   },
 
   onMark() {
@@ -393,17 +404,25 @@ Page({
     const rt = evt.raceTypes || [evt.raceType || 'full'];
     const primaryType = rt.includes('full') ? 'full' : rt[0];
 
-    // 其他状态直接标记
-    wx.showLoading({ title: '标记中' });
+    // 其他状态直接关注
+    wx.showLoading({ title: '关注中' });
     raceUtil.markEvent(userInfo._id, eventId, status, false, primaryType).then(() => {
       wx.hideLoading();
-      wx.showToast({ title: '已标记', icon: 'success' });
-      this.setData({ myStatus: status, isMine: true });
+      wx.showToast({ title: '已关注', icon: 'success' });
+      this.setData({ myStatus: status, isMine: true, _shareTitle: `我已关注「${this.data.event.name}」，邀请你来关注` });
       cache.invalidate('calendar'); // 列表缓存失效，返回后重新查库
+      // 邀请分享：关注赛事
+      wx.showModal({
+        title: '已关注',
+        content: `我已关注「${this.data.event.name}」，邀请你来关注`,
+        confirmText: '分享',
+        cancelText: '完成',
+        success: (r) => { if (r.confirm) wx.showToast({ title: '请点击右上角转发', icon: 'none' }); },
+      });
     }).catch(err => {
       wx.hideLoading();
-      console.error('标记赛事失败:', err);
-      wx.showToast({ title: '标记失败，请重试', icon: 'none' });
+      console.error('关注赛事失败:', err);
+      wx.showToast({ title: '关注失败，请重试', icon: 'none' });
     });
   },
 
@@ -471,14 +490,14 @@ Page({
       }
 
       wx.hideLoading();
-      wx.showToast({ title: '已标记并记录成绩', icon: 'success' });
+      wx.showToast({ title: '已关注并记录成绩', icon: 'success' });
       this.setData({ showResultModal: false, myStatus: 'finished', isMine: true });
       cache.invalidate('calendar'); // 列表缓存失效，返回后重新查库
       this.loadEvent();
     } catch (err) {
       wx.hideLoading();
       console.error('标记完赛失败:', err);
-      wx.showToast({ title: '标记失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
+      wx.showToast({ title: '关注失败: ' + (err.message || err.errMsg || '未知'), icon: 'none', duration: 3000 });
     }
   },
 

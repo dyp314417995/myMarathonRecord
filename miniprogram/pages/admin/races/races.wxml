@@ -278,6 +278,6 @@
       <text wx:if="{{sharingRaceInfo.type || sharingRaceInfo.level || sharingRaceInfo.label}}" class="qr-race-meta">{{sharingRaceInfo.type}}{{sharingRaceInfo.level ? ' · ' + sharingRaceInfo.level + '级' : ''}}{{sharingRaceInfo.label ? ' · ' + sharingRaceInfo.label : ''}}</text>
     </view>
     <image wx:if="{{qrFileID}}" src="{{qrFileID}}" mode="widthFix" class="qr-img" show-menu-by-longpress="{{true}}" />
-    <view class="qr-tip" wx:if="{{showQRText}}">扫码可查看赛事详情、标记和评分</view>
+    <view class="qr-tip" wx:if="{{showQRText}}">扫码可查看赛事详情、关注和评分</view>
   </view>
 </view>
