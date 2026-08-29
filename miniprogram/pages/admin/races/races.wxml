@@ -60,13 +60,12 @@
     </view>
 
     <view wx:if="{{adminHasMore}}" class="load-more" bindtap="onLoadMoreRaces">加载更多</view>
-</block>
     <view class="btn-area" style="padding:24rpx;">
       <button class="btn-primary" bindtap="onAdd">+ 添加赛事</button>
     </view>
-
-    <!-- 日志管理 -->
-    <view wx:elif="{{tab === 'logs'}}" class="log-panel">
+</block>
+    <block wx:else>
+    <view class="log-panel">
       <view class="log-tabs">
         <text class="log-tab {{logTab === 'import' ? 'on' : ''}}" data-lt="import" bindtap="onLogTab">导入日志</text>
         <text class="log-tab {{logTab === 'update' ? 'on' : ''}}" data-lt="update" bindtap="onLogTab">更新日志</text>
@@ -86,6 +85,7 @@
       </view>
       <view wx:if="{{logHasMore}}" class="load-more" bindtap="onLoadMoreLogs">加载更多</view>
     </view>
+    </block>
 
     <!-- 赛事表单弹窗 -->
     <view class="modal-mask" wx:if="{{showForm}}" catchtap="onHideForm"></view>
