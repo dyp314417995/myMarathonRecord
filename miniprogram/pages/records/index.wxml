@@ -33,7 +33,7 @@
     <block wx:for="{{filteredRecords}}" wx:key="_id">
       <view class="card">
         <view class="card-header">
-          <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : '🅲'}}</text>
+          <text class="level-tag {{item.raceLevel}}">{{item.raceLevel === 'A' ? '🅰' : item.raceLevel === 'B' ? '🅱' : item.raceLevel === 'C' ? '🅲' : (item.raceLevel || '其他')}}</text>
           <text class="type-text">{{item.raceType === '10k' ? '10公里' : item.raceType === 'half' ? '半程马拉松' : item.raceType === 'custom' ? (item.distanceKm ? item.distanceKm + '公里' : '自定义') : '全程马拉松'}}</text>
           <text class="status-tag {{item.status}}">{{item.status === 'planned' ? '计划报名' : item.status === 'finished' ? '已完赛' : item.status === 'dnf' ? '未完赛' : item.status === 'dns' ? '弃赛' : item.status === 'won' ? '已中签' : '已报名'}}</text>
         </view>
@@ -107,6 +107,7 @@
         <text class="opt-btn {{form.raceLevel === 'A' ? 'on' : ''}}" data-v="A" bindtap="onFormLevel">A</text>
         <text class="opt-btn {{form.raceLevel === 'B' ? 'on' : ''}}" data-v="B" bindtap="onFormLevel">B</text>
         <text class="opt-btn {{form.raceLevel === 'C' ? 'on' : ''}}" data-v="C" bindtap="onFormLevel">C</text>
+        <text class="opt-btn {{form.raceLevel === '其他' ? 'on' : ''}}" data-v="其他" bindtap="onFormLevel">其他</text>
       </view>
     </block>
 

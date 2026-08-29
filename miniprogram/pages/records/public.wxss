@@ -25,6 +25,7 @@
 .level-tag.A { color: #ff6b00; }
 .level-tag.B { color: #1aad19; }
 .level-tag.C { color: #999; }
+.level-tag.其他 { color: #666; font-style: italic; }
 .type-text { font-size: 26rpx; color: #333; font-weight: 500; flex: 1; }
 .status-tag { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 8rpx; }
 .status-tag.finished { background: #e8f5e9; color: #2e7d32; }
