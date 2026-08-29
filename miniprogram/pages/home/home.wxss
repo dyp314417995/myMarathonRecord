@@ -40,6 +40,9 @@
 .menu-desc { font-size: 22rpx; color: #999; margin-top: 6rpx; }
 
 .menu-item.disabled { opacity: 0.5; }
+
+.signin-status { font-size: 20rpx; color: #ff6b00; margin-top: 6rpx; }
+.signin-status.done { color: #1aad19; }
 .beta-tag { font-size: 22rpx; color: #ff9800; font-weight: 400; margin-left: 8rpx; }
 
 /* ===== 游客模式 ===== */

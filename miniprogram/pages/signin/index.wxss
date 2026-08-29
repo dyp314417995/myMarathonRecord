@@ -1,5 +1,11 @@
 /* pages/signin/index.wxss - 每日签到 */
 .signin-page { padding: 24rpx 24rpx 60rpx; }
+.rule-link {
+  text-align: right;
+  font-size: 26rpx;
+  color: #1aad19;
+  margin-bottom: 16rpx;
+}
 
 /* 顶部 */
 .hero {
@@ -21,6 +27,20 @@
   padding: 10rpx 28rpx;
   font-size: 24rpx;
 }
+.cycle-bar {
+  margin-top: 20rpx;
+  height: 12rpx;
+  background: rgba(255,255,255,0.25);
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+.cycle-bar-inner {
+  height: 100%;
+  background: #fff;
+  border-radius: 6rpx;
+  transition: width 0.3s;
+}
+.makeup-tip { font-size: 26rpx; color: #ff6b00; }
 
 .card {
   background: #fff;

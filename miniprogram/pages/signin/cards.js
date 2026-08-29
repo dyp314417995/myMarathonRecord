@@ -45,7 +45,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     wx.showModal({
       title: '使用补签卡',
-      content: '将补签昨天（+基础积分），确定使用？',
+      content: '将补签最早的漏签日（+1基础积分），确定使用？',
       success: async (res) => {
         if (!res.confirm) return;
         this.setData({ using: true });

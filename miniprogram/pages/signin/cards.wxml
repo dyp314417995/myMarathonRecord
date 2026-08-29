@@ -3,13 +3,13 @@
   <view class="summary card">
     <text class="summary-num">{{usable}}</text>
     <text class="summary-label">张可用补签卡</text>
-    <text class="summary-tip">补签卡仅限补签昨天 · 有效期 30 天</text>
+    <text class="summary-tip">可补过去30天内漏签 · 连补最多3天 · 有效期30天</text>
   </view>
 
   <view class="section-title">我的补签卡</view>
   <view wx:if="{{list.length === 0 && !loading}}" class="empty-state">
     <text>暂无补签卡</text>
-    <text class="empty-sub">连续签到满 7 天可获赠，也可用 30 积分兑换</text>
+    <text class="empty-sub">每月1-10号可用10积分兑换</text>
   </view>
 
   <block wx:for="{{list}}" wx:key="_id">

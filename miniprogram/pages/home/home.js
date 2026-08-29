@@ -1,6 +1,7 @@
 // pages/home/home.js - 首页（角色面板）
 const dbUtil = require('../../utils/db');
 const shareUtil = require('../../utils/share');
+const signinUtil = require('../../utils/signin');
 const app = getApp();
 
 Page({
@@ -11,6 +12,7 @@ Page({
     status: '',
     pendingCount: 0,   // 待审批数
     isGuest: false,
+    signedToday: false, // 今日是否已签到
   },
 
   async onShow() {
@@ -27,6 +29,19 @@ Page({
       this.setData({ isGuest: !!wx.getStorageSync('_logged_out') });
     }
     await this.loadUserInfo();
+    this.loadSigninStatus();
+  },
+
+  // 加载签到状态（走缓存，不额外查库）
+  async loadSigninStatus() {
+    const cached = wx.getStorageSync('userInfo');
+    if (!cached || !cached._id) return;
+    try {
+      const res = await signinUtil.getInfo(false);
+      if (res && res.ok) {
+        this.setData({ signedToday: !!res.signed });
+      }
+    } catch (e) { /* 忽略 */ }
   },
 
   onShareAppMessage() {

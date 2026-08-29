@@ -236,6 +236,7 @@
     <view class="menu-item card" bindtap="onSignin">
       <text class="menu-icon">✅</text>
       <text class="menu-text">每日签到</text>
+      <text class="signin-status {{signedToday ? 'done' : ''}}">{{signedToday ? '已签到' : '未签到'}}</text>
     </view>
     <view class="menu-item card" bindtap="onLedger">
       <text class="menu-icon">💰</text>

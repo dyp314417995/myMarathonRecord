@@ -1,0 +1,31 @@
+<view class="rule-page">
+  <view class="card">
+    <text class="section-title">一、补签卡规则</text>
+    <view class="rule-item">1. 使用一张补签卡可补签一个漏签日</view>
+    <view class="rule-item">2. 补签卡使用范围：</view>
+    <view class="rule-sub">① 当天起算，过去 30 天内的漏签日</view>
+    <view class="rule-sub">② 从最先漏签的日子开始补签，不可跳补</view>
+    <view class="rule-sub">③ 连补最多连续 3 个漏签日（如连续漏签 5 天，只能补前 3 天）</view>
+    <view class="rule-item">3. 兑换方式：10 积分兑换一张，每月最多兑换 5 张，每月 1-10 号可兑换</view>
+    <view class="rule-item">4. 以 88 天为一个签到周期，中途间断或累计连续满 88 天，则重新开启新周期</view>
+  </view>
+
+  <view class="card">
+    <text class="section-title">二、奖励说明</text>
+    <view class="rule-item">首签奖励：首次签到打卡可领 5 积分，每个账号仅限一次</view>
+    <view class="rule-item">常规奖励：连续签到满 7 天后，每 3 天可领取一次</view>
+    <view class="rule-sub">· 连续 < 30 天：常规奖励 1 积分</view>
+    <view class="rule-sub">· 连续 30~60 天：常规奖励 2 积分</view>
+    <view class="rule-sub">· 连续 > 60 天：常规奖励 3 积分</view>
+    <view class="rule-item">目标奖励：完成首轮 88 天签到，第 88 天可领 25 积分；从第二轮起每轮额外加 5 积分</view>
+    <view class="rule-item">每日签到基础分 1 分</view>
+  </view>
+
+  <view class="card">
+    <text class="section-title">三、积分用途</text>
+    <view class="rule-item">1. 购买任意产品均可抵现（额度视情况而定）</view>
+    <view class="rule-item">2. 有名额等资源时拥有优先权</view>
+    <view class="rule-item">3. 兑换免费名额（具体积分视情况而定）</view>
+    <view class="rule-item">4. 其他积分获取方式详见「我的积分」</view>
+  </view>
+</view>

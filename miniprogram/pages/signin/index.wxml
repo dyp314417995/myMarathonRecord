@@ -1,17 +1,19 @@
 <!-- pages/signin/index.wxml - 每日签到 -->
 <view class="signin-page">
-  <!-- 顶部连续天数 -->
+  <!-- 右上角签到规则 -->
+  <view class="rule-link" bindtap="onGoRule">签到规则</view>
+  <!-- 顶部：周期进度 + 连续天数 -->
   <view class="hero">
     <view class="hero-inner">
-      <text class="hero-label">已连续签到</text>
+      <text class="hero-label">签到周期 {{cycleProgress}}/{{cycleDays}} 天</text>
       <view class="hero-num-row">
         <text class="hero-num">{{continuousDays}}</text>
-        <text class="hero-unit">天</text>
+        <text class="hero-unit">连续天</text>
       </view>
-      <text class="hero-sub">历史最高 {{maxDays}} 天</text>
-      <view class="hero-tip" wx:if="{{ruleDisabled && !signed}}">签到积分已停用，签到不再获得积分</view>
-      <view class="hero-tip" wx:elif="{{!signed && reward.gap === 0}}">🎉 今天签到可触发连续奖励 +{{reward.bonus}}！</view>
-      <view class="hero-tip" wx:elif="{{!signed}}">再连续签到 {{reward.gap}} 天可得额外 +{{reward.bonus}} 积分</view>
+      <text class="hero-sub">历史最高 {{maxDays}} 天 · 第 {{cycleCount + 1}} 轮</text>
+      <view class="cycle-bar"><view class="cycle-bar-inner" style="width:{{cycleProgress / cycleDays * 100}}%"></view></view>
+      <view class="hero-tip" wx:if="{{!signed && nextRegular.gap === 0}}">🎉 今日签到可领常规奖励 +{{nextRegular.points}}！</view>
+      <view class="hero-tip" wx:elif="{{!signed && nextRegular.gap > 0}}">再连续签 {{nextRegular.gap}} 天可领常规奖励 +{{nextRegular.points}}</view>
       <view class="hero-tip" wx:else>今日已签到，明天 0 点后可继续</view>
     </view>
   </view>
@@ -21,13 +23,10 @@
     <button class="sign-btn {{signed ? 'signed' : ''}}" bindtap="onSign" disabled="{{signed || signing}}">
       {{signing ? '签到中...' : (signed ? '今日已签到 ✓' : '立即签到')}}
     </button>
-    <view class="preview" wx:if="{{!signed && ruleDisabled}}">
-      <text class="preview-main">签到不再获得积分</text>
-    </view>
-    <view class="preview" wx:elif="{{!signed}}">
+    <view class="preview" wx:if="{{!signed}}">
       <text class="preview-main">今日可得 <text class="preview-num">+{{preview.total}}</text> 积分</text>
-      <text class="preview-sub" wx:if="{{preview.bonus > 0}}">含连续签到奖励 +{{preview.bonus}}</text>
-      <text class="preview-sub" wx:else>基础分 +{{preview.base}}</text>
+      <text class="preview-sub" wx:if="{{preview.bonus > 0}}">含奖励 +{{preview.bonus}}（基础 1 分）</text>
+      <text class="preview-sub" wx:else>基础分 +1</text>
     </view>
     <view class="preview" wx:else>
       <text class="preview-main">今日已签到，明天再来吧</text>
@@ -61,12 +60,17 @@
   <view class="card cards-entry" bindtap="onGoCards">
     <view class="cards-left">
       <text class="cards-title">🎫 补签卡</text>
-      <text class="cards-sub">持有 {{usableCards}} / {{holdLimit}} 张 · 仅限补签昨天</text>
+      <text class="cards-sub">持有 {{usableCards}} / {{holdLimit}} 张 · 可补过去30天漏签</text>
     </view>
     <view class="cards-right">
       <view wx:if="{{expiringCards > 0}}" class="red-dot"></view>
       <text class="arrow">›</text>
     </view>
+  </view>
+
+  <!-- 补签提示 -->
+  <view class="card" wx:if="{{canMakeup}}">
+    <text class="makeup-tip">📌 有 {{makeupDays.length}} 天漏签可补，去补签卡页面操作</text>
   </view>
 
   <!-- 积分余额 + 兑换 -->
@@ -76,7 +80,7 @@
       <text class="balance-num">{{balance}}</text>
       <text class="balance-unit">分</text>
     </view>
-    <button class="exchange-btn" bindtap="onOpenExchange">兑换补签卡</button>
+    <button class="exchange-btn" bindtap="onOpenExchange">{{exchange.in_window ? '兑换补签卡' : '每月1-10号可兑换'}}</button>
   </view>
 
   <!-- 规则说明 -->
