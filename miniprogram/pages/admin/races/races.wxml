@@ -128,11 +128,16 @@
       <input class="form-input" placeholder="如：石家庄马拉松赛" value="{{form.wechatAccount}}" data-k="wechatAccount" bindinput="onInput" />
       <text class="form-label">官网</text>
       <input class="form-input" placeholder="https://" value="{{form.website}}" data-k="website" bindinput="onInput" />
-      <text class="form-label">报名信息</text>
+      <text class="form-label">报名方式</text>
       <view class="btn-row">
         <text class="opt-btn {{form.mechanism === '' ? 'on' : ''}}" data-v="" bindtap="onFormMechanism">未填</text>
-          <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
+        <text class="opt-btn {{form.mechanism === '抽签' ? 'on' : ''}}" data-v="抽签" bindtap="onFormMechanism">抽签</text>
         <text class="opt-btn {{form.mechanism === '先到先得' ? 'on' : ''}}" data-v="先到先得" bindtap="onFormMechanism">先到先得</text>
+      </view>
+
+      <text class="form-label">缴费方式</text>
+      <view class="btn-row">
+        <text class="opt-btn {{form.payment === '' ? 'on' : ''}}" data-v="" bindtap="onFormPayment">未填</text>
         <text class="opt-btn {{form.payment === '报名时缴费' ? 'on' : ''}}" data-v="报名时缴费" bindtap="onFormPayment">报名时缴费</text>
         <text class="opt-btn {{form.payment === '中签后缴费' ? 'on' : ''}}" data-v="中签后缴费" bindtap="onFormPayment">中签后缴费</text>
       </view>
