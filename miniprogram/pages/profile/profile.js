@@ -3,7 +3,7 @@ const dbUtil = require('../../utils/db');
 
 Page({
   data: {
-    userInfo: {},
+    userInfo: wx.getStorageSync('userInfo') || {},  // 预置缓存，避免首帧闪'未设置'
     groups: [],
     editing: false,
     selectedGroupIds: [],
@@ -23,6 +23,16 @@ Page({
       wx.navigateTo({ url: '/pages/login/login' });
       return;
     }
+    // 先同步渲染缓存（避免首帧闪'未设置'），再异步刷新
+    this.setData({ userInfo });
+    // 从服务端刷新最新用户信息（角色/资料可能已更新），避免本地缓存旧数据闪'未设置'
+    try {
+      const fresh = await dbUtil.getCurrentUser();
+      if (fresh) {
+        userInfo = { ...userInfo, ...fresh };
+        wx.setStorageSync('userInfo', userInfo);
+      }
+    } catch (e) { console.warn('刷新用户信息失败，使用缓存', e); }
     // 兼容旧数据：groupId → groupIds
     if (!userInfo.groupIds && userInfo.groupId) {
       userInfo.groupIds = [userInfo.groupId];

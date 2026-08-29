@@ -5,7 +5,7 @@ const app = getApp();
 
 Page({
   data: {
-    userInfo: {},
+    userInfo: wx.getStorageSync('userInfo') || {},  // 预置缓存，避免首帧闪'未设置'
     role: '',          // 'super_admin' | 'admin' | 'user'
     groupName: '',
     status: '',
@@ -15,6 +15,9 @@ Page({
 
   async onShow() {
     shareUtil.enableShareMenu();
+    // 先用缓存同步渲染（避免闪'未设置'），再异步刷新
+    const cached = wx.getStorageSync('userInfo');
+    if (cached) this.setData({ userInfo: cached, role: cached.role || '' });
     await this.loadUserInfo();
   },
 
