@@ -33,11 +33,10 @@ Page({
     if (!options.id) return;
     wx.showLoading({ title: '加载中...' });
 
-    // 先取赛事信息（拿 raceGroup），再查已有评价（按组去重，避免跨年重复）
-    const evtRes = await raceUtil.getEventDetail(options.id).catch(() => null);
-    const event = evtRes && evtRes.event ? evtRes.event : null;
-    const [myReviewData, stats] = await Promise.all([
-      this._loadMyReview(options.id, event ? event.raceGroup : ''),
+    // 并行加载赛事信息、已有评价、热门标签
+    const [event, myReviewData, stats] = await Promise.all([
+      raceUtil.getAll({ limit: 200 }).then(res => (res.list || []).find(r => r._id === options.id)).catch(() => null),
+      this._loadMyReview(options.id),
       raceUtil.getReviewStats(options.id).catch(() => ({ tagStats: {} })),
     ]);
 
@@ -75,13 +74,14 @@ Page({
   onYearSel(e) { this.setData({ yearIdx: e.detail.value }); },
 
   // 加载已有评价数据（返回数据对象，不调 setData，避免闪烁）
-  async _loadMyReview(eventId, raceGroup) {
+  async _loadMyReview(eventId) {
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return null;
     try {
       const db = require('../../../utils/db').db;
-      const cond = raceGroup ? { raceGroup, userId: userInfo._id } : { eventId, userId: userInfo._id };
-      const exist = await db.collection('race_reviews').where(cond).get();
+      const exist = await db.collection('race_reviews').where({
+        eventId, userId: userInfo._id
+      }).get();
       if (exist.data.length > 0) {
         const r = exist.data[0];
         return {
@@ -153,9 +153,9 @@ Page({
 
       // 服务端防重复：再查一次是否已有评价
       if (!this.data.isEdit) {
-        const rg = this.data.raceGroup;
-        const checkCond = rg ? { raceGroup: rg, userId: userInfo._id } : { eventId: this.data.eventId, userId: userInfo._id };
-        const check = await db.collection('race_reviews').where(checkCond).limit(1).get();
+        const check = await db.collection('race_reviews').where({
+          eventId: this.data.eventId, userId: userInfo._id
+        }).limit(1).get();
         if (check.data.length > 0) {
           this.setData({ isEdit: true, existingId: check.data[0]._id, submitting: false });
           wx.hideLoading();
