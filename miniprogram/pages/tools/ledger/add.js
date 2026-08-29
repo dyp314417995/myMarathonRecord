@@ -307,16 +307,18 @@ Page({
   },
 
   onShareAppMessage() {
-    const race = this.data.eventName || '这场比赛';
+    const race = this.data.eventName;
     return shareUtil.buildShare({
-      title: `快来看看「${race}」你花了多少钱`,
+      title: race ? `快来看看「${race}」你花了多少钱` : '我用跑步账本记录跑步开销，你也试试',
       path: '/pages/tools/ledger/index',
     });
   },
 
   onShareTimeline() {
-    const race = this.data.eventName || '这场比赛';
-    return shareUtil.buildTimeline({ title: `快来看看「${race}」你花了多少钱` });
+    const race = this.data.eventName;
+    return shareUtil.buildTimeline({
+      title: race ? `快来看看「${race}」你花了多少钱` : '我用跑步账本记录跑步开销，你也试试',
+    });
   },
 
   onDelete() {
