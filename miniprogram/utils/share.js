@@ -1,7 +1,7 @@
 // utils/share.js - 转发工具
 
 // 默认品牌分享图（本地图片，微信分享卡片最可靠）
-const DEFAULT_IMAGE = '/imgs/jiuzhouzhanma.jpg';
+const DEFAULT_IMAGE = '/imgs/jzzm.jpg';
 
 /** 开启右上角「转发」「分享到朋友圈」菜单（页面 onLoad/onShow 调用） */
 function enableShareMenu() {
