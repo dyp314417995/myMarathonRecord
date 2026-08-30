@@ -305,7 +305,7 @@ Page({
     // 检查是否刷新 PB
     if (f.status === 'finished' && f.result) {
       const pbChanged = await this.checkPB(f.raceType, f.result);
-      if (pbChanged) { cache.invalidate('members'); cache.invalidate('users'); }
+      if (pbChanged) { cache.invalidate('members_v2'); cache.invalidate('users_v2'); }
     }
     // 同步本地缓存，避免下次切回来读到旧数据
     const curU = wx.getStorageSync('userInfo');

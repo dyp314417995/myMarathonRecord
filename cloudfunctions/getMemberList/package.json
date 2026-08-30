@@ -1,0 +1,9 @@
+{
+  "name": "getMemberList",
+  "version": "1.0.0",
+  "description": "跑友名录：一次返回全量成员含头像临时URL",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

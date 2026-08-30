@@ -484,7 +484,7 @@ Page({
 
         // 检查 PB
         const pbChanged = await this.checkPB(resultRaceType, resultTime, userInfo);
-        if (pbChanged) { cache.invalidate('members'); cache.invalidate('users'); }
+        if (pbChanged) { cache.invalidate('members_v2'); cache.invalidate('users_v2'); }
         // 新增了跑马记录，让跑马记录缓存失效
         cache.invalidate('records');
       }
