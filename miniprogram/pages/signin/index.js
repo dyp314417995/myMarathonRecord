@@ -156,7 +156,8 @@ Page({
       await this.loadInfo();
       return;
     }
-    let msg = res.total > 0 ? `今日获得 +${res.total} 积分` : '本次未获得积分';
+    const earned = res.earned || 0;
+    let msg = earned > 0 ? `今日获得 +${earned} 积分` : '本次未获得积分';
     if (res.first_reward > 0) msg += `\n🎉 首签奖励 +${res.first_reward}`;
     if (res.regular_reward > 0) msg += `\n🎁 常规奖励 +${res.regular_reward}`;
     if (res.goal_reward > 0) msg += `\n🏆 目标奖励 +${res.goal_reward}`;
