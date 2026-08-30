@@ -11,6 +11,7 @@ Page({
     rules: [],
     pendingList: [],
     reviewedList: [],
+    pendingRegList: [],  // 注册待审核用户
     pendingSkip: 0,
     reviewedSkip: 0,
     hasMorePending: false,
@@ -49,7 +50,7 @@ Page({
       isAdmin: userInfo.role === 'super_admin' || userInfo.role === 'admin',
     });
     await pointsUtil.migrateRules();
-    await Promise.all([this.loadRules(), this.loadPending(true), this.loadUsers()]);
+    await Promise.all([this.loadRules(), this.loadPending(true), this.loadUsers(), this.loadPendingRegisters()]);
   },
 
   onTabChange(e) {
@@ -57,7 +58,74 @@ Page({
     if (e.currentTarget.dataset.tab === 'review') {
       this.setData({ reviewSub: 'pending' });
       this.loadPending(true);
+      this.loadPendingRegisters();
     }
+  },
+
+  // 加载注册待审核用户（status=pending 且未选群）
+  async loadPendingRegisters() {
+    try {
+      const res = await dbUtil.db.collection('users')
+        .where({ status: 'pending' })
+        .orderBy('createTime', 'desc')
+        .limit(50)
+        .get();
+      const list = await Promise.all((res.data || []).map(async (u) => {
+        let avatar = u.avatarUrl || '';
+        if (avatar && avatar.startsWith('cloud://')) {
+          try { const r = await wx.cloud.getTempFileURL({ fileList: [avatar] }); avatar = r.fileList[0].tempFileURL; } catch {}
+        }
+        return {
+          _id: u._id,
+          userName: u.nickName || '未知',
+          userAvatar: avatar,
+          userCity: u.city || '',
+          phoneNumber: u.phoneNumber || '',
+          createTime: this.fmtDate(u.createTime),
+        };
+      }));
+      this.setData({ pendingRegList: list });
+    } catch (err) {
+      console.error('加载注册审核列表失败:', err);
+    }
+  },
+
+  // 通过注册审核
+  onApproveRegister(e) {
+    const userId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '确认通过',
+      content: '确认通过该用户的注册申请？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await dbUtil.updateUser(userId, { status: 'approved' });
+          wx.showToast({ title: '已通过', icon: 'success' });
+          this.loadPendingRegisters();
+        } catch (err) {
+          wx.showToast({ title: '操作失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
+  // 拒绝注册
+  onRejectRegister(e) {
+    const userId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '确认拒绝',
+      content: '确认拒绝该用户的注册申请？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await dbUtil.updateUser(userId, { status: 'rejected' });
+          wx.showToast({ title: '已拒绝', icon: 'success' });
+          this.loadPendingRegisters();
+        } catch (err) {
+          wx.showToast({ title: '操作失败', icon: 'none' });
+        }
+      }
+    });
   },
 
   onReviewSub(e) {

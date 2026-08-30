@@ -183,6 +183,9 @@ Page({
     if (!phoneNumber.trim()) return wx.showToast({ title: '请输入手机号', icon: 'none' });
     if (!/^1\d{10}$/.test(phoneNumber.trim())) return wx.showToast({ title: '手机号格式不正确', icon: 'none' });
 
+    // 未选择群组：需管理员审核
+    const needReview = selectedGroupIds.length === 0;
+
     this.setData({ submitting: true });
     wx.showLoading({ title: '注册中...' });
 
@@ -228,6 +231,7 @@ Page({
           city: city.trim(), pb10k, pbHalf, pbFull,
           // 初始余额为 0：注册赠送积分只通过下方 addRecord -> incUserPoints 发放一次，避免重复加积分
           groupIds: selectedGroupIds, points: 0,
+          status: needReview ? 'pending' : 'approved',
         };
         const addRes = await dbUtil.createUser(userData);
         const fullUser = await dbUtil.db.collection('users').doc(addRes._id).get();
@@ -263,7 +267,15 @@ Page({
       wx.setStorageSync('userInfo', user);
 
       wx.hideLoading();
-      wx.showToast({ title: '注册成功', icon: 'success' });
+      if (needReview) {
+        wx.showModal({
+          title: '已提交申请',
+          content: '你未选择加入任何群，需要管理员审核通过后才能使用完整功能',
+          showCancel: false,
+        });
+      } else {
+        wx.showToast({ title: '注册成功', icon: 'success' });
+      }
       setTimeout(() => {
         const pending = app.globalData.pendingActivityId;
         if (pending) {

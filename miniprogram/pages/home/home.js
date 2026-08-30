@@ -12,6 +12,7 @@ Page({
     status: '',
     pendingCount: 0,   // 待审批数
     isGuest: false,
+    isPending: false,  // 注册待审核（未选群）
     signedToday: false, // 今日是否已签到
   },
 
@@ -86,9 +87,7 @@ Page({
         this.setData({ isGuest: true });
         return;
       }
-      // 更新本地缓存
-      wx.setStorageSync('userInfo', user);
-      // 转换头像 cloud:// → 临时 URL
+      // 转换头像 cloud:// → 临时 URL（先转再存缓存，避免下次进首页首帧闪）
       if (user.avatarUrl && user.avatarUrl.startsWith('cloud://')) {
         try {
           const r = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [user.avatarUrl] } });
@@ -101,6 +100,8 @@ Page({
           } catch {}
         }
       }
+      // 更新本地缓存（存转换后的临时 URL）
+      wx.setStorageSync('userInfo', user);
 
       // V1.0 老用户补发注册赠送积分（从规则表读取）
       const pointsUtil = require('../../utils/points');
@@ -164,7 +165,10 @@ Page({
       app.globalData.isSuperAdmin = role === 'super_admin';
       app.globalData.isAdmin = role === 'admin' || role === 'super_admin';
 
-      this.setData({ userInfo: user, role, groupName, status: user.status });
+      this.setData({
+        userInfo: user, role, groupName, status: user.status,
+        isPending: user.status === 'pending',
+      });
 
     } catch (err) {
       console.error('加载用户信息失败:', err);
@@ -174,11 +178,6 @@ Page({
   // 超管：管理管理员
   onManageAdmins() {
     wx.navigateTo({ url: '/pages/super-admin/manage' });
-  },
-
-  // 审批加群
-  onApproval() {
-    wx.navigateTo({ url: '/pages/admin/approval/approval' });
   },
 
   // 管理用户

@@ -44,14 +44,6 @@ exports.main = async () => {
     results.push(`admins 集合检查: ${err.message}`);
   }
 
-  // 4. 检查 join_requests 集合
-  try {
-    await db.collection('join_requests').count();
-    results.push('join_requests 集合已就绪');
-  } catch (err) {
-    results.push(`join_requests 集合检查: ${err.message}`);
-  }
-
   // 4.5 赛事采集日志集合（v2.6 自动采集）
   const fetchCols = ['race_fetch_log', 'race_import_log'];
   for (const col of fetchCols) {

@@ -57,6 +57,16 @@
     </view>
   </view>
 
+  <!-- ========== 注册待审核 ========== -->
+  <view wx:elif="{{isPending}}" class="pending-page">
+    <view class="pending-card card">
+      <text class="pending-icon">⏳</text>
+      <text class="pending-title">账号待审核</text>
+      <text class="pending-desc">你未选择加入任何跑群，注册申请已提交，请等待管理员审核通过后再使用。</text>
+      <view class="pending-tip">审核通过后重新进入小程序即可正常使用</view>
+    </view>
+  </view>
+
   <!-- ========== 已登录用户 ========== -->
   <view wx:else>
   <!-- 用户信息卡片 -->

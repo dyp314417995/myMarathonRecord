@@ -90,11 +90,11 @@ async function createUser(data) {
   const now = new Date();
   return await db.collection('users').add({
     data: {
-      ...data,
       role: 'user',
       status: 'approved',
       createTime: now,
       updateTime: now,
+      ...data,   // data 放在最后，允许覆盖 role/status 等默认值
     }
   });
 }
@@ -184,38 +184,9 @@ async function checkIsSuperAdmin(userId) {
   return res.data && res.data.role === 'super_admin';
 }
 
-// ============ 审批操作 ============
-
-/** 创建加群申请 */
-async function createJoinRequest(userId, groupId) {
-  return await db.collection('join_requests').add({
-    data: {
-      userId, groupId,
-      status: 'pending',
-      createTime: new Date()
-    }
-  });
-}
-
-/** 获取待审批列表 */
-async function getPendingRequests() {
-  return await db.collection('join_requests')
-    .where({ status: 'pending' })
-    .orderBy('createTime', 'asc')
-    .get();
-}
-
-/** 审批加群申请 */
-async function reviewRequest(requestId, status, reviewerId) {
-  return await db.collection('join_requests').doc(requestId).update({
-    data: { status, reviewedBy: reviewerId, reviewTime: new Date() }
-  });
-}
-
 module.exports = {
   db, _,
   getCurrentUser, createUser, updateUser, getUserList, getUserCount,
   getGroups, createGroup, updateGroup, deleteGroup,
   getAdminList, createAdmin, updateAdmin, checkIsAdmin, checkIsSuperAdmin,
-  createJoinRequest, getPendingRequests, reviewRequest,
 };

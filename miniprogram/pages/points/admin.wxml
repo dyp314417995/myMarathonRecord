@@ -106,8 +106,26 @@
 
     <!-- 待审核 -->
     <block wx:if="{{reviewSub === 'pending'}}">
+      <!-- 注册审核 -->
+      <view class="review-section-title" wx:if="{{pendingRegList.length > 0}}">注册审核（未选群）</view>
+      <block wx:for="{{pendingRegList}}" wx:key="_id">
+        <view class="card review-card">
+          <view class="req-header">
+            <text class="req-name">{{item.userName}}</text>
+            <text class="tag tag-orange">注册待审</text>
+          </view>
+          <text class="req-desc">{{item.userCity || '未知城市'}} · {{item.phoneNumber || '未填手机号'}}</text>
+          <text class="req-time">注册时间：{{item.createTime}}</text>
+          <view class="req-actions">
+            <button class="btn-reject" data-id="{{item._id}}" bindtap="onRejectRegister">拒绝</button>
+            <button class="btn-approve" data-id="{{item._id}}" bindtap="onApproveRegister">通过</button>
+          </view>
+        </view>
+      </block>
+
       <!-- 积分审批 -->
-      <view wx:if="{{pendingList.length === 0}}" class="empty-tight"><text>暂无待审批积分申请</text></view>
+      <view class="review-section-title" wx:if="{{pendingList.length > 0 && pendingRegList.length > 0}}">积分申请</view>
+      <view wx:if="{{pendingList.length === 0 && pendingRegList.length === 0}}" class="empty-tight"><text>暂无待审批申请</text></view>
       <block wx:for="{{pendingList}}" wx:key="_id">
         <view class="card review-card">
           <view class="req-header">
