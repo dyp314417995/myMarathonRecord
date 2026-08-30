@@ -45,14 +45,14 @@ Page({
 
   onShareAppMessage() {
     return shareUtil.buildShare({
-      title: `我已连续签到 ${this.data.continuousDays} 天，邀请你一起来打卡`,
+      title: `我已连续签到 ${this.data.continuousDays} 天，一起来打卡赚积分`,
       path: '/pages/signin/index',
     });
   },
 
   onShareTimeline() {
     return shareUtil.buildTimeline({
-      title: `我已连续签到 ${this.data.continuousDays} 天，邀请你一起来打卡`,
+      title: `我已连续签到 ${this.data.continuousDays} 天，一起来打卡赚积分`,
     });
   },
 
