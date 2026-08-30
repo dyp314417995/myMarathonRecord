@@ -331,14 +331,28 @@ Page({
     const name = e.currentTarget.dataset.name || '';
     this.setData({ showReviews: true, reviewEventId: id, reviewEventName: name, reviewList: [] });
     const res = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', eventId: id } });
-    const enriched = [];
-    for (const r of (res.result || [])) {
+    const reviews = res.result || [];
+
+    // 批量查询用户昵称（避免 N+1）
+    const db = require('../../../utils/db').db;
+    const _ = require('../../../utils/db')._;
+    const userIds = [...new Set(reviews.map(r => r.userId).filter(Boolean))];
+    const nameMap = {};
+    for (let i = 0; i < userIds.length; i += 20) {
+      const part = userIds.slice(i, i + 20);
       try {
-        const db = require('../../../utils/db').db;
-        const u = await db.collection('users').doc(r.userId).get();
+        const q = await db.collection('users')
+          .where({ _id: _.in(part) }).field({ nickName: true }).get();
+        (q.data || []).forEach(u => { nameMap[u._id] = u.nickName || '未知'; });
+      } catch {}
+    }
+
+    const enriched = [];
+    for (const r of reviews) {
+      try {
         enriched.push({
           ...r,
-          userName: u.data ? (u.data.nickName || '未知') : '已删除',
+          userName: nameMap[r.userId] || '已删除',
           fmtTime: this.fmtReviewDate(r.createTime),
           fmtScores: Object.keys(r.scores||{}).map(k => {
             const lb = { difficulty:'难度',atmosphere:'氛围',supply:'补给',transport:'交通',scenery:'风景',org:'组织',medal:'奖牌',value:'性价比' };
