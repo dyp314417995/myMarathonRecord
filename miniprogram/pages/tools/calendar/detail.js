@@ -349,7 +349,7 @@ Page({
     const { event } = this.data;
     const name = event.name || '这赛事';
     return shareUtil.buildShare({
-      title: this.data._shareTitle || `快来看看「${name}」马拉松`,
+      title: this.data._shareTitle || `快来看看「${name}」`,
       path: `/pages/tools/calendar/detail?id=${this.data.eventId}`,
       imageUrl: event.poster || '',
     });
@@ -359,7 +359,7 @@ Page({
     const { event } = this.data;
     const name = event.name || '这赛事';
     return shareUtil.buildTimeline({
-      title: this.data._shareTitle || `快来看看「${name}」马拉松`,
+      title: this.data._shareTitle || `快来看看「${name}」`,
       query: `id=${this.data.eventId}`,
       imageUrl: event.poster || '',
     });

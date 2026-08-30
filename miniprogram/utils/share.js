@@ -13,22 +13,25 @@ function enableShareMenu() {
   } catch (e) { /* 基础库版本过低时忽略 */ }
 }
 
-/** 构造转发配置（onShareAppMessage 返回值），自动处理默认图 */
+/** 构造转发配置（onShareAppMessage 返回值） */
 function buildShare({ title, path, imageUrl }) {
-  return {
+  const cfg = {
     title: title || '九州战马联盟',
     path: path || '/pages/home/home',
-    imageUrl: imageUrl || DEFAULT_IMAGE,
   };
+  // 仅显式传入 imageUrl 时才带图（赛事海报/活动图等）；否则不设默认图，微信自动截屏当前页面
+  if (imageUrl) cfg.imageUrl = imageUrl;
+  return cfg;
 }
 
 /** 构造朋友圈分享配置（onShareTimeline 返回值） */
 function buildTimeline({ title, query, imageUrl }) {
-  return {
+  const cfg = {
     title: title || '九州战马联盟',
     query: query || '',
-    imageUrl: imageUrl || DEFAULT_IMAGE,
   };
+  if (imageUrl) cfg.imageUrl = imageUrl;
+  return cfg;
 }
 
 module.exports = { enableShareMenu, buildShare, buildTimeline, DEFAULT_IMAGE };

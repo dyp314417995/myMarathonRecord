@@ -41,22 +41,44 @@ Page({
     hasMore: false,
   },
 
-  onLoad() {
+  onLoad(options) {
     shareUtil.enableShareMenu();
-    // 恢复上次的 tab
-    const saved = wx.getStorageSync('calendar_tab');
-    if (saved) this.setData({ tab: saved });
+    // 优先用分享带来的 tab 参数；否则恢复上次的 tab
+    const sharedTab = (options && options.tab) || '';
+    if (['all', 'mine', 'review'].includes(sharedTab)) {
+      this.setData({ tab: sharedTab });
+    } else {
+      const saved = wx.getStorageSync('calendar_tab');
+      if (saved) this.setData({ tab: saved });
+    }
   },
 
   onShareAppMessage() {
     return shareUtil.buildShare({
-      title: '九州战马赛事日历｜查赛事、看评分、关注比赛',
-      path: '/pages/tools/calendar/index',
+      title: this.shareTitle(),
+      path: this.sharePath(),
     });
   },
 
   onShareTimeline() {
-    return shareUtil.buildTimeline({ title: '九州战马赛事日历｜查赛事、看评分、关注比赛' });
+    return shareUtil.buildTimeline({
+      title: this.shareTitle(),
+      query: this.data.tab ? `tab=${this.data.tab}` : '',
+    });
+  },
+
+  shareTitle() {
+    const tab = this.data.tab;
+    if (tab === 'mine') return '我关注的这些马拉松，你也来看看';
+    if (tab === 'review') return '我给这些马拉松打了分，快来参考';
+    return '九州战马赛事日历｜查赛事、看评分、关注比赛';
+  },
+
+  sharePath() {
+    const tab = this.data.tab;
+    if (tab === 'mine') return '/pages/tools/calendar/index?tab=mine';
+    if (tab === 'review') return '/pages/tools/calendar/index?tab=review';
+    return '/pages/tools/calendar/index';
   },
 
   onShow() {

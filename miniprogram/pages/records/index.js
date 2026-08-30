@@ -3,6 +3,7 @@ const dbUtil = require('../../utils/db');
 const cache = require('../../utils/cache');
 const db = dbUtil.db;
 const raceUtil = require('../../utils/raceEvents');
+const shareUtil = require('../../utils/share');
 
 const RECORDS_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
 
@@ -29,6 +30,7 @@ Page({
   },
 
   onLoad() {
+    shareUtil.enableShareMenu();
     // 读取用户自定义默认 Tab
     const t = wx.getStorageSync('records_default_tab');
     if (['half', 'full', '10k', 'custom'].includes(t)) {
@@ -37,6 +39,27 @@ Page({
   },
 
   onShow() { this.loadRecords(); },
+
+  // 统计已完赛的全马场次
+  countFullMarathons() {
+    return (this.data.records || []).filter(r => r.raceType === 'full' && r.status === 'finished').length;
+  },
+
+  onShareAppMessage() {
+    const u = wx.getStorageSync('userInfo');
+    const count = this.countFullMarathons();
+    return shareUtil.buildShare({
+      title: `我已跑了 ${count} 场马拉松，一起来记录吧`,
+      path: `/pages/records/public?userId=${u?._id || ''}&userName=${encodeURIComponent(u?.nickName || '')}`,
+    });
+  },
+
+  onShareTimeline() {
+    const count = this.countFullMarathons();
+    return shareUtil.buildTimeline({
+      title: `我已跑了 ${count} 场马拉松，一起来记录吧`,
+    });
+  },
 
   // 缓存未过期时直接使用本地缓存，不查库；只有查库成功才更新缓存
   async loadRecords(force = false) {
