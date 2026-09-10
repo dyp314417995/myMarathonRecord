@@ -1,9 +1,9 @@
 ﻿# ============================================================
 # 赛事数据自动更新 + 上传脚本
 # 用法:
-#   powershell -File 赛事数据\auto_import.ps1          # 增量拉取（表格没变就退出）
-#   powershell -File 赛事数据\auto_import.ps1 -Force    # 强制全量拉取
-#   powershell -File 赛事数据\auto_import.ps1 -Invoke   # 上传后触发云函数导入
+#   powershell -File race-data\auto_import.ps1          # 增量拉取（表格没变就退出）
+#   powershell -File race-data\auto_import.ps1 -Force    # 强制全量拉取
+#   powershell -File race-data\auto_import.ps1 -Invoke   # 上传后触发云函数导入
 # 前置: TCB CLI 已登录（.codex\tcbhome），云存储 races_import.json 已存在
 # ============================================================
 param(

@@ -31,13 +31,16 @@ function clearCache() {
 }
 
 // 读取签到信息（优先缓存，未命中才查库）
-async function getInfo(forceRefresh = false) {
-  if (!forceRefresh) {
+// month 参数：查看指定月份的签到明细（格式 YYYY-MM，默认当前月）
+async function getInfo(forceRefresh = false, month = '') {
+  if (!forceRefresh && !month) {
     const cached = readCache();
     if (cached) return cached;
   }
-  const res = await call('info');
-  if (res && res.ok) writeCache(res);
+  const data = {};
+  if (month) data.month = month;
+  const res = await call('info', data);
+  if (res && res.ok && !month) writeCache(res); // 只有默认当月才写缓存
   return res;
 }
 

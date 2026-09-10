@@ -147,6 +147,7 @@ Page({
     const rules = (res.data || []).map(r => ({
       ...r,
       limitText: pointsUtil.getRuleLimitText(r),
+      pointsText: pointsUtil.getRulePointsText(r),
       submitText: pointsUtil.isNeedSubmit(r) ? '用户可提交' : '无需提交',
     }));
     this.setData({ rules });

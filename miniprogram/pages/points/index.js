@@ -69,6 +69,7 @@ Page({
     const rules = (res.data || []).filter(r => r.status === 'active').map(r => ({
       ...r,
       limitText: pointsUtil.getRuleLimitText(r),
+      pointsText: pointsUtil.getRulePointsText(r),
       _expanded: false,
     }));
     this.setData({ rules });

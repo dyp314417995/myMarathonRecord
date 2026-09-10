@@ -90,6 +90,8 @@ Page({
     // 排序
     const sortBy = this.data.sortBy;
     const asc = this.data.sortAsc;
+    // createTime 可能是 ISO 字符串或 Date，统一转时间戳再比较
+    const ts = (v) => { if (!v) return 0; const t = new Date(v).getTime(); return isNaN(t) ? 0 : t; };
     if (sortBy === 'name') {
       list.sort((a, b) => asc ? (b.nickName || '').localeCompare(a.nickName || '') : (a.nickName || '').localeCompare(b.nickName || ''));
     } else if (sortBy === 'pb10k' || sortBy === 'pbHalf' || sortBy === 'pbFull') {
@@ -98,11 +100,11 @@ Page({
         const ha = sa !== null, hb = sb !== null;
         // 没成绩（或成绩非法）的不参与排名：有成绩的排前，没成绩的恒排最后
         if (ha !== hb) return ha ? -1 : 1;
-        if (!ha) return (a.createTime || 0) - (b.createTime || 0) || (a._id || '').localeCompare(b._id || '');
+        if (!ha) return ts(a.createTime) - ts(b.createTime) || (a._id || '').localeCompare(b._id || '');
         return asc ? sb - sa : sa - sb;
       });
     } else {
-      list.sort((a, b) => asc ? (a.createTime || 0) - (b.createTime || 0) : (b.createTime || 0) - (a.createTime || 0));
+      list.sort((a, b) => asc ? ts(a.createTime) - ts(b.createTime) : ts(b.createTime) - ts(a.createTime));
     }
     const visible = list.slice(0, this.data.visibleCount);
     this.setData({ users: visible, hasMore: visible.length < list.length, loading: false });

@@ -76,6 +76,8 @@
 /* 月历 */
 .calendar-card { padding: 28rpx 24rpx; }
 .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.cal-nav { display: flex; align-items: center; gap: 20rpx; }
+.cal-nav-btn { font-size: 40rpx; color: #999; padding: 0 12rpx; }
 .cal-title { font-size: 30rpx; font-weight: 600; color: #333; }
 .cal-legend { display: flex; }
 .legend-item { display: flex; align-items: center; margin-left: 16rpx; font-size: 20rpx; color: #999; }

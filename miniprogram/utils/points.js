@@ -79,6 +79,17 @@ function parseRuleLimit(rule) {
   return { period, limitCount };
 }
 
+/** 规则积分展示文案：随机范围显示「40~60」，固定值显示「50」 */
+function getRulePointsText(rule) {
+  if (!rule) return '';
+  const min = parseInt(rule.minPoints, 10);
+  const max = parseInt(rule.maxPoints, 10);
+  if (!isNaN(min) && !isNaN(max) && min > 0 && max >= min) {
+    return `${min}~${max}`;
+  }
+  return String(rule.points != null ? rule.points : '');
+}
+
 /** 规则限制文案（如：每月最多4次） */
 function getRuleLimitText(rule) {
   const { period, limitCount } = parseRuleLimit(rule);
@@ -282,7 +293,7 @@ async function expireOverduePoints() {
 
 module.exports = {
   getRules, addRule, deleteRule, updateRule, migrateRules,
-  isNeedSubmit, parseRuleLimit, getRuleLimitText, getPeriodRange, getPeriodCount, checkRuleLimit, getRulePoints,
+  isNeedSubmit, parseRuleLimit, getRuleLimitText, getRulePointsText, getPeriodRange, getPeriodCount, checkRuleLimit, getRulePoints,
   getBalance, getExpiringSoon, getRecords, addRecord,
   getMonthlyCount, reviewRecord, getPendingRecords, withdrawRecord,
   expireOverduePoints,

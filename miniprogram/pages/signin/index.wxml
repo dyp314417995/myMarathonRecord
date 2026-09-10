@@ -36,7 +36,11 @@
   <!-- 月历 -->
   <view class="card calendar-card">
     <view class="cal-header">
-      <text class="cal-title">{{calTitle}}</text>
+      <view class="cal-nav">
+        <text class="cal-nav-btn" bindtap="onPrevMonth">‹</text>
+        <text class="cal-title">{{calTitle}}</text>
+        <text class="cal-nav-btn" bindtap="onNextMonth">›</text>
+      </view>
       <view class="cal-legend">
         <view class="legend-item"><view class="dot dot-signed"></view>已签</view>
         <view class="legend-item"><view class="dot dot-makeup"></view>补签</view>

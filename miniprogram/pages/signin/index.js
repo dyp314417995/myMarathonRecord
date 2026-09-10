@@ -26,6 +26,7 @@ Page({
     exchange: { used: 0, limit: 5, cost: 10, in_window: false, day_from: 1, day_to: 10 },
     calendarDays: [],
     calTitle: '',
+    currentMonth: '',   // 当前查看的月份（YYYY-MM，默认当月）
     weeks: WEEK,
     showExchange: false,
     exchangeBusy: false,
@@ -61,15 +62,17 @@ Page({
     await this.loadInfo(true);
   },
 
-  async loadInfo(forceRefresh) {
+  async loadInfo(forceRefresh, month) {
     this.setData({ loading: true });
-    const res = await signinUtil.getInfo(forceRefresh);
+    const res = await signinUtil.getInfo(forceRefresh, month);
     if (!res || !res.ok) {
       this.setData({ loading: false });
       wx.showToast({ title: (res && res.msg) || '加载失败', icon: 'none' });
       return;
     }
-    const [y, m] = res.today.split('-').map(Number);
+    // 查询的月份（默认当月）
+    const queryMonth = res.query_month || res.today.slice(0, 7);
+    const [y, m] = queryMonth.split('-').map(Number);
     this.setData({
       loading: false,
       signed: !!res.signed,
@@ -93,8 +96,9 @@ Page({
       cycleProgress: res.cycle_progress || 0,
       cycleCount: res.cycle_count || 0,
       firstSignPoints: res.first_sign_points || 5,
+      currentMonth: queryMonth,
       calTitle: `${y} 年 ${m} 月`,
-      calendarDays: this.buildCalendar(res.today, res.signed_dates || [], res.makeup_dates || []),
+      calendarDays: this.buildCalendar(queryMonth, res.today, res.signed_dates || [], res.makeup_dates || []),
     });
 
     if (res.can_makeup && !this.hasPromptedMakeup && !res.signed) {
@@ -107,8 +111,27 @@ Page({
     }
   },
 
-  buildCalendar(todayStr, signedDates, makeupDates) {
-    const [y, m] = todayStr.split('-').map(Number);
+  // 切换月份（上月/下月）
+  async onPrevMonth() {
+    const [y, m] = this.data.currentMonth.split('-').map(Number);
+    const prev = new Date(y, m - 2, 1);
+    const month = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    await this.loadInfo(false, month);
+  },
+
+  async onNextMonth() {
+    const [y, m] = this.data.currentMonth.split('-').map(Number);
+    const next = new Date(y, m, 1);
+    const month = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    // 不能查看未来月份（东八区当前月）
+    const now = new Date(Date.now() + 8 * 3600000);
+    const nowMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    if (month > nowMonth) return;
+    await this.loadInfo(false, month);
+  },
+
+  buildCalendar(monthStr, todayStr, signedDates, makeupDates) {
+    const [y, m] = monthStr.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     const leading = (new Date(y, m - 1, 1).getDay() + 6) % 7;
     const cells = [];

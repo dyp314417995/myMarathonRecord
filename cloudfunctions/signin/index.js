@@ -124,6 +124,8 @@ async function actionInfo(event, openid) {
   const now = new Date();
   const todayStr = fmtDate(now);
   const yesterdayStr = addDays(todayStr, -1);
+  // 查看指定月份的签到明细（默认当前月，格式 YYYY-MM）
+  const queryMonth = (event && event.month) || fmtMonth(now);
 
   const cards = await db.collection('makeup_card')
     .where({ userId, status: 0, expire_at: _.gt(now) })
@@ -163,9 +165,9 @@ async function actionInfo(event, openid) {
     .where({ userId, exchange_type: 1, month }).get();
   const monthUsed = (exRes.data || []).reduce((s, r) => s + (r.quantity || 0), 0);
 
-  // 本月签到明细（日历）
-  const monthStart = `${month}-01`;
-  const monthEnd = `${month}-31`;
+  // 指定月份的签到明细（日历）
+  const monthStart = `${queryMonth}-01`;
+  const monthEnd = `${queryMonth}-31`;
   const detRes = await db.collection('signin_detail')
     .where({ userId, sign_date: _.gte(monthStart).and(_.lte(monthEnd)) })
     .field({ sign_date: true, is_makeup: true }).get();
@@ -219,6 +221,7 @@ async function actionInfo(event, openid) {
     },
     signed_dates: signedDates,
     makeup_dates: makeupDates,
+    query_month: queryMonth,
     hold_limit: CARD_HOLD_LIMIT,
     first_sign_points: FIRST_SIGN_POINTS,
   };
@@ -245,11 +248,8 @@ function nextRegularInfo(continuousDays) {
   return { gap: step, points: regularPoints(continuousDays + step), desc: `再签 ${step} 天可领常规奖励` };
 }
 
-// 计算可补签的漏签日列表（过去30天内、当前周期内、按时间正序）
+// 计算可补签的漏签日列表（过去30天内，按时间正序，从最早开始）
 async function calcMakeupDays(userId, signin, todayStr, now) {
-  const cycleStart = signin.cycle_start_date || '';
-  if (!cycleStart) return [];
-
   const fromDate = addDays(todayStr, -MAKEUP_WINDOW_DAYS);
   // 查询最近30天的签到明细
   const detRes = await db.collection('signin_detail')
@@ -258,16 +258,14 @@ async function calcMakeupDays(userId, signin, todayStr, now) {
   const signedSet = new Set((detRes.data || []).map(d => d.sign_date));
 
   const makeupDays = [];
-  // 从周期开始日遍历到昨天，找漏签日（且在过去30天内）
-  let day = cycleStart;
+  // 从30天前遍历到昨天，找漏签日
+  let day = fromDate;
   const yesterday = addDays(todayStr, -1);
   while (day <= yesterday) {
-    const in30 = diffDays(todayStr, day) <= MAKEUP_WINDOW_DAYS;
-    if (in30 && !signedSet.has(day)) {
+    if (!signedSet.has(day)) {
       makeupDays.push(day);
     }
     day = addDays(day, 1);
-    if (diffDays(day, cycleStart) > CYCLE_DAYS) break;
   }
   // 从最早开始，最多取 MAX 个
   return makeupDays.slice(0, MAKEUP_MAX_CONSECUTIVE);
@@ -587,8 +585,6 @@ async function actionUseCard(event, openid) {
 }
 
 async function calcMakeupDaysTxn(transaction, userId, signin, todayStr, now) {
-  const cycleStart = signin.cycle_start_date || '';
-  if (!cycleStart) return [];
   const fromDate = addDays(todayStr, -MAKEUP_WINDOW_DAYS);
   const detRes = await transaction.collection('signin_detail')
     .where({ userId, sign_date: _.gte(fromDate).and(_.lte(todayStr)) })
@@ -596,13 +592,11 @@ async function calcMakeupDaysTxn(transaction, userId, signin, todayStr, now) {
   const signedSet = new Set((detRes.data || []).map(d => d.sign_date));
 
   const days = [];
-  let day = cycleStart;
+  let day = fromDate;
   const yesterday = addDays(todayStr, -1);
   while (day <= yesterday) {
-    const in30 = diffDays(todayStr, day) <= MAKEUP_WINDOW_DAYS;
-    if (in30 && !signedSet.has(day)) days.push(day);
+    if (!signedSet.has(day)) days.push(day);
     day = addDays(day, 1);
-    if (diffDays(day, cycleStart) > CYCLE_DAYS) break;
   }
   return days.slice(0, MAKEUP_MAX_CONSECUTIVE);
 }

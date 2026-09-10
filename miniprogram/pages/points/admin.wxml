@@ -19,7 +19,7 @@
             <text class="rule-name">{{item.name}}</text>
             <text class="rule-submit {{item.submitText === '用户可提交' ? '' : 'off'}}">{{item.submitText}}</text>
           </view>
-          <text class="rule-meta">+{{item.points}}分{{item.limitText ? ' · ' + item.limitText : ''}}</text>
+          <text class="rule-meta">+{{item.pointsText}}分{{item.limitText ? ' · ' + item.limitText : ''}}</text>
         </view>
         <view class="rule-ops" wx:if="{{isSuperAdmin}}">
           <text class="rule-op" data-id="{{item._id}}" bindtap="onEditRule">编辑</text>
