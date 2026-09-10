@@ -21,6 +21,27 @@ App({
     this.fixOpenid();
     this.fixUserRole();
     this.checkLaunchScene();
+    this.initUpdateManager();
+  },
+
+  // 微信官方更新检测：小程序发布新版本后提醒用户重启
+  initUpdateManager() {
+    if (!wx.getUpdateManager) return;
+    const updateManager = wx.getUpdateManager();
+    updateManager.onUpdateReady(() => {
+      wx.showModal({
+        title: '更新提示',
+        content: '新版本已准备好，是否重启应用？',
+        confirmText: '立即重启',
+        success: (res) => {
+          if (res.confirm) updateManager.applyUpdate();
+        },
+      });
+    });
+    updateManager.onUpdateFailed(() => {
+      // 更新失败（通常是网络原因），静默处理，下次再试
+      console.warn('小程序更新失败');
+    });
   },
 
   // 补存 openid（已有用户）

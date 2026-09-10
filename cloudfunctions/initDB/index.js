@@ -65,5 +65,33 @@ exports.main = async () => {
       results.push(`${col} 集合已存在或创建失败: ${err.message}`);
     }
   }
+
+  // 6. app_config 集合（版本号等全局配置）
+  try {
+    await db.createCollection('app_config');
+    results.push('app_config 集合已创建');
+  } catch (err) {
+    results.push('app_config 集合已存在或创建失败: ' + err.message);
+  }
+  // 初始化版本号配置（不存在才写入）
+  try {
+    const verRes = await db.collection('app_config').where({ key: 'version' }).limit(1).get();
+    if (verRes.data.length === 0) {
+      await db.collection('app_config').add({
+        data: {
+          key: 'version',
+          value: '2.6.1',
+          updateTime: new Date(),
+          createTime: new Date(),
+        },
+      });
+      results.push('app_config 版本号已初始化：v2.6.1');
+    } else {
+      results.push('app_config 版本号已存在，跳过初始化');
+    }
+  } catch (err) {
+    results.push('app_config 版本号初始化失败: ' + err.message);
+  }
+
   return { success: true, results };
 };

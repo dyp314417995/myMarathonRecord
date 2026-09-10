@@ -253,5 +253,8 @@
       <text class="menu-text">跑步账本</text>
     </view>
   </view>
+
+  <!-- 版本号 -->
+  <view class="version-text" wx:if="{{appVersion}}">{{appVersion}}</view>
 </view>
 </view>

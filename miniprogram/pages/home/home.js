@@ -2,6 +2,7 @@
 const dbUtil = require('../../utils/db');
 const shareUtil = require('../../utils/share');
 const signinUtil = require('../../utils/signin');
+const versionUtil = require('../../utils/version');
 const app = getApp();
 
 Page({
@@ -14,6 +15,7 @@ Page({
     isGuest: false,
     isPending: false,  // 注册待审核（未选群）
     signedToday: false, // 今日是否已签到
+    appVersion: '',     // 版本号 + 更新时间
   },
 
   async onShow() {
@@ -31,6 +33,30 @@ Page({
     }
     await this.loadUserInfo();
     this.loadSigninStatus();
+    this.loadVersion();
+  },
+
+  // 加载版本号 + 更新检测
+  async loadVersion() {
+    const info = await versionUtil.checkUpdate();
+    let text = `v${info.localVersion}`;
+    if (info.updateTime) {
+      const d = new Date(info.updateTime);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      text += ` · 更新于 ${d.getFullYear()}-${m}-${day}`;
+    }
+    this.setData({ appVersion: text });
+
+    // 有新版本（云端 > 本地）则提醒
+    if (info.hasNew) {
+      wx.showModal({
+        title: '发现新版本',
+        content: `当前版本 v${info.localVersion}，最新版本 v${info.version}，请更新后使用。`,
+        confirmText: '知道了',
+        showCancel: false,
+      });
+    }
   },
 
   // 加载签到状态（走缓存，不额外查库）
