@@ -21,7 +21,6 @@ const EXCHANGE_MONTH_LIMIT = 5;
 const EXCHANGE_DAY_FROM = 1;   // 每月可兑换起始日
 const EXCHANGE_DAY_TO = 10;    // 每月可兑换截止日
 const MAKEUP_WINDOW_DAYS = 30; // 补签范围（过去N天）
-const MAKEUP_MAX_CONSECUTIVE = 3; // 连补最多天数
 // 奖励
 const FIRST_SIGN_POINTS = 5;   // 首签奖励
 const GOAL_BASE_POINTS = 25;   // 首轮目标奖励
@@ -267,8 +266,7 @@ async function calcMakeupDays(userId, signin, todayStr, now) {
     }
     day = addDays(day, 1);
   }
-  // 从最早开始，最多取 MAX 个
-  return makeupDays.slice(0, MAKEUP_MAX_CONSECUTIVE);
+  return makeupDays;
 }
 
 // ---------- action: sign ----------
@@ -506,12 +504,14 @@ async function actionExchange(event, openid) {
 }
 
 // ---------- action: useCard ----------
-// 补签：从最早漏签日开始，连补最多3天
+// 补签：用户指定补签某一天
 async function actionUseCard(event, openid) {
   const userId = await getUserIdByOpenid(openid);
   if (!userId) return { ok: false, code: 'NO_USER', msg: '用户不存在' };
   const cardId = event.cardId;
   if (!cardId) return { ok: false, code: 'NO_CARD', msg: '补签卡不存在' };
+  const targetDate = event.targetDate; // 用户选择要补签的日期
+  if (!targetDate) return { ok: false, code: 'NO_TARGET', msg: '请选择要补签的日期' };
   const now = new Date();
   const todayStr = fmtDate(now);
 
@@ -529,22 +529,19 @@ async function actionUseCard(event, openid) {
       return { ok: false, code: 'CARD_INVALID', msg: '补签卡不可用或已过期' };
     }
 
-    let signin;
-    try {
-      signin = (await transaction.collection('user_signin').doc(userId).get()).data;
-    } catch (e) {
-      signin = { continuous_days: 0, last_sign_date: '', cycle_start_date: '' };
-    }
-
-    // 计算可补签的漏签日
-    const makeupDays = await calcMakeupDaysTxn(transaction, userId, signin, todayStr, now);
-    if (makeupDays.length === 0) {
+    // 校验目标日期：过去30天内、且当天确实漏签
+    const fromDate = addDays(todayStr, -MAKEUP_WINDOW_DAYS);
+    if (targetDate < fromDate || targetDate >= todayStr) {
       await transaction.rollback();
-      return { ok: false, code: 'NO_MAKEUP_DAY', msg: '没有可补签的漏签日' };
+      return { ok: false, code: 'DATE_OUT_OF_RANGE', msg: '只能补签过去30天内的漏签日' };
+    }
+    const dup = await transaction.collection('signin_detail')
+      .where({ userId, sign_date: targetDate }).get();
+    if (dup.data && dup.data.length > 0) {
+      await transaction.rollback();
+      return { ok: false, code: 'DUP', msg: '该日期已签到，无需补签' };
     }
 
-    // 补签最早的一天
-    const targetDate = makeupDays[0];
     const base = 1;
 
     await transaction.collection('makeup_card').doc(cardId).update({
@@ -569,14 +566,26 @@ async function actionUseCard(event, openid) {
       data: { points: _.inc(base) },
     });
 
-    // 补签不影响 last_sign_date / continuous_days（只是补齐历史）
+    // 补签后重算连续天数
+    let signin;
+    try {
+      signin = (await transaction.collection('user_signin').doc(userId).get()).data;
+    } catch (e) {
+      signin = { continuous_days: 0, last_sign_date: '', cycle_start_date: '' };
+    }
+    const recalc = await recalcContinuousTxn(transaction, userId, signin.last_sign_date || '', todayStr);
     await transaction.collection('user_signin').doc(userId).update({
-      data: { total_score: _.inc(base), updated_at: now },
+      data: {
+        total_score: _.inc(base),
+        continuous_days: recalc.continuous,
+        max_continuous_days: Math.max(signin.max_continuous_days || 0, recalc.continuous),
+        updated_at: now,
+      },
     });
 
     await transaction.commit();
     const usable = await countUsableCards(userId, now);
-    return { ok: true, base, makeup_date: targetDate, usable_cards: usable };
+    return { ok: true, base, makeup_date: targetDate, continuous: recalc.continuous, usable_cards: usable };
   } catch (err) {
     try { await transaction.rollback(); } catch (e) { /* 忽略 */ }
     console.error('useCard error', err);
@@ -584,21 +593,28 @@ async function actionUseCard(event, openid) {
   }
 }
 
-async function calcMakeupDaysTxn(transaction, userId, signin, todayStr, now) {
-  const fromDate = addDays(todayStr, -MAKEUP_WINDOW_DAYS);
+// 重算连续天数：从今天往前，连续签到的天数（含补签）
+// 基准日 lastSignDate 为最近一次签到日（今天或昨天等）
+async function recalcContinuousTxn(transaction, userId, lastSignDate, todayStr) {
+  // 收集最近90天的签到日期
+  const fromDate = addDays(todayStr, -90);
   const detRes = await transaction.collection('signin_detail')
     .where({ userId, sign_date: _.gte(fromDate).and(_.lte(todayStr)) })
     .field({ sign_date: true }).get();
   const signedSet = new Set((detRes.data || []).map(d => d.sign_date));
 
-  const days = [];
-  let day = fromDate;
-  const yesterday = addDays(todayStr, -1);
-  while (day <= yesterday) {
-    if (!signedSet.has(day)) days.push(day);
-    day = addDays(day, 1);
+  // 从基准日开始往前数连续天数
+  let start = lastSignDate || todayStr;
+  // 如果基准日没签到（异常），用今天
+  if (!signedSet.has(start)) start = todayStr;
+
+  let continuous = 0;
+  let day = start;
+  while (signedSet.has(day)) {
+    continuous++;
+    day = addDays(day, -1);
   }
-  return days.slice(0, MAKEUP_MAX_CONSECUTIVE);
+  return { continuous };
 }
 
 async function countUsableCards(userId, now) {

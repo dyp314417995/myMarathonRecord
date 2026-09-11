@@ -49,7 +49,7 @@ function doSign(useCard) {
 }
 function getCards() { return call('cards'); }
 function exchangeCard() { return call('exchange'); }
-function useCard(cardId) { return call('useCard', { cardId }); }
+function useCard(cardId, targetDate) { return call('useCard', { cardId, targetDate }); }
 
 module.exports = {
   call, getInfo, doSign, getCards, exchangeCard, useCard,

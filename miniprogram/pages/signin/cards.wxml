@@ -3,7 +3,7 @@
   <view class="summary card">
     <text class="summary-num">{{usable}}</text>
     <text class="summary-label">张可用补签卡</text>
-    <text class="summary-tip">可补过去30天内漏签 · 连补最多3天 · 有效期30天</text>
+    <text class="summary-tip">可补过去30天内漏签 · 有效期30天</text>
   </view>
 
   <view class="section-title">我的补签卡</view>
@@ -25,4 +25,19 @@
       </view>
     </view>
   </block>
+</view>
+
+<!-- 选择补签日期弹窗 -->
+<view wx:if="{{showPickDate}}" class="mask" bindtap="onHidePickDate">
+  <view class="modal" catchtap="noop">
+    <text class="modal-title">选择要补签的日期</text>
+    <view class="date-list">
+      <view class="date-item" wx:for="{{makeupDays}}" wx:key="date" data-date="{{item.date}}" bindtap="onPickDate">
+        <text class="date-label">{{item.label}}</text>
+        <text class="date-arrow">补签 ›</text>
+      </view>
+      <view wx:if="{{makeupDays.length === 0}}" class="date-empty">没有可补签的漏签日</view>
+    </view>
+    <button class="btn-cancel" bindtap="onHidePickDate">取消</button>
+  </view>
 </view>
