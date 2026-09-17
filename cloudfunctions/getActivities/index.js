@@ -7,6 +7,12 @@ const _ = db.command;
 exports.main = async (event) => {
   const { action, id, data, userId, skip, limit } = event || {};
 
+  // 定时触发器入口（每天 03:00 自动跑 autoFinish，不依赖用户访问），也可手动传 { autoFinishSweep: true }
+  if (event && (event.TriggerName === 'autoFinishActivitySweep' || event.autoFinishSweep === true)) {
+    const r = await autoFinish();
+    return { ok: true, source: 'trigger', time: new Date().toISOString(), ...r };
+  }
+
   if (action === 'create') {
     return await db.collection('activities').add({ data: { ...data, status: 'active', createTime: new Date() } });
   }
@@ -19,8 +25,8 @@ exports.main = async (event) => {
     return { ok: true };
   }
   if (action === 'finish') {
-    const count = await finishActivity(id);
-    return { ok: true, awarded: count };
+    const result = await finishActivity(id);
+    return { ok: true, awarded: result.awarded || 0, failed: result.failed || 0, total: result.total || 0 };
   }
   if (action === 'delete') {
     await db.collection('activities').doc(id).remove();
@@ -33,20 +39,39 @@ exports.main = async (event) => {
   }
 
   // 共用：自动完成已结束的活动
+  // 触发：① 定时器（每天 03:00，不依赖用户访问）；② 用户进入活动列表（list/all/my 三个 action 内调用）
   async function autoFinish() {
     const now = new Date();
     const expired = await db.collection('activities')
-      .where({ status: 'active', timeEnd: _.exists(true).and(_.lt(now)) }).get();
-    for (const a of expired.data) {
-      await finishActivity(a._id);
+      .where({ status: 'active', timeEnd: _.lt(new Date().toISOString()) }).get();
+    const list = expired.data || [];
+    let swept = 0;
+    let failed = 0;
+    const details = [];
+    for (const a of list) {
+      try {
+        const r = await finishActivity(a._id);
+        swept++;
+        if (r && r.failed > 0) {
+          failed++;
+          details.push({ activityId: a._id, name: a.name, failed: r.failed, awarded: r.awarded, total: r.total });
+        } else if (r && r.awarded > 0) {
+          details.push({ activityId: a._id, name: a.name, awarded: r.awarded, total: r.total });
+        }
+      } catch (e) {
+        failed++;
+        console.error('[autoFinish] finish failed for', a._id, e);
+        details.push({ activityId: a._id, name: a.name, error: (e && e.message) || String(e) });
+      }
     }
+    return { swept, failed, total: list.length, details };
   }
 
-  // 列表：所有进行中的活动
+  // 列表：返回全部状态活动（含已结束/已取消），由前端按 stateTag + filterIdx 筛选
   if (action === 'list') {
     await autoFinish();
     const now = new Date();
-    const query = db.collection('activities').where({ status: 'active' }).orderBy('timeStart', 'asc');
+    const query = db.collection('activities').orderBy('timeStart', 'asc');
     const totalRes = await query.count();
     const res = await query.skip(skip || 0).limit(limit || 20).get();
     const ids = res.data.map(a => a._id);
@@ -191,22 +216,34 @@ async function getCollectivePoints() {
 async function finishActivity(activityId) {
   await db.collection('activities').doc(activityId).update({ data: { status: 'finished' } });
   const act = await db.collection('activities').doc(activityId).get();
-  const regs = await db.collection('activity_registrations').where({ activityId, status: 'active' }).get();
+  // 幂等：只发从未发过分的人（rewarded!=true）。重复 finish / autoFinish 不会重发
+  const regs = await db.collection('activity_registrations')
+    .where({ activityId, status: 'active', rewarded: _.neq(true) }).get();
   const points = await getCollectivePoints();
   // 规则未启用（禁用/删除/未配置）时不发积分
   if (points <= 0) return 0;
+  let awarded = 0;
+  let failed = 0;
   for (const r of regs.data) {
-    await db.collection('points_records').add({
-      data: {
-        userId: r.userId, type: 'earn', category: '集体活动', points,
-        description: `参加活动：${act.data.name}`, status: 'approved',
-        createTime: new Date(), earnDate: new Date(),
-        expireDate: new Date(Date.now() + 365 * 86400000),
-      },
-    });
-    const user = await db.collection('users').doc(r.userId).get();
-    const balance = (user.data.points || 0) + points;
-    await db.collection('users').doc(r.userId).update({ data: { points: balance } });
+    try {
+      await db.collection('points_records').add({
+        data: {
+          userId: r.userId, type: 'earn', category: '集体活动', points,
+          description: `参加活动：${act.data.name}`, status: 'approved',
+          createTime: new Date(), earnDate: new Date(),
+          expireDate: new Date(Date.now() + 365 * 86400000),
+        },
+      });
+      // 原子自增，避免并发 finish 时覆盖丢失
+      await db.collection('users').doc(r.userId).update({ data: { points: _.inc(points) } });
+      // 标记已发放，下次重复触发不再处理
+      await db.collection('activity_registrations').doc(r._id).update({ data: { rewarded: true, rewardedAt: new Date() } });
+      awarded++;
+    } catch (e) {
+      failed++;
+      // 单条失败不影响其他用户（修复原 bug：循环里没有 try/catch，首个错误会导致全员不发）
+      console.error('[finishActivity] skip reg', r._id, r.userId, e);
+    }
   }
-  return regs.data.length;
+  return { awarded, failed, total: regs.data.length };
 }

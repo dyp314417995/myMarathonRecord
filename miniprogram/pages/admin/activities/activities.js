@@ -84,15 +84,18 @@ Page({
   onHideForm() { this.setData({ showForm: false }); },
   onAdd() {
     const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    // 默认开始 7:00，结束 9:00，截止 6:00
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const fmtT = (d) => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    // 默认开始=现在；结束=明天同一时刻；截止=结束前一小时
+    const end = new Date(now.getTime() + 24 * 3600 * 1000);
+    const deadline = new Date(end.getTime() - 3600 * 1000);
     this.setData({
       showForm: true, editingId: '', tmpImages: [],
       form: {
         name: '', location: '', fee: '', maxPeople: '', images: [], description: '', customFields: [],
-        timeStartDate: today, timeStartTime: '07:00',
-        timeEndDate: today, timeEndTime: '09:00',
-        deadlineDate: today, deadlineTime: '06:00',
+        timeStartDate: fmt(now), timeStartTime: fmtT(now),
+        timeEndDate: fmt(end), timeEndTime: fmtT(end),
+        deadlineDate: fmt(deadline), deadlineTime: fmtT(deadline),
       },
     });
   },
@@ -163,22 +166,23 @@ Page({
   onDate(e) {
     const { k } = e.currentTarget.dataset;
     const updates = { ['form.' + k]: e.detail.value };
-    // 开始时间变化 → 自动调整结束和截止
-    if (k === 'timeStartTime') {
-      const [h, m] = e.detail.value.split(':').map(Number);
-      // 结束 = 开始 + 2h
-      const endH = (h + 2) % 24;
-      updates['form.timeEndTime'] = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      updates['form.timeEndDate'] = this.data.form.timeStartDate;
-      // 截止 = 开始 - 1h
-      let deadH = h - 1, deadDate = this.data.form.timeStartDate;
-      if (deadH < 0) { deadH = 23; }
-      updates['form.deadlineTime'] = `${String(deadH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      updates['form.deadlineDate'] = deadDate;
-    }
-    if (k === 'timeStartDate') {
-      updates['form.timeEndDate'] = e.detail.value;
-      updates['form.deadlineDate'] = e.detail.value;
+    const f = this.data.form;
+    // 时间联动：开始 → 结束（+24h）、截止（结束 -1h）
+    if (k === 'timeStartTime' || k === 'timeStartDate') {
+      const parse = (d, t) => {
+        const [Y, M, D] = d.split('-').map(Number);
+        const [h, m] = (t || '00:00').split(':').map(Number);
+        return new Date(Y, M - 1, D, h, m);
+      };
+      const start = parse(f.timeStartDate, f.timeStartTime);
+      const end = new Date(start.getTime() + 24 * 3600 * 1000);
+      const deadline = new Date(end.getTime() - 3600 * 1000);
+      const fmtD = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const fmtT = (d) => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      updates['form.timeEndDate'] = fmtD(end);
+      updates['form.timeEndTime'] = fmtT(end);
+      updates['form.deadlineDate'] = fmtD(deadline);
+      updates['form.deadlineTime'] = fmtT(deadline);
     }
     this.setData(updates);
   },
@@ -303,8 +307,16 @@ Page({
     const id = e.currentTarget.dataset.id;
     wx.showModal({ title: '完成活动', content: '确认后将发放积分', success: async (res) => {
       if (!res.confirm) return;
-      await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'finish', id } });
-      wx.showToast({ title: '已完成', icon: 'success' });
+      wx.showLoading({ title: '发放中' });
+      const r = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'finish', id } });
+      wx.hideLoading();
+      const result = (r && r.result) || {};
+      const { awarded = 0, failed = 0, total = 0 } = result;
+      let title;
+      if (total === 0) title = '已无待发放报名';
+      else if (failed === 0) title = `已完成，发放 ${awarded} 人`;
+      else title = `已完成，发放 ${awarded}/${total}（${failed} 失败）`;
+      wx.showModal({ title, content: failed > 0 ? '请前往云开发控制台查看活动报名 userId 是否与 users._id 一致' : '', showCancel: false, confirmText: '知道了' });
       this.onShow();
     }});
   },
@@ -327,24 +339,6 @@ Page({
     this.setData({ showRegs: true, regList: (res.result || {}).list || [], regActId: id });
   },
   onHideRegs() { this.setData({ showRegs: false }); },
-  async onShare(e) {
-    const { id, qr } = e.currentTarget.dataset;
-    if (qr) {
-      this.setData({ showQR: true, qrImage: qr });
-      return;
-    }
-    wx.showLoading({ title: '生成中' });
-    const res = await wx.cloud.callFunction({ name: 'genActivityQR', data: { activityId: id } });
-    wx.hideLoading();
-    if (res.result && res.result.fileID) {
-      await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'update', id, data: { qrcode: res.result.fileID } } });
-      this.setData({ showQR: true, qrImage: res.result.fileID });
-      this.onShow();
-    } else {
-      wx.showToast({ title: '生成失败', icon: 'none' });
-    }
-  },
-  onHideQR() { this.setData({ showQR: false }); },
 
   onViewDetail(e) {
     wx.navigateTo({ url: `/pages/tools/activity/detail?id=${e.currentTarget.dataset.id}&from=admin` });
