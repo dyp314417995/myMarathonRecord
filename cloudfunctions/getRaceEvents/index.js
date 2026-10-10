@@ -17,7 +17,7 @@ const db = cloud.database();
 const _ = db.command;
 
 exports.main = async (event) => {
-  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published', sortBy = 'date', action } = event || {};
+  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published', sortBy = 'date', action, adminProvinces, qrFilter } = event || {};
   const wxContext = cloud.getWXContext();
   // ===== action: 同步/回填标记人数（markerCount 预计算字段，热度排序用） =====
   if (action === 'syncMarkerCount') {
@@ -108,6 +108,24 @@ exports.main = async (event) => {
 
   // 全站不再做越野赛事：历史自动采集的越野数据也一并过滤
   conds.push(_.nor([{ raceTypes: 'trail' }, { raceType: 'trail' }]));
+
+  // 省份筛选（管理员专属）：空/null/undefined 不过滤；非空时 province in adminProvinces
+  if (Array.isArray(adminProvinces) && adminProvinces.length > 0) {
+    conds.push({ province: _.in(adminProvinces) });
+  }
+
+  // 二维码筛选（v2.7）：
+  //   missing  → 还没上传二维码（字段不存在或为空字符串或 null）
+  //   expired  → 二维码存在但更新时间 7 天以前
+  if (qrFilter === 'missing') {
+    conds.push(_.or([{ qrCode: _.exists(false) }, { qrCode: '' }, { qrCode: null }]));
+  } else if (qrFilter === 'expired') {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    conds.push(_.and([
+      _.or([{ qrCode: _.exists(true) }, { qrCode: _.neq('') }]),
+      { qrCodeUpdatedAt: _.lt(sevenDaysAgo) },
+    ]));
+  }
 
   const query = conds.length ? _.and(conds) : {};
 

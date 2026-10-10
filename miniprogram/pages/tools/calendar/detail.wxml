@@ -53,7 +53,6 @@
   <!-- 时间轴 -->
   <view class="card" wx:if="{{event.timeline && event.timeline.length > 0}}">
     <view class="section-title"><text>⏱ 赛事时间轴</text></view>
-    <view class="timeline">
       <view class="tl-item {{t.status}}" wx:for="{{event.timeline}}" wx:key="label" wx:for-item="t" wx:if="{{index < 5 || showAllTimeline}}">
         <view class="tl-dot">
           <text wx:if="{{t.status === 'past'}}">🚩</text>
@@ -72,7 +71,6 @@
       <view wx:if="{{event.timeline && event.timeline.length > 5}}" class="tl-toggle" bindtap="onToggleTimeline">
         <text>{{showAllTimeline ? '收起时间轴 ▲' : '展开全部 (' + event.timeline.length + '项) ▼'}}</text>
       </view>
-    </view>
   </view>
 
   <!-- 评分概览 -->
@@ -225,6 +223,19 @@
   </view>
   <view class="card" wx:elif="{{!isMine}}">
     <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">⭐ 关注赛事</view>
+  </view>
+
+  <!-- 二维码异常：通知负责人 -->
+  <view class="card qr-notice" wx:if="{{qrStatus === 'expired' || qrStatus === 'none'}}">
+    <view class="section-title">
+      <text>{{qrStatus === 'expired' ? '⚠️ 群二维码已过期' : '📭 该赛事还未上传群二维码'}}</text>
+    </view>
+    <view class="qr-notice-text">
+      {{qrStatus === 'expired' ? '发现二维码已过期？点击通知负责该省的管理员尽快更新' : '还没看到群二维码？点击通知负责该省的管理员尽快上传'}}
+    </view>
+    <view class="qr-notice-btn {{notifyingOwner ? 'disabled' : ''}}" catchtap="onNotifyOwner">
+      <text>{{notifyingOwner ? '通知中…' : '🔔 通知负责人处理'}}</text>
+    </view>
   </view>
 
   <!-- 自定义关注操作面板 -->

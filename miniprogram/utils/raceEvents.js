@@ -22,6 +22,8 @@ async function getAll(params = {}) {
   if (params.userId !== undefined) data.userId = params.userId;
   if (params.publishFilter !== undefined) data.publishFilter = params.publishFilter;
   if (params.sortBy !== undefined) data.sortBy = params.sortBy;
+  if (params.adminProvinces !== undefined) data.adminProvinces = params.adminProvinces;
+  if (params.qrFilter !== undefined) data.qrFilter = params.qrFilter;
   const res = await wx.cloud.callFunction({ name: 'getRaceEvents', data });
   return res.result || { list: [], total: 0, hasMore: false };
 }

@@ -4,7 +4,7 @@
 #   powershell -File race-data\auto_import.ps1          # 增量拉取（表格没变就退出）
 #   powershell -File race-data\auto_import.ps1 -Force    # 强制全量拉取
 #   powershell -File race-data\auto_import.ps1 -Invoke   # 上传后触发云函数导入
-# 前置: TCB CLI 已登录（.codex\tcbhome），云存储 races_import.json 已存在
+# 前置: .codex\tcb-credentials.ps1 已配置腾讯云 API 密钥，云存储 races_import.json 已存在
 # ============================================================
 param(
   [switch]$Force,     # 强制全量拉取（忽略 rev 判断）
@@ -19,8 +19,17 @@ $EnvId = 'cloud1-d5gy0iuiba5f9300f'
 $JsonPath = Join-Path $PSScriptRoot 'races_import.json'
 $CloudFileID = 'cloud://cloud1-d5gy0iuiba5f9300f.636c-cloud1-d5gy0iuiba5f9300f-1430408608/races_import.json'
 
-# 使用项目内 TCB home（避免写用户目录）
-$env:HOME = Join-Path $ProjectRoot '.codex\tcbhome'
+# 长期方案：用腾讯云 API 密钥免登录（不随 2 小时登录态过期）
+$SecretFile = Join-Path $ProjectRoot '.codex\tcb-credentials.ps1'
+if (-not (Test-Path $SecretFile)) {
+  Write-Host "缺少密钥文件: $SecretFile" -ForegroundColor Red
+  Write-Host "请在 .codex\tcb-credentials.ps1 中配置 TENCENTCLOUD_SECRETID / TENCENTCLOUD_SECRETKEY" -ForegroundColor Yellow
+  exit 1
+}
+. $SecretFile
+
+# 使用独立的 TCB home，避免残留的过期登录态覆盖环境变量密钥
+$env:HOME = Join-Path $ProjectRoot '.codex\tcbhome-key'
 $env:CLOUDBASE_HOME = $env:HOME
 
 Set-Location $ProjectRoot

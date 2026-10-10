@@ -1,33 +1,48 @@
-// pages/admin/races/races.js - 赛事管理
+// pages/admin/races/races.js - 赛事管理（v2.7：加省份/二维码、二维码筛选）
 const raceUtil = require('../../../utils/raceEvents');
+const cityData = require('../../../utils/city-data');
+const ALL_PROVINCES = cityData.map(p => p.name);
 
 Page({
   data: {
     isAdmin: false,
+    isSuperAdmin: false,
+    role: '',
+    userId: '',
+    adminProvinces: [],         // 当前管理员负责的省份（空数组=全国）
     raceList: [],
-    allRaceList: [],        // 未筛选的完整列表
+    allRaceList: [],            // 未筛选的完整列表
     adminSearch: '', adminType: '', adminLevel: '', adminLabel: '', adminRegStatus: '',
-    adminYearSel: new Date().getFullYear(),  // 年份筛选
-    adminMonthSel: 0,                        // 0=全年 | 1-12=指定月
+    adminYearSel: new Date().getFullYear(),
+    adminMonthSel: 0,
+    // 二维码筛选
+    qrScope: 'all',             // all | my | missing | expired
+    provinceScope: 'my',        // my 仅看我负责的；all 全部
     showQR: false, qrFileID: '', sharingRaceName: '', sharingRaceInfo: {},
-    showQRText: true, // 合成海报后隐藏重复文字
-    nameDupStatus: '', // '' | 'checking' | 'ok' | 'dup'
+    showQRText: true,
+    nameDupStatus: '',
     showPoster: false, posterIdx: 0, posterPreviewUrl: '',
     typeFull: true, typeHalf: false, type10k: false,
     showForm: false,
     gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
     zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
     editingId: '',
-    form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
+    form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [], qrCode: '', qrCodeUpdatedAt: null },
     posterTemp: [],
-    showPaste: false,    // 粘贴全文面板
-    pasteText: '',       // 粘贴的全文
-    parsing: false,      // 解析中
-    // 评价管理
+    showPaste: false,
+    pasteText: '',
+    parsing: false,
     showReviews: false,
     reviewEventId: '',
     reviewEventName: '',
     reviewList: [],
+    // 省份 / 二维码
+    allProvinces: ALL_PROVINCES,
+    showProvincePicker: false,
+    provinceSearchKey: '',
+    provincePickerItems: ALL_PROVINCES,
+    formQrUrl: '',         // 表单中二维码预览 URL
+    formQrUpdatedAtText: '', // 当前表单中二维码的上传时间（精确到天，不强制展示）
     timelineNodes: [
       { label: '报名开启', date: '', time: '12:00' },
       { label: '报名截止', date: '', time: '12:00' },
@@ -44,34 +59,171 @@ Page({
   mechanisms: ['抽签', '先到先得'],
   payments: ['报名时缴费', '中签后缴费'],
 
-  onShow() {
+  async onShow() {
     const userInfo = wx.getStorageSync('userInfo') || {};
     const role = userInfo.role || 'user';
-    this.setData({ isAdmin: role === 'super_admin' || role === 'admin', tab: 'races', adminPage: 0, adminHasMore: true, allRaceList: [], raceList: [] });
-    if (this.data.isAdmin) this.loadRaces();
+    const userId = userInfo._id || '';
+    // 默认 provinceScope：根据角色决定
+    const provinceScope = role === 'super_admin' ? 'all' : 'my';
+    this.setData({
+      isAdmin: role === 'super_admin' || role === 'admin',
+      isSuperAdmin: role === 'super_admin',
+      role, userId,
+      tab: 'races', adminPage: 0, adminHasMore: true, allRaceList: [], raceList: [],
+      qrScope: 'all',
+      provinceScope,
+    });
+    if (this.data.isAdmin) {
+      // 获取管理员负责省份
+      const provinces = await this.fetchAdminProvinces(userId, role);
+      // 拉所有 active 管理员（按 province 分组），用于赛事列表"负责人"派生展示
+      const { map, nameMap } = await this.fetchProvinceAdminMap();
+      this.setData({ adminProvinces: provinces, provinceAdminMap: map, adminNameMap: nameMap });
+      this.loadRaces();
+    }
+  },
+
+  // 取当前用户的负责省份：超管=全国[]；普通管理员=admins 表对应行的 provinces
+  async fetchAdminProvinces(userId, role) {
+    if (role === 'super_admin') return []; // 空=全国
+    if (!userId) return [];
+    try {
+      const dbUtil = require('../../../utils/db');
+      const res = await dbUtil.db.collection('admins')
+        .where({ userId, status: 'active' })
+        .orderBy('createTime', 'desc').limit(1).get();
+      const a = res.data && res.data[0];
+      if (!a) return [];
+      return Array.isArray(a.provinces) ? a.provinces : [];
+    } catch (e) { console.warn('fetchAdminProvinces failed', e); return []; }
+  },
+
+  // 取所有 active 管理员：返回 { province -> [{userId, userName}], '全国' -> [...] }
+  // 用于赛事列表/详情按 province 自动带出负责人
+  async fetchProvinceAdminMap() {
+    try {
+      const dbUtil = require('../../../utils/db');
+      const now = new Date();
+      const _ = dbUtil._;
+      // 1. 拉所有 active 管理员
+      const adminRes = await dbUtil.db.collection('admins').where({
+        status: 'active',
+        validFrom: _.lte(now),
+        validTo: _.gte(now),
+      }).get();
+      const admins = adminRes.data || [];
+      if (!admins.length) return { map: {}, nameMap: {} };
+
+      // 2. 批量查 user 信息（nickName）
+      const userIds = [...new Set(admins.map(a => a.userId).filter(Boolean))];
+      const nameMap = {};
+      // 分批查（每批 20）
+      for (let i = 0; i < userIds.length; i += 20) {
+        const part = userIds.slice(i, i + 20);
+        try {
+          const q = await dbUtil.db.collection('users').where({ _id: _.in(part) }).field({ nickName: true }).get();
+          (q.data || []).forEach(u => { nameMap[u._id] = u.nickName || '管理员'; });
+        } catch {}
+      }
+
+      // 3. 按 province 分组
+      const map = {};
+      admins.forEach(a => {
+        const provinces = Array.isArray(a.provinces) ? a.provinces : [];
+        const entry = { userId: a.userId, userName: nameMap[a.userId] || '管理员' };
+        if (provinces.length === 0) {
+          // provinces=[] 视为负责全国
+          if (!map['__all__']) map['__all__'] = [];
+          map['__all__'].push(entry);
+        } else {
+          provinces.forEach(p => {
+            if (!map[p]) map[p] = [];
+            map[p].push(entry);
+          });
+        }
+      });
+      // 兜底：未匹配的省自动继承"全国"组
+      map['__all__'] = map['__all__'] || [];
+      return { map, nameMap };
+    } catch (e) {
+      console.warn('fetchProvinceAdminMap failed', e);
+      return { map: {}, nameMap: {} };
+    }
+  },
+
+  // 从 map 中取赛事负责人（按 province）
+  resolveOwners(province, map) {
+    if (!map) return [];
+    const direct = (map[province] || []);
+    if (direct.length) return direct;
+    // 兜底：省未匹配时用"全国"组
+    return map['__all__'] || [];
   },
 
   async loadRaces() {
-    const userInfo = wx.getStorageSync('userInfo');
-    const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
+    const { userId, adminProvinces, provinceScope } = this.data;
     const skip = this.data.adminPage * 20;
     const search = this.data.adminSearch || '';
     const dateRange = this.calcAdminDateRange();
-    const res = await raceUtil.getAll({ skip, limit: 20, userId, search: search || undefined, publishFilter: 'all', dateFrom: dateRange.from, dateTo: dateRange.to });
+    const params = {
+      skip, limit: 20,
+      userId,
+      search: search || undefined,
+      publishFilter: 'all',
+      dateFrom: dateRange.from,
+      dateTo: dateRange.to,
+    };
+    // 我负责的省份：传入 adminProvinces（仅 provinceScope==='my' 时）；否则传空数组=全国
+    if (provinceScope === 'my') params.adminProvinces = adminProvinces;
+    else params.adminProvinces = []; // 全选
+    // 二维码筛选
+    if (this.data.qrScope === 'missing') params.qrFilter = 'missing';
+    else if (this.data.qrScope === 'expired') params.qrFilter = 'expired';
+    // else all：不加过滤
+
+    const res = await raceUtil.getAll(params);
     const all = res.list;
     all.forEach(r => {
       if (r.raceType && !r.raceTypes) r.raceTypes = [r.raceType];
       if (!r.raceTypes || !r.raceTypes.length) r.raceTypes = ['full'];
     });
-    const list = all.map(r => ({
-      ...r, fmtDate: this.fmtDate(r.date),
-      raceTypesStr: r.raceTypes.map(t => ({ full: '全马', half: '半马', '10k': '10K' }[t] || t)).join('/'),
-      countdown: this.calcCountdown(r.date, r.status, r.timeline, r.gunTimes),
-      publishStatus: r.publishStatus || 'published',
-    }));
-        const merged = skip === 0 ? list : [...this.data.allRaceList, ...list];
+    const list = all.map(r => {
+      const owners = this.resolveOwners(r.province, this.data.provinceAdminMap);
+      return {
+        ...r,
+        fmtDate: this.fmtDate(r.date),
+        raceTypesStr: r.raceTypes.map(t => ({ full: '全马', half: '半马', '10k': '10K' }[t] || t)).join('/'),
+        countdown: this.calcCountdown(r.date, r.status, r.timeline, r.gunTimes),
+        publishStatus: r.publishStatus || 'published',
+        qrStatus: this.calcQrStatus(r.qrCode, r.qrCodeUpdatedAt),
+        qrStatusText: this.calcQrStatusText(r.qrCode, r.qrCodeUpdatedAt),
+        responsibleAdminName: owners.length ? owners.map(o => o.userName).join('、') : '未分配',
+        responsibleAdminCount: owners.length,
+      };
+    });
+    const merged = skip === 0 ? list : [...this.data.allRaceList, ...list];
     this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
     this.applyAdminFilter();
+  },
+
+  // 计算二维码状态：none / fresh(<3d) / ok(<7d) / expired(>=7d)
+  calcQrStatus(qrCode, qrCodeUpdatedAt) {
+    if (!qrCode || qrCode === '') return 'none';
+    if (!qrCodeUpdatedAt) return 'ok';
+    const ts = (qrCodeUpdatedAt instanceof Date ? qrCodeUpdatedAt : new Date(qrCodeUpdatedAt)).getTime();
+    const days = (Date.now() - ts) / 86400000;
+    if (days >= 7) return 'expired';
+    if (days >= 3) return 'ok';
+    return 'fresh';
+  },
+  calcQrStatusText(qrCode, qrCodeUpdatedAt) {
+    if (!qrCode || qrCode === '') return '无二维码';
+    if (!qrCodeUpdatedAt) return '已上传';
+    const ts = (qrCodeUpdatedAt instanceof Date ? qrCodeUpdatedAt : new Date(qrCodeUpdatedAt)).getTime();
+    const days = Math.floor((Date.now() - ts) / 86400000);
+    if (days >= 7) return `已过期 ${days} 天`;
+    if (days === 0) return '今日上传';
+    return `${days} 天前上传`;
   },
 
   calcAdminDateRange() {
@@ -103,7 +255,6 @@ Page({
 
   applyAdminFilter() {
     let list = [...this.data.allRaceList];
-    // 方案B：全部已发布，无草稿过滤
     if (this.data.adminSearch) list = list.filter(r => (r.name||'').includes(this.data.adminSearch));
     if (this.data.adminType) list = list.filter(r => (r.raceTypes || [r.raceType]).includes(this.data.adminType));
     if (this.data.adminLevel) list = list.filter(r => r.raceLevel === this.data.adminLevel);
@@ -125,10 +276,18 @@ Page({
     this.applyAdminFilter();
   },
 
-  // 点击卡片跳用户详情
+  // 二维码/省份维度的过滤
+  onQrScope(e) {
+    const v = e.currentTarget.dataset.v;
+    this.setData({ qrScope: this.data.qrScope === v ? 'all' : v, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
+  },
+  onProvinceScope(e) {
+    const v = e.currentTarget.dataset.v;
+    this.setData({ provinceScope: this.data.provinceScope === v ? 'my' : v, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
+  },
+
   onRaceDetailAdmin(e) {
     const id = e.currentTarget.dataset.id;
-    const r = this.data.raceList.find(x => x._id === id);
     wx.navigateTo({ url: `/pages/tools/calendar/detail?id=${id}` });
   },
 
@@ -136,7 +295,6 @@ Page({
     const now = new Date();
     const toDate = (v) => v instanceof Date ? v : new Date(v);
 
-    // 找最早发枪时间
     let firstGun = null;
     if (gunTimes && gunTimes.length) {
       gunTimes.forEach(g => {
@@ -148,7 +306,6 @@ Page({
       });
     }
 
-    // 优先找最近的下一个时间节点（含发枪时间）
     let nearestLabel = '', nearestMs = Infinity;
     if (timeline && timeline.length) {
       timeline.forEach(t => {
@@ -199,18 +356,20 @@ Page({
     this.setData({
       showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false, nameDupStatus: '',
       typeFull: true, typeHalf: false, type10k: false,
-      form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [] },
+      form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [], qrCode: '', qrCodeUpdatedAt: null },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
-    zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
+      zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
+      formQrUrl: '', formQrUpdatedAtText: '',
+      showProvincePicker: false, provinceSearchKey: '',
       timelineNodes: [
         { label: '报名开启', date: '', time: '12:00' }, { label: '报名截止', date: '', time: '12:00' }, { label: '退费截止', date: '', time: '12:00' },
         { label: '出签时间', date: '', time: '12:00' }, { label: '缴费截止', date: '', time: '12:00' }, { label: '候补时间', date: '', time: '12:00' },
         { label: '二抽出签', date: '', time: '12:00' }, { label: '鸣枪开跑', date: '', time: '07:00' },
-      ]
+      ],
     });
   },
 
-  onEdit(e) {
+  async onEdit(e) {
     const r = this.data.raceList.find(x => x._id === e.currentTarget.dataset.id);
     if (!r) return;
     const existingTimeline = (r.timeline || []).map(t => {
@@ -228,12 +387,10 @@ Page({
         node.date = found.date;
         node.time = found.time ?? (node.label === '鸣枪开跑' ? '07:00' : '12:00');
       } else {
-        // 不在 timeline 中说明被清掉了，保持空
         node.date = '';
         node.time = '';
       }
     });
-    // 如果 timeline 中没有鸣枪开跑，用赛事日期填充
     const gunNode = tNodes[tNodes.length - 1];
     if (!gunNode.date && r.date) {
       gunNode.date = this.fmtDate(r.date);
@@ -252,13 +409,25 @@ Page({
           } catch { this.setData({ posterTemp: initPosters }); }
         } else { this.setData({ posterTemp: initPosters }); }
       }
+      // 二维码预览
+      if (r.qrCode && r.qrCode.startsWith('cloud://')) {
+        try {
+          const ur = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [r.qrCode] } });
+          const tUrl = (ur.result || [])[0] && (ur.result || [])[0].tempFileURL;
+          if (tUrl) this.setData({ formQrUrl: tUrl });
+        } catch { /* ignore */ }
+      } else if (r.qrCode) {
+        this.setData({ formQrUrl: r.qrCode });
+      }
     })();
     this.setData({
       showForm: true, editingId: r._id, nameDupStatus: '',
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
-      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline },
+      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline, qrCode: r.qrCode || '', qrCodeUpdatedAt: r.qrCodeUpdatedAt || null },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       timelineNodes: tNodes,
+      formQrUpdatedAtText: r.qrCodeUpdatedAt ? this.fmtDate(r.qrCodeUpdatedAt) : '',
+      showProvincePicker: false, provinceSearchKey: '', provincePickerItems: ALL_PROVINCES,
     });
   },
 
@@ -277,7 +446,6 @@ Page({
     const r = this.data.raceList.find(x => x._id === id);
     if (!r) return wx.showToast({ title: '赛事不存在', icon: 'none' });
 
-    // 构建复制数据，名称后加"2"
     const dupData = {
       name: r.name + '2',
       raceGroup: r.raceGroup || '',
@@ -298,7 +466,7 @@ Page({
       website: r.website || '',
       mechanism: r.mechanism || '',
       payment: r.payment || '',
-            signupChannels: r.signupChannels || '',
+      signupChannels: r.signupChannels || '',
       medicalReport: r.medicalReport || '',
       finishRequirement: r.finishRequirement || '',
       refundRule: r.refundRule || '',
@@ -308,6 +476,8 @@ Page({
       regStatus: r.regStatus || '',
       posters: r.posters || (r.poster ? [r.poster] : []),
       timeline: (r.timeline || []).map(t => ({ label: t.label, date: t.date, time: t.time || '' })),
+      qrCode: r.qrCode || '',
+      qrCodeUpdatedAt: r.qrCodeUpdatedAt || null,
       status: r.status || 'upcoming',
       source: 'manual',
       publishStatus: 'published',
@@ -333,7 +503,6 @@ Page({
     const res = await wx.cloud.callFunction({ name: 'getRaceReviews', data: { action: 'all', eventId: id } });
     const reviews = res.result || [];
 
-    // 批量查询用户昵称（避免 N+1）
     const db = require('../../../utils/db').db;
     const _ = require('../../../utils/db')._;
     const userIds = [...new Set(reviews.map(r => r.userId).filter(Boolean))];
@@ -378,7 +547,6 @@ Page({
       if (!res.confirm) return;
       const db = require('../../../utils/db').db;
       await db.collection('race_reviews').doc(id).remove();
-      // 更新统计
       const stats = await raceUtil.getReviewStats(this.data.reviewEventId);
       const tagStats = {};
       Object.keys(stats.tagStats).forEach(k => { tagStats[k] = stats.tagStats[k]; });
@@ -399,7 +567,6 @@ Page({
   async onNameBlur(e) {
     const name = (e.detail.value || '').trim();
     if (!name) { this.setData({ nameDupStatus: '' }); return; }
-    // 编辑时名字没改则不校验
     if (this.data.editingId) {
       const orig = this.data.raceList.find(x => x._id === this.data.editingId);
       if (orig && orig.name === name) { this.setData({ nameDupStatus: '' }); return; }
@@ -473,6 +640,64 @@ Page({
     this.setData({ posterTemp: imgs, 'form.posters': fids });
   },
 
+  // ===== 二维码上传 =====
+  onChooseQR() {
+    const that = this;
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['compressed', 'original'],
+      sourceType: ['album', 'camera'],
+      success: async (res) => {
+        wx.showLoading({ title: '上传中' });
+        try {
+          const fileID = await uploadQrFile(res.tempFilePaths[0]);
+          const now = new Date();
+          // 取得临时 URL 用于预览
+          const urlR = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [fileID] } });
+          const tUrl = (urlR.result || [])[0] && (urlR.result || [])[0].tempFileURL;
+          that.setData({
+            'form.qrCode': fileID,
+            'form.qrCodeUpdatedAt': now,
+            formQrUrl: tUrl || fileID,
+            formQrUpdatedAtText: that.fmtDate(now),
+          });
+          wx.hideLoading();
+          wx.showToast({ title: '已更新二维码', icon: 'success' });
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: '上传失败', icon: 'none' });
+        }
+      },
+    });
+  },
+  onClearQR() {
+    this.setData({
+      'form.qrCode': '',
+      'form.qrCodeUpdatedAt': null,
+      formQrUrl: '',
+      formQrUpdatedAtText: '',
+    });
+  },
+  onPreviewQR() {
+    if (!this.data.formQrUrl) return;
+    wx.previewImage({ urls: [this.data.formQrUrl] });
+  },
+
+  // ===== 省份选择 =====
+  onShowProvincePicker() {
+    this.setData({ showProvincePicker: true, provinceSearchKey: '', provincePickerItems: ALL_PROVINCES });
+  },
+  onHideProvincePicker() { this.setData({ showProvincePicker: false }); },
+  onProvinceSearch(e) {
+    const kw = (e.detail.value || '').toLowerCase().trim();
+    const items = !kw ? ALL_PROVINCES : ALL_PROVINCES.filter(p => p.toLowerCase().includes(kw));
+    this.setData({ provinceSearchKey: e.detail.value, provincePickerItems: items });
+  },
+  onPickProvince(e) {
+    const { name } = e.currentTarget.dataset;
+    this.setData({ 'form.province': name, showProvincePicker: false });
+  },
+
   onTogglePaste() { this.setData({ showPaste: !this.data.showPaste, pasteText: '', parsing: false }); },
   onPasteInput(e) { this.setData({ pasteText: e.detail.value }); },
 
@@ -485,7 +710,6 @@ Page({
     const year = now.getFullYear();
     const nextYear = year + 1;
 
-    // 从文本提取日期 "2026年10月18日" | "10月18日" | "2026-10-18"
     const extractDate = (str) => {
       let m = str.match(/(\d{4})[年\-\/](\d{1,2})[月\-\/](\d{1,2})日?/);
       if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
@@ -493,15 +717,12 @@ Page({
       if (m) return `${year}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
       return null;
     };
-
-    // 从文本提取时间 "7:30" | "07：30"
     const extractTime = (str) => {
       const m = str.match(/(\d{1,2})[:：](\d{2})/);
       if (m) return `${m[0].padStart(2,'0')}:${m[2]}`;
       return null;
     };
 
-    // 关键词 → 标签名映射
     const keywordMap = [
       { key: '报名开启', kw: ['报名开启', '开启报名', '开始报名', '报名时间', '报名启动'] },
       { key: '报名截止', kw: ['报名截止', '截止报名', '报名结束'] },
@@ -518,7 +739,7 @@ Page({
 
     keywordMap.forEach(({ key, kw }) => {
       const node = nodes.find(n => n.label === key);
-      if (!node || node.date) return; // 已有值就跳过
+      if (!node || node.date) return;
       for (const k of kw) {
         const idx = text.indexOf(k);
         if (idx === -1) continue;
@@ -532,7 +753,6 @@ Page({
       }
     });
 
-    // 顺便提取赛事名
     const nameMatch = text.match(/(.{2,20})(?:马拉松|半程马拉松)/);
     if (nameMatch) name = nameMatch[0].trim();
 
@@ -548,7 +768,6 @@ Page({
     const v = e.currentTarget.dataset.v;
     const types = [...(this.data.form.raceTypes || ['full'])];
     if (v === 'full' || v === 'half') {
-      // 全马半马多选：先清掉 10K，然后切换
       const filtered = types.filter(t => t === 'full' || t === 'half');
       const idx = filtered.indexOf(v);
       if (idx >= 0) filtered.splice(idx, 1);
@@ -560,7 +779,6 @@ Page({
         type10k: false,
       });
     } else {
-      // 10K：已选中则取消回到全马，否则单选
       if (types.length === 1 && types[0] === v) {
         this.setData({
           'form.raceTypes': ['full'],
@@ -582,13 +800,11 @@ Page({
   onAddGunTime() {
     const list = this.data.gunTimes;
     const last = list[list.length - 1];
-    // 分区：上一个的字母 +1；非单字母则默认 A
     let nextZone = 'A';
     if (last && last.zone && /^[A-Za-z]$/.test(last.zone)) {
       const code = last.zone.toUpperCase().charCodeAt(0);
       if (code < 90) nextZone = String.fromCharCode(code + 1);
     }
-    // 时间：上一个 +5 分钟，否则 07:00
     let nextTime = '07:00';
     if (last && last.time) {
       const [h, m] = last.time.split(':').map(Number);
@@ -626,7 +842,6 @@ Page({
     const idx = e.currentTarget.dataset.idx;
     const nodes = [...this.data.timelineNodes];
     nodes[idx].date = e.detail.value;
-    // 如果是鸣枪开跑节点，同步更新 form.date
     if (nodes[idx].label === '鸣枪开跑') {
       this.setData({ timelineNodes: nodes, 'form.date': e.detail.value });
     } else {
@@ -642,7 +857,6 @@ Page({
   onClearTime(e) {
     const idx = e.currentTarget.dataset.idx;
     const nodes = [...this.data.timelineNodes];
-    // 一次清掉日期和时间
     if (nodes[idx].label === '鸣枪开跑') {
       nodes[idx].date = '';
       nodes[idx].time = '';
@@ -653,7 +867,7 @@ Page({
       this.setData({ timelineNodes: nodes });
     }
   },
-    onFormRegStatus(e) { this.setData({ 'form.regStatus': e.currentTarget.dataset.v }); },
+  onFormRegStatus(e) { this.setData({ 'form.regStatus': e.currentTarget.dataset.v }); },
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onHideForm() { this.setData({ showForm: false }); },
 
@@ -662,11 +876,11 @@ Page({
     if (!f.name.trim()) return wx.showToast({ title: '请输入赛事名称', icon: 'none' });
     if (this.data.nameDupStatus === 'dup') return wx.showToast({ title: '同名赛事已存在，请修改名称', icon: 'none' });
     if (!f.date) return wx.showToast({ title: '请选择鸣枪开跑日期', icon: 'none' });
+    if (!f.province || !f.province.trim()) return wx.showToast({ title: '请选择举办省份', icon: 'none' });
     const raceDate = new Date(f.date);
     if (!this.data.editingId && raceDate < new Date(new Date().toDateString())) return wx.showToast({ title: '赛事日期不能早于今天', icon: 'none' });
     wx.showLoading({ title: '保存中' });
 
-    // 海报使用 posters 数组
     const posters = (f.posters || []).filter(Boolean) || [];
 
     const data = {
@@ -684,6 +898,8 @@ Page({
       gunTimes: this.data.gunTimes.filter(g => g.time),
       timeline: this.data.timelineNodes.filter(n => n.date).map(n => ({ label: n.label, date: n.date, time: n.time || '' })),
       posters,
+      qrCode: f.qrCode || '',
+      qrCodeUpdatedAt: f.qrCode ? (f.qrCodeUpdatedAt || new Date()) : null,
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
       tagStats: {}, reviewCount: 0, avgScore: 0,
       publishStatus: 'published',
@@ -692,11 +908,10 @@ Page({
         : 'manual',
     };
 
-    // 字段级保护：编辑时对比新旧值，把人工改过的字段写入 manualFields（导入时保留，不覆盖）
     if (this.data.editingId) {
       const old = this.data.allRaceList.find(r => r._id === this.data.editingId) || {};
       const manual = new Set(old.manualFields || []);
-      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters'];
+      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters','qrCode','qrCodeUpdatedAt'];
       const toStr = (v) => {
         if (v instanceof Date) {
           const p = n => String(n).padStart(2, '0');
@@ -727,7 +942,6 @@ Page({
 
     if (this.data.editingId) {
       await raceUtil.update(this.data.editingId, data);
-      // 直接更新本地缓存
       const list = this.data.allRaceList.slice();
       const idx = list.findIndex(r => r._id === this.data.editingId);
       if (idx > -1) {
@@ -737,7 +951,6 @@ Page({
       }
     } else {
       const addRes = await raceUtil.create(data);
-      // 新记录加到本地缓存
       const newItem = { _id: addRes._id, ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
       const list = [newItem, ...this.data.allRaceList];
       this.setData({ allRaceList: list, showForm: false });
@@ -764,11 +977,9 @@ Page({
               canvas.height = H * dpr;
               ctx.scale(dpr, dpr);
 
-              // 白色背景
               ctx.fillStyle = '#ffffff';
               ctx.fillRect(0, 0, W, H);
 
-              // 赛事名称（截断防溢出）
               ctx.fillStyle = '#333333';
               ctx.font = 'bold 24px sans-serif';
               ctx.textAlign = 'center';
@@ -777,20 +988,17 @@ Page({
               if (displayName.length > 14) displayName = displayName.slice(0, 12) + '…';
               ctx.fillText(displayName, W / 2, 24);
 
-              // 日期 · 城市
               ctx.fillStyle = '#888888';
               ctx.font = '18px sans-serif';
               const metaParts = [raceInfo.date, raceInfo.city].filter(Boolean);
               if (metaParts.length) ctx.fillText(metaParts.join(' · '), W / 2, 56);
 
-              // 类型 · 等级 · 标牌
               const typeParts = [];
               if (raceInfo.type) typeParts.push(raceInfo.type);
               if (raceInfo.level) typeParts.push(raceInfo.level + '级');
               if (raceInfo.label) typeParts.push(raceInfo.label);
               if (typeParts.length) ctx.fillText(typeParts.join(' · '), W / 2, 80);
 
-              // 加载二维码图片并绘制
               const img = canvas.createImage();
               img.src = imgInfo.path;
               img.onload = () => {
@@ -799,12 +1007,10 @@ Page({
                 const qrY = 112;
                 ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
 
-                // 底部提示
                 ctx.fillStyle = '#aaaaaa';
                 ctx.font = '14px sans-serif';
                 ctx.fillText('扫码查看赛事详情、关注和评分', W / 2, 415);
 
-                // 导出为临时文件
                 wx.canvasToTempFilePath({
                   canvas,
                   x: 0, y: 0,
@@ -843,7 +1049,6 @@ Page({
       const url = (r2.result || [])[0];
       const qrUrl = url ? url.tempFileURL : fileID;
 
-      // 尝试合成带赛事信息的海报图
       try {
         const posterPath = await this.genRacePoster(qrUrl, raceInfo);
         const upRes = await wx.cloud.uploadFile({
@@ -861,7 +1066,6 @@ Page({
         console.warn('poster composition failed, fallback to plain QR', posterErr);
       }
 
-      // 兜底：显示原始二维码
       this.setData({ showQR: true, qrFileID: qrUrl, sharingRaceName: name, sharingRaceInfo: raceInfo, showQRText: true });
     } catch (e) {
       console.error('genRaceQR error:', e);
@@ -871,3 +1075,11 @@ Page({
   },
   onHideQR() { this.setData({ showQR: false, showQRText: true }); },
 });
+
+// 工具函数
+async function uploadQrFile(filePath) {
+  const cloudPath = `race_qrcode/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
+  const up = await wx.cloud.uploadFile({ cloudPath, filePath });
+  if (!up.fileID) throw new Error('upload no fileID');
+  return up.fileID;
+}

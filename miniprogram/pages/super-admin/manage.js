@@ -1,5 +1,9 @@
-// pages/super-admin/manage.js - 超管：配置管理员
+// pages/super-admin/manage.js - 超管：配置管理员（v2.7 支持多选省份）
 const dbUtil = require('../../utils/db');
+const cityData = require('../../utils/city-data');
+
+// 取全国省份列表（直接从 city-data 顶层抽取）
+const ALL_PROVINCES = cityData.map(p => p.name);
 
 Page({
   data: {
@@ -16,6 +20,13 @@ Page({
       approve_points: true,
       remove_user: true,
     },
+    // 省份相关
+    allProvinces: ALL_PROVINCES,
+    selectedProvinces: [],   // 已选中的省份
+    provincePickerVisible: false, // 多选弹窗
+    provinceSearchKey: '',        // 省份搜索关键字
+    provinceFilterShown: [],      // 多选弹窗过滤后展示
+    showProvinceTagPicker: false, // 列表点击展示省份角标时使用
   },
 
   async onShow() {
@@ -38,8 +49,11 @@ Page({
     const enriched = res.data.map((admin, i) => {
       const u = allUsers[i];
       if (!u) return null;
+      // 已撤销的管理员不在列表中显示
+      if (admin.status === 'revoked') return null;
       let avatar = u.avatarUrl || '';
       if (avatar.startsWith('cloud://')) avatar = urlMap[avatar] || '';
+      const provinces = Array.isArray(admin.provinces) ? admin.provinces : [];
       return {
         ...admin,
         userName: u.nickName || '未知',
@@ -47,6 +61,8 @@ Page({
         isExpired: new Date(admin.validTo) < new Date(),
         validFrom: this.formatDate(new Date(admin.validFrom)),
         validTo: this.formatDate(new Date(admin.validTo)),
+        provinces,
+        provinceText: provinces.length ? provinces.join('、') : '全国',
       };
     }).filter(Boolean);
     // 同一用户只保留最新记录
@@ -86,6 +102,7 @@ Page({
       showAdd: true, selectedUserId: '', selectedUserName: '',
       validFrom: today, validTo: nextYear,
       permissions: { approve_points: true, remove_user: true },
+      selectedProvinces: [], provinceSearchKey: '', provinceFilterShown: ALL_PROVINCES,
     });
   },
 
@@ -107,9 +124,36 @@ Page({
     this.setData({ [`permissions.${key}`]: !this.data.permissions[key] });
   },
 
+  // 省份多选
+  onShowProvincePicker() {
+    this.setData({
+      provincePickerVisible: true,
+      provinceSearchKey: '',
+      provinceFilterShown: this.filterProvinces('', this.data.selectedProvinces),
+    });
+  },
+  onHideProvincePicker() { this.setData({ provincePickerVisible: false }); },
+  onProvinceSearch(e) {
+    const kw = e.detail.value || '';
+    this.setData({ provinceSearchKey: kw, provinceFilterShown: this.filterProvinces(kw, this.data.selectedProvinces) });
+  },
+  filterProvinces(kw, selectedSet) {
+    const k = kw.trim().toLowerCase();
+    return ALL_PROVINCES.filter(p => !k || p.toLowerCase().includes(k));
+  },
+  onToggleProvince(e) {
+    const { name } = e.currentTarget.dataset;
+    const list = [...this.data.selectedProvinces];
+    const idx = list.indexOf(name);
+    if (idx >= 0) list.splice(idx, 1); else list.push(name);
+    this.setData({ selectedProvinces: list });
+  },
+  onClearProvinces() { this.setData({ selectedProvinces: [] }); },
+  onPickAllProvinces() { this.setData({ selectedProvinces: [...this.data.allProvinces] }); },
+
   // 添加管理员
   async onAddAdmin() {
-    const { selectedUserId, validFrom, validTo, permissions } = this.data;
+    const { selectedUserId, validFrom, validTo, permissions, selectedProvinces } = this.data;
     if (!selectedUserId) return wx.showToast({ title: '请选择用户', icon: 'none' });
     if (!validFrom || !validTo) return wx.showToast({ title: '请设置有效期', icon: 'none' });
     if (new Date(validTo) <= new Date(validFrom)) return wx.showToast({ title: '结束日期必须大于开始日期', icon: 'none' });
@@ -127,6 +171,7 @@ Page({
         validFrom: new Date(validFrom),
         validTo: new Date(validTo),
         permissions: permList,
+        provinces: selectedProvinces, // 多选省份（空数组=全国）
         status: 'active',
       });
       // 更新用户角色
@@ -135,6 +180,7 @@ Page({
       this.setData({ showAdd: false });
       this.loadAdmins();
     } catch (err) {
+      console.error('add admin error:', err);
       wx.showToast({ title: '添加失败', icon: 'none' });
     }
   },

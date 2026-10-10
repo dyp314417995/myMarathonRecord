@@ -2,24 +2,91 @@
 // https://docs.qq.com/smartsheet/DQlZpdE1QRFhST0dF?tab=sc_fJm8EC
 // 国内路跑认证赛事 - 增量更新脚本
 // 用法: node update_saishi.js
+//        node update_saishi.js --force       # 强制全量
+//        node update_saishi.js --no-relogin  # 关闭自动重登录
 // 依赖同目录: cookies.txt(登录态), snapshot.json(上次快照,自动生成)
 const fs=require("fs");
 const zlib=require("zlib");
 const path=require("path");
+const { execSync, spawnSync } = require("child_process");
 const DIR=__dirname;
 const COOKIE_FILE=path.join(DIR,"cookies.txt");
 const SNAP_FILE=path.join(DIR,"snapshot.json");
+const RELOGIN_PS1 = path.join(DIR, "重新登录.ps1");
+const RELOGIN_TIMEOUT_MS = 5 * 60 * 1000; // 5 分钟扫码窗口
 const ID="DQlZpdE1QRFhST0dF";
 const SHEETS=[["tHPyTV","2026"],["tg7iI5","2027"],["tbrnPV","2025"],["BB08J2","2024H2"],["t3Lo8Q","2024H1"]];
 const CHUNK=60;
-function loadCookies(){ try{ const c=fs.readFileSync(COOKIE_FILE,"utf8").trim(); if(!c) throw new Error("empty"); return c; }catch(e){ console.log("[错误] 缺少 cookies.txt，请先扫码登录后重新生成。"); process.exit(1); } }
-const COOKIE=loadCookies();
+const NO_RELOGIN = process.argv.includes('--no-relogin');
+
+// ---------- 登录态管理 ----------
+let COOKIE = "";
+function loadCookies() {
+  try {
+    const c = fs.readFileSync(COOKIE_FILE, "utf8").trim();
+    return c || null;
+  } catch (e) { return null; }
+}
+function ensureCookie() {
+  COOKIE = loadCookies();
+  if (!COOKIE) {
+    console.log("[错误] 缺少 cookies.txt 或文件为空。");
+    if (NO_RELOGIN) { process.exit(1); }
+    return triggerRelogin();
+  }
+  return true;
+}
+async function triggerRelogin() {
+  console.log("[自动重登录] 检测到登录态失效，触发重新登录脚本，请尽快在弹出的浏览器中扫码…");
+  if (process.platform !== "win32") {
+    console.log("[错误] 自动重登录仅支持 Windows。");
+    process.exit(1);
+  }
+  const ps = process.env.SystemRoot + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+  const startedAt = Date.now();
+  // 启动 PowerShell 重新登录脚本（阻塞，浏览器扫码窗口会自动弹出）
+  try {
+    spawnSync(ps, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", RELOGIN_PS1], {
+      stdio: "inherit",
+      timeout: RELOGIN_TIMEOUT_MS,
+    });
+  } catch (e) {
+    console.log("[自动重登录] PowerShell 调用异常: " + e.message);
+  }
+  // 等脚本退出后再次尝试加载 cookie
+  const waited = Date.now() - startedAt;
+  console.log(`[自动重登录] 等待扫码 ${Math.round(waited / 1000)} 秒，重新检查 cookies.txt…`);
+  const fresh = loadCookies();
+  if (!fresh) {
+    console.log("[失败] 5 分钟内未检测到有效登录态，放弃。请手动运行 重新登录.ps1 后再试。");
+    process.exit(1);
+  }
+  COOKIE = fresh;
+  console.log("[成功] 已获取新登录态，继续原任务。");
+  return true;
+}
+
+// 异步封装：让 fetchJson 在检测到登录失效时尝试一次重登录 + 重试
+async function fetchJsonWithRetry(u) {
+  try {
+    return await fetchJson(u);
+  } catch (e) {
+    if (e && e.loginExpired && !NO_RELOGIN) {
+      console.log("[提示] 请求返回 401/403，判定登录态失效。");
+      await triggerRelogin();
+      // 重新加载 COOKIE 后再试
+      return await fetchJson(u);
+    }
+    throw e;
+  }
+}
+ensureCookie();
 function url(tab,start,end){ return "https://docs.qq.com/dop-api/opendoc?id="+ID+"&tab="+tab+"&startrow="+start+"&endrow="+end+"&normal=1&outformat=1"; }
 async function fetchJson(u){ const r=await fetch(u,{headers:{"Cookie":COOKIE,"User-Agent":"Mozilla/5.0","Referer":"https://docs.qq.com/smartsheet/"+ID}}); const txt=await r.text(); if(r.status!==200||!txt||txt.charAt(0)!=="{" ){ if(r.status===401||r.status===403){ const e=new Error("LOGIN_EXPIRED"); e.loginExpired=true; throw e; } throw new Error("请求失败 status="+r.status+" body="+txt.substring(0,120)); } return JSON.parse(txt); }
 function normalizeKeys(o){ if(Array.isArray(o)){ o.forEach(normalizeKeys); return o; } if(o&&typeof o==="object"){ for(const k of Object.keys(o)){ const nk=/^\d+$/.test(k)?"k"+k:k; if(nk!==k){ o[nk]=o[k]; delete o[k]; } normalizeKeys(o[nk]); } } return o; }
 function collectRecords(all,head,recs){ const cand=[]; if(head&&head.c&&head.c.k2&&head.c.k2.k1) cand.push(head.c.k2.k1); if(recs&&recs.c&&recs.c.k2&&recs.c.k2.k1) cand.push(recs.c.k2.k1); for(const rm of cand){ for(const rid of Object.keys(rm)){ all.records[rid]=rm[rid]; } } if(!all.fieldDefs&&head&&head.c&&head.c.k3&&head.c.k3.k3) all.fieldDefs=head.c.k3.k3; if(!all.refData&&head&&head.c&&head.c.k3) all.refData=head.c.k3; }
-async function getRev(tab){ const o=await fetchJson(url(tab,0,1)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; return ccv.rev||0; }
-async function extractSheet(tab){ const first=await fetchJson(url(tab,0,1)); const ccv0=first.clientVars&&first.clientVars.collab_client_vars||{}; const maxRow=ccv0.maxRow||0; const all={fieldDefs:null,refData:null,records:{}}; for(let start=0;start<maxRow;start+=CHUNK){ const end=Math.min(start+CHUNK,maxRow); const o=await fetchJson(url(tab,start,end)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; const iat=ccv.initialAttributedText; if(!iat||!iat.text) continue; const textArr=Array.isArray(iat.text)?iat.text:[iat.text]; for(const ch of textArr){ if(!ch||!ch.smartsheet) continue; const data=normalizeKeys(JSON.parse(ch.smartsheet.charAt(0)==="["?ch.smartsheet:zlib.inflateSync(Buffer.from(ch.smartsheet,"base64")).toString("utf8"))); const items=Array.isArray(data)?data:[data]; for(const inner of items){ const head=Array.isArray(inner)?inner[0]:(inner.head||null); const recs=Array.isArray(inner)?inner[1]:(inner.records||null); collectRecords(all,head,recs); } } } return all; }
+async function getRev(tab){ const o=await fetchJsonWithRetry(url(tab,0,1)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; return ccv.rev||0; }
+async function extractSheet(tab){ const first=await fetchJsonWithRetry(url(tab,0,1)); const ccv0=first.clientVars&&first.clientVars.collab_client_vars||{}; const maxRow=ccv0.maxRow||0; const all={fieldDefs:null,refData:null,records:{}}; for(let start=0;start<maxRow;start+=CHUNK){ const end=Math.min(start+CHUNK,maxRow); const o=await fetchJsonWithRetry(url(tab,start,end)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; const iat=ccv.initialAttributedText; if(!iat||!iat.text) continue; const textArr=Array.isArray(iat.text)?iat.text:[iat.text]; for(const ch of textArr){ if(!ch||!ch.smartsheet) continue; const data=normalizeKeys(JSON.parse(ch.smartsheet.charAt(0)==="["?ch.smartsheet:zlib.inflateSync(Buffer.from(ch.smartsheet,"base64")).toString("utf8"))); const items=Array.isArray(data)?data:[data]; for(const inner of items){ const head=Array.isArray(inner)?inner[0]:(inner.head||null); const recs=Array.isArray(inner)?inner[1]:(inner.records||null); collectRecords(all,head,recs); } } } return all; }
 function csvF(s){ s=String(s==null?"":s); if(/[",\n\r]/.test(s)){ return "\""+s.replace(/"/g,"\"\"")+"\""; } return s; }
 function fmtDate(ms){ if(ms==null||ms==="") return ""; const d=new Date(Number(ms)); if(isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes()); }
 function richText(v){ if(v&&Array.isArray(v.k1)) return v.k1.map(x=>x.k2!=null?x.k2:(x.k3||"")).join(""); return ""; }
@@ -81,7 +148,7 @@ async function main(){
   console.log("== 检查版本号(rev) ==" + (FORCE ? '（--force 强制全量）' : ''));
   const revs={};
   for(const [tab,name] of SHEETS){
-    try{ revs[tab]=await getRev(tab); console.log("  "+name+": rev="+revs[tab]); }catch(e){ if(e.loginExpired){ console.log("[提示] 登录态已失效，请重新扫码登录后更新 cookies.txt 再运行。"); process.exit(1); } throw e; }
+    try{ revs[tab]=await getRev(tab); console.log("  "+name+": rev="+revs[tab]); }catch(e){ if(e.loginExpired){ console.log("[提示] 登录态已失效，自动重登录失败，请手动运行 重新登录.ps1 后再试。"); process.exit(1); } throw e; }
   }
   let oldSnap=null; try{ oldSnap=JSON.parse(fs.readFileSync(SNAP_FILE,"utf8")); }catch(e){}
   if(oldSnap&&oldSnap.revs){ const same=Object.keys(revs).every(t=>oldSnap.revs[t]===revs[t]); if(same && !FORCE){ console.log("== 无更新：所有子表版本号与上次一致 =="); return; } if(same && FORCE){ console.log("== rev 无变化，--force 强制全量重拉 =="); } }

@@ -54,14 +54,37 @@
         <text class="filter-chip {{adminRegStatus === '取消' ? 'on' : ''}}" data-v="取消" bindtap="onAdminFilter" data-field="regStatus">取消</text>
       </view>
     </view>
+    <!-- 二维码筛选 + 省份范围 -->
+    <view class="admin-filter">
+      <view class="filter-row">
+        <text class="filter-chip {{qrScope === 'all' ? 'on' : ''}}" data-v="all" bindtap="onQrScope">全部二维码</text>
+        <text class="filter-chip {{qrScope === 'missing' ? 'on' : ''}}" data-v="missing" bindtap="onQrScope">无二维码</text>
+        <text class="filter-chip {{qrScope === 'expired' ? 'on' : ''}}" data-v="expired" bindtap="onQrScope">失效（≥7天）</text>
+      </view>
+      <view class="filter-row" wx:if="{{!isSuperAdmin}}">
+        <text class="filter-chip {{provinceScope === 'my' ? 'on' : ''}}" data-v="my" bindtap="onProvinceScope">我负责的省份</text>
+        <text class="filter-chip {{provinceScope === 'all' ? 'on' : ''}}" data-v="all" bindtap="onProvinceScope">全部省份</text>
+      </view>
+      <view wx:if="{{provinceScope === 'my' && adminProvinces.length}}" class="my-province-tip">
+        <text>负责：</text>
+        <text class="my-province-tag" wx:for="{{adminProvinces}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view wx:elif="{{provinceScope === 'my' && !adminProvinces.length && !isSuperAdmin}}" class="my-province-tip">
+        <text>未配置负责省份，查看全部</text>
+      </view>
+    </view>
     <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
     <view class="card race-card" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
       <view class="race-card-row">
         <view class="race-info">
           <text class="race-name">{{item.name}}</text>
           <text class="race-meta">{{item.fmtDate}} · {{item.province || item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · 规模' + item.scale : ''}}<text wx:if="{{item.regStatus}}"> · {{item.regStatus}}</text></text>
-          <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
-          <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
+          <view class="race-tags-row">
+            <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
+            <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
+            <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}</text>
+            <text class="tag tag-blue owner-tag" wx:if="{{item.province}}">👤 {{item.responsibleAdminName}}</text>
+          </view>
         </view>
         <view class="race-actions">
           <text class="act" data-id="{{item._id}}" catchtap="onEdit">✏️</text>
@@ -104,6 +127,11 @@
       </view>
       <text class="form-label">赛事组（不带年份，同赛事跨年关联）</text>
       <input class="form-input" placeholder="如：北京马拉松" value="{{form.raceGroup}}" data-k="raceGroup" bindinput="onInput" />
+      <text class="form-label">举办省份 *</text>
+      <view class="form-input province-input" bindtap="onShowProvincePicker">
+        <text wx:if="{{form.province}}" style="color:#333;">{{form.province}}</text>
+        <text wx:else class="placeholder">点击选择省份</text>
+      </view>
       <text class="form-label">比赛日期 *</text>
       <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
         <view class="tl-date-pick"><text class="{{form.date ? '' : 'placeholder'}}">{{form.date || '选择日期'}}</text></view>
@@ -205,6 +233,25 @@
         </view>
       </block>
       <text class="form-label">赛事图片（选填，最多9张）</text>
+      <!-- 群二维码（v2.7） -->
+      <text class="form-label">群二维码（选填，有编辑权限的都可上传）</text>
+      <view class="qr-uploader">
+        <block wx:if="{{formQrUrl}}">
+          <image src="{{formQrUrl}}" mode="aspectFit" class="qr-thumb" bindtap="onPreviewQR" />
+          <view class="qr-thumb-actions">
+            <text class="qr-action" bindtap="onChooseQR">重新上传</text>
+            <text class="qr-action qr-action-danger" bindtap="onClearQR">清除</text>
+          </view>
+          <text class="qr-meta-line">上传时间（仅后台/定时判断，不展示给用户）：{{formQrUpdatedAtText || '未记录'}}</text>
+        </block>
+        <block wx:else>
+          <view class="qr-empty" bindtap="onChooseQR">
+            <text class="qr-empty-icon">＋</text>
+            <text class="qr-empty-text">点击上传二维码</text>
+            <text class="qr-empty-tip">上传后系统将记录更新时间，7 天以上视为失效</text>
+          </view>
+        </block>
+      </view>
       <view class="poster-grid count-{{posterTemp.length === 1 ? 1 : (posterTemp.length === 2 || posterTemp.length === 4 ? 2 : 3)}}">
         <view class="poster-grid-item" wx:for="{{posterTemp}}" wx:key="*this" wx:for-index="idx">
           <image src="{{item}}" mode="aspectFill" class="poster-grid-img" data-idx="{{idx}}" bindtap="onPreviewPoster" />
@@ -247,6 +294,25 @@
         </view>
       </scroll-view>
     </view>
+  </view>
+
+  <!-- 省份选择弹窗 -->
+  <view class="modal-mask" wx:if="{{showProvincePicker}}" catchtap="onHideProvincePicker"></view>
+  <view class="modal-box modal-box-inner" wx:if="{{showProvincePicker}}" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">选择省份</text>
+      <text class="modal-close" bindtap="onHideProvincePicker">✕</text>
+    </view>
+    <input class="form-input" placeholder="搜索省份" value="{{provinceSearchKey}}" bindinput="onProvinceSearch" />
+    <scroll-view scroll-y class="province-picker-list">
+      <view wx:for="{{provincePickerItems}}" wx:key="*this"
+            class="picker-item {{form.province === item ? 'active' : ''}}"
+            data-name="{{item}}" bindtap="onPickProvince">
+        <text>{{item}}</text>
+        <text wx:if="{{form.province === item}}" style="color:#1aad19;font-weight:700;">✓</text>
+      </view>
+      <view wx:if="{{provincePickerItems.length === 0}}" class="empty-tight"><text>没有匹配的省份</text></view>
+    </scroll-view>
   </view>
 
   <!-- 海报预览弹窗 -->

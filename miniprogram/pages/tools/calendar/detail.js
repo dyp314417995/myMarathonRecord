@@ -27,6 +27,19 @@ Page({
     resultRaceType: 'full',
     showResultTimePicker: false,
     showMarkSheet: false,
+    qrStatus: 'none',       // none | fresh | ok | expired（qr 状态）
+    notifyingOwner: false,
+  },
+
+  // 计算赛事二维码状态：none / fresh(<3d) / ok(<7d) / expired(>=7d)
+  calcQrStatus(qrCode, qrCodeUpdatedAt) {
+    if (!qrCode || qrCode === '') return 'none';
+    if (!qrCodeUpdatedAt) return 'ok';
+    const ts = (qrCodeUpdatedAt instanceof Date ? qrCodeUpdatedAt : new Date(qrCodeUpdatedAt)).getTime();
+    const days = (Date.now() - ts) / 86400000;
+    if (days >= 7) return 'expired';
+    if (days >= 3) return 'ok';
+    return 'fresh';
   },
 
   onScoreTab(e) { this.setData({ scoreTab: e.currentTarget.dataset.t }); },
@@ -154,6 +167,7 @@ Page({
           _scaleDisplay: scaleDisplay,
           _feeDisplay: feeDisplay,
         },
+        qrStatus: this.calcQrStatus(event.qrCode, event.qrCodeUpdatedAt),
         raceGroup: event.raceGroup || '',
         reviewStats: stats,
         topTags: tagEntries,
@@ -427,6 +441,70 @@ Page({
   },
 
   onHideMarkSheet() { this.setData({ showMarkSheet: false }); },
+
+  // 通知赛事负责人处理二维码
+  async onNotifyOwner() {
+    const { qrStatus, eventId, event, notifyingOwner } = this.data;
+    if (notifyingOwner) return;
+    if (qrStatus !== 'expired' && qrStatus !== 'none') {
+      return wx.showToast({ title: '当前二维码状态无需通知', icon: 'none' });
+    }
+    const reason = qrStatus === 'none' ? 'missing' : 'expired';
+    const reasonText = reason === 'missing' ? '还没上传二维码' : '二维码过期啦';
+
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || (!userInfo._id && !userInfo.openid)) {
+      return wx.navigateTo({ url: '/pages/login/login' });
+    }
+
+    // 先请求订阅消息授权（一次性）
+    try {
+      await new Promise((resolve, reject) => {
+        wx.requestSubscribeMessage({
+          tmplIds: ['xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew'],
+          success: (r) => {
+            // 用户同意或拒绝都放行（订阅是软依赖）
+            resolve(r);
+          },
+          fail: (e) => {
+            // 用户拒绝/系统异常都不阻断流程，云函数侧会记录错误
+            console.warn('requestSubscribeMessage fail', e);
+            resolve({});
+          },
+        });
+      });
+    } catch (e) { console.warn('subscribe exception', e); }
+
+    wx.showLoading({ title: '通知中' });
+    this.setData({ notifyingOwner: true });
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'notifyRaceQrOwner',
+        data: {
+          eventId,
+          reporterId: userInfo._id || userInfo.openid || '',
+          reason,
+        },
+      });
+      wx.hideLoading();
+      this.setData({ notifyingOwner: false });
+      const res = (r && r.result) || {};
+      if (res.success && res.deduped) {
+        wx.showToast({ title: '今日已通知过负责人了', icon: 'none' });
+      } else if (res.success && res.sentCount > 0) {
+        wx.showToast({ title: `已通知 ${res.sentCount} 位负责人`, icon: 'success' });
+      } else if (res.success && res.sentCount === 0) {
+        wx.showToast({ title: res.message || '暂无负责人在管此省', icon: 'none', duration: 2500 });
+      } else {
+        wx.showToast({ title: '通知失败：' + (res.error || '未知错误'), icon: 'none' });
+      }
+    } catch (err) {
+      wx.hideLoading();
+      this.setData({ notifyingOwner: false });
+      console.error('notifyRaceQrOwner fail', err);
+      wx.showToast({ title: '通知失败，请重试', icon: 'none' });
+    }
+  },
 
   onCancelResult() { this.setData({ showResultModal: false }); },
   onPickResultTime() { this.setData({ showResultTimePicker: true }); },
