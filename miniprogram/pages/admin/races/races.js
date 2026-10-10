@@ -172,6 +172,8 @@ Page({
       publishFilter: 'all',
       dateFrom: dateRange.from,
       dateTo: dateRange.to,
+      // 报名状态改为云端过滤（v2.7）：分页数据下客户端过滤会漏掉未加载的页
+      regStatus: this.data.adminRegStatus || undefined,
     };
     // 我负责的省份：传入 adminProvinces（仅 provinceScope==='my' 时）；否则传空数组=全国
     if (provinceScope === 'my') params.adminProvinces = adminProvinces;
@@ -259,7 +261,7 @@ Page({
     if (this.data.adminType) list = list.filter(r => (r.raceTypes || [r.raceType]).includes(this.data.adminType));
     if (this.data.adminLevel) list = list.filter(r => r.raceLevel === this.data.adminLevel);
     if (this.data.adminLabel) list = list.filter(r => r.label === this.data.adminLabel);
-    if (this.data.adminRegStatus) list = list.filter(r => r.regStatus === this.data.adminRegStatus);
+    // regStatus 已改为云端过滤（loadRaces 传参），此处不再客户端过滤
     this.setData({ raceList: list });
   },
 
@@ -273,6 +275,11 @@ Page({
     const { field, v } = e.currentTarget.dataset;
     const key = field === 'type' ? 'adminType' : field === 'level' ? 'adminLevel' : field === 'regStatus' ? 'adminRegStatus' : 'adminLabel';
     this.setData({ [key]: this.data[key] === v ? '' : v });
+    // 状态筛选在云端做，切换时需重新拉取数据
+    if (field === 'regStatus') {
+      this.setData({ adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
+      return;
+    }
     this.applyAdminFilter();
   },
 

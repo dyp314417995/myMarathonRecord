@@ -17,7 +17,7 @@ const db = cloud.database();
 const _ = db.command;
 
 exports.main = async (event) => {
-  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published', sortBy = 'date', action, adminProvinces, qrFilter } = event || {};
+  const { skip = 0, limit = 20, search, dateFrom, dateTo, raceType, raceLevel, raceLabel, userId, publishFilter = 'published', sortBy = 'date', action, adminProvinces, qrFilter, regStatus } = event || {};
   const wxContext = cloud.getWXContext();
   // ===== action: 同步/回填标记人数（markerCount 预计算字段，热度排序用） =====
   if (action === 'syncMarkerCount') {
@@ -97,6 +97,22 @@ exports.main = async (event) => {
   // 等级/标牌
   if (raceLevel) conds.push({ raceLevel });
   if (raceLabel) conds.push({ label: raceLabel });
+
+  // 报名状态筛选（管理端 v2.7，云端过滤，避免分页下客户端过滤漏数据）：
+  //   '已结束' → regStatus='已结束' 或 status='finished' 或 date < 今天0点（regStatus 为表格静态字段不实时刷新，以日期为准）
+  //   其他值  → regStatus 精确匹配
+  if (regStatus) {
+    if (regStatus === '已结束') {
+      const startOfToday = (() => {
+        // 云函数运行在 UTC，换算北京时间今天 0 点
+        const bj = new Date(Date.now() + 8 * 3600 * 1000);
+        return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
+      })();
+      conds.push(_.or([{ regStatus: '已结束' }, { status: 'finished' }, { date: _.lt(startOfToday) }]));
+    } else {
+      conds.push({ regStatus });
+    }
+  }
 
   // 审核状态过滤：默认仅已发布（老数据无 publishStatus 字段=视为已发布）
   if (publishFilter === 'published') {
