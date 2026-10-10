@@ -1,0 +1,30 @@
+﻿[1] SECRETID set: True
+[1] SECRETKEY set: True
+
+[2] TEST A: XDG_CONFIG_HOME=C:\Users\董亚鹏\AppData\Local\Temp\tcb-iso-test (fresh dir, no stale login)
+  CloudBase CLI 3.6.0
+  璇曡瘯 tcb ai 鍛戒护锛屽紑鍚?AI 鍘熺敓寮€鍙?脳 鏃犳湁鏁堣韩浠戒俊鎭紝璇蜂娇鐢?cloudbase login 鐧诲綍
+  
+  Solution:
+    - 杩愯 tcb login 杩涜鐧诲綍
+  
+  Documentation: https://docs.cloudbase.net/cli-v1/quick-start
+  
+  CLI used isolated dir: True
+
+[3] TEST B: default config dir (stale login present) + env keys
+  CloudBase CLI 3.6.0
+  璇曡瘯 tcb ai 鍛戒护锛屽紑鍚?AI 鍘熺敓寮€鍙?脳 鏃犳湁鏁堣韩浠戒俊鎭紝璇蜂娇鐢?cloudbase login 鐧诲綍
+  
+  Solution:
+    - 杩愯 tcb login 杩涜鐧诲綍
+  
+  Documentation: https://docs.cloudbase.net/cli-v1/quick-start
+  
+
+[4] stale login files:
+  C:\Users\董亚鹏\.config\.cloudbase\auth.json  (133 B, 09/18/2026 15:32:23)
+  C:\Users\董亚鹏\.config\.cloudbase\config.json  (2 B, 07/09/2026 16:31:37)
+  C:\Users\董亚鹏\.config\.cloudbase\global.json  (2 B, 07/09/2026 16:31:43)
+  C:\Users\董亚鹏\.config\.cloudbase\usage.json  (26 B, 10/10/2026 18:26:32)
+  C:\Users\董亚鹏\.config\.cloudbase\projects\D--code-jiuzhouzhanma\auth.json  (4027 B, 08/29/2026 15:24:59)

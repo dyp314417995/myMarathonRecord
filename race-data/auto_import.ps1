@@ -28,9 +28,23 @@ if (-not (Test-Path $SecretFile)) {
 }
 . $SecretFile
 
-# 使用独立的 TCB home，避免残留的过期登录态覆盖环境变量密钥
-$env:HOME = Join-Path $ProjectRoot '.codex\tcbhome-key'
-$env:CLOUDBASE_HOME = $env:HOME
+# 自愈（v2.7 关键修复）：清理本项目过期的 CLI 临时登录态缓存
+# 背景：CLI 在 %USERPROFILE%\.config\.cloudbase\projects\<项目>\auth.json 缓存临时密钥，
+#   该文件优先于 API 密钥（环境变量 + 全局 auth.json），其 accessTokenExpired 过期后
+#   CLI 刷新失败并报"无有效身份信息"，导致 10 点定时任务上传环节挂掉。
+#   每次运行前检测并删除已过期的缓存，CLI 自动回落到全局长期密钥。
+$projAuthDir = Join-Path $env:USERPROFILE '.config\.cloudbase\projects'
+if (Test-Path $projAuthDir) {
+  Get-ChildItem $projAuthDir -Recurse -Filter 'auth.json' -ErrorAction SilentlyContinue | ForEach-Object {
+    try {
+      $cred = (Get-Content $_.FullName -Raw | ConvertFrom-Json).credential
+      if ($cred.accessTokenExpired -and ([long]$cred.accessTokenExpired) -lt [DateTimeOffset]::Now.ToUnixTimeMilliseconds()) {
+        Remove-Item $_.FullName -Force
+        Write-Host ("已清理过期 CLI 登录态缓存: " + $_.FullName) -ForegroundColor Yellow
+      }
+    } catch {}
+  }
+}
 
 Set-Location $ProjectRoot
 
