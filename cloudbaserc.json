@@ -15,6 +15,27 @@
       "runtime": "Nodejs16.13",
       "handler": "index.main",
       "memorySize": 256
+    },
+    {
+      "name": "raceQrExpireNotify",
+      "timeout": 300,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256,
+      "triggers": [
+        {
+          "name": "dailyQrExpireNotify",
+          "type": "timer",
+          "config": "0 0 10 * * * *"
+        }
+      ]
+    },
+    {
+      "name": "notifyRaceQrOwner",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
     }
   ]
 }

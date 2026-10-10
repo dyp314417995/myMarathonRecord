@@ -178,6 +178,7 @@ Page({
         },
         qrStatus: this.calcQrStatus(event.qrCode, event.qrCodeUpdatedAt),
         raceFinished: this.calcRaceFinished(event.status, event.date),
+        qrNotifyDisabled: !!event.qrNotifyDisabled, // 赛事级开关：不拉群的赛事不显示通知入口
         raceGroup: event.raceGroup || '',
         reviewStats: stats,
         topTags: tagEntries,
@@ -471,10 +472,11 @@ Page({
     }
 
     // 先请求订阅消息授权（一次性）
+    // 注：模板已切换为二维码通知专用模板，管理员每次点此按钮为自己累积 1 条接收额度
     try {
       await new Promise((resolve, reject) => {
         wx.requestSubscribeMessage({
-          tmplIds: ['xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew'],
+          tmplIds: ['mcDtCsiTEPabnEEWb317RnQT4K12zkoknB02GfQZHN4'],
           success: (r) => {
             // 用户同意或拒绝都放行（订阅是软依赖）
             resolve(r);
@@ -506,6 +508,13 @@ Page({
         wx.showToast({ title: '今日已通知过负责人了', icon: 'none' });
       } else if (res.success && res.sentCount > 0) {
         wx.showToast({ title: `已通知 ${res.sentCount} 位负责人`, icon: 'success' });
+      } else if (res.success && res.adminCount > 0) {
+        // 匹配到了负责人但都没送达：一般是对方还没订阅过通知模板
+        wx.showModal({
+          title: '暂时没送达',
+          content: `已匹配到 ${res.adminCount} 位负责人，但都未成功送达。请各管理员在赛事详情页点一次「通知负责人处理」并允许订阅，之后即可收到消息。`,
+          showCancel: false,
+        });
       } else if (res.success && res.sentCount === 0) {
         wx.showToast({ title: res.message || '暂无负责人在管此省', icon: 'none', duration: 2500 });
       } else {

@@ -242,3 +242,15 @@
 .qr-empty-icon { font-size: 56rpx; color: #1aad19; line-height: 1; }
 .qr-empty-text { font-size: 26rpx; color: #333; margin-top: 8rpx; }
 .qr-empty-tip { font-size: 20rpx; color: #999; margin-top: 4rpx; padding: 0 12rpx; }
+
+/* 开启接收二维码通知按钮：醒目绿框样式 */
+.qr-notify-chip { background: #e8f5e9 !important; color: #1aad19 !important; font-weight: 600; }
+
+/* 待处理二维码数量提示条 */
+.qr-issue-tip text { color: #e6a23c; font-weight: 600; }
+
+/* 编辑弹窗：群二维码提醒开关 */
+.qr-notify-switch { display: flex; align-items: center; justify-content: space-between; background: #f7f9f7; border-radius: 12rpx; padding: 16rpx 20rpx; margin-top: 12rpx; }
+.qr-notify-switch-info { display: flex; flex-direction: column; flex: 1; margin-right: 16rpx; }
+.qr-notify-switch-title { font-size: 26rpx; color: #333; font-weight: 600; }
+.qr-notify-switch-tip { font-size: 20rpx; color: #999; margin-top: 4rpx; }

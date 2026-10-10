@@ -72,6 +72,12 @@
       <view wx:elif="{{provinceScope === 'my' && !adminProvinces.length && !isSuperAdmin}}" class="my-province-tip">
         <text>未配置负责省份，查看全部</text>
       </view>
+      <view class="filter-row">
+        <text class="filter-chip qr-notify-chip" bindtap="onSubscribeQrNotify">🔔 开启接收通知（每点一次+1条）</text>
+      </view>
+      <view wx:if="{{qrScope === 'all' && (qrIssueMissing > 0 || qrIssueExpired > 0)}}" class="my-province-tip qr-issue-tip">
+        <text>📋 待处理：缺 {{qrIssueMissing || 0}} 个、过期 {{qrIssueExpired || 0}} 个群二维码</text>
+      </view>
     </view>
     <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
     <view class="card race-card" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
@@ -82,7 +88,7 @@
           <view class="race-tags-row">
             <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
             <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
-            <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}</text>
+            <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}{{item.qrNotifyDisabled ? ' ·不提醒' : ''}}</text>
             <text class="tag tag-blue owner-tag" wx:if="{{item.province}}">👤 {{item.responsibleAdminName}}</text>
           </view>
         </view>
@@ -251,6 +257,14 @@
             <text class="qr-empty-tip">上传后系统将记录更新时间，7 天以上视为失效</text>
           </view>
         </block>
+      </view>
+      <!-- 群二维码提醒开关（v2.8）：不拉群的赛事可关闭，关闭后不再提醒缺失/过期 -->
+      <view class="qr-notify-switch">
+        <view class="qr-notify-switch-info">
+          <text class="qr-notify-switch-title">群二维码过期提醒</text>
+          <text class="qr-notify-switch-tip">默认开启；不拉群的赛事可关闭</text>
+        </view>
+        <switch checked="{{!form.qrNotifyDisabled}}" bindchange="onToggleQrNotify" color="#1aad19" />
       </view>
       <view class="poster-grid count-{{posterTemp.length === 1 ? 1 : (posterTemp.length === 2 || posterTemp.length === 4 ? 2 : 3)}}">
         <view class="poster-grid-item" wx:for="{{posterTemp}}" wx:key="*this" wx:for-index="idx">

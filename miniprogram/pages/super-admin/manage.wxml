@@ -14,7 +14,7 @@
           </view>
           <text wx:else class="admin-allprovinces">负责省份：全国</text>
           <view class="admin-perms">
-            <text class="tag tag-blue" wx:for="{{item.permissions}}" wx:key="*this" wx:for-item="p">{{permName(p)}}</text>
+            <text class="tag tag-blue" wx:for="{{item.permNames}}" wx:key="*this" wx:for-item="p">{{p}}</text>
           </view>
         </view>
         <view class="admin-status">
@@ -24,6 +24,7 @@
         </view>
       </view>
       <view class="admin-actions" wx:if="{{item.status === 'active'}}">
+        <button class="btn-edit" data-id="{{item._id}}" data-user-id="{{item.userId}}" bindtap="onEditAdmin">编辑</button>
         <button class="btn-revoke" data-id="{{item._id}}" data-user-id="{{item.userId}}" bindtap="onRevokeAdmin">撤销管理员</button>
       </view>
     </view>
@@ -37,27 +38,33 @@
     <button class="btn-primary" bindtap="onShowAdd">+ 添加管理员</button>
   </view>
 
-  <!-- 添加管理员弹窗 -->
+  <!-- 添加管理员弹窗（整体滚动方案：不依赖 scroll-view flex 高度，真机可靠） -->
   <view class="modal-mask" wx:if="{{showAdd}}" catchtap="onHideAdd"></view>
-  <view class="modal-box" wx:if="{{showAdd}}" catchtap="">
+  <view class="modal-box modal-box-scroll" wx:if="{{showAdd}}" catchtap="">
     <view class="modal-header">
-      <text class="modal-title">添加管理员</text>
+      <text class="modal-title">{{editingAdminId ? '编辑管理员' : '添加管理员'}}</text>
       <text class="modal-close" bindtap="onHideAdd">✕</text>
     </view>
-    <scroll-view scroll-y class="modal-scroll">
+    <view class="modal-scroll">
 
-      <!-- 选择用户 -->
-      <text class="form-label">选择用户</text>
-      <input class="form-input" placeholder="搜索用户昵称" bindinput="onSearchAdminUser" />
-      <scroll-view scroll-y class="user-picker" wx:if="{{filteredUsers ? filteredUsers.length : users.length}}">
-        <view wx:for="{{filteredUsers || users}}" wx:key="_id"
-              class="picker-item {{selectedUserId === item._id ? 'active' : ''}}"
-              data-id="{{item._id}}" data-name="{{item.nickName}}"
-              bindtap="onSelectUser">
-          <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
-        </view>
-      </scroll-view>
-      <text wx:if="{{selectedUserName}}" style="color:#1aad19;font-size:26rpx;margin-top:12rpx;">已选：{{selectedUserName}}</text>
+      <!-- 选择用户（编辑模式下不可更换） -->
+      <block wx:if="{{!editingAdminId}}">
+        <text class="form-label">选择用户</text>
+        <input class="form-input" placeholder="搜索用户昵称" bindinput="onSearchAdminUser" />
+        <scroll-view scroll-y class="user-picker" wx:if="{{filteredUsers ? filteredUsers.length : users.length}}">
+          <view wx:for="{{filteredUsers || users}}" wx:key="_id"
+                class="picker-item {{selectedUserId === item._id ? 'active' : ''}}"
+                data-id="{{item._id}}" data-name="{{item.nickName}}"
+                bindtap="onSelectUser">
+            <text>{{item.nickName}}（{{item.city || '未知'}}）</text>
+          </view>
+        </scroll-view>
+        <text wx:if="{{selectedUserName}}" style="color:#1aad19;font-size:26rpx;margin-top:12rpx;">已选：{{selectedUserName}}</text>
+      </block>
+      <block wx:else>
+        <text class="form-label">管理员</text>
+        <view class="edit-user-view"><text>{{selectedUserName}}</text></view>
+      </block>
 
       <!-- 有效期 -->
       <text class="form-label" style="margin-top:24rpx;">有效开始日期</text>
@@ -90,9 +97,9 @@
 
       <view class="modal-actions">
         <button class="btn-outline" bindtap="onHideAdd">取消</button>
-        <button class="btn-primary" style="flex:1;padding:20rpx;" bindtap="onAddAdmin">确认添加</button>
+        <button class="btn-primary" style="flex:1;padding:20rpx;" bindtap="onAddAdmin">{{editingAdminId ? '保存修改' : '确认添加'}}</button>
       </view>
-    </scroll-view>
+    </view>
   </view>
 
   <!-- 省份多选子弹窗 -->
@@ -110,11 +117,11 @@
       </view>
     </view>
     <scroll-view scroll-y class="province-picker-list">
-      <view wx:for="{{provinceFilterShown}}" wx:key="*this"
-            class="province-picker-item {{selectedProvinces.indexOf(item) >= 0 ? 'active' : ''}}"
-            data-name="{{item}}" bindtap="onToggleProvince">
-        <text>{{item}}</text>
-        <text wx:if="{{selectedProvinces.indexOf(item) >= 0}}" class="picker-item-check">✓</text>
+      <view wx:for="{{provinceFilterShown}}" wx:key="name"
+            class="province-picker-item {{item.checked ? 'active' : ''}}"
+            data-name="{{item.name}}" bindtap="onToggleProvince">
+        <text>{{item.name}}</text>
+        <text wx:if="{{item.checked}}" class="picker-item-check">✓</text>
       </view>
       <view wx:if="{{provinceFilterShown.length === 0}}" class="empty-tight"><text>没有匹配的省份</text></view>
     </scroll-view>

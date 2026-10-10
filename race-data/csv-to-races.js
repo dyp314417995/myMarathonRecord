@@ -39,7 +39,23 @@ function col(header, names){ for(const n of names){ const i=header.indexOf(n); i
 function stripYear(n){ return (n||"").replace(/^(20\d{2})[年\s·\-–—]*/,"").replace(/[·\s\-–—]*(20\d{2})$/,"").replace(/^(20\d{2})$/,"").trim(); }
 function parseDate(v){ const m=/(\d{4})-(\d{1,2})-(\d{1,2})/.exec(v||""); if(m) return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0"); return ""; }
 function parseTime(v){ const m=/(\d{1,2}):(\d{2})/.exec(v||""); if(m) return m[1].padStart(2,"0")+":"+m[2]; return ""; }
-function parseTypes(text){ const t=text||""; const out=[]; if(/全程|马拉松(?!半)|全马/.test(t)) out.push("full"); if(/半程|半马|半马拉松/.test(t)) out.push("half"); if(/10km|10k|10公里|短距离/.test(t)) out.push("10k"); return out.length?out:["full"]; }
+function parseTypes(text, name){
+  const t = (text||"").trim();
+  if (t) {
+    const out=[];
+    if(/全程|马拉松(?!半)|全马/.test(t)) out.push("full");
+    if(/半程|半马|半马拉松/.test(t)) out.push("half");
+    if(/10km|10k|10公里|短距离/.test(t)) out.push("10k");
+    return out.length?out:["full"];
+  }
+  // 项目列为空（表格未填/2024 表无此列）：从赛事名推断，推断不出返回 []（导入时不覆盖库中已有值）
+  const n = name||"";
+  if(/半程|半马/.test(n)) return ["half"];
+  if(/全程|全马/.test(n)) return ["full"];
+  if(/10km|10k|10公里/.test(n)) return ["10k"];
+  if(/马拉松|馬拉松/.test(n)) return ["full"];
+  return [];
+}
 function parseLevel(text){ const t=text||""; if(/A1|A类|(^|\/|\s)A($|\/|\s)/.test(t)) return "A"; if(/B类|(^|\/|\s)B($|\/|\s)/.test(t)) return "B"; if(/(^|\/|\s)C($|\/|\s)/.test(t)) return "C"; return ""; }
 function parseLabel(text){ const t=text||""; if(/白金/.test(t)) return "白金标"; if(/金标/.test(t)) return "金标"; if(/精英/.test(t)) return "精英标"; if(/标牌|WA/.test(t)) return "普通标"; return ""; }
 function parseTags(text){ const t=text||""; const tags=[]; if(/AIMS/.test(t)) tags.push("AIMS认证"); return tags; }
@@ -82,6 +98,31 @@ function extractCity(name){
   return (head.length >= 2 && head.length <= 8) ? head : '';
 }
 function num(v){ const m=/(\d[\d,]*(?:\.\d+)?)/.exec(v||""); if(!m) return ""; return m[1].replace(/,/g,""); }
+// ===== 省份名统一为全称 =====
+// 表格里是简称（吉林/广西/兵团），city-data/管理员配置用全称（吉林省/广西壮族自治区），统一存全称
+const PROVINCE_ALIAS = {
+  "北京市":"北京","天津市":"天津","上海市":"上海","重庆市":"重庆",
+  "内蒙古自治区":"内蒙古","广西壮族自治区":"广西","西藏自治区":"西藏",
+  "宁夏回族自治区":"宁夏","新疆维吾尔自治区":"新疆",
+  "香港特别行政区":"香港","澳门特别行政区":"澳门","兵团":"新疆",
+};
+const PROVINCE_FULL = {
+  "北京":"北京市","天津":"天津市","上海":"上海市","重庆":"重庆市",
+  "内蒙古":"内蒙古自治区","广西":"广西壮族自治区","西藏":"西藏自治区",
+  "宁夏":"宁夏回族自治区","新疆":"新疆维吾尔自治区",
+  "香港":"香港特别行政区","澳门":"澳门特别行政区","台湾":"台湾省",
+};
+function canonProvince(name){
+  if(!name) return "";
+  if(PROVINCE_ALIAS[name]) return PROVINCE_ALIAS[name];
+  return String(name).replace(/(省|市)$/,"");
+}
+function fullProvince(name){
+  const c = canonProvince(name);
+  if(!c) return "";
+  if(PROVINCE_FULL[c]) return PROVINCE_FULL[c];
+  return c + "省"; // 山西→山西省、吉林→吉林省、黑龙江→黑龙江省...
+}
 function timelineItem(label, v){ if(!v) return null; const date=parseDate(v); if(!date) return null; return { label, date, time: parseTime(v) || "" }; }
 function buildRace(row, header, sheetYear){
   const g=v=>{ const i=col(header,v); return i>=0?row[i]||"":""; };
@@ -97,8 +138,8 @@ function buildRace(row, header, sheetYear){
   let regStatus = g(["状态"]).trim();
   if (/取消|推迟|熔断/.test(regStatus)) regStatus = "取消";
   return {
-    name: finalName, raceGroup, date: dateStr, province: g(["省份"]).trim(), city: extractCity(name),
-    raceTypes: parseTypes(g(["比赛项目"])), raceLevel: parseLevel(levelTxt), label: parseLabel(levelTxt), tags: parseTags(levelTxt),
+    name: finalName, raceGroup, date: dateStr, province: fullProvince(g(["省份"])), city: extractCity(name),
+    raceTypes: parseTypes(g(["比赛项目"]), name), raceLevel: parseLevel(levelTxt), label: parseLabel(levelTxt), tags: parseTags(levelTxt),
     scale: num(g(["总规模"])), subScale: g(["分项规模"]).trim(), fee: g(["报名费"]).trim(),
     organizer: g(["主办单位"]).trim(), operator: g(["运营单位"]).trim(),
     contactPhone: g(["联系电话"]).trim(), contactEmail: g(["官方邮箱"]).trim(), wechatAccount: g(["微信公众号"]).trim(), website: g(["官网"]).trim(),

@@ -5,13 +5,17 @@ const cityData = require('../../utils/city-data');
 // 取全国省份列表（直接从 city-data 顶层抽取）
 const ALL_PROVINCES = cityData.map(p => p.name);
 
+// 权限名称映射（WXML 无法调用页面方法，必须预计算）
+const PERM_NAME_MAP = { approve_points: '积分审批', remove_user: '移除用户' };
+
 Page({
   data: {
     admins: [],
     users: [],
     loading: true,
     showAdd: false,
-    // 新增管理员表单
+    editingAdminId: '',     // 非空 = 编辑模式（复用添加弹窗）
+    // 新增/编辑管理员表单
     selectedUserId: '',
     selectedUserName: '',
     validFrom: '',
@@ -25,7 +29,7 @@ Page({
     selectedProvinces: [],   // 已选中的省份
     provincePickerVisible: false, // 多选弹窗
     provinceSearchKey: '',        // 省份搜索关键字
-    provinceFilterShown: [],      // 多选弹窗过滤后展示
+    provinceFilterShown: [],      // 多选弹窗过滤后展示 [{ name, checked }]（WXML 不支持 indexOf，需预计算 checked）
     showProvinceTagPicker: false, // 列表点击展示省份角标时使用
   },
 
@@ -63,6 +67,7 @@ Page({
         validTo: this.formatDate(new Date(admin.validTo)),
         provinces,
         provinceText: provinces.length ? provinces.join('、') : '全国',
+        permNames: (admin.permissions || []).map(p => PERM_NAME_MAP[p] || p),
       };
     }).filter(Boolean);
     // 同一用户只保留最新记录
@@ -99,14 +104,36 @@ Page({
     const today = this.formatDate(new Date());
     const nextYear = this.formatDate(new Date(Date.now() + 36500 * 24 * 60 * 60 * 1000));
     this.setData({
-      showAdd: true, selectedUserId: '', selectedUserName: '',
+      showAdd: true, editingAdminId: '', selectedUserId: '', selectedUserName: '',
       validFrom: today, validTo: nextYear,
       permissions: { approve_points: true, remove_user: true },
-      selectedProvinces: [], provinceSearchKey: '', provinceFilterShown: ALL_PROVINCES,
+      selectedProvinces: [], provinceSearchKey: '', provinceFilterShown: this.filterProvinces('', []),
     });
   },
 
-  onHideAdd() { this.setData({ showAdd: false }); },
+  // 点击"编辑"：复用弹窗回填该管理员的现有配置
+  onEditAdmin(e) {
+    const { id } = e.currentTarget.dataset;
+    const admin = this.data.admins.find(a => a._id === id);
+    if (!admin) return;
+    this.setData({
+      showAdd: true,
+      editingAdminId: id,
+      selectedUserId: admin.userId,
+      selectedUserName: admin.userName,
+      validFrom: admin.validFrom,   // formatDate 输出即 YYYY-MM-DD，可直接用于 date input
+      validTo: admin.validTo,
+      permissions: {
+        approve_points: (admin.permissions || []).includes('approve_points'),
+        remove_user: (admin.permissions || []).includes('remove_user'),
+      },
+      selectedProvinces: [...(admin.provinces || [])],
+      provinceSearchKey: '',
+      provinceFilterShown: this.filterProvinces('', admin.provinces || []),
+    });
+  },
+
+  onHideAdd() { this.setData({ showAdd: false, editingAdminId: '' }); },
 
   // 选择用户
   onSelectUser(e) {
@@ -137,9 +164,15 @@ Page({
     const kw = e.detail.value || '';
     this.setData({ provinceSearchKey: kw, provinceFilterShown: this.filterProvinces(kw, this.data.selectedProvinces) });
   },
-  filterProvinces(kw, selectedSet) {
+  // 返回 [{ name, checked }]，checked 预计算（WXML 表达式不支持数组 indexOf）
+  filterProvinces(kw, selected) {
     const k = kw.trim().toLowerCase();
-    return ALL_PROVINCES.filter(p => !k || p.toLowerCase().includes(k));
+    return ALL_PROVINCES
+      .filter(p => !k || p.toLowerCase().includes(k))
+      .map(p => ({ name: p, checked: selected.includes(p) }));
+  },
+  refreshProvinceFilter() {
+    this.setData({ provinceFilterShown: this.filterProvinces(this.data.provinceSearchKey, this.data.selectedProvinces) });
   },
   onToggleProvince(e) {
     const { name } = e.currentTarget.dataset;
@@ -147,13 +180,14 @@ Page({
     const idx = list.indexOf(name);
     if (idx >= 0) list.splice(idx, 1); else list.push(name);
     this.setData({ selectedProvinces: list });
+    this.refreshProvinceFilter();
   },
-  onClearProvinces() { this.setData({ selectedProvinces: [] }); },
-  onPickAllProvinces() { this.setData({ selectedProvinces: [...this.data.allProvinces] }); },
+  onClearProvinces() { this.setData({ selectedProvinces: [] }); this.refreshProvinceFilter(); },
+  onPickAllProvinces() { this.setData({ selectedProvinces: [...this.data.allProvinces] }); this.refreshProvinceFilter(); },
 
-  // 添加管理员
+  // 添加/编辑管理员（editingAdminId 非空时为编辑，直接更新原记录，不撤销重建）
   async onAddAdmin() {
-    const { selectedUserId, validFrom, validTo, permissions, selectedProvinces } = this.data;
+    const { editingAdminId, selectedUserId, validFrom, validTo, permissions, selectedProvinces } = this.data;
     if (!selectedUserId) return wx.showToast({ title: '请选择用户', icon: 'none' });
     if (!validFrom || !validTo) return wx.showToast({ title: '请设置有效期', icon: 'none' });
     if (new Date(validTo) <= new Date(validFrom)) return wx.showToast({ title: '结束日期必须大于开始日期', icon: 'none' });
@@ -164,24 +198,36 @@ Page({
     if (permList.length === 0) return wx.showToast({ title: '请至少选择一个权限', icon: 'none' });
 
     try {
-      // 先撤销该用户已有的管理员记录
-      await dbUtil.db.collection('admins').where({ userId: selectedUserId }).update({ data: { status: 'revoked' } });
-      await dbUtil.createAdmin({
-        userId: selectedUserId,
+      const data = {
         validFrom: new Date(validFrom),
         validTo: new Date(validTo),
         permissions: permList,
         provinces: selectedProvinces, // 多选省份（空数组=全国）
         status: 'active',
-      });
-      // 更新用户角色
-      await dbUtil.updateUser(selectedUserId, { role: 'admin' });
-      wx.showToast({ title: '添加成功', icon: 'success' });
-      this.setData({ showAdd: false });
+      };
+      if (editingAdminId) {
+        // 编辑：原位更新，保留 createTime/首次设置时间
+        await dbUtil.updateAdmin(editingAdminId, data);
+        wx.showToast({ title: '已保存', icon: 'success' });
+      } else {
+        // 新增：先撤销该用户已有的管理员记录
+        await dbUtil.db.collection('admins').where({ userId: selectedUserId }).update({ data: { status: 'revoked' } });
+        await dbUtil.createAdmin({
+          userId: selectedUserId,
+          ...data,
+        });
+        // 更新用户角色（超管不降级：超管本身已兼容全部管理员权限）
+        const uRes = await dbUtil.db.collection('users').doc(selectedUserId).get().catch(() => null);
+        if (!uRes || !uRes.data || uRes.data.role !== 'super_admin') {
+          await dbUtil.updateUser(selectedUserId, { role: 'admin' });
+        }
+        wx.showToast({ title: '添加成功', icon: 'success' });
+      }
+      this.setData({ showAdd: false, editingAdminId: '' });
       this.loadAdmins();
     } catch (err) {
-      console.error('add admin error:', err);
-      wx.showToast({ title: '添加失败', icon: 'none' });
+      console.error('save admin error:', err);
+      wx.showToast({ title: editingAdminId ? '保存失败' : '添加失败', icon: 'none' });
     }
   },
 
@@ -196,7 +242,11 @@ Page({
         if (!res.confirm) return;
         try {
           await dbUtil.updateAdmin(id, { status: 'revoked' });
-          await dbUtil.updateUser(userId, { role: 'user' });
+          // 超管不降级：撤销的只是 admins 配置记录，不覆盖超管角色
+          const uRes = await dbUtil.db.collection('users').doc(userId).get().catch(() => null);
+          if (!uRes || !uRes.data || uRes.data.role !== 'super_admin') {
+            await dbUtil.updateUser(userId, { role: 'user' });
+          }
           wx.showToast({ title: '已撤销', icon: 'success' });
           this.loadAdmins();
         } catch (err) {
@@ -211,11 +261,5 @@ Page({
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
-  },
-
-  // 权限名称映射
-  permName(key) {
-    const map = { approve_points: '积分审批', remove_user: '移除用户' };
-    return map[key] || key;
   },
 });
