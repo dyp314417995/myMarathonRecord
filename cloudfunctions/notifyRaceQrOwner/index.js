@@ -55,6 +55,17 @@ exports.main = async (event, context) => {
 
     if (!province) return { success: false, error: '该赛事未设置举办省份，无法定位负责人' };
 
+    // 0.2 已举办完成的赛事不再通知（date < 北京时间今天0点 或 status='finished'）
+    //    注：status 仅导入时计算不实时刷新，故以 date 为准
+    const startOfToday = (() => {
+      const bj = new Date(Date.now() + 8 * 3600 * 1000);
+      return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
+    })();
+    const raceDate = new Date(race.date);
+    if (race.status === 'finished' || raceDate.getTime() < startOfToday.getTime()) {
+      return { success: true, skipped: true, message: '赛事已举办完成，无需通知' };
+    }
+
     // 0.5 防骚扰：同一赛事同一原因每天只通知一次（按 reason+eventId+日期 去重）
     const today = new Date();
     const dayKey = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;

@@ -28,6 +28,7 @@ Page({
     showResultTimePicker: false,
     showMarkSheet: false,
     qrStatus: 'none',       // none | fresh | ok | expired（qr 状态）
+    raceFinished: false,    // 赛事是否已举办完成（完成后不再提示通知负责人）
     notifyingOwner: false,
   },
 
@@ -40,6 +41,14 @@ Page({
     if (days >= 7) return 'expired';
     if (days >= 3) return 'ok';
     return 'fresh';
+  },
+
+  // 赛事是否已举办完成（比赛日早于今天 0 点，或 status='finished'）
+  calcRaceFinished(status, date) {
+    if (status === 'finished') return true;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return new Date(date).getTime() < startOfToday.getTime();
   },
 
   onScoreTab(e) { this.setData({ scoreTab: e.currentTarget.dataset.t }); },
@@ -168,6 +177,7 @@ Page({
           _feeDisplay: feeDisplay,
         },
         qrStatus: this.calcQrStatus(event.qrCode, event.qrCodeUpdatedAt),
+        raceFinished: this.calcRaceFinished(event.status, event.date),
         raceGroup: event.raceGroup || '',
         reviewStats: stats,
         topTags: tagEntries,
@@ -444,8 +454,11 @@ Page({
 
   // 通知赛事负责人处理二维码
   async onNotifyOwner() {
-    const { qrStatus, eventId, event, notifyingOwner } = this.data;
+    const { qrStatus, eventId, event, notifyingOwner, raceFinished } = this.data;
     if (notifyingOwner) return;
+    if (raceFinished) {
+      return wx.showToast({ title: '赛事已举办完成，无需通知', icon: 'none' });
+    }
     if (qrStatus !== 'expired' && qrStatus !== 'none') {
       return wx.showToast({ title: '当前二维码状态无需通知', icon: 'none' });
     }

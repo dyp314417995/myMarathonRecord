@@ -117,14 +117,23 @@ exports.main = async (event) => {
   // 二维码筛选（v2.7）：
   //   missing  → 还没上传二维码（字段不存在或为空字符串或 null）
   //   expired  → 二维码存在但更新时间 7 天以前
-  if (qrFilter === 'missing') {
-    conds.push(_.or([{ qrCode: _.exists(false) }, { qrCode: '' }, { qrCode: null }]));
-  } else if (qrFilter === 'expired') {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    conds.push(_.and([
-      _.or([{ qrCode: _.exists(true) }, { qrCode: _.neq('') }]),
-      { qrCodeUpdatedAt: _.lt(sevenDaysAgo) },
-    ]));
+  // 已举办完成的赛事（date < 今天0点 或 status='finished'）不再出现在筛选结果中
+  if (qrFilter === 'missing' || qrFilter === 'expired') {
+    const startOfToday = (() => {
+      // 云函数运行在 UTC，换算北京时间今天 0 点
+      const bj = new Date(Date.now() + 8 * 3600 * 1000);
+      return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
+    })();
+    conds.push({ status: _.neq('finished'), date: _.gte(startOfToday) });
+    if (qrFilter === 'missing') {
+      conds.push(_.or([{ qrCode: _.exists(false) }, { qrCode: '' }, { qrCode: null }]));
+    } else {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      conds.push(_.and([
+        _.or([{ qrCode: _.exists(true) }, { qrCode: _.neq('') }]),
+        { qrCodeUpdatedAt: _.lt(sevenDaysAgo) },
+      ]));
+    }
   }
 
   const query = conds.length ? _.and(conds) : {};

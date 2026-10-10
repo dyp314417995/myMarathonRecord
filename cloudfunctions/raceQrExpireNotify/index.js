@@ -58,10 +58,17 @@ exports.main = async (event, context) => {
     }
 
     // 1. 拉所有有二维码状态问题的赛事（限定未结束的，避免噪音）
+    //   - 已举办完成（date < 今天0点 或 status='finished'）的赛事不再通知
     //   - qrCode 缺失（空/不存在）
     //   - qrCode 存在但 qrCodeUpdatedAt <= expireBefore（过期）
+    // 注：status 仅导入时计算不实时刷新，故以 date 为准（status 作兜底）
     // 用两条 query 分别取（云数据库 _.or 在不同条件组合下行为复杂，显式分开更稳）
-    const upcomingFilter = { status: _.neq('finished') }; // 即将开始/进行中的赛事
+    const startOfToday = (() => {
+      // 云函数运行在 UTC，换算北京时间今天 0 点
+      const bj = new Date(Date.now() + 8 * 3600 * 1000);
+      return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
+    })();
+    const upcomingFilter = { status: _.neq('finished'), date: _.gte(startOfToday) }; // 即将开始/进行中（含今天）的赛事
     const racesMissing = (await db.collection('race_events').where({
       ...upcomingFilter,
       $or: [
