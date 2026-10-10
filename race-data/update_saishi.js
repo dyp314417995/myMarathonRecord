@@ -83,10 +83,27 @@ async function fetchJsonWithRetry(u) {
 ensureCookie();
 function url(tab,start,end){ return "https://docs.qq.com/dop-api/opendoc?id="+ID+"&tab="+tab+"&startrow="+start+"&endrow="+end+"&normal=1&outformat=1"; }
 async function fetchJson(u){ const r=await fetch(u,{headers:{"Cookie":COOKIE,"User-Agent":"Mozilla/5.0","Referer":"https://docs.qq.com/smartsheet/"+ID}}); const txt=await r.text(); if(r.status!==200||!txt||txt.charAt(0)!=="{" ){ if(r.status===401||r.status===403){ const e=new Error("LOGIN_EXPIRED"); e.loginExpired=true; throw e; } throw new Error("请求失败 status="+r.status+" body="+txt.substring(0,120)); } return JSON.parse(txt); }
+// 拉取并校验文档数据（v2.7 关键修复）：
+// 登录态失效时腾讯文档不返回 401/403，而是 200 + 无 clientVars.collab_client_vars 的 JSON（静默失效），
+// 历史上导致 rev=0 / 0 条记录被写入快照和 CSV。此处校验数据存在性，缺失则触发自动重登录。
+async function fetchDocJson(u){
+  const o = await fetchJsonWithRetry(u);
+  const ccv = o && o.clientVars && o.clientVars.collab_client_vars;
+  const valid = ccv && (ccv.rev !== undefined || ccv.maxRow !== undefined || ccv.initialAttributedText !== undefined);
+  if (valid) return o;
+  if (NO_RELOGIN) { const e = new Error("LOGIN_EXPIRED"); e.loginExpired = true; throw e; }
+  console.log("[提示] 响应缺少文档数据（clientVars.collab_client_vars 为空），判定登录态静默失效，触发自动重登录…");
+  await triggerRelogin();
+  const o2 = await fetchJson(u);
+  const ccv2 = o2 && o2.clientVars && o2.clientVars.collab_client_vars;
+  const valid2 = ccv2 && (ccv2.rev !== undefined || ccv2.maxRow !== undefined || ccv2.initialAttributedText !== undefined);
+  if (!valid2) { const e = new Error("LOGIN_EXPIRED"); e.loginExpired = true; throw e; }
+  return o2;
+}
 function normalizeKeys(o){ if(Array.isArray(o)){ o.forEach(normalizeKeys); return o; } if(o&&typeof o==="object"){ for(const k of Object.keys(o)){ const nk=/^\d+$/.test(k)?"k"+k:k; if(nk!==k){ o[nk]=o[k]; delete o[k]; } normalizeKeys(o[nk]); } } return o; }
 function collectRecords(all,head,recs){ const cand=[]; if(head&&head.c&&head.c.k2&&head.c.k2.k1) cand.push(head.c.k2.k1); if(recs&&recs.c&&recs.c.k2&&recs.c.k2.k1) cand.push(recs.c.k2.k1); for(const rm of cand){ for(const rid of Object.keys(rm)){ all.records[rid]=rm[rid]; } } if(!all.fieldDefs&&head&&head.c&&head.c.k3&&head.c.k3.k3) all.fieldDefs=head.c.k3.k3; if(!all.refData&&head&&head.c&&head.c.k3) all.refData=head.c.k3; }
-async function getRev(tab){ const o=await fetchJsonWithRetry(url(tab,0,1)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; return ccv.rev||0; }
-async function extractSheet(tab){ const first=await fetchJsonWithRetry(url(tab,0,1)); const ccv0=first.clientVars&&first.clientVars.collab_client_vars||{}; const maxRow=ccv0.maxRow||0; const all={fieldDefs:null,refData:null,records:{}}; for(let start=0;start<maxRow;start+=CHUNK){ const end=Math.min(start+CHUNK,maxRow); const o=await fetchJsonWithRetry(url(tab,start,end)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; const iat=ccv.initialAttributedText; if(!iat||!iat.text) continue; const textArr=Array.isArray(iat.text)?iat.text:[iat.text]; for(const ch of textArr){ if(!ch||!ch.smartsheet) continue; const data=normalizeKeys(JSON.parse(ch.smartsheet.charAt(0)==="["?ch.smartsheet:zlib.inflateSync(Buffer.from(ch.smartsheet,"base64")).toString("utf8"))); const items=Array.isArray(data)?data:[data]; for(const inner of items){ const head=Array.isArray(inner)?inner[0]:(inner.head||null); const recs=Array.isArray(inner)?inner[1]:(inner.records||null); collectRecords(all,head,recs); } } } return all; }
+async function getRev(tab){ const o=await fetchDocJson(url(tab,0,1)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; return ccv.rev||0; }
+async function extractSheet(tab){ const first=await fetchDocJson(url(tab,0,1)); const ccv0=first.clientVars&&first.clientVars.collab_client_vars||{}; const maxRow=ccv0.maxRow||0; const all={fieldDefs:null,refData:null,records:{}}; for(let start=0;start<maxRow;start+=CHUNK){ const end=Math.min(start+CHUNK,maxRow); const o=await fetchDocJson(url(tab,start,end)); const ccv=o.clientVars&&o.clientVars.collab_client_vars||{}; const iat=ccv.initialAttributedText; if(!iat||!iat.text) continue; const textArr=Array.isArray(iat.text)?iat.text:[iat.text]; for(const ch of textArr){ if(!ch||!ch.smartsheet) continue; const data=normalizeKeys(JSON.parse(ch.smartsheet.charAt(0)==="["?ch.smartsheet:zlib.inflateSync(Buffer.from(ch.smartsheet,"base64")).toString("utf8"))); const items=Array.isArray(data)?data:[data]; for(const inner of items){ const head=Array.isArray(inner)?inner[0]:(inner.head||null); const recs=Array.isArray(inner)?inner[1]:(inner.records||null); collectRecords(all,head,recs); } } } return all; }
 function csvF(s){ s=String(s==null?"":s); if(/[",\n\r]/.test(s)){ return "\""+s.replace(/"/g,"\"\"")+"\""; } return s; }
 function fmtDate(ms){ if(ms==null||ms==="") return ""; const d=new Date(Number(ms)); if(isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes()); }
 function richText(v){ if(v&&Array.isArray(v.k1)) return v.k1.map(x=>x.k2!=null?x.k2:(x.k3||"")).join(""); return ""; }
@@ -151,11 +168,29 @@ async function main(){
     try{ revs[tab]=await getRev(tab); console.log("  "+name+": rev="+revs[tab]); }catch(e){ if(e.loginExpired){ console.log("[提示] 登录态已失效，自动重登录失败，请手动运行 重新登录.ps1 后再试。"); process.exit(1); } throw e; }
   }
   let oldSnap=null; try{ oldSnap=JSON.parse(fs.readFileSync(SNAP_FILE,"utf8")); }catch(e){}
-  if(oldSnap&&oldSnap.revs){ const same=Object.keys(revs).every(t=>oldSnap.revs[t]===revs[t]); if(same && !FORCE){ console.log("== 无更新：所有子表版本号与上次一致 =="); return; } if(same && FORCE){ console.log("== rev 无变化，--force 强制全量重拉 =="); } }
+  if(oldSnap&&oldSnap.revs){ const same=Object.keys(revs).every(t=>oldSnap.revs[t]===revs[t]); if(same && !FORCE){
+    // 自愈（v2.7）：rev 一致但 CSV 为空/缺失（历史故障写坏）时，强制全量重拉
+    const csvBroken = SHEETS.some(([tab,name]) => {
+      const fn = path.join(DIR, "路跑赛事_"+name+".csv");
+      try { return fs.statSync(fn).size <= 10; } catch(e){ return true; }
+    });
+    if (!csvBroken) { console.log("== 无更新：所有子表版本号与上次一致 =="); return; }
+    console.log("== 检测到 CSV 为空/缺失（历史故障残留），强制全量重拉 ==");
+  } if(same && FORCE){ console.log("== rev 无变化，--force 强制全量重拉 =="); } }
   console.log("== 检测到更新，开始全量拉取 ==");
   const sheets={};
   for(const [tab,name] of SHEETS){
-    const s=await extractSheet(tab); sheets[tab]=s; console.log("  "+name+": "+Object.keys(s.records).length+" 条");
+    const s=await extractSheet(tab); sheets[tab]=s;
+    const n=Object.keys(s.records).length;
+    console.log("  "+name+": "+n+" 条");
+    // 防护（v2.7）：某子表拉到 0 条但上次快照有数据，视为解析失败，中止（不写快照/CSV）
+    const oldN = (oldSnap&&oldSnap.sheets&&oldSnap.sheets[tab]) ? Object.keys(oldSnap.sheets[tab].records||{}).length : -1;
+    if(n===0 && oldN>0){ console.log("[错误] "+name+" 拉取到 0 条（上次快照 "+oldN+" 条），疑似解析失败，已中止。快照与 CSV 未改动。"); process.exit(1); }
+  }
+  // 防护（v2.7）：全部子表 0 条一律视为拉取失败，中止（快照/CSV 均不改动）
+  {
+    const totalRecs=Object.values(sheets).reduce((n,s)=>n+Object.keys(s.records).length,0);
+    if(totalRecs===0){ console.log("[错误] 所有子表均拉取到 0 条，疑似登录失效或解析失败，已中止。快照与 CSV 未改动。"); process.exit(1); }
   }
   const newSnap={revs,sheets,updatedAt:new Date().toISOString()};
   if(oldSnap&&oldSnap.sheets){

@@ -3,6 +3,7 @@ race-data/cookies.txt
 
 # 临时/可再生成
 race-data/snapshot.json
+race-data/relogin.log
 race-data/races_import.json
 race-data/races_import_backup.json
 
