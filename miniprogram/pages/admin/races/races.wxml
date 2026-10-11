@@ -77,7 +77,7 @@
       <view class="race-card-row">
         <view class="race-info">
           <text class="race-name">{{item.name}}</text>
-          <text class="race-meta">{{item.fmtDate}} · {{item.province || item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · 规模' + item.scale : ''}}<text wx:if="{{item.regStatus}}"> · {{item.regStatus}}</text></text>
+          <text class="race-meta">{{item.fmtDate}} · {{item.province || item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · 规模' + item.scale : ''}}<text wx:if="{{item.displayRegStatus}}"> · {{item.displayRegStatus}}</text></text>
           <view class="race-tags-row">
             <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
             <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
@@ -135,6 +135,11 @@
       <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
         <view class="tl-date-pick"><text class="{{form.date ? '' : 'placeholder'}}">{{form.date || '选择日期'}}</text></view>
       </picker>
+      <text class="form-label">报名状态（自动按日期/时间线推导，此值仅在无时间线数据时兜底）</text>
+      <view class="filter-row form-regstatus-row">
+        <text wx:for="{{['待确定','待报名','报名中','待出签','待开赛','取消']}}" wx:key="*this"
+          class="filter-chip {{form.regStatus === item ? 'on' : ''}}" data-v="{{item}}" bindtap="onFormRegStatus">{{item}}</text>
+      </view>
       <text class="form-label">赛事等级</text>
       <view class="btn-row">
         <text class="opt-btn {{form.raceLevel === '' ? 'on' : ''}}" data-v="" bindtap="onFormLevel">未填</text>

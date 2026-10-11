@@ -13,6 +13,58 @@
 // 创建方式：TCB 控制台 → 数据库 → 对应集合 → 索引 → 新建
 const cloud = require('wx-server-sdk');
 cloud.init();
+
+// ===== 报名状态自动推导（与小程序端 utils/raceStatus.js 保持同步）=====
+// 状态链：待确定 → 待报名 → 报名中 → 待出签(抽签赛事) → 待开赛 → 已结束；取消独立
+// 优先级：取消(静态) > 已结束(按日期) > 按时间线推导 > 静态 regStatus 兜底
+function _toDate(d, time) {
+  if (!d) return null;
+  if (d instanceof Date) return d;
+  const s = String(d).replace(/\//g, '-');
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) {
+    const p = new Date(s);
+    return isNaN(p.getTime()) ? null : p;
+  }
+  const t = time && String(time).match(/^(\d{1,2}):(\d{2})/);
+  return new Date(+m[1], +m[2] - 1, +m[3], t ? +t[1] : 0, t ? +t[2] : 0);
+}
+
+function deriveRegStatus(race, now) {
+  now = now || new Date();
+  if (!race) return '';
+  if (race.regStatus === '取消') return '取消';
+  const d = _toDate(race.date);
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (d && d < today0) return '已结束';
+  if (race.regStatus === '已结束') return d ? '待确定' : '已结束';
+
+  const tl = race.timeline || [];
+  const node = (names) => {
+    for (const n of tl) {
+      if (names.includes(n.label) && n.date) return _toDate(n.date, n.time);
+    }
+    return null;
+  };
+  const regOpen = node(['报名开启', '开启报名']);
+  const regEnd = node(['报名截止', '截止报名']);
+  const draw = node(['出签时间', '出签']) || node(['二抽出签']);
+
+  if (regOpen && regEnd) {
+    if (now < regOpen) return '待报名';
+    if (now < regEnd) return '报名中';
+  } else if (regOpen && now < regOpen) {
+    return '待报名';
+  }
+  if (regEnd && now >= regEnd) {
+    const isDraw = String(race.mechanism || '').indexOf('抽签') !== -1;
+    if (isDraw && draw && now < draw) return '待出签';
+    return '待开赛';
+  }
+  if (draw && now >= draw) return '待开赛';
+
+  return race.regStatus || '待确定';
+}
 const db = cloud.database();
 const _ = db.command;
 
@@ -98,21 +150,9 @@ exports.main = async (event) => {
   if (raceLevel) conds.push({ raceLevel });
   if (raceLabel) conds.push({ label: raceLabel });
 
-  // 报名状态筛选（管理端 v2.7，云端过滤，避免分页下客户端过滤漏数据）：
-  //   '已结束' → regStatus='已结束' 或 status='finished' 或 date < 今天0点（regStatus 为表格静态字段不实时刷新，以日期为准）
-  //   其他值  → regStatus 精确匹配
-  if (regStatus) {
-    if (regStatus === '已结束') {
-      const startOfToday = (() => {
-        // 云函数运行在 UTC，换算北京时间今天 0 点
-        const bj = new Date(Date.now() + 8 * 3600 * 1000);
-        return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
-      })();
-      conds.push(_.or([{ regStatus: '已结束' }, { status: 'finished' }, { date: _.lt(startOfToday) }]));
-    } else {
-      conds.push({ regStatus });
-    }
-  }
+  // 报名状态筛选（v2.8：改为内存推导过滤）
+  // 状态按「日期+时间线」实时推导（与小程序端 utils/raceStatus.js 保持同步），
+  // 推导依赖 timeline 字段，数据库查询表达不了，故拉出后内存过滤再分页
 
   // 审核状态过滤：默认仅已发布（老数据无 publishStatus 字段=视为已发布）
   if (publishFilter === 'published') {
@@ -154,14 +194,35 @@ exports.main = async (event) => {
 
   const query = conds.length ? _.and(conds) : {};
 
-  // 2. 查询总数 + 分页数据（一次查询）
-  const ref = db.collection('race_events').where(query);
-  const [countRes, dataRes] = await Promise.all([
-    ref.count(),
-    ref.orderBy(sortBy === 'hot' ? 'markerCount' : 'date', 'desc').skip(skip).limit(limit).get(),
-  ]);
-  const total = countRes.total;
-  const list = dataRes.data;
+  // 2. 查询总数 + 分页数据
+  //    有 regStatus 筛选时：先拉全量（按日期排序），内存推导状态过滤后分页
+  //    无 regStatus 时：数据库层 count + 分页一次完成
+  let total = 0;
+  let list = [];
+  let hasMore = false;
+  if (regStatus) {
+    let all = [];
+    for (let s = 0; s < 5000; s += 1000) {
+      const r = await db.collection('race_events').where(query)
+        .orderBy(sortBy === 'hot' ? 'markerCount' : 'date', 'desc')
+        .skip(s).limit(1000).get();
+      all.push(...r.data);
+      if (r.data.length < 1000) break;
+    }
+    const filtered = all.filter(x => deriveRegStatus(x) === regStatus);
+    total = filtered.length;
+    list = filtered.slice(skip, skip + limit);
+    hasMore = skip + list.length < total;
+  } else {
+    const ref = db.collection('race_events').where(query);
+    const [countRes, dataRes] = await Promise.all([
+      ref.count(),
+      ref.orderBy(sortBy === 'hot' ? 'markerCount' : 'date', 'desc').skip(skip).limit(limit).get(),
+    ]);
+    total = countRes.total;
+    list = dataRes.data;
+    hasMore = skip + list.length < total;
+  }
 
   // 3. 查询标记人数（仅当前页）
   const markerCountMap = {};

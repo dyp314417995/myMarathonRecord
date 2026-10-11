@@ -2,6 +2,7 @@
 const raceUtil = require('../../../utils/raceEvents');
 const cityData = require('../../../utils/city-data');
 const { canonProvince, expandProvinceList } = require('../../../utils/province');
+const { deriveRegStatus } = require('../../../utils/raceStatus');
 const ALL_PROVINCES = cityData.map(p => p.name);
 
 Page({
@@ -221,6 +222,7 @@ Page({
         publishStatus: r.publishStatus || 'published',
         qrStatus: this.calcQrStatus(r.qrCode, r.qrCodeUpdatedAt),
         qrStatusText: this.calcQrStatusText(r.qrCode, r.qrCodeUpdatedAt),
+        displayRegStatus: deriveRegStatus(r), // 按日期/时间线自动推导，静态值兜底
         responsibleAdminName: owners.length ? owners.map(o => o.userName).join('、') : '未分配',
         responsibleAdminCount: owners.length,
       };
@@ -478,30 +480,33 @@ Page({
 
     const raceTypes = r.raceTypes || [r.raceType || 'full'];
     const initPosters = ((r.posters || []).filter(Boolean).length ? r.posters.filter(Boolean) : (r.poster ? [r.poster] : [])).filter(p => p && typeof p === 'string');
+    // 同步初始化预览，防止上一个赛事的二维码/海报残留；cloud:// 链接由 image 组件直接渲染，稍后异步换成临时链接
+    const qrInit = (r.qrCode && !String(r.qrCode).startsWith('cloud://')) ? r.qrCode : '';
     (async () => {
+      // 异步转临时链接（返回时校验仍是当前赛事，防止连续打开两个赛事时旧请求覆盖新表单）
+      const stillMine = () => this.data.editingId === r._id && this.data.showForm;
       if (initPosters.length > 0) {
         const cld = initPosters.filter(p => p.startsWith('cloud://'));
         if (cld.length > 0) {
           try {
             const ur = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cld } });
             const m = {}; (ur.result || []).forEach(f => { if (f.tempFileURL) m[f.fileID] = f.tempFileURL; });
-            this.setData({ posterTemp: initPosters.map(p => p.startsWith('cloud://') ? (m[p] || p) : p) });
-          } catch { this.setData({ posterTemp: initPosters }); }
-        } else { this.setData({ posterTemp: initPosters }); }
+            if (stillMine()) this.setData({ posterTemp: initPosters.map(p => p.startsWith('cloud://') ? (m[p] || p) : p) });
+          } catch { /* 保持占位值 */ }
+        }
       }
       // 二维码预览
-      if (r.qrCode && r.qrCode.startsWith('cloud://')) {
+      if (r.qrCode && String(r.qrCode).startsWith('cloud://')) {
         try {
           const ur = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [r.qrCode] } });
           const tUrl = (ur.result || [])[0] && (ur.result || [])[0].tempFileURL;
-          if (tUrl) this.setData({ formQrUrl: tUrl });
+          if (tUrl && stillMine()) this.setData({ formQrUrl: tUrl });
         } catch { /* ignore */ }
-      } else if (r.qrCode) {
-        this.setData({ formQrUrl: r.qrCode });
       }
     })();
     this.setData({
       showForm: true, editingId: r._id, nameDupStatus: '',
+      posterTemp: initPosters, formQrUrl: qrInit,
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
       form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline, qrCode: r.qrCode || '', qrCodeUpdatedAt: r.qrCodeUpdatedAt || null, qrNotifyDisabled: !!r.qrNotifyDisabled },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
