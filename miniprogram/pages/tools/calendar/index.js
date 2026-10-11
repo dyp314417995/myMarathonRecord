@@ -401,23 +401,32 @@ Page({
   onRaceTypeFilter(e) {
     const v = e.currentTarget.dataset.v;
     this.setData({ raceTypeFilter: this.data.raceTypeFilter === v ? '' : v });
-    this.applyFilter();
+    // 所有赛事 tab 走云端筛选（本地过滤只能筛已加载的页，分页深层会漏）；mine/review 已一次取完，本地过滤
+    if (this.data.tab === 'all') this.loadData();
+    else this.applyFilter();
   },
   onRaceLevelFilter(e) {
     const v = e.currentTarget.dataset.v;
     this.setData({ raceLevelFilter: this.data.raceLevelFilter === v ? '' : v });
-    this.applyFilter();
+    if (this.data.tab === 'all') this.loadData();
+    else this.applyFilter();
   },
   onRaceLabelFilter(e) {
     const v = e.currentTarget.dataset.v;
     this.setData({ raceLabelFilter: this.data.raceLabelFilter === v ? '' : v });
-    this.applyFilter();
+    if (this.data.tab === 'all') this.loadData();
+    else this.applyFilter();
   },
 
   onSearch(e) {
     this.setData({ searchKey: e.detail.value });
     clearTimeout(this._searchTimer);
-    this._searchTimer = setTimeout(() => this.applyFilter(), 300);
+    // 所有赛事：云端全量搜索（本地过滤只能搜到已加载的页，如 11 月 69 场要翻 3 页才出现的目标搜不到）
+    // 我的赛事/评价：已一次取完，本地过滤即可
+    this._searchTimer = setTimeout(() => {
+      if (this.data.tab === 'all') this.loadData();
+      else this.applyFilter();
+    }, 300);
   },
 
   onDateFrom(e) { this.setData({ dateFrom: e.detail.value, _dateSet: true }); this.loadData(); },
