@@ -190,10 +190,16 @@ Page({
       // 报名状态改为云端过滤（v2.7）：分页数据下客户端过滤会漏掉未加载的页
       regStatus: this.data.adminRegStatus || undefined,
     };
-    // 我负责的省份：传入 adminProvinces（仅 provinceScope==='my' 时）；否则传空数组=全国
-    // 注意归一化：admins 存全称（吉林省），race_events.province 存简称（吉林），展开成两种写法再查询
-    if (provinceScope === 'my') params.adminProvinces = expandProvinceList(adminProvinces);
-    else params.adminProvinces = []; // 全选
+    // 省份范围：普通管理员强制只看自己负责的省份（未配置省份则查不到任何赛事，提示联系超管分配）
+    // 超管看全部（负责陆续分配省份）
+    // 注意归一化：admins 存全称（吉林省），race_events.province 需兼容，展开成两种写法再查询
+    if (!this.data.isSuperAdmin) {
+      params.adminProvinces = (adminProvinces && adminProvinces.length)
+        ? expandProvinceList(adminProvinces)
+        : ['__none__']; // 未配置省份：不可能匹配的占位值 → 空列表
+    } else {
+      params.adminProvinces = [];
+    }
     // 二维码筛选
     if (this.data.qrScope === 'missing') params.qrFilter = 'missing';
     else if (this.data.qrScope === 'expired') params.qrFilter = 'expired';
@@ -301,6 +307,7 @@ Page({
   },
 
   onAdminFilter(e) {
+    this.tickSubscribe();
     const { field, v } = e.currentTarget.dataset;
     const key = field === 'type' ? 'adminType' : field === 'level' ? 'adminLevel' : field === 'regStatus' ? 'adminRegStatus' : 'adminLabel';
     this.setData({ [key]: this.data[key] === v ? '' : v });
@@ -314,11 +321,16 @@ Page({
 
   // 二维码/省份维度的过滤
   onQrScope(e) {
+    this.tickSubscribe();
     const v = e.currentTarget.dataset.v;
     this.setData({ qrScope: this.data.qrScope === v ? 'all' : v, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
   },
   onProvinceScope(e) {
     const v = e.currentTarget.dataset.v;
+    // 普通管理员只允许查看自己负责的省份（全部省份仅超管可见）
+    if (!this.data.isSuperAdmin && v === 'all') {
+      return wx.showToast({ title: '仅超管可查看全部省份', icon: 'none' });
+    }
     this.setData({ provinceScope: this.data.provinceScope === v ? 'my' : v, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
   },
 
@@ -406,26 +418,20 @@ Page({
   },
 
   async onEdit(e) {
+    this.tickSubscribe();
     const r = this.data.raceList.find(x => x._id === e.currentTarget.dataset.id);
     if (!r) return;
     this.openEditForm(r);
   },
 
-  // 开启接收二维码通知：订阅消息为一次性授权（1次=1条额度），
-  // 管理员点此按钮累积额度；勾选「总是保持以上选择」后不再弹窗、静默+1
-  onSubscribeQrNotify() {
+  // 静默累积订阅额度：挂在管理员日常点击动作上（须在 tap 回调同步链路内调用）
+  // 一次性订阅须由点击触发（微信平台规定），授权 1 次=1 条接收额度；
+  // 管理员首次弹窗勾选「总是保持以上选择」后，之后每次点击完全静默、无感累积
+  tickSubscribe() {
+    if (!this.data.isAdmin) return;
     wx.requestSubscribeMessage({
       tmplIds: ['mcDtCsiTEPabnEEWb317RnQT4K12zkoknB02GfQZHN4'],
-      success: (r) => {
-        const st = r['mcDtCsiTEPabnEEWb317RnQT4K12zkoknB02GfQZHN4'];
-        if (st === 'accept') wx.showToast({ title: '已开启，接收额度+1', icon: 'success' });
-        else if (st === 'reject') wx.showToast({ title: '已拒绝，无法接收通知', icon: 'none' });
-        else wx.showToast({ title: '已请求订阅', icon: 'none' });
-      },
-      fail: (e) => {
-        console.warn('requestSubscribeMessage fail', e);
-        wx.showToast({ title: '订阅请求失败', icon: 'none' });
-      },
+      complete: () => {}, // 静默：成功/失败/拒绝都不提示
     });
   },
 
@@ -735,8 +741,22 @@ Page({
             formQrUrl: tUrl || fileID,
             formQrUpdatedAtText: that.fmtDate(now),
           });
-          wx.hideLoading();
-          wx.showToast({ title: '已更新二维码', icon: 'success' });
+          // 编辑模式下立即落库：上传即保存，避免用户误以为已保存导致丢失
+          if (that.data.editingId) {
+            try {
+              await raceUtil.update(that.data.editingId, { qrCode: fileID, qrCodeUpdatedAt: now });
+              that.syncQrToRaceList(that.data.editingId, fileID, now);
+              wx.hideLoading();
+              wx.showToast({ title: '已上传并保存', icon: 'success' });
+            } catch (e) {
+              wx.hideLoading();
+              // 自动保存失败时兜底：表单里仍有值，点底部保存也会带上
+              wx.showToast({ title: '已上传，请点底部保存', icon: 'none' });
+            }
+          } else {
+            wx.hideLoading();
+            wx.showToast({ title: '已上传，创建时生效', icon: 'none' });
+          }
         } catch (err) {
           wx.hideLoading();
           wx.showToast({ title: '上传失败', icon: 'none' });
@@ -751,6 +771,29 @@ Page({
       formQrUrl: '',
       formQrUpdatedAtText: '',
     });
+    // 编辑模式下清除即落库（用户点「清除」是明确意图）
+    if (this.data.editingId) {
+      raceUtil.update(this.data.editingId, { qrCode: '', qrCodeUpdatedAt: null })
+        .then(() => {
+          this.syncQrToRaceList(this.data.editingId, '', null);
+          wx.showToast({ title: '已清除并保存', icon: 'success' });
+        })
+        .catch(() => wx.showToast({ title: '已清除，请点底部保存', icon: 'none' }));
+    }
+  },
+  // 二维码即时保存后同步本地列表（重算状态标签与待处理统计）
+  syncQrToRaceList(id, qrCode, qrCodeUpdatedAt) {
+    const list = this.data.allRaceList.slice();
+    const idx = list.findIndex(r => r._id === id);
+    if (idx < 0) return;
+    list[idx] = {
+      ...list[idx], qrCode, qrCodeUpdatedAt,
+      qrStatus: this.calcQrStatus(qrCode, qrCodeUpdatedAt),
+      qrStatusText: this.calcQrStatusText(qrCode, qrCodeUpdatedAt),
+    };
+    this.setData({ allRaceList: list });
+    this.updateQrIssueTip(list);
+    this.applyAdminFilter();
   },
   onPreviewQR() {
     if (!this.data.formQrUrl) return;
@@ -951,6 +994,7 @@ Page({
   },
 
   async onSave() {
+    this.tickSubscribe(); // 顺手累积接收额度（tap 链路内静默请求）
     const f = this.data.form;
     if (!f.name.trim()) return wx.showToast({ title: '请输入赛事名称', icon: 'none' });
     if (this.data.nameDupStatus === 'dup') return wx.showToast({ title: '同名赛事已存在，请修改名称', icon: 'none' });
@@ -1025,15 +1069,21 @@ Page({
       const list = this.data.allRaceList.slice();
       const idx = list.findIndex(r => r._id === this.data.editingId);
       if (idx > -1) {
-        list[idx] = { ...list[idx], ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
+        list[idx] = { ...list[idx], ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes),
+          qrStatus: this.calcQrStatus(data.qrCode, data.qrCodeUpdatedAt),
+          qrStatusText: this.calcQrStatusText(data.qrCode, data.qrCodeUpdatedAt) };
         this.setData({ allRaceList: list, showForm: false });
+        this.updateQrIssueTip(list);
         this.applyAdminFilter();
       }
     } else {
       const addRes = await raceUtil.create(data);
-      const newItem = { _id: addRes._id, ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes) };
+      const newItem = { _id: addRes._id, ...data, fmtDate: this.fmtDate(data.date), raceTypesStr: (data.raceTypes||[]).map(t => ({ full:'全马', half:'半马', '10k':'10K' }[t]||t)).join('/'), countdown: this.calcCountdown(data.date, data.status, data.timeline, data.gunTimes),
+        qrStatus: this.calcQrStatus(data.qrCode, data.qrCodeUpdatedAt),
+        qrStatusText: this.calcQrStatusText(data.qrCode, data.qrCodeUpdatedAt) };
       const list = [newItem, ...this.data.allRaceList];
       this.setData({ allRaceList: list, showForm: false });
+      this.updateQrIssueTip(list);
       this.applyAdminFilter();
     }
     wx.hideLoading();

@@ -61,19 +61,12 @@
         <text class="filter-chip {{qrScope === 'missing' ? 'on' : ''}}" data-v="missing" bindtap="onQrScope">无二维码</text>
         <text class="filter-chip {{qrScope === 'expired' ? 'on' : ''}}" data-v="expired" bindtap="onQrScope">失效（≥7天）</text>
       </view>
-      <view class="filter-row" wx:if="{{!isSuperAdmin}}">
-        <text class="filter-chip {{provinceScope === 'my' ? 'on' : ''}}" data-v="my" bindtap="onProvinceScope">我负责的省份</text>
-        <text class="filter-chip {{provinceScope === 'all' ? 'on' : ''}}" data-v="all" bindtap="onProvinceScope">全部省份</text>
-      </view>
-      <view wx:if="{{provinceScope === 'my' && adminProvinces.length}}" class="my-province-tip">
+      <view wx:if="{{!isSuperAdmin && adminProvinces.length}}" class="my-province-tip">
         <text>负责：</text>
         <text class="my-province-tag" wx:for="{{adminProvinces}}" wx:key="*this">{{item}}</text>
       </view>
-      <view wx:elif="{{provinceScope === 'my' && !adminProvinces.length && !isSuperAdmin}}" class="my-province-tip">
-        <text>未配置负责省份，查看全部</text>
-      </view>
-      <view class="filter-row">
-        <text class="filter-chip qr-notify-chip" bindtap="onSubscribeQrNotify">🔔 开启接收通知（每点一次+1条）</text>
+      <view wx:elif="{{!isSuperAdmin}}" class="my-province-tip">
+        <text>未配置负责省份，暂无可管理赛事，请联系超管分配</text>
       </view>
       <view wx:if="{{qrScope === 'all' && (qrIssueMissing > 0 || qrIssueExpired > 0)}}" class="my-province-tip qr-issue-tip">
         <text>📋 待处理：缺 {{qrIssueMissing || 0}} 个、过期 {{qrIssueExpired || 0}} 个群二维码</text>

@@ -59,6 +59,19 @@ exports.main = async (event, context) => {
       return { success: true, deduped: true, message: '今日已通知过，跳过' };
     }
 
+    // 0.5 取上一次运行（今天之前最近一条）的分省数量，用于「有变化才发」：
+    //     某省缺失/过期数量与上次完全一致 = 已提醒过且无新增无进展，不重复打扰
+    const prevRes = await db.collection('race_qr_expire_notify_log').where({
+      source: 'cron',
+      dayKey: _.neq(dayKey),
+    }).orderBy('createTime', 'desc').limit(1).get().catch(() => null);
+    const prevMap = {};
+    if (prevRes && prevRes.data && prevRes.data.length) {
+      ((prevRes.data[0].detail) || []).forEach(d => {
+        prevMap[d.province] = `${d.missing || 0}-${d.expired || 0}`;
+      });
+    }
+
     // 1. 拉所有有二维码状态问题的赛事（限定未结束的，避免噪音）
     //   - 已举办完成（date < 今天0点 或 status='finished'）的赛事不再通知
     //   - qrCode 缺失（空/不存在）
@@ -155,6 +168,13 @@ exports.main = async (event, context) => {
     racesExpired.forEach(r => addRace(r, 'expired'));
 
     for (const g of Object.values(groupMap)) {
+      // 有变化才发：该省数量与上次运行完全一致则跳过（已提醒过，无新增无进展）
+      const curKey = `${g.missing.length}-${g.expired.length}`;
+      if (prevMap[g.province] === curKey) {
+        detail.push({ province: g.province, status: 'skipped_no_change', missing: g.missing.length, expired: g.expired.length });
+        continue;
+      }
+
       const matched = matchAdmins(g.province);
       if (matched.length === 0) {
         detail.push({ province: g.province, status: 'no_admin', missing: g.missing.length, expired: g.expired.length });

@@ -243,9 +243,6 @@
 .qr-empty-text { font-size: 26rpx; color: #333; margin-top: 8rpx; }
 .qr-empty-tip { font-size: 20rpx; color: #999; margin-top: 4rpx; padding: 0 12rpx; }
 
-/* 开启接收二维码通知按钮：醒目绿框样式 */
-.qr-notify-chip { background: #e8f5e9 !important; color: #1aad19 !important; font-weight: 600; }
-
 /* 待处理二维码数量提示条 */
 .qr-issue-tip text { color: #e6a23c; font-weight: 600; }
 

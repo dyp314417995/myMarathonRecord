@@ -225,6 +225,18 @@
     <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">⭐ 关注赛事</view>
   </view>
 
+  <!-- 群二维码展示（管理员已上传时） -->
+  <view class="card qr-show" wx:if="{{qrStatus !== 'none' && qrCodeUrl}}">
+    <view class="section-title">
+      <text>{{qrStatus === 'expired' ? '👥 赛事交流群（二维码已过期）' : '👥 赛事交流群'}}</text>
+    </view>
+    <view class="qr-show-box">
+      <image src="{{qrCodeUrl}}" mode="aspectFit" class="qr-show-img" bindtap="onPreviewRaceQr" />
+      <text wx:if="{{qrStatus === 'expired'}}" class="qr-show-warn">⚠️ 二维码已过期，扫码可能无法进群</text>
+      <text wx:else class="qr-show-tip">点击二维码可放大保存</text>
+    </view>
+  </view>
+
   <!-- 二维码异常：通知负责人（已举办完成/管理员已关闭提醒的赛事不再提示） -->
   <view class="card qr-notice" wx:if="{{!raceFinished && !qrNotifyDisabled && (qrStatus === 'expired' || qrStatus === 'none')}}">
     <view class="section-title">
