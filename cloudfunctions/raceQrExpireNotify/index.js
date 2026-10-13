@@ -181,11 +181,16 @@ exports.main = async (event, context) => {
         continue;
       }
 
-      // 消息体：省份 + 「缺N个，过期M个」 + 赛事名列表（先缺后过期，超 20 字截断）
-      const parts = [];
-      if (g.missing.length) parts.push(`缺${g.missing.length}个`);
-      if (g.expired.length) parts.push(`过期${g.expired.length}个`);
-      const summary = parts.join('，') + '群二维码';
+      // 消息体：省份 + 摘要 + 赛事名列表（先缺后过期，超 20 字截断）
+      // 三种场景文案明确分开，避免「缺/过期」两种情况读起来一样
+      let summary;
+      if (g.missing.length && g.expired.length) {
+        summary = `缺${g.missing.length}、过期${g.expired.length}个群二维码`;
+      } else if (g.missing.length) {
+        summary = `缺${g.missing.length}个群二维码待上传`;
+      } else {
+        summary = `${g.expired.length}个群二维码已过期需更新`;
+      }
       const names = [...g.missing, ...g.expired].map(r => r.name).join('、');
       const msgData = useQrTpl ? getQrMsg(g.province, summary, names) : getMsg(g.province, summary);
 
