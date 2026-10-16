@@ -191,10 +191,10 @@ Page({
       // 报名状态改为云端过滤（v2.7）：分页数据下客户端过滤会漏掉未加载的页
       regStatus: this.data.adminRegStatus || undefined,
     };
-    // 省份范围：普通管理员强制只看自己负责的省份（未配置省份则查不到任何赛事，提示联系超管分配）
-    // 超管看全部（负责陆续分配省份）
-    // 注意归一化：admins 存全称（吉林省），race_events.province 需兼容，展开成两种写法再查询
-    if (!this.data.isSuperAdmin) {
+    // 省份范围：「我负责的」默认选中（只查自己省份），切到「全部赛事」后管理员也能查看并编辑全部赛事。
+    // 注意：此处只控制可见范围，不限制编辑权限——管理员对看到的赛事均可编辑
+    // 归一化：admins 存全称（吉林省），race_events.province 需兼容，展开成两种写法再查询
+    if (this.data.provinceScope === 'my' && !this.data.isSuperAdmin) {
       params.adminProvinces = (adminProvinces && adminProvinces.length)
         ? expandProvinceList(adminProvinces)
         : ['__none__']; // 未配置省份：不可能匹配的占位值 → 空列表
@@ -222,6 +222,7 @@ Page({
         publishStatus: r.publishStatus || 'published',
         qrStatus: this.calcQrStatus(r.qrCode, r.qrCodeUpdatedAt),
         qrStatusText: this.calcQrStatusText(r.qrCode, r.qrCodeUpdatedAt),
+        qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'), // 列表展示与统计用
         displayRegStatus: deriveRegStatus(r), // 按日期/时间线自动推导，静态值兜底
         responsibleAdminName: owners.length ? owners.map(o => o.userName).join('、') : '未分配',
         responsibleAdminCount: owners.length,
@@ -238,7 +239,9 @@ Page({
     if (this.data.qrScope !== 'all') return;
     let missing = 0, expired = 0;
     list.forEach(r => {
-      if (r.qrNotifyDisabled || r.status === 'finished') return;
+      // 仅控制定时通知：mode==='expired' 即关闭该赛事的定时提醒，缺/过期都不再自动汇总
+      const mode = r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all');
+      if (mode === 'expired' || r.status === 'finished') return;
       if (r.qrStatus === 'none') missing++;
       else if (r.qrStatus === 'expired') expired++;
     });
@@ -329,11 +332,9 @@ Page({
   },
   onProvinceScope(e) {
     const v = e.currentTarget.dataset.v;
-    // 普通管理员只允许查看自己负责的省份（全部省份仅超管可见）
-    if (!this.data.isSuperAdmin && v === 'all') {
-      return wx.showToast({ title: '仅超管可查看全部省份', icon: 'none' });
-    }
-    this.setData({ provinceScope: this.data.provinceScope === v ? 'my' : v, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
+    this.tickSubscribe();
+    // 两个选项是范围单选（点已选中的保持选中），不做开关式切换
+    this.setData({ provinceScope: v, adminPage: 0, allRaceList: [], raceList: [] }, () => this.loadRaces());
   },
 
   onRaceDetailAdmin(e) {
@@ -410,6 +411,7 @@ Page({
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
       formQrUrl: '', formQrUpdatedAtText: '',
+      qrNotifyMode: 'all', // 新建默认都提醒
       showProvincePicker: false, provinceSearchKey: '',
       timelineNodes: [
         { label: '报名开启', date: '', time: '12:00' }, { label: '报名截止', date: '', time: '12:00' }, { label: '退费截止', date: '', time: '12:00' },
@@ -506,9 +508,9 @@ Page({
     })();
     this.setData({
       showForm: true, editingId: r._id, nameDupStatus: '',
-      posterTemp: initPosters, formQrUrl: qrInit,
+      posterTemp: initPosters, formQrUrl: qrInit, qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'),
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
-      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline, qrCode: r.qrCode || '', qrCodeUpdatedAt: r.qrCodeUpdatedAt || null, qrNotifyDisabled: !!r.qrNotifyDisabled },
+      form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline, qrCode: r.qrCode || '', qrCodeUpdatedAt: r.qrCodeUpdatedAt || null, qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'), qrNotifyDisabled: !!r.qrNotifyDisabled },
       gunTimes: (r.gunTimes && r.gunTimes.length) ? r.gunTimes.map((g, i) => ({ ...g, zoneIdx: i })) : [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       timelineNodes: tNodes,
       formQrUpdatedAtText: r.qrCodeUpdatedAt ? this.fmtDate(r.qrCodeUpdatedAt) : '',
@@ -993,9 +995,12 @@ Page({
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onHideForm() { this.setData({ showForm: false }); },
 
-  // 群二维码提醒开关（关闭=该赛事不再提醒缺失/过期）
+  // 群二维码提醒模式：'expired' = 关闭定时提醒（仅控制每日汇总），'all' = 正常推送
+  // 注意：手动催办（用户在详情页点「通知负责人处理」）始终能送达，不受此开关影响
   onToggleQrNotify(e) {
-    this.setData({ 'form.qrNotifyDisabled': !e.detail.value });
+    const off = e.detail.value; // 开关 = true 表示关闭定时
+    const mode = off ? 'expired' : 'all';
+    this.setData({ 'form.qrNotifyMode': mode, 'form.qrNotifyDisabled': off });
   },
 
   async onSave() {
@@ -1028,7 +1033,9 @@ Page({
       posters,
       qrCode: f.qrCode || '',
       qrCodeUpdatedAt: f.qrCode ? (f.qrCodeUpdatedAt || new Date()) : null,
-      qrNotifyDisabled: !!f.qrNotifyDisabled,
+      // 三态：'all' 都提醒 | 'expired' 仅关过期（缺仍通知） | 'none' 全关闭
+      qrNotifyMode: f.qrNotifyMode || (f.qrNotifyDisabled ? 'expired' : 'all'),
+      qrNotifyDisabled: (f.qrNotifyMode || 'all') === 'expired', // 兼容老数据查询（true 表示关闭定时）
       status: new Date(f.date) < new Date() ? 'finished' : 'upcoming',
       tagStats: {}, reviewCount: 0, avgScore: 0,
       publishStatus: 'published',
@@ -1040,7 +1047,7 @@ Page({
     if (this.data.editingId) {
       const old = this.data.allRaceList.find(r => r._id === this.data.editingId) || {};
       const manual = new Set(old.manualFields || []);
-      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters','qrCode','qrCodeUpdatedAt','qrNotifyDisabled'];
+      const COMPARE_FIELDS = ['name','raceGroup','date','province','city','raceTypes','raceLevel','label','scale','subScale','fee','organizer','operator','contactPhone','contactEmail','wechatAccount','website','mechanism','payment','signupChannels','medicalReport','finishRequirement','refundRule','startPoint','medalImage','routeMap','regStatus','gunTimes','timeline','posters','qrCode','qrCodeUpdatedAt','qrNotifyMode','qrNotifyDisabled'];
       const toStr = (v) => {
         if (v instanceof Date) {
           const p = n => String(n).padStart(2, '0');

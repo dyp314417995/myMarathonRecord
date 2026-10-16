@@ -61,12 +61,16 @@
         <text class="filter-chip {{qrScope === 'missing' ? 'on' : ''}}" data-v="missing" bindtap="onQrScope">无二维码</text>
         <text class="filter-chip {{qrScope === 'expired' ? 'on' : ''}}" data-v="expired" bindtap="onQrScope">失效（≥7天）</text>
       </view>
-      <view wx:if="{{!isSuperAdmin && adminProvinces.length}}" class="my-province-tip">
+      <view class="filter-row">
+        <text class="filter-chip {{provinceScope === 'my' ? 'on' : ''}}" data-v="my" bindtap="onProvinceScope">我负责的省份</text>
+        <text class="filter-chip {{provinceScope === 'all' ? 'on' : ''}}" data-v="all" bindtap="onProvinceScope">全部赛事</text>
+      </view>
+      <view wx:if="{{provinceScope === 'my' && adminProvinces.length}}" class="my-province-tip">
         <text>负责：</text>
         <text class="my-province-tag" wx:for="{{adminProvinces}}" wx:key="*this">{{item}}</text>
       </view>
-      <view wx:elif="{{!isSuperAdmin}}" class="my-province-tip">
-        <text>未配置负责省份，暂无可管理赛事，请联系超管分配</text>
+      <view wx:elif="{{provinceScope === 'my' && !adminProvinces.length && !isSuperAdmin}}" class="my-province-tip">
+        <text>未配置负责省份，可切「全部赛事」查看</text>
       </view>
       <view wx:if="{{qrScope === 'all' && (qrIssueMissing > 0 || qrIssueExpired > 0)}}" class="my-province-tip qr-issue-tip">
         <text>📋 待处理：缺 {{qrIssueMissing || 0}} 个、过期 {{qrIssueExpired || 0}} 个群二维码</text>
@@ -81,7 +85,7 @@
           <view class="race-tags-row">
             <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
             <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
-            <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}{{item.qrNotifyDisabled ? ' ·不提醒' : ''}}</text>
+            <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}<text wx:if="{{item.qrNotifyMode === 'expired'}}"> ·已关提醒</text></text>
             <text class="tag tag-blue owner-tag" wx:if="{{item.province}}">👤 {{item.responsibleAdminName}}</text>
           </view>
         </view>
@@ -256,13 +260,13 @@
           </view>
         </block>
       </view>
-      <!-- 群二维码提醒开关（v2.8）：不拉群的赛事可关闭，关闭后不再提醒缺失/过期 -->
+      <!-- 群二维码提醒（v2.10）：仅控制定时汇总通知；用户手动催办始终能送达管理员 -->
       <view class="qr-notify-switch">
         <view class="qr-notify-switch-info">
-          <text class="qr-notify-switch-title">群二维码过期提醒</text>
-          <text class="qr-notify-switch-tip">默认开启；不拉群的赛事可关闭</text>
+          <text class="qr-notify-switch-title">关闭定时提醒</text>
+          <text class="qr-notify-switch-tip">开启时过期/未上传会每日汇总；不打算建群的赛事可关闭以免打扰。用户手动催办始终会通知到负责人</text>
         </view>
-        <switch checked="{{!form.qrNotifyDisabled}}" bindchange="onToggleQrNotify" color="#1aad19" />
+        <switch checked="{{qrNotifyMode === 'expired'}}" bindchange="onToggleQrNotify" color="#1aad19" />
       </view>
       <view class="poster-grid count-{{posterTemp.length === 1 ? 1 : (posterTemp.length === 2 || posterTemp.length === 4 ? 2 : 3)}}">
         <view class="poster-grid-item" wx:for="{{posterTemp}}" wx:key="*this" wx:for-index="idx">

@@ -238,7 +238,7 @@
   </view>
 
   <!-- 二维码异常：通知负责人（已举办完成/管理员已关闭提醒的赛事不再提示） -->
-  <view class="card qr-notice" wx:if="{{!raceFinished && !qrNotifyDisabled && (qrStatus === 'expired' || qrStatus === 'none')}}">
+  <view class="card qr-notice" wx:if="{{!raceFinished && (qrStatus === 'expired' || qrStatus === 'none')}}">
     <view class="section-title">
       <text>{{qrStatus === 'expired' ? '⚠️ 群二维码已过期' : '📭 该赛事还未上传群二维码'}}</text>
     </view>

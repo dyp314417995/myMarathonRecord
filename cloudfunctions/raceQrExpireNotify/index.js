@@ -84,19 +84,24 @@ exports.main = async (event, context) => {
       return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
     })();
     const upcomingFilter = { status: _.neq('finished'), date: _.gte(startOfToday) }; // 即将开始/进行中（含今天）的赛事
+    // 模式派生：'all' 正常推送定时通知 | 'expired' 关闭整个定时通知（缺+过期都不发）
+    // 手动催办不受此开关影响（详见 notifyRaceQrOwner）
+    // 老数据 qrNotifyDisabled=true 等同 'expired'（关闭）
+    const modeOf = (r) => r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all');
+    const allowPush = (r) => modeOf(r) === 'all';
     const racesMissing = ((await db.collection('race_events').where({
       ...upcomingFilter,
       $or: [
         { qrCode: _.in(['', null]) },
         { qrCode: { $exists: false } },
       ],
-    }).limit(500).get()).data || []).filter(r => !r.qrNotifyDisabled); // 赛事级开关：关闭提醒的不发
+    }).limit(500).get()).data || []).filter(allowPush);
 
     const racesExpired = ((await db.collection('race_events').where({
       ...upcomingFilter,
       qrCode: db.command.not(_.in(['', null])),
       qrCodeUpdatedAt: _.lte(expireBefore),
-    }).limit(500).get()).data || []).filter(r => !r.qrNotifyDisabled);
+    }).limit(500).get()).data || []).filter(allowPush);
 
     const total = racesMissing.length + racesExpired.length;
     if (total === 0) {

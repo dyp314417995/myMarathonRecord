@@ -106,10 +106,8 @@ exports.main = async (event, context) => {
 
     if (!province) return { success: false, error: '该赛事未设置举办省份，无法定位负责人' };
 
-    // 0.1 赛事级开关：管理员可对不拉群的赛事关闭提醒（qrNotifyDisabled，缺省=开启）
-    if (race.qrNotifyDisabled) {
-      return { success: true, skipped: true, message: '该赛事已关闭二维码提醒' };
-    }
+    // 0.1 手动催办始终送达，不受定时提醒开关影响
+    //   （开关仅控制 raceQrExpireNotify 的每日定时汇总）
 
     // 0.2 已举办完成的赛事不再通知（date < 北京时间今天0点 或 status='finished'）
     //    注：status 仅导入时计算不实时刷新，故以 date 为准

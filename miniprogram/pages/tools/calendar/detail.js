@@ -28,7 +28,8 @@ Page({
     showResultTimePicker: false,
     showMarkSheet: false,
     qrStatus: 'none',       // none | fresh | ok | expired（qr 状态）
-    qrCodeUrl: '',          // 群二维码展示 URL（云文件ID 转临时链接）
+    qrCodeUrl: '',          // 群二维码展示 URL（cloud:// 文件ID 或 http 链接，image 直接渲染）
+    qrCodeTempUrl: '',      // 群二维码临时 http 链接（previewImage 用，异步获取）
     raceFinished: false,    // 赛事是否已举办完成（完成后不再提示通知负责人）
     notifyingOwner: false,
   },
@@ -179,8 +180,10 @@ Page({
         },
         qrStatus: this.calcQrStatus(event.qrCode, event.qrCodeUpdatedAt),
         raceFinished: this.calcRaceFinished(event.status, event.date),
-        qrNotifyDisabled: !!event.qrNotifyDisabled, // 赛事级开关：不拉群的赛事不显示通知入口
+        qrNotifyDisabled: !!event.qrNotifyDisabled, // 兼容老数据：true 视为关闭定时
+        qrNotifyMode: event.qrNotifyMode || (event.qrNotifyDisabled ? 'expired' : 'all'), // 'all' 正常 | 'expired' 关闭定时（手动催办仍能送达）
         qrCodeUrl: event.qrCode && String(event.qrCode).indexOf('cloud://') !== 0 ? event.qrCode : '',
+        qrCodeTempUrl: '',               // 临时 http 链接（previewImage 用，与 qrCodeUrl 同源）
         raceGroup: event.raceGroup || '',
         reviewStats: stats,
         topTags: tagEntries,
@@ -189,14 +192,26 @@ Page({
         'myReview.myAvg': myReview && myReview.scores ? Math.round((myReview.scores.difficulty + myReview.scores.atmosphere + myReview.scores.supply + myReview.scores.transport) / 0.4) / 10 : 0,
       });
       if (!silent) wx.hideLoading();
-      // 群二维码：云文件 ID 转临时链接展示（比 image 直接用 cloud:// 兼容性更稳，且可复用给 previewImage）
+      // 群二维码：cloud:// 需转 http 临时链接才能渲染（开发者工具不认 cloud:// 会拼成相对 URL 报错）
+      // 优先用云函数 getImageUrls（与管理端编辑弹窗同源，已验证稳定），失败再退回客户端 API，
+      // 两者都失败时才直接用 cloud://（真机可渲染，开发者工具会报加载错误）
       if (event.qrCode && String(event.qrCode).indexOf('cloud://') === 0) {
-        wx.cloud.getTempFileURL({ fileList: [event.qrCode] })
-          .then(r => {
-            const f = r.fileList && r.fileList[0];
-            if (f && f.tempFileURL) this.setData({ qrCodeUrl: f.tempFileURL });
+        const stillMine = () => this.data.event && this.data.event._id === event._id;
+        const apply = (tUrl) => {
+          if (!stillMine()) return;
+          if (tUrl) this.setData({ qrCodeUrl: tUrl, qrCodeTempUrl: tUrl });
+          else this.setData({ qrCodeUrl: event.qrCode }); // 兜底：真机可直接渲染
+        };
+        wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [event.qrCode] } })
+          .then(ur => {
+            const f = (ur && ur.result || [])[0];
+            apply(f && f.tempFileURL);
           })
-          .catch(() => this.setData({ qrCodeUrl: event.qrCode })); // 兜底：image 组件支持直接用 cloud://
+          .catch(() => {
+            wx.cloud.getTempFileURL({ fileList: [event.qrCode] })
+              .then(r => apply(r.fileList && r.fileList[0] && r.fileList[0].tempFileURL))
+              .catch(() => apply(''));
+          });
       }
       // 加载他人评价
       if (event.raceGroup) this.loadOtherReviews();
@@ -466,7 +481,7 @@ Page({
 
   // 预览群二维码（放大保存）
   onPreviewRaceQr() {
-    const url = this.data.qrCodeUrl;
+    const url = this.data.qrCodeTempUrl || this.data.qrCodeUrl; // 优先用已转好的临时链接
     if (!url) return;
     if (url.indexOf('cloud://') === 0) {
       // previewImage 不认云文件 ID，先转临时链接
@@ -492,6 +507,7 @@ Page({
     if (qrStatus !== 'expired' && qrStatus !== 'none') {
       return wx.showToast({ title: '当前二维码状态无需通知', icon: 'none' });
     }
+    // 手动催办始终送达，不受定时提醒开关影响
     const reason = qrStatus === 'none' ? 'missing' : 'expired';
     const reasonText = reason === 'missing' ? '还没上传二维码' : '二维码过期啦';
 
