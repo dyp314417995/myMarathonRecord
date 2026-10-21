@@ -1,0 +1,114 @@
+<!-- pages/winter/index.wxml - 冬训营首页 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+
+  <block wx:if="{{!loading}}">
+    <!-- 顶部 Banner -->
+    <view class="hero">
+      <text class="hero-title">{{cfg.title || '冬训营'}}</text>
+      <text class="hero-sub">{{cfg.subtitle || '一起练，跑过这个冬天'}}</text>
+      <view style="margin-top:18rpx">
+        <text class="tag {{phase === 'formal' ? 'tag-green' : (phase === 'trial' ? 'tag-orange' : 'tag-gray')}}">{{phaseText}}</text>
+        <text class="tag tag-blue" wx:if="{{weekIndex > 0}}">第 {{weekIndex}} 周</text>
+      </view>
+      <text class="hero-tip" wx:if="{{frozen}}">❄️ 春节假期中：考核、连续计数、罚金与榜单已冻结</text>
+    </view>
+
+    <!-- 未报名：介绍 + 报名入口 -->
+    <block wx:if="{{!joined}}">
+      <view class="card">
+        <text class="card-title">冬训营简介</text>
+        <text class="intro-text">{{cfg.intro}}</text>
+      </view>
+
+      <view class="card">
+        <text class="card-title">费用说明</text>
+        <view class="row"><text class="row-label">参赛费</text><text class="row-value">{{cfg.fee.entry}} 元</text></view>
+        <view class="row"><text class="row-label">教练费</text><text class="row-value">{{cfg.fee.coach}} 元</text></view>
+        <view class="row"><text class="row-label">奖池</text><text class="row-value">{{cfg.fee.pool}} 元</text></view>
+        <text class="card-sub" style="margin-top:16rpx">费用线下收取，系统仅记录缴费状态</text>
+      </view>
+
+      <view class="card" style="text-align:center">
+        <block wx:if="{{phase !== 'closed' && cfg.signupOpen}}">
+          <button class="btn" bindtap="onGoApply">立即报名</button>
+        </block>
+        <block wx:else>
+          <button class="btn btn-gray" disabled>报名暂未开放</button>
+        </block>
+        <text class="card-sub" style="margin-top:16rpx">已有账号但看不到报名入口？说明你已报名或登录状态异常</text>
+      </view>
+
+      <view class="card" bindtap="onGoRules">
+        <text class="row-label">📖 查看完整规则（完成判定 / 处罚 / 转组 / 春节放假）</text>
+      </view>
+    </block>
+
+    <!-- 已报名：概览 -->
+    <block wx:else>
+      <!-- 报名未通过 -->
+      <view class="notice-bar" wx:if="{{member.status === 'pending'}}">
+        ⏳ 你的{{myRoleText}}申请待管理组审核任命，通过后即可进入我的组
+      </view>
+      <view class="notice-bar" wx:elif="{{member.status === 'rejected'}}">
+        ❌ 报名被驳回，可重新提交申请
+      </view>
+      <view class="notice-bar" wx:elif="{{member.status === 'quit-suggested'}}">
+        ⚠️ 已连续 {{member.continuousFailWeeks}} 周未完成，建议退出，等待管理组确认
+      </view>
+
+      <view class="card">
+        <text class="card-title">我的组 · {{group.name || '未分组'}}</text>
+        <view class="row"><text class="row-label">我的角色</text><text class="row-value">{{myRoleText}}</text></view>
+        <view class="row"><text class="row-label">报名状态</text><text class="row-value">{{statusText}}</text></view>
+        <view class="row"><text class="row-label">本周 KPI</text><text class="row-value" wx:if="{{member.kpiValue > 0}}">{{member.kpiValue}}{{member.kpiType === 'attendance' ? ' 天' : ' 公里'}}</text><text class="row-value" wx:else>未填报</text></view>
+        <view class="row"><text class="row-label">KPI 区间</text><text class="row-value">{{kpiRangeText}}</text></view>
+        <view class="row"><text class="row-label">今日打卡</text><text class="row-value">{{todayCheckinText}}</text></view>
+        <view class="row"><text class="row-label">本组本周完成率</text><text class="row-value">{{weeklyAvg}}</text></view>
+        <view class="row" wx:if="{{member.continuousFailWeeks > 0}}"><text class="row-label">连续未完成</text><text class="row-value" style="color:#e74c3c">{{member.continuousFailWeeks}} 周</text></view>
+        <view style="margin-top:20rpx"><button class="btn btn-ghost" bindtap="onGoTeam">进入我的组</button></view>
+      </view>
+
+      <!-- 功能入口 -->
+      <view class="card">
+        <text class="card-title">训练打卡</text>
+        <view class="grid-4">
+          <view class="grid-item" bindtap="onGoCheckin">
+            <text class="grid-num">📷</text><text class="grid-label">今日打卡</text>
+          </view>
+          <view class="grid-item" bindtap="onGoKpi">
+            <text class="grid-num">🎯</text><text class="grid-label">{{myRoleText === '教练' ? '设定区间' : 'KPI填报'}}</text>
+          </view>
+          <view class="grid-item" bindtap="onGoSchedule">
+            <text class="grid-num">📅</text><text class="grid-label">本周课表</text>
+          </view>
+          <view class="grid-item" bindtap="onGoReview" wx:if="{{myRoleText === '队长' || myRoleText === '教练'}}">
+            <text class="grid-num">✅</text>
+            <text class="grid-label">待审 {{pendingCount}}</text>
+          </view>
+          <view class="grid-item" bindtap="onGoRank">
+            <text class="grid-num">🏆</text><text class="grid-label">榜单</text>
+          </view>
+          <view class="grid-item" bindtap="onGoProfile">
+            <text class="grid-num">👤</text><text class="grid-label">我的</text>
+          </view>
+          <view class="grid-item" bindtap="onGoRules">
+            <text class="grid-num">📖</text><text class="grid-label">规则</text>
+          </view>
+          <view class="grid-item" bindtap="onGoAdmin" wx:if="{{isAdmin}}">
+            <text class="grid-num">⚙️</text><text class="grid-label">管理后台</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="card" bindtap="onGoSchedule">
+        <text class="card-title">本周课表</text>
+        <text class="card-sub">点击查看本周训练建议与三档课表</text>
+      </view>
+    </block>
+
+    <view class="card" bindtap="onGoRules" wx:if="{{joined}}" style="text-align:center;text-decoration:underline;color:#888">
+      📖 冬训规则与说明
+    </view>
+  </block>
+</view>

@@ -1,0 +1,77 @@
+<!-- pages/winter/checkin.wxml - 每日打卡 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="notice-bar" wx:if="{{notJoined}}">你尚未报名冬训营，请先完成报名</view>
+
+    <block wx:if="{{!notJoined}}">
+      <view class="card">
+        <text class="card-title">今日打卡</text>
+        <view class="row">
+          <text class="row-label">打卡日期</text>
+          <picker mode="date" value="{{date}}" end="{{maxDate}}" bindchange="onDateChange">
+            <text class="row-value">{{date}} ›</text>
+          </picker>
+        </view>
+        <view class="row" wx:if="{{todayRecord}}">
+          <text class="row-label">今日状态</text>
+          <text class="tag {{todayRecord.status === 'approved' ? 'tag-green' : (todayRecord.status === 'rejected' ? 'tag-red' : 'tag-orange')}}">{{statusText}}</text>
+        </view>
+        <view wx:if="{{todayRecord && todayRecord.status === 'rejected' && todayRecord.reviewNote}}" class="notice-bar" style="margin-top:16rpx">
+          驳回原因：{{todayRecord.reviewNote}}
+        </view>
+      </view>
+
+      <view class="card">
+        <text class="card-title">上传跑步记录截图 *</text>
+        <text class="card-sub">需包含日期与跑量/时长信息，每日 1 张</text>
+        <view style="display:flex;align-items:center">
+          <image wx:if="{{tempImage}}" class="img-preview" src="{{tempImage}}" mode="aspectFill" bindtap="onPreview" />
+          <view wx:else class="upload-box" bindtap="onChooseImage">＋ 选择图片</view>
+          <view style="margin-left:20rpx" wx:if="{{tempImage}}" bindtap="onChooseImage">
+            <text class="tag tag-blue">重新选择</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="card">
+        <text class="card-title">训练数据</text>
+        <view class="field" wx:if="{{needDistance}}">
+          <text class="field-label">本次跑量（公里）*</text>
+          <input class="input" type="digit" value="{{distance}}" data-f="distance" bindinput="onInput" placeholder="如 10.5" />
+        </view>
+        <view class="field" wx:else>
+          <text class="field-label">本次时长（分钟）*</text>
+          <input class="input" type="digit" value="{{duration}}" data-f="duration" bindinput="onInput" placeholder="如 60" />
+        </view>
+        <view class="field" wx:if="{{!needDistance}}">
+          <text class="field-label">本次跑量（公里，选填）</text>
+          <input class="input" type="digit" value="{{distance}}" data-f="distance" bindinput="onInput" placeholder="如 10.5" />
+        </view>
+        <view class="field">
+          <text class="field-label">备注</text>
+          <textarea class="textarea" value="{{note}}" data-f="note" bindinput="onInput" placeholder="训练感受、地点等（选填）"></textarea>
+        </view>
+      </view>
+
+      <view class="notice-bar">
+        ⏰ 周日 24 点截止本周打卡；队长/教练需在周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）
+      </view>
+
+      <button class="btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">提交打卡</button>
+
+      <view class="card" wx:if="{{weekDays.length > 0}}">
+        <text class="card-title">本周打卡记录</text>
+        <view class="member-row" wx:for="{{weekDays}}" wx:key="_id">
+          <view class="member-info">
+            <text class="member-name">{{item.date}}</text>
+            <text class="member-meta">{{needDistance ? (item.distance + ' 公里') : (item.duration + ' 分钟')}}{{item.note ? ' · ' + item.note : ''}}</text>
+          </view>
+          <view class="member-right">
+            <text class="tag {{item.status === 'approved' ? 'tag-green' : (item.status === 'rejected' ? 'tag-red' : 'tag-orange')}}">{{item.status === 'approved' ? '已通过' : (item.status === 'rejected' ? '已驳回' : '审核中')}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </block>
+</view>

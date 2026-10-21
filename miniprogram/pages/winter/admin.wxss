@@ -1,0 +1,3 @@
+@import './common.wxss';
+.loading { text-align: center; padding: 80rpx; color: #999; }
+.modal-box .textarea { height: 120rpx; }

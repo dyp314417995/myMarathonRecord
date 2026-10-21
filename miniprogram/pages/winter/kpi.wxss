@@ -1,0 +1,4 @@
+@import './common.wxss';
+.loading { text-align: center; padding: 80rpx; color: #999; }
+.range-big { font-size: 52rpx; font-weight: 700; color: #1aad19; display: block; text-align: center; margin: 20rpx 0; }
+.ok-tip { font-size: 22rpx; color: #1aad19; margin-top: 8rpx; display: block; }

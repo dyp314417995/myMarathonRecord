@@ -1,0 +1,68 @@
+<!-- pages/winter/rules.wxml - 冬训规则 -->
+<view class="winter-page">
+  <view class="card">
+    <text class="card-title">当前状态</text>
+    <text class="row-value">{{phaseText}} · 共 {{totalWeeks}} 周</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">一、完成判定</text>
+    <text class="rule-line">1. KPI 类型由教练按组设定（跑量 或 出勤），含下限、上限与单次最低时长。</text>
+    <text class="rule-line">2. 队员在教练设定的区间内填报个人 KPI，区间内自动通过，越界不可提交。</text>
+    <text class="rule-line">3. 每日上传 1 张跑步记录截图 + 跑量或时长；队长/教练 24 小时内审核。</text>
+    <text class="rule-line">4. 周日 24 点截止本周打卡，周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）。</text>
+    <text class="rule-line">5. 周完成率 = 实际 / 个人 KPI，≥100% 视为完成。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">二、审核规则</text>
+    <text class="rule-line">1. 队长与教练在本组正常打卡、正常考核，不去其他组当队员。</text>
+    <text class="rule-line">2. 队长/教练不能审核自己的打卡，两人互相审核。</text>
+    <text class="rule-line">3. 组内只有 1 名管理角色时自动通过，由管理组抽查。</text>
+    <text class="rule-line">4. 审核页只出现「我所在组」的待审打卡。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">三、连续未完成与退出</text>
+    <text class="rule-line">1. 系统每周统计个人完成率，未完成则连续计数 +1。</text>
+    <text class="rule-line">2. 连续未完成由系统自动提醒。</text>
+    <text class="rule-line">3. 连续第 4 周标记「建议退出」，由管理组确认后退出冬训营。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">四、费用与罚金</text>
+    <text class="rule-line">1. 参赛费 {{fee.entry}} 元 + 教练费 {{fee.coach}} 元 + 奖池 {{fee.pool}} 元，线下收取，系统只记录缴费状态。</text>
+    <text class="rule-line">2. 未完成周产生罚金（红包线下发放），系统只记录「应发 / 已发 / 未发」。</text>
+    <text class="rule-line">3. 队长/教练补贴、奖池收支由管理组公示。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">五、转组与伤病</text>
+    <text class="rule-line">1. 不开放自助转组；确需调整由管理组后台操作并备注原因与时点。</text>
+    <text class="rule-line">2. 伤病情况由管理组备注，可同时决定是否清零连续未完成计数。</text>
+    <text class="rule-line">3. 所有调组与伤病备注全程留痕。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">六、春节假期</text>
+    <text class="rule-line">1. 春节假期周自动冻结：考核判定、连续未完成计数、罚金与榜单。</text>
+    <text class="rule-line">2. 冻结期间打卡仍可提交，但不计入考核。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">七、其他说明</text>
+    <text class="rule-line">1. 一人只报名一次，只进一个组，只担任一个角色。</text>
+    <text class="rule-line">2. 不设豁免、复活卡与补卡入口。</text>
+    <text class="rule-line">3. 娱乐跑量榜不计入积分与考核。</text>
+  </view>
+
+  <view class="card" wx:if="{{rulesText}}">
+    <text class="card-title">补充说明</text>
+    <text class="rule-line">{{rulesText}}</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">⚠️ 安全与免责声明</text>
+    <text class="rule-line">冬训营为自愿参与的训练互助活动，参与者应根据自身身体状况科学训练。训练过程中如出现不适请立即停止并就医。活动组织方不承担因个人身体原因、训练方式或意外导致的任何责任。</text>
+  </view>
+</view>

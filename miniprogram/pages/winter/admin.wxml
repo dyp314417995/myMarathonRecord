@@ -1,0 +1,213 @@
+<!-- pages/winter/admin.wxml - 冬训管理组后台 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="notice-bar" wx:if="{{noPerm}}">无管理组权限</view>
+
+    <block wx:if="{{!noPerm}}">
+      <view class="chip-row" style="margin-bottom:24rpx">
+        <text class="chip {{tab === 'overview' ? 'on' : ''}}" data-v="overview" bindtap="onTab">概览</text>
+        <text class="chip {{tab === 'groups' ? 'on' : ''}}" data-v="groups" bindtap="onTab">组别</text>
+        <text class="chip {{tab === 'applies' ? 'on' : ''}}" data-v="applies" bindtap="onTab">报名审核 {{counts.pending ? '(' + counts.pending + ')' : ''}}</text>
+        <text class="chip {{tab === 'members' ? 'on' : ''}}" data-v="members" bindtap="onTab">成员</text>
+        <text class="chip {{tab === 'checkins' ? 'on' : ''}}" data-v="checkins" bindtap="onTab">抽查打卡</text>
+        <text class="chip {{tab === 'finance' ? 'on' : ''}}" data-v="finance" bindtap="onTab">费用/奖池</text>
+      </view>
+
+      <!-- 概览 -->
+      <block wx:if="{{tab === 'overview'}}">
+        <view class="card">
+          <text class="card-title">运营数据</text>
+          <view class="grid-4">
+            <view class="grid-item"><text class="grid-num">{{counts.total}}</text><text class="grid-label">报名人数</text></view>
+            <view class="grid-item"><text class="grid-num">{{counts.approved}}</text><text class="grid-label">已在组</text></view>
+            <view class="grid-item"><text class="grid-num">{{counts.pending}}</text><text class="grid-label">待审报名</text></view>
+            <view class="grid-item"><text class="grid-num">{{counts.pendingCheckins}}</text><text class="grid-label">待审打卡</text></view>
+          </view>
+        </view>
+
+        <view class="card">
+          <text class="card-title">运营阶段</text>
+          <view class="chip-row">
+            <text class="chip {{cfg.phase === item.v ? 'on' : ''}}" wx:for="{{phases}}" wx:key="v" data-v="{{item.v}}" bindtap="onSetPhase">{{item.t}}</text>
+          </view>
+          <view class="row" style="margin-top:16rpx">
+            <text class="row-label">报名通道</text>
+            <text class="tag {{cfg.signupOpen ? 'tag-green' : 'tag-red'}}" bindtap="onToggleSignup">{{cfg.signupOpen ? '开放中（点击关闭）' : '已关闭（点击开放）'}}</text>
+          </view>
+          <text class="card-sub" style="margin-top:12rpx">当前第 {{weekIndex}} 周 / 共 {{cfg.totalWeeks}} 周{{cfg.holidayWeeks.length ? (' · 春节周：' + cfg.holidayWeeks.join('、')) : ''}}</text>
+          <view style="margin-top:20rpx"><button class="btn" bindtap="onCalcWeek">结算本周（第 {{weekIndex}} 周）</button></view>
+        </view>
+
+        <view class="card">
+          <text class="card-title">开营检查（每组需 1 队长 + 1 教练）</text>
+          <view class="member-row" wx:for="{{groups}}" wx:key="_id">
+            <view class="member-info">
+              <text class="member-name">{{item.name}} · {{item.memberCount}} 人</text>
+              <text class="member-meta">队长：{{item.leader}} · 教练：{{item.coach}} · KPI：{{item.kpiRange}}</text>
+            </view>
+            <view class="member-right"><text class="tag {{item.ready ? 'tag-green' : 'tag-red'}}">{{item.ready ? '就绪' : '缺管理'}}</text></view>
+          </view>
+          <view class="empty" wx:if="{{groups.length === 0}}">暂无组别，请先创建</view>
+        </view>
+      </block>
+
+      <!-- 组别管理 -->
+      <block wx:if="{{tab === 'groups'}}">
+        <button class="btn" style="margin-bottom:24rpx" bindtap="onNewGroup">＋ 新建组别</button>
+        <view class="card" wx:for="{{groups}}" wx:key="_id">
+          <view class="member-row">
+            <view class="member-info">
+              <text class="member-name">{{item.emblem}} {{item.name}}</text>
+              <text class="member-meta">{{item.desc}} · 上限 {{item.capacity || '不限'}} · {{item.open ? '开放报名' : '暂停报名'}}</text>
+            </view>
+            <view class="member-right"><text class="tag tag-blue" data-id="{{item._id}}" bindtap="onEditGroup">编辑</text></view>
+          </view>
+          <text class="card-sub" style="margin-top:12rpx">队长 {{item.leader}} / 教练 {{item.coach}} / KPI {{item.kpiRange}}</text>
+        </view>
+      </block>
+
+      <!-- 报名审核 -->
+      <block wx:if="{{tab === 'applies'}}">
+        <view class="card" wx:for="{{applies}}" wx:key="_id">
+          <view class="member-row">
+            <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view class="member-info">
+              <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
+              <text class="member-meta">{{item.groupName}} · 近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
+              <text class="member-meta" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
+              <text class="member-meta" wx:if="{{item.acceptAdjust}}">☑ 接受调剂</text>
+            </view>
+          </view>
+          <view style="display:flex;margin-top:20rpx">
+            <button class="btn btn-ghost" style="flex:1;margin-right:12rpx" data-id="{{item._id}}" data-pass="{{false}}" bindtap="onReviewApply">驳回</button>
+            <button class="btn" style="flex:1" data-id="{{item._id}}" data-pass="{{true}}" bindtap="onReviewApply">通过并任命</button>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{applies.length === 0}}">暂无待审报名</view>
+      </block>
+
+      <!-- 成员管理 -->
+      <block wx:if="{{tab === 'members'}}">
+        <view class="card" wx:for="{{members}}" wx:key="_id">
+          <view class="member-row">
+            <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view class="member-info">
+              <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
+              <text class="member-meta">{{item.groupName}} · {{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
+              <text class="member-meta" wx:if="{{item.continuousFailWeeks > 0}}">⚠️ 连续未完成 {{item.continuousFailWeeks}} 周</text>
+              <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
+            </view>
+            <view class="member-right">
+              <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : '待缴费'}}</text>
+            </view>
+          </view>
+          <view class="chip-row" style="margin-top:16rpx">
+            <text class="chip" data-id="{{item._id}}" bindtap="onOpenTransfer">调组</text>
+            <text class="chip" data-id="{{item._id}}" bindtap="onOpenRemark">伤病备注</text>
+            <text class="chip" wx:if="{{item.status === 'quit-suggested'}}" data-id="{{item._id}}" data-confirm="{{true}}" bindtap="onConfirmQuit">确认退出</text>
+            <text class="chip" wx:if="{{item.status === 'quit'}}" data-id="{{item._id}}" data-confirm="{{false}}" bindtap="onConfirmQuit">恢复成员</text>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{members.length === 0}}">暂无成员</view>
+      </block>
+
+      <!-- 抽查打卡 -->
+      <block wx:if="{{tab === 'checkins'}}">
+        <view class="card" wx:for="{{checkins}}" wx:key="_id">
+          <view class="member-row">
+            <view class="member-info">
+              <text class="member-name">{{item.nickName}} · {{item.date}}</text>
+              <text class="member-meta">{{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}{{item.note ? ' · ' + item.note : ''}}</text>
+            </view>
+            <view class="member-right"><text class="tag tag-orange">第 {{item.weekIndex}} 周</text></view>
+          </view>
+          <view style="display:flex;margin-top:16rpx">
+            <text class="tag tag-red" style="margin-right:16rpx" data-id="{{item._id}}" data-pass="{{false}}" bindtap="onAdminReviewCheckin">驳回</text>
+            <text class="tag tag-green" data-id="{{item._id}}" data-pass="{{true}}" bindtap="onAdminReviewCheckin">通过</text>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{checkins.length === 0}}">暂无待审打卡</view>
+      </block>
+
+      <!-- 费用与奖池 -->
+      <block wx:if="{{tab === 'finance'}}">
+        <view class="card" wx:if="{{finance}}">
+          <text class="card-title">费用汇总</text>
+          <view class="row"><text class="row-label">在训人数</text><text class="row-value">{{finance.memberCount}} 人</text></view>
+          <view class="row"><text class="row-label">已缴费</text><text class="row-value">{{finance.paidCount}} 人</text></view>
+          <view class="row"><text class="row-label">费用合计</text><text class="row-value">{{finance.feeTotal}} 元</text></view>
+          <view class="row"><text class="row-label">奖池总额</text><text class="row-value">{{finance.poolTotal}} 元</text></view>
+          <view class="row"><text class="row-label">罚金待发</text><text class="row-value" style="color:#e6a23c">{{finance.fineDue}} 元</text></view>
+          <view class="row"><text class="row-label">罚金已发</text><text class="row-value" style="color:#1aad19">{{finance.finePaid}} 元</text></view>
+          <text class="card-sub" style="margin-top:16rpx">队长/教练补贴与奖池支出请线下发放后在此公示更新</text>
+        </view>
+
+        <view class="card">
+          <text class="card-title">罚金明细</text>
+          <view class="member-row" wx:for="{{finance.fineList}}" wx:key="_id">
+            <view class="member-info">
+              <text class="member-name">第 {{item.weekIndex}} 周</text>
+              <text class="member-meta">{{item.amount}} 元 · {{item.packets}} 个红包</text>
+            </view>
+            <view class="member-right">
+              <text class="tag {{item.status === 'paid' ? 'tag-green' : 'tag-orange'}}" wx:if="{{item.status === 'paid'}}">已发</text>
+              <text class="tag tag-orange" wx:else data-id="{{item._id}}" data-status="paid" bindtap="onToggleFine">标记已发</text>
+            </view>
+          </view>
+          <view class="empty" wx:if="{{!finance.fineList || finance.fineList.length === 0}}">暂无罚金记录</view>
+        </view>
+      </block>
+    </block>
+  </block>
+
+  <!-- 建组/编辑弹窗 -->
+  <view class="modal-mask" wx:if="{{showGroup}}">
+    <view class="modal-box">
+      <text class="modal-title">{{groupForm.id ? '编辑组别' : '新建组别'}}</text>
+      <view class="field"><text class="field-label">组名 *</text><input class="input" value="{{groupForm.name}}" data-f="name" bindinput="onGroupInput" placeholder="如 S 组 / 动起来" /></view>
+      <view class="field"><text class="field-label">标识</text><input class="input" value="{{groupForm.emblem}}" data-f="emblem" bindinput="onGroupInput" placeholder="如 🏃" /></view>
+      <view class="field"><text class="field-label">简介</text><input class="input" value="{{groupForm.desc}}" data-f="desc" bindinput="onGroupInput" placeholder="组别定位说明" /></view>
+      <view class="field"><text class="field-label">人数上限（0 为不限）</text><input class="input" type="number" value="{{groupForm.capacity}}" data-f="capacity" bindinput="onGroupInput" /></view>
+      <view class="field"><text class="field-label">排序</text><input class="input" type="number" value="{{groupForm.sort}}" data-f="sort" bindinput="onGroupInput" /></view>
+      <view class="field"><text class="row-label">{{groupForm.open ? '☑' : '☐'}} 开放报名</text><switch checked="{{groupForm.open}}" bindchange="onGroupOpen" color="#1aad19" /></view>
+      <view class="modal-btns">
+        <button class="btn btn-gray" bindtap="onCloseGroup">取消</button>
+        <button class="btn" loading="{{busy}}" bindtap="onSaveGroup">保存</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 调组弹窗 -->
+  <view class="modal-mask" wx:if="{{showTransfer}}">
+    <view class="modal-box">
+      <text class="modal-title">手动调组（留痕）</text>
+      <view class="field">
+        <text class="field-label">目标组别 *</text>
+        <view class="chip-row">
+          <text class="chip {{transferForm.newGroupId === item._id ? 'on' : ''}}" wx:for="{{allGroups}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPickTransferGroup">{{item.name}}</text>
+        </view>
+      </view>
+      <view class="field"><text class="field-label">调整原因 *</text><textarea class="textarea" value="{{transferForm.reason}}" data-f="reason" bindinput="onTransferInput" placeholder="如：伤病降档 / 训练强度不匹配"></textarea></view>
+      <view class="field"><text class="field-label">生效日期</text><input class="input" value="{{transferForm.effectiveDate}}" data-f="effectiveDate" bindinput="onTransferInput" placeholder="YYYY-MM-DD" /></view>
+      <view class="field"><text class="row-label">{{transferForm.clearFail ? '☑' : '☐'}} 清零连续未完成周数</text><switch checked="{{transferForm.clearFail}}" bindchange="onTransferClear" color="#1aad19" /></view>
+      <text class="card-sub">注：仅队员可调组；队长/教练变更请先由成员管理与报名审核处理</text>
+      <view class="modal-btns">
+        <button class="btn btn-gray" bindtap="onCloseTransfer">取消</button>
+        <button class="btn" loading="{{busy}}" bindtap="onSaveTransfer">确认调组</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 备注弹窗 -->
+  <view class="modal-mask" wx:if="{{showRemark}}">
+    <view class="modal-box">
+      <text class="modal-title">伤病 / 情况备注（留痕）</text>
+      <textarea class="textarea" value="{{remarkForm.remark}}" bindinput="onRemarkInput" placeholder="如：膝盖伤病，暂停长距离训练"></textarea>
+      <view class="modal-btns">
+        <button class="btn btn-gray" bindtap="onCloseRemark">取消</button>
+        <button class="btn" bindtap="onSaveRemark">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

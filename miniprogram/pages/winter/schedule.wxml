@@ -1,0 +1,71 @@
+<!-- pages/winter/schedule.wxml - 周课表 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="hero">
+      <text class="hero-title">第 {{weekIndex}} 周课表</text>
+      <text class="hero-sub" wx:if="{{schedule}}">发布人：{{schedule.publisherName || '教练'}} · 已读 {{schedule.readCount}} 人</text>
+      <text class="hero-sub" wx:else>本周课表尚未发布</text>
+    </view>
+
+    <!-- 教练编辑 -->
+    <block wx:if="{{isCoach}}">
+      <view class="card" wx:if="{{editing || !schedule}}">
+        <text class="card-title">发布本周课表</text>
+        <text class="card-sub">三档建议，供不同水平的队员选择</text>
+        <view class="field">
+          <text class="field-label">A 档（进阶）</text>
+          <textarea class="textarea" value="{{form.a}}" data-f="a" bindinput="onFormInput" placeholder="如：周二 间歇 8×800m，周四 节奏跑 10km"></textarea>
+        </view>
+        <view class="field">
+          <text class="field-label">B 档（标准）</text>
+          <textarea class="textarea" value="{{form.b}}" data-f="b" bindinput="onFormInput" placeholder="如：周二 轻松跑 8km，周六 长距离 18km"></textarea>
+        </view>
+        <view class="field">
+          <text class="field-label">C 档（基础/恢复）</text>
+          <textarea class="textarea" value="{{form.c}}" data-f="c" bindinput="onFormInput" placeholder="如：周三 轻松跑 5km，周日 休息拉伸"></textarea>
+        </view>
+        <view class="field">
+          <text class="field-label">训练建议 / 云约练安排</text>
+          <textarea class="textarea" value="{{form.advice}}" data-f="advice" bindinput="onFormInput" placeholder="注意事项、集体约练时间地点等"></textarea>
+        </view>
+        <view style="display:flex">
+          <button class="btn btn-gray" style="flex:1;margin-right:12rpx" wx:if="{{schedule}}" bindtap="onCancelEdit">取消</button>
+          <button class="btn" style="flex:1" bindtap="onPublish">发布 / 更新</button>
+        </view>
+      </view>
+      <view wx:else style="margin-bottom:24rpx"><button class="btn btn-ghost" bindtap="onEdit">编辑本周课表</button></view>
+    </block>
+
+    <!-- 课表展示 -->
+    <block wx:if="{{schedule}}">
+      <view class="card">
+        <text class="card-title">A 档 · 进阶</text>
+        <text class="row-value">{{schedule.a || '（无）'}}</text>
+      </view>
+      <view class="card">
+        <text class="card-title">B 档 · 标准</text>
+        <text class="row-value">{{schedule.b || '（无）'}}</text>
+      </view>
+      <view class="card">
+        <text class="card-title">C 档 · 基础 / 恢复</text>
+        <text class="row-value">{{schedule.c || '（无）'}}</text>
+      </view>
+      <view class="card" wx:if="{{schedule.advice}}">
+        <text class="card-title">教练建议</text>
+        <text class="row-value">{{schedule.advice}}</text>
+      </view>
+
+      <!-- 队员反馈 -->
+      <view class="card" wx:if="{{!isCoach}}">
+        <text class="card-title">本周反馈</text>
+        <text class="card-sub">身体不适可选择降档或跳过，不用硬扛</text>
+        <view class="chip-row">
+          <text class="chip {{feedback === 'done' ? 'on' : ''}}" data-v="done" bindtap="onFeedback">✅ 按计划完成</text>
+          <text class="chip {{feedback === 'downgrade' ? 'on' : ''}}" data-v="downgrade" bindtap="onFeedback">⬇️ 需要降档</text>
+          <text class="chip {{feedback === 'skip' ? 'on' : ''}}" data-v="skip" bindtap="onFeedback">⏸️ 跳过本周</text>
+        </view>
+      </view>
+    </block>
+  </block>
+</view>

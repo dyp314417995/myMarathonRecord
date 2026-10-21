@@ -1,0 +1,3 @@
+@import './common.wxss';
+.loading { text-align: center; padding: 80rpx; color: #999; }
+.intro-text { font-size: 27rpx; color: #555; line-height: 1.7; }

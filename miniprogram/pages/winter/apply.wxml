@@ -1,0 +1,61 @@
+<!-- pages/winter/apply.wxml - 冬训报名 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="card">
+      <text class="card-title">基本信息</text>
+      <view class="field">
+        <text class="field-label">昵称 *</text>
+        <input class="input" value="{{nickName}}" data-f="nickName" bindinput="onInput" placeholder="填写你在跑团的昵称" />
+      </view>
+      <view class="field">
+        <text class="field-label">近期成绩</text>
+        <input class="input" value="{{recentResult}}" data-f="recentResult" bindinput="onInput" placeholder="如：全马 3:45:00 / 半马 1:45:00" />
+      </view>
+      <view class="field">
+        <text class="field-label">冬训目标</text>
+        <input class="input" value="{{target}}" data-f="target" bindinput="onInput" placeholder="如：半马破 1:40 / 月跑量 200km" />
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">选择组别 *</text>
+      <view class="group-item {{groupId === item._id ? 'on' : ''}} {{(item.capacity && item.memberCount >= item.capacity) ? 'disabled' : ''}}"
+        wx:for="{{groups}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPickGroup">
+        <view class="group-left">
+          <text class="group-name">{{item.emblem}} {{item.name}}</text>
+          <text class="group-desc">{{item.desc}}</text>
+          <text class="group-meta">{{item.capacity ? (item.memberCount + '/' + item.capacity + ' 人') : ('已报名 ' + item.memberCount + ' 人')}} · 队长 {{item.leaders[0] || '待任命'}} · 教练 {{item.coaches[0] || '待任命'}}</text>
+        </view>
+        <view class="group-right">
+          <text class="tag {{item.capacity && item.memberCount >= item.capacity ? 'tag-red' : 'tag-green'}}">{{item.capacity && item.memberCount >= item.capacity ? '已满' : '可加入'}}</text>
+        </view>
+      </view>
+      <view class="empty" wx:if="{{groups.length === 0}}">暂无开放组别</view>
+      <view class="field" style="margin-top:16rpx">
+        <text class="row-label {{acceptAdjust ? 'adjust-on' : ''}}" bindtap="onToggleAdjust">{{acceptAdjust ? '☑' : '☐'}} 接受调剂（人数满时由管理组安排到相近组别）</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">申请角色 *</text>
+      <text class="card-sub">一人只报名一次、只进一个组、只担任一个角色</text>
+      <view class="chip-row">
+        <text class="chip {{role === item.v ? 'on' : ''}}" wx:for="{{roles}}" wx:key="v" data-v="{{item.v}}" bindtap="onPickRole">{{item.t}}</text>
+      </view>
+      <text class="field-tip">{{roleDesc}}</text>
+      <text class="field-tip" wx:if="{{role !== 'member'}}">队长/教练需管理组审核任命；且在本组正常打卡、参与考核</text>
+    </view>
+
+    <view class="card">
+      <text class="card-title">申请理由</text>
+      <textarea class="textarea" value="{{reason}}" data-f="reason" bindinput="onInput" placeholder="{{role === 'member' ? '可简单介绍自己的跑步经历（选填）' : '说明你的带队/执教经验（队长教练必填）'}}"></textarea>
+    </view>
+
+    <view class="notice-bar">
+      💰 费用：参赛费 + 教练费 + 奖池，线下收取；报名即代表已阅读并同意训练规则与安全免责声明
+    </view>
+
+    <button class="btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">提交报名</button>
+  </block>
+</view>

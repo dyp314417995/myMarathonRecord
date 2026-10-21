@@ -249,6 +249,9 @@ Page({
   onRecords() {
     wx.navigateTo({ url: '/pages/records/index' });
   },
+  onWinter() {
+    wx.navigateTo({ url: '/pages/winter/index' });
+  },
   onManageRaces() {
     wx.navigateTo({ url: '/pages/admin/races/races' });
   },

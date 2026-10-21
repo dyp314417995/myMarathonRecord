@@ -1,0 +1,54 @@
+<!-- pages/winter/rank.wxml - 榜单 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="hero">
+      <text class="hero-title">第 {{weekIndex}} 周榜单</text>
+      <text class="hero-sub">本组完成率 {{groupAvgRate}}% · 已完成 {{completedCount}} 人</text>
+      <text class="hero-tip" wx:if="{{frozen}}">❄️ 春节假期周，榜单已冻结</text>
+    </view>
+
+    <view class="chip-row" style="margin-bottom:24rpx">
+      <text class="chip {{tab === 'team' ? 'on' : ''}}" data-v="team" bindtap="onTab">队伍榜</text>
+      <text class="chip {{tab === 'personal' ? 'on' : ''}}" data-v="personal" bindtap="onTab">个人榜</text>
+    </view>
+
+    <!-- 队伍榜 -->
+    <view class="card" wx:if="{{tab === 'team'}}">
+      <text class="card-title">队伍人均完成率</text>
+      <view class="member-row" wx:for="{{teamRank}}" wx:key="groupId">
+        <view class="member-info" style="flex:1">
+          <text class="member-name">{{index + 1}}. {{item.emblem}} {{item.name}}</text>
+          <text class="member-meta">{{item.memberCount}} 人 · 完成 {{item.completedCount}} 人</text>
+          <view class="bar-wrap"><view class="bar-inner" style="width:{{item.avgRate}}%"></view></view>
+        </view>
+        <view class="member-right"><text class="tag {{item.avgRate >= 100 ? 'tag-green' : (item.avgRate >= 60 ? 'tag-orange' : 'tag-red')}}">{{item.avgRate}}%</text></view>
+      </view>
+      <view class="empty" wx:if="{{teamRank.length === 0}}">暂无数据</view>
+    </view>
+
+    <!-- 个人榜 -->
+    <view class="card" wx:else>
+      <text class="card-title">本周个人完成率</text>
+      <view class="member-row" wx:for="{{personal}}" wx:key="userId">
+        <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <view class="member-info">
+          <text class="member-name">{{index + 1}}. {{item.nickName}} <text class="tag {{item.role === 'leader' ? 'tag-green' : (item.role === 'coach' ? 'tag-blue' : 'tag-gray')}}">{{item.roleText}}</text></text>
+          <text class="member-meta">目标 {{item.target}}{{item.kpiType === 'attendance' ? '天' : '公里'}} · 实际 {{item.actual}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
+          <view class="bar-wrap"><view class="bar-inner" style="width:{{item.rate}}%"></view></view>
+        </view>
+        <view class="member-right">
+          <text class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.rate}}%</text>
+        </view>
+      </view>
+      <view class="empty" wx:if="{{personal.length === 0}}">暂无数据</view>
+    </view>
+
+    <view class="notice-bar" wx:if="{{myStat}}">
+      📊 我的本周：目标 {{myStat.target}}{{myStat.kpiType === 'attendance' ? '天' : '公里'}}，实际 {{myStat.actual}}，完成率 {{myStat.rate}}%{{myStat.completed ? ' ✅ 已完成' : ' ⚠️ 未完成'}}
+    </view>
+    <view class="notice-bar">
+      🏃 娱乐跑量榜不计入积分与考核，仅作展示参考
+    </view>
+  </block>
+</view>

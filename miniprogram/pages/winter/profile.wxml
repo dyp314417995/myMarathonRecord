@@ -1,0 +1,57 @@
+<!-- pages/winter/profile.wxml - 我的冬训档案 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="notice-bar" wx:if="{{notJoined}}">尚未报名冬训营</view>
+    <block wx:if="{{!notJoined}}">
+      <view class="card">
+        <text class="card-title">我的档案</text>
+        <view class="row"><text class="row-label">昵称</text><text class="row-value">{{me.nickName}}</text></view>
+        <view class="row"><text class="row-label">角色</text><text class="row-value">{{me.roleText}}</text></view>
+        <view class="row"><text class="row-label">状态</text><text class="row-value">{{me.statusText}}</text></view>
+        <view class="row"><text class="row-label">本周 KPI</text><text class="row-value">{{me.kpiValue > 0 ? (me.kpiValue + (me.kpiType === 'attendance' ? ' 天' : ' 公里')) : '未填报'}}</text></view>
+        <view class="row"><text class="row-label">连续未完成</text><text class="row-value" style="color:#e74c3c">{{me.continuousFailWeeks}} 周</text></view>
+        <view class="row" wx:if="{{me.remark}}"><text class="row-label">伤病 / 备注</text><text class="row-value">{{me.remark}}</text></view>
+      </view>
+
+      <view class="card">
+        <text class="card-title">费用状态（线下收取，系统仅记账）</text>
+        <view class="row"><text class="row-label">参赛费</text><text class="row-value">{{fee.entry}} 元</text></view>
+        <view class="row"><text class="row-label">教练费</text><text class="row-value">{{fee.coach}} 元</text></view>
+        <view class="row"><text class="row-label">奖池</text><text class="row-value">{{fee.pool}} 元</text></view>
+        <view class="row"><text class="row-label">合计</text><text class="row-value">{{totalFee}} 元</text></view>
+        <view class="row"><text class="row-label">缴费状态</text><text class="tag {{me.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}">{{me.feeStatus === 'paid' ? '已缴费' : '待缴费'}}</text></view>
+      </view>
+
+      <view class="card">
+        <text class="card-title">罚金记录（红包线下发放）</text>
+        <view class="member-row" wx:for="{{fines}}" wx:key="_id">
+          <view class="member-info">
+            <text class="member-name">第 {{item.weekIndex}} 周未完成</text>
+            <text class="member-meta">{{item.amount}} 元 · {{item.packets}} 个红包</text>
+          </view>
+          <view class="member-right">
+            <text class="tag {{item.status === 'paid' ? 'tag-green' : (item.status === 'due' ? 'tag-orange' : 'tag-red')}}">{{item.statusText}}</text>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{fines.length === 0}}">🎉 暂无罚金记录</view>
+      </view>
+
+      <view class="card">
+        <text class="card-title">周完成记录</text>
+        <view class="member-row" wx:for="{{weekly}}" wx:key="_id">
+          <view class="member-info">
+            <text class="member-name">第 {{item.weekIndex}} 周 <text class="tag tag-gray" wx:if="{{item.isHoliday}}">春节</text></text>
+            <text class="member-meta">目标 {{item.target}} · 实际 {{item.actual}} · {{item.rate}}%</text>
+          </view>
+          <view class="member-right">
+            <text class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.completed ? '完成' : '未完成'}}</text>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{weekly.length === 0}}">暂无周结算记录（由管理组每周结算生成）</view>
+      </view>
+
+      <button class="btn btn-ghost" bindtap="onGoKpi">调整 KPI</button>
+    </block>
+  </block>
+</view>

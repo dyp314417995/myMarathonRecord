@@ -1,0 +1,78 @@
+// utils/winter.js - 冬训营模块云函数封装
+const FUNC = 'winterTraining';
+
+async function call(action, data = {}) {
+  const res = await wx.cloud.callFunction({ name: FUNC, data: { action, data } });
+  return res.result || {};
+}
+
+// 统一错误处理：云函数返回 { ok:false, error } 时不弹 toast，交由页面决定
+const api = {
+  intro: () => call('intro'),
+  bootstrap: () => call('bootstrap'),
+  submitApply: (data) => call('submitApply', data),
+  myGroup: () => call('myGroup'),
+  setKpiRange: (data) => call('setKpiRange', data),
+  submitKpi: (data) => call('submitKpi', data),
+  checkin: (data) => call('checkin', data),
+  myCheckins: (data) => call('myCheckins', data),
+  pendingReview: () => call('pendingReview'),
+  reviewCheckin: (data) => call('reviewCheckin', data),
+  weeklyStats: (data) => call('weeklyStats', data),
+  publishSchedule: (data) => call('publishSchedule', data),
+  getSchedule: (data) => call('getSchedule', data),
+  readSchedule: (data) => call('readSchedule', data),
+  myProfile: () => call('myProfile'),
+
+  // 管理组后台
+  adminOverview: () => call('adminOverview'),
+  adminSaveGroup: (data) => call('adminSaveGroup', data),
+  adminApplies: (data) => call('adminApplies', data),
+  adminReviewApply: (data) => call('adminReviewApply', data),
+  adminMembers: (data) => call('adminMembers', data),
+  adminTransfer: (data) => call('adminTransfer', data),
+  adminRemark: (data) => call('adminRemark', data),
+  adminCheckins: (data) => call('adminCheckins', data),
+  adminCalcWeek: (data) => call('adminCalcWeek', data),
+  adminSetPhase: (data) => call('adminSetPhase', data),
+  adminFinance: () => call('adminFinance'),
+  adminUpdateFinance: (data) => call('adminUpdateFinance', data),
+  adminConfirmQuit: (data) => call('adminConfirmQuit', data),
+};
+
+// 上传打卡截图到云存储，返回 fileID
+function uploadCheckinImage(filePath) {
+  return new Promise((resolve, reject) => {
+    const ext = (filePath.split('.').pop() || 'png').toLowerCase();
+    const cloudPath = `winter_checkin/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    wx.cloud.uploadFile({
+      cloudPath,
+      filePath,
+      success: (r) => resolve(r.fileID),
+      fail: reject,
+    });
+  });
+}
+
+// cloud:// 转 http 临时链接（开发者工具不支持 cloud:// 直渲）
+async function toTempUrl(fileID) {
+  if (!fileID) return '';
+  if (String(fileID).indexOf('cloud://') !== 0) return fileID;
+  try {
+    const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: [fileID] } });
+    const f = (res.result || [])[0];
+    if (f && f.tempFileURL) return f.tempFileURL;
+  } catch (e) { /* ignore */ }
+  try {
+    const r = await wx.cloud.getTempFileURL({ fileList: [fileID] });
+    const f = r.fileList && r.fileList[0];
+    if (f && f.tempFileURL) return f.tempFileURL;
+  } catch (e) { /* ignore */ }
+  return fileID;
+}
+
+const ROLE_TEXT = { member: '队员', leader: '队长', coach: '教练' };
+const PHASE_TEXT = { closed: '未开放', trial: '试运行', formal: '正式进行', holiday: '春节假期' };
+const STATUS_TEXT = { pending: '待审核', approved: '已通过', rejected: '已驳回', 'quit-suggested': '建议退出', quit: '已退出' };
+
+module.exports = { api, uploadCheckinImage, toTempUrl, ROLE_TEXT, PHASE_TEXT, STATUS_TEXT };

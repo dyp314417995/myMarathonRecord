@@ -29,7 +29,18 @@
     "pages/signin/index",
     "pages/signin/cards",
     "pages/signin/rule",
-    "pages/admin/makeup-cards/makeup-cards"
+    "pages/admin/makeup-cards/makeup-cards",
+    "pages/winter/index",
+    "pages/winter/apply",
+    "pages/winter/team",
+    "pages/winter/kpi",
+    "pages/winter/checkin",
+    "pages/winter/review",
+    "pages/winter/rank",
+    "pages/winter/schedule",
+    "pages/winter/profile",
+    "pages/winter/rules",
+    "pages/winter/admin"
   ],
   "usingComponents": {},
   "window": {

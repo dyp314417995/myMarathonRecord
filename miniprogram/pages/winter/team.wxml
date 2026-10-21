@@ -1,0 +1,62 @@
+<!-- pages/winter/team.wxml - 我的组 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="hero">
+      <text class="hero-title">{{group.emblem}} {{group.name}}</text>
+      <text class="hero-sub">{{group.desc}}</text>
+      <text class="hero-tip">第 {{weekIndex}} 周 · 我的角色：{{me.roleText}}</text>
+    </view>
+
+    <view class="frozen-bar notice-bar" wx:if="{{frozen}}">❄️ 本周为春节假期，考核、连续计数、罚金与榜单均已冻结</view>
+
+    <view class="card">
+      <text class="card-title">本组 KPI 区间</text>
+      <text class="row-value">{{kpiRangeText}}</text>
+      <text class="card-sub" style="margin-top:16rpx" wx:if="{{kpiRange}}">由教练在{{kpiRange.effectiveWeek ? ('第' + kpiRange.effectiveWeek + '周') : ''}}发布，保存即生效</text>
+      <text class="card-sub" style="margin-top:16rpx" wx:else>等待教练发布区间后，队员即可在区间内填报 KPI</text>
+      <view style="margin-top:20rpx">
+        <button class="btn btn-ghost" wx:if="{{me.role === 'coach'}}" bindtap="onGoKpi">设定 / 更新区间</button>
+        <button class="btn" wx:else bindtap="onGoKpi">{{me.kpiValue > 0 ? '我的 KPI：' + me.kpiValue + (me.kpiType === 'attendance' ? ' 天' : ' 公里') : '填报我的 KPI'}}</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">队长 / 教练</text>
+      <view class="member-row" wx:if="{{leader}}">
+        <image class="member-avatar" src="{{leader.avatarUrl}}" mode="aspectFill" />
+        <view class="member-info">
+          <text class="member-name">{{leader.nickName}} <text class="tag tag-green">队长</text></text>
+          <text class="member-meta">KPI {{leader.kpiValue}}{{leader.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{leader.remark ? ' · ' + leader.remark : ''}}</text>
+        </view>
+        <view class="member-right"><text class="tag {{leader.continuousFailWeeks > 0 ? 'tag-red' : 'tag-gray'}}" wx:if="{{leader.continuousFailWeeks > 0}}">未完成{{leader.continuousFailWeeks}}周</text></view>
+      </view>
+      <view class="empty" wx:else style="padding:24rpx">队长待任命</view>
+      <view class="member-row" wx:if="{{coach}}">
+        <image class="member-avatar" src="{{coach.avatarUrl}}" mode="aspectFill" />
+        <view class="member-info">
+          <text class="member-name">{{coach.nickName}} <text class="tag tag-blue">教练</text></text>
+          <text class="member-meta">KPI {{coach.kpiValue}}{{coach.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{coach.remark ? ' · ' + coach.remark : ''}}</text>
+        </view>
+      </view>
+      <view class="empty" wx:else style="padding:24rpx">教练待任命</view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">队员（{{mates.length}} 人）</text>
+      <view class="member-row" wx:for="{{mates}}" wx:key="_id">
+        <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <view class="member-info">
+          <text class="member-name">{{item.nickName}}</text>
+          <text class="member-meta">KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{item.remark ? ' · ' + item.remark : ''}}</text>
+        </view>
+        <view class="member-right">
+          <text class="tag {{item.continuousFailWeeks > 0 ? 'tag-red' : 'tag-green'}}">{{item.continuousFailWeeks > 0 ? ('未完成' + item.continuousFailWeeks + '周') : '正常'}}</text>
+        </view>
+      </view>
+      <view class="empty" wx:if="{{mates.length === 0}}">暂无队员</view>
+    </view>
+
+    <button class="btn" bindtap="onGoCheckin">去打卡</button>
+  </block>
+</view>

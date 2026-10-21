@@ -1,0 +1,42 @@
+<!-- pages/winter/review.wxml - 打卡审核（队长/教练互审） -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="notice-bar" wx:if="{{noPerm}}">{{errMsg || '无审核权限'}}</view>
+
+    <block wx:if="{{!noPerm}}">
+      <view class="notice-bar">
+        👤 我的角色：{{roleText}} · 仅显示本组待审打卡（不含自己）；队长与教练互审
+      </view>
+
+      <view class="card" wx:for="{{list}}" wx:key="_id">
+        <view class="member-row">
+          <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view class="member-info">
+            <text class="member-name">{{item.nickName}}</text>
+            <text class="member-meta">{{item.date}} · {{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}</text>
+          </view>
+          <view class="member-right"><text class="tag tag-orange">待审核</text></view>
+        </view>
+        <view style="margin:16rpx 0">
+          <image wx:if="{{item.tempImage}}" class="img-preview" src="{{item.tempImage}}" mode="aspectFit" data-url="{{item.tempImage}}" bindtap="onPreview" />
+          <text wx:else class="card-sub">（无图片）</text>
+        </view>
+        <text class="card-sub" wx:if="{{item.note}}">备注：{{item.note}}</text>
+        <view style="display:flex;margin-top:20rpx">
+          <button class="btn btn-ghost" style="flex:1;margin-right:12rpx" loading="{{busyId === item._id}}" bindtap="onAskReject" data-id="{{item._id}}">驳回</button>
+          <button class="btn" style="flex:1" loading="{{busyId === item._id}}" bindtap="onPass" data-id="{{item._id}}">通过</button>
+        </view>
+        <view wx:if="{{reasonId === item._id}}" style="margin-top:16rpx">
+          <textarea class="textarea" placeholder="请填写驳回原因" value="{{reason}}" bindinput="onReasonInput"></textarea>
+          <view style="display:flex;margin-top:12rpx">
+            <button class="btn btn-gray" style="flex:1;margin-right:12rpx" bindtap="onCancelReject">取消</button>
+            <button class="btn" style="flex:1" bindtap="onConfirmReject" data-id="{{item._id}}">确认驳回</button>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty" wx:if="{{list.length === 0}}">🎉 暂无待审打卡</view>
+    </block>
+  </block>
+</view>

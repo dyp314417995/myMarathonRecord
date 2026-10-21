@@ -155,6 +155,10 @@
         <text class="menu-icon">🏁</text>
         <text class="menu-text">跑马记录</text>
       </view>
+      <view class="menu-item card" bindtap="onWinter">
+        <text class="menu-icon">❄️</text>
+        <text class="menu-text">冬训营</text>
+      </view>
     </view>
   </block>
 
@@ -206,6 +210,10 @@
         <text class="menu-icon">🏁</text>
         <text class="menu-text">跑马记录</text>
       </view>
+      <view class="menu-item card" bindtap="onWinter">
+        <text class="menu-icon">❄️</text>
+        <text class="menu-text">冬训营</text>
+      </view>
     </view>
   </block>
 
@@ -228,6 +236,10 @@
       <view class="menu-item card" bindtap="onRecords">
         <text class="menu-icon">🏁</text>
         <text class="menu-text">跑马记录</text>
+      </view>
+      <view class="menu-item card" bindtap="onWinter">
+        <text class="menu-icon">❄️</text>
+        <text class="menu-text">冬训营</text>
       </view>
     </view>
   </block>
