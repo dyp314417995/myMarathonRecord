@@ -50,7 +50,8 @@ page { background: #f5f6f7; }
 .chip.on { border-color: #1aad19; background: #e8f5e9; color: #1aad19; font-weight: 600; }
 .chip.disabled { opacity: 0.4; }
 
-.input { background: #f8f8f8; border-radius: 10rpx; padding: 20rpx; font-size: 28rpx; width: 100%; box-sizing: border-box; }
+/* input 是原生组件，默认内容高度很小；必须显式给 height，否则加 padding 后文字会被上下裁切显示不全 */
+.input { background: #f8f8f8; border-radius: 10rpx; padding: 0 20rpx; font-size: 28rpx; width: 100%; height: 84rpx; box-sizing: border-box; }
 .textarea { background: #f8f8f8; border-radius: 10rpx; padding: 20rpx; font-size: 28rpx; width: 100%; box-sizing: border-box; height: 150rpx; }
 .field { margin-bottom: 24rpx; }
 .field-label { font-size: 26rpx; color: #666; margin-bottom: 12rpx; display: block; }
