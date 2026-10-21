@@ -24,11 +24,22 @@ Page({
     }
     const range = r.kpiRange;
     const isCoach = r.me.role === 'coach';
+    // 教练未发布过区间时，用该组的能力档位「建议区间」作初始值（规则：开营前公示，教练可调整后发布）
+    const sug = (r.group && r.group.suggest) || null;
+    const seed = range || (sug ? {
+      type: sug.defaultType || (sug.distance ? 'distance' : 'attendance'),
+      min: sug.distance ? sug.distance.min : sug.attendance.min,
+      max: sug.distance ? sug.distance.max : sug.attendance.max,
+      minDuration: sug.minDuration || 20,
+    } : null);
+    const isDraft = !range && !!seed; // 尚未发布，仅为参考初值
     this.setData({
       loading: false,
       role: r.me.role,
       roleText: w.ROLE_TEXT[r.me.role] || '',
       isCoach,
+      isDraft,
+      draftTip: isDraft ? '当前为本组建议参考区间，确认后点击「发布区间」正式生效' : '',
       kpiRange: range,
       kpiType: range ? range.type : '',
       myKpiValue: r.me.kpiValue || 0,
@@ -37,10 +48,10 @@ Page({
         ? `${range.type === 'distance' ? '跑量' : '出勤'} ${range.min} ~ ${range.max}${range.type === 'distance' ? ' 公里/周' : ' 天/周'}`
         : '教练尚未设定 KPI 区间',
       unit: range && range.type === 'attendance' ? '天/周' : '公里/周',
-      'form.type': range ? range.type : 'distance',
-      'form.min': range ? String(range.min) : '',
-      'form.max': range ? String(range.max) : '',
-      'form.minDuration': range && range.minDuration ? String(range.minDuration) : '',
+      'form.type': seed ? seed.type : 'distance',
+      'form.min': seed ? String(seed.min) : '',
+      'form.max': seed ? String(seed.max) : '',
+      'form.minDuration': seed && seed.minDuration ? String(seed.minDuration) : '20',
     });
     if (r.me.kpiValue) this.checkRange(String(r.me.kpiValue));
   },

@@ -10,6 +10,7 @@ Page({
     cfg: {}, isAdmin: false,
     myRoleText: '', statusText: '',
     weeklyAvg: '--',
+    groups: [], scale: { target: 100, max: 150 },
   },
 
   onLoad() {
@@ -26,7 +27,14 @@ Page({
 
   async load() {
     this.setData({ loading: true });
-    const r = await w.api.bootstrap();
+    // bootstrap 提供登录态数据，intro 提供公开的组别列表与规模（未报名用户也要看到）
+    const [r, introRes] = await Promise.all([w.api.bootstrap(), w.api.intro()]);
+    if (introRes.ok) {
+      this.setData({
+        groups: introRes.groups || [],
+        scale: (introRes.cfg && introRes.cfg.scale) || { target: 100, max: 150 },
+      });
+    }
     if (!r.ok) {
       this.setData({ loading: false });
       if (/登录/.test(r.error || '')) {

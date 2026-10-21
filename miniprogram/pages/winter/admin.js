@@ -3,7 +3,7 @@ const w = require('../../utils/winter');
 
 const PHASES = [
   { v: 'closed', t: '未开放' },
-  { v: 'trial', t: '试运行' },
+  { v: 'trial', t: '报名/试运行' },
   { v: 'formal', t: '正式进行' },
   { v: 'holiday', t: '春节假期（冻结）' },
 ];
@@ -119,7 +119,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     this.setData({
       showTransfer: true,
-      transferForm: { userId: id, newGroupId: '', reason: '', clearFail: true, effectiveDate: '' },
+      transferForm: { userId: id, newGroupId: '', reason: '', clearFail: false, effectiveDate: '' }, // 规则：转组连续未完成不清零
     });
   },
   onCloseTransfer() { this.setData({ showTransfer: false }); },
@@ -208,9 +208,12 @@ Page({
   onSetPhase(e) {
     const v = e.currentTarget.dataset.v;
     const text = (this.data.phases.find(p => p.v === v) || {}).t || v;
-    let tip = '';
-    if (v === 'holiday') tip = '切换到春节假期将冻结考核、连续计数、罚金与榜单';
-    if (v === 'formal') tip = '正式进行期间将正常统计与考核';
+    const tipMap = {
+      holiday: '切换到春节假期将冻结考核、连续计数、罚金与榜单（2/5—2/11 放假，对应第 12、13 周）',
+      formal: '正式进行期间正常计 KPI、连续未完成与罚金（注意：第 1 周为警告周，只提醒不罚）',
+      trial: '报名/试运行：不罚款、不计连续、不结算榜单，可免费调组换角色',
+    };
+    const tip = tipMap[v] || '确认切换运营阶段';
     wx.showModal({
       title: '切换为「' + text + '」？',
       content: tip || '确认切换运营阶段',

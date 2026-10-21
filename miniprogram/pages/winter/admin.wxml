@@ -19,7 +19,7 @@
         <view class="card">
           <text class="card-title">运营数据</text>
           <view class="grid-4">
-            <view class="grid-item"><text class="grid-num">{{counts.total}}</text><text class="grid-label">报名人数</text></view>
+            <view class="grid-item"><text class="grid-num">{{counts.total}}</text><text class="grid-label">报名人数 /{{cfg.scale.max}}</text></view>
             <view class="grid-item"><text class="grid-num">{{counts.approved}}</text><text class="grid-label">已在组</text></view>
             <view class="grid-item"><text class="grid-num">{{counts.pending}}</text><text class="grid-label">待审报名</text></view>
             <view class="grid-item"><text class="grid-num">{{counts.pendingCheckins}}</text><text class="grid-label">待审打卡</text></view>
@@ -35,7 +35,8 @@
             <text class="row-label">报名通道</text>
             <text class="tag {{cfg.signupOpen ? 'tag-green' : 'tag-red'}}" bindtap="onToggleSignup">{{cfg.signupOpen ? '开放中（点击关闭）' : '已关闭（点击开放）'}}</text>
           </view>
-          <text class="card-sub" style="margin-top:12rpx">当前第 {{weekIndex}} 周 / 共 {{cfg.totalWeeks}} 周{{cfg.holidayWeeks.length ? (' · 春节周：' + cfg.holidayWeeks.join('、')) : ''}}</text>
+          <text class="card-sub">当前第 {{weekIndex}} 周 / 共 {{cfg.totalWeeks}} 周 · 第 {{cfg.warnWeek}} 周为警告周（只提醒不罚） · 第 {{cfg.tailWeek}} 周收尾降档（完成 1 次即达标）{{cfg.holidayWeeks.length ? (' · 春节冻结周：' + cfg.holidayWeeks.join('、')) : ''}}</text>
+          <text class="card-sub">小红包梯度：连续第 1/2/3 周分别为 {{cfg.fineTiers[0]}}/{{cfg.fineTiers[1]}}/{{cfg.fineTiers[2]}} 元（封顶），每个 {{cfg.finePackets}} 个拼手气 · 规模目标 {{cfg.scale.target}} 人 / 上限 {{cfg.scale.max}} 人</text>
           <view style="margin-top:20rpx"><button class="btn" bindtap="onCalcWeek">结算本周（第 {{weekIndex}} 周）</button></view>
         </view>
 
@@ -190,7 +191,7 @@
       </view>
       <view class="field"><text class="field-label">调整原因 *</text><textarea class="textarea" value="{{transferForm.reason}}" data-f="reason" bindinput="onTransferInput" placeholder="如：伤病降档 / 训练强度不匹配"></textarea></view>
       <view class="field"><text class="field-label">生效日期</text><input class="input" value="{{transferForm.effectiveDate}}" data-f="effectiveDate" bindinput="onTransferInput" placeholder="YYYY-MM-DD" /></view>
-      <view class="field"><text class="row-label">{{transferForm.clearFail ? '☑' : '☐'}} 清零连续未完成周数</text><switch checked="{{transferForm.clearFail}}" bindchange="onTransferClear" color="#1aad19" /></view>
+      <view class="field"><text class="row-label">{{transferForm.clearFail ? '☑' : '☐'}} 清零连续未完成周数（规则默认不清零，仅伤病代管等特殊情形勾选）</text><switch checked="{{transferForm.clearFail}}" bindchange="onTransferClear" color="#1aad19" /></view>
       <text class="card-sub">注：仅队员可调组；队长/教练变更请先由成员管理与报名审核处理</text>
       <view class="modal-btns">
         <button class="btn btn-gray" bindtap="onCloseTransfer">取消</button>

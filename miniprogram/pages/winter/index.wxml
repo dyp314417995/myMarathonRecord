@@ -17,16 +17,54 @@
     <!-- 未报名：介绍 + 报名入口 -->
     <block wx:if="{{!joined}}">
       <view class="card">
-        <text class="card-title">冬训营简介</text>
+        <text class="card-title">活动简介</text>
         <text class="intro-text">{{cfg.intro}}</text>
       </view>
 
       <view class="card">
-        <text class="card-title">费用说明</text>
-        <view class="row"><text class="row-label">参赛费</text><text class="row-value">{{cfg.fee.entry}} 元</text></view>
-        <view class="row"><text class="row-label">教练费</text><text class="row-value">{{cfg.fee.coach}} 元</text></view>
-        <view class="row"><text class="row-label">奖池</text><text class="row-value">{{cfg.fee.pool}} 元</text></view>
-        <text class="card-sub" style="margin-top:16rpx">费用线下收取，系统仅记录缴费状态</text>
+        <text class="card-title">适合这样的你</text>
+        <text class="rule-line">1. 有目标、想突破，但缺练法——不知道冬天怎么安排课表、怎么控节奏，希望跟着水平相近的队友系统练一冬。</text>
+        <text class="rule-line">2. 一个人容易拖、容易放弃——需要有人提醒、有人审核、有人一起打卡，靠队伍推着走。</text>
+        <text class="rule-line">3. 天一冷就想缩回被窝——不要求你跑多快，先做到每周出现，用队友的提醒和小红包把自己从冬眠边缘拉回来。</text>
+      </view>
+
+      <view class="card">
+        <text class="card-title">8 个能力组（每组即一队）</text>
+        <view class="member-row" wx:for="{{groups}}" wx:key="_id">
+          <view class="member-info">
+            <text class="member-name">{{item.emblem}} {{item.name}}</text>
+            <text class="member-meta">{{item.desc}} · 建议 {{item.targetSize}}</text>
+            <text class="member-meta" wx:if="{{item.suggest}}">跑量 {{item.suggest.distance.min}}—{{item.suggest.distance.max}}km / 出勤 {{item.suggest.attendance.min}}—{{item.suggest.attendance.max}} 次</text>
+          </view>
+          <view class="member-right"><text class="tag tag-gray">{{item.memberCount}} 人</text></view>
+        </view>
+        <text class="card-sub" style="margin-top:12rpx">目标 {{scale.target}} 人，上限 {{scale.max}} 人，招满即止。每组下限 6 人、上限 20 人。</text>
+      </view>
+
+      <view class="card">
+        <text class="card-title">时间线</text>
+        <view class="row"><text class="row-label">报名 / 建组 / 任命</text><text class="row-value">即日—10月31日</text></view>
+        <view class="row"><text class="row-label">试运行</text><text class="row-value">11月1日—15日</text></view>
+        <view class="row"><text class="row-label">正式冬训</text><text class="row-value">11月16日—2027年2月23日</text></view>
+        <view class="row"><text class="row-label">春节放假</text><text class="row-value">2月5日—11日</text></view>
+        <view class="row"><text class="row-label">结营</text><text class="row-value">2月23日</text></view>
+        <text class="card-sub" style="margin-top:12rpx">试运行期不罚款、不计连续、可免费调组；正式第 1 周为警告周，只提醒不罚。</text>
+      </view>
+
+      <view class="card">
+        <text class="card-title">现招募队长和教练</text>
+        <text class="rule-line">队长（每队 1 名）：管审核、统计、提醒、催打卡、维护气氛。不要求你跑得最快，要求你靠得住。</text>
+        <text class="rule-line">教练（每队 1—2 名）：定 KPI 区间、出周课表、答疑、给降档建议。不要求你最快，要求你懂训练、会降档。</text>
+        <text class="rule-line">队长和教练补贴同一标准，按实际岗位人数均摊；100 人 / 8 组示例约 175 元/人，优秀队长 / 教练另奖 200 元，结营公示。队长、教练本人在本组正常打卡、正常考核，不额外免罚。</text>
+        <text class="card-sub">报名时选择角色「队长」或「教练」，填一句申请理由或相关经历，由管理组审核任命。</text>
+      </view>
+
+      <view class="card">
+        <text class="card-title">费用说明（每人 {{cfg.fee.entry}} 元）</text>
+        <view class="row"><text class="row-label">队长/教练辛苦补贴</text><text class="row-value">{{cfg.fee.coach}} 元</text></view>
+        <view class="row"><text class="row-label">结营奖池</text><text class="row-value">{{cfg.fee.pool}} 元</text></view>
+        <text class="card-sub" style="margin-top:16rpx">补贴感谢队长审打卡、做统计、催进度，教练出课表、答疑、组织约练；奖池用于小奖品、证书和物料。不为盈利，收费和支出结营后公示。确认报名后进入统一支出，不再退还。</text>
+        <text class="card-sub">系统仅记录缴费状态，线下收款</text>
       </view>
 
       <view class="card" style="text-align:center">

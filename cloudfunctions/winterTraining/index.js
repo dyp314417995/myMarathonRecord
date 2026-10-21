@@ -73,15 +73,20 @@ async function getConfig() {
     _id: CONFIG_ID,
     phase: 'closed',              // closed | trial | formal | holiday
     signupOpen: true,
-    title: '冬训营',
-    subtitle: '一起练，跑过这个冬天',
-    intro: '冬训营为跑团冬季集中训练活动，按组分队、设定目标、每日打卡互审、每周结算。请仔细阅读规则后再报名。',
-    startMonday: '',              // 冬训第一周周一 YYYY-MM-DD
-    totalWeeks: 12,
-    holidayWeeks: [],             // 春节周（冻结考核）
+    title: '破冬行动',
+    subtitle: '100 天能力组冬训 · 不卷跑量，只卷出现',
+    intro: '「破冬行动」是九州战马联盟冬训管理组发起的百日能力组冬训：按全马目标分成 S/A/B/C/D/E/F/动起来 8 个组，每组即一队，由队长审核、教练定 KPI 区间与周课表。个人只在自己填报的 KPI 内被考核，不比绝对跑量、不排名配速。不要求你跑多快，只要求你每周出现。来，别冬眠。',
+    startMonday: '2026-11-16',     // 正式开营周一（100 天到 2027-02-23）
+    totalWeeks: 15,               // 第 1 周 11/16-11/22 … 第 15 周 2/22-2/28（结营日 2/23）
+    holidayWeeks: [12, 13],       // 覆盖春节放假 2/5-2/11（第12周 2/1-2/7、第13周 2/8-2/14）
+    scale: { target: 100, max: 150 }, // 规模：目标 100 人，上限 150 人
     fee: { entry: 50, coach: 30, pool: 20 },
-    finePerWeek: 20,
-    finePackets: 1,
+    // 小红包提醒：按「连续未完成周数」取对应档位，超出取最后一档（20 元封顶）
+    fineTiers: [5, 10, 20],
+    finePackets: 5,               // 5 个拼手气；组内人少按「人数-1」发
+    warnWeek: 1,                  // 正式第 1 周（11/16-11/22）为警告周：未完成只提醒不罚
+    tailWeek: 14,                 // 第 14 周（2/15 起）进入收尾降档：自动降档，完成 1 次即达标
+    tailPassOnce: true,           // 收尾周只需 1 次有效打卡即算完成
     autoApproveMember: true,      // 队员自动通过
     extraAdminIds: [],            // 额外管理组成员
     rulesText: '',
@@ -199,7 +204,10 @@ async function actionBootstrap(userId) {
     cfg: {
       phase: cfg.phase, signupOpen: cfg.signupOpen, title: cfg.title, subtitle: cfg.subtitle,
       intro: cfg.intro, startMonday: cfg.startMonday, totalWeeks: cfg.totalWeeks,
-      fee: cfg.fee, rulesText: cfg.rulesText,
+      fee: cfg.fee, rulesText: cfg.rulesText, holidayWeeks: cfg.holidayWeeks || [],
+      scale: cfg.scale || { target: 100, max: 150 },
+      fineTiers: cfg.fineTiers || [5, 10, 20], finePackets: cfg.finePackets || 5,
+      warnWeek: Number(cfg.warnWeek) || 1, tailWeek: Number(cfg.tailWeek) || 0,
     },
     weekIndex, frozen,
     isAdmin,
@@ -260,10 +268,15 @@ async function actionGetIntro() {
     cfg: {
       phase: cfg.phase, signupOpen: cfg.signupOpen, title: cfg.title, subtitle: cfg.subtitle,
       intro: cfg.intro, fee: cfg.fee, rulesText: cfg.rulesText, totalWeeks: cfg.totalWeeks,
+      holidayWeeks: cfg.holidayWeeks || [], scale: cfg.scale || { target: 100, max: 150 },
+      fineTiers: cfg.fineTiers || [5, 10, 20], finePackets: cfg.finePackets || 5,
+      warnWeek: Number(cfg.warnWeek) || 1, tailWeek: Number(cfg.tailWeek) || 0,
+      startMonday: cfg.startMonday,
     },
     groups: groups.map(g => ({
       _id: g._id, name: g.name, desc: g.desc || '', emblem: g.emblem || '',
       capacity: g.capacity || 0, open: g.open !== false,
+      targetSize: g.targetSize || '', suggest: g.suggest || null,
       memberCount: counts[g._id] || 0,
       leaders: (staffMap[g._id] && staffMap[g._id].leader) || [],
       coaches: (staffMap[g._id] && staffMap[g._id].coach) || [],
@@ -286,6 +299,14 @@ async function actionSubmitApply(userId, data) {
 
   const exist = await getMyMember(userId);
   if (exist) return fail('你已报名，不可重复提交');
+
+  // 总规模上限：目标 100 人，上限 150 人，招满即止
+  const scaleMax = Number((cfg.scale && cfg.scale.max) || 0);
+  if (scaleMax > 0) {
+    const tc = await db.collection('winter_member')
+      .where({ status: _.in(['approved', 'pending']) }).count().catch(() => ({ total: 0 }));
+    if ((tc.total || 0) >= scaleMax) return fail(`报名已满 ${scaleMax} 人，招满即止`);
+  }
 
   const g = await db.collection('winter_group').doc(groupId).get().catch(() => null);
   if (!g || !g.data) return fail('组别不存在');
@@ -334,7 +355,7 @@ async function actionGetMyGroup(userId) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   const g = await db.collection('winter_group').doc(member.groupId).get().catch(() => null);
-  const group = g && g.data ? { _id: g.data._id, name: g.data.name, desc: g.data.desc || '', emblem: g.data.emblem || '', capacity: g.data.capacity || 0 } : null;
+  const group = g && g.data ? { _id: g.data._id, name: g.data.name, desc: g.data.desc || '', emblem: g.data.emblem || '', capacity: g.data.capacity || 0, targetSize: g.data.targetSize || '', suggest: g.data.suggest || null } : null;
   const raw = await getMemberListOfGroup(member.groupId);
   const members = await decorateMembers(raw);
   const kpiRange = await getKpiRange(member.groupId);
@@ -437,8 +458,10 @@ async function actionDoCheckin(userId, data) {
   }
 
   const exist = await db.collection('winter_checkin').where({ userId, date }).limit(1).get().catch(() => null);
-  const weekIndex = Math.floor(diffDays(mondayOf(date), cfg.startMonday) / 7) + 1;
-  if (weekIndex < 1) return fail('不在冬训周期内');
+  const weekIndexRaw = Math.floor(diffDays(mondayOf(date), cfg.startMonday) / 7) + 1;
+  // 开营前（11/1—11/15 试运行）允许打卡练手，记为第 0 周，不参与考核与周统计
+  if (weekIndexRaw < 1 && cfg.phase !== 'trial') return fail('不在冬训周期内');
+  const weekIndex = weekIndexRaw < 1 ? 0 : weekIndexRaw;
 
   const payload = {
     userId, groupId: member.groupId, date, weekIndex,
@@ -733,7 +756,10 @@ async function actionAdminOverview(userId) {
     cfg: {
       phase: cfg.phase, signupOpen: cfg.signupOpen, startMonday: cfg.startMonday,
       totalWeeks: cfg.totalWeeks, holidayWeeks: cfg.holidayWeeks || [], fee: cfg.fee,
-      finePerWeek: cfg.finePerWeek, finePackets: cfg.finePackets, intro: cfg.intro, rulesText: cfg.rulesText,
+      fineTiers: cfg.fineTiers || [5, 10, 20], finePackets: cfg.finePackets || 5,
+      warnWeek: Number(cfg.warnWeek) || 1, tailWeek: Number(cfg.tailWeek) || 0,
+      scale: cfg.scale || { target: 100, max: 150 },
+      intro: cfg.intro, rulesText: cfg.rulesText,
     },
     weekIndex,
     counts: {
@@ -870,6 +896,8 @@ async function actionAdminTransfer(userId, data) {
   const targetId = String(data.userId || '');
   const newGroupId = String(data.newGroupId || '').trim();
   const reason = String(data.reason || '').trim();
+  // 规则：转组不重复交费，连续未完成周数默认【不清零】；
+  // 仅当管理组明确传 clearFail=true（如确认伤病代管等特殊情形）才清零
   const clearFail = data.clearFail === true || String(data.clearFail) === 'true';
   if (!targetId || !newGroupId) return fail('缺少成员或目标组别');
   if (!reason) return fail('请填写调整原因');
@@ -943,7 +971,9 @@ async function actionAdminCalcWeek(userId, data) {
   const weekIndex = Number(data.weekIndex) || calcWeekIndex(cfg);
   if (weekIndex < 1) return fail('冬训尚未开始');
   await autoApproveOverdue('');
-  const frozen = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  // 试运行阶段：不计连续、不结算榜单、不罚款（11/1—11/15）
+  const trialRun = cfg.phase === 'trial';
+  const frozen = trialRun || cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
   const all = await db.collection('winter_member').where({ status: _.in(['approved', 'quit-suggested']) }).limit(500).get().catch(() => null);
   const members = (all && all.data) || [];
 
@@ -959,7 +989,11 @@ async function actionAdminCalcWeek(userId, data) {
       actual = m.kpiType === 'attendance' ? days : totalDistance;
       rate = Math.min(1, actual / target);
     }
-    const completed = frozen || (target > 0 && rate >= 1);
+    // 收尾降档周（规则 2/17—2/23，跨第 14、15 周）：自 tailWeek 起自动降档，完成 1 次即达标
+    const tailWeek = Number(cfg.tailWeek) || 0;
+    const tailOnce = cfg.tailPassOnce !== false && tailWeek > 0 && weekIndex >= tailWeek;
+    const oncePass = tailOnce && days >= 1;
+    const completed = frozen || oncePass || (target > 0 && rate >= 1);
     // 更新连续未完成（春节周冻结）
     let continuousFailWeeks = m.continuousFailWeeks || 0;
     if (!frozen) {
@@ -984,19 +1018,31 @@ async function actionAdminCalcWeek(userId, data) {
     } else {
       await db.collection('winter_weekly').add({ data: { ...stat, createTime: new Date() } });
     }
-    // 罚金（仅未完成且非春节周）
-    if (!completed && target > 0 && !frozen) {
+    // 小红包提醒：仅未完成 + 非冻结周 + 非警告周（正式第 1 周只提醒不罚）
+    const warnWeek = Number(cfg.warnWeek) || 0;
+    const noFine = frozen || weekIndex === warnWeek;
+    if (!completed && target > 0 && !noFine) {
       const fineExist = await db.collection('winter_fine').where({ userId: m.userId, weekIndex }).limit(1).get().catch(() => null);
       if (!(fineExist && fineExist.data && fineExist.data.length)) {
+        // 金额按「连续未完成周数」取档：第1周5元、第2周10元、第3周及以上20元封顶
+        const tiers = Array.isArray(cfg.fineTiers) && cfg.fineTiers.length ? cfg.fineTiers : [5, 10, 20];
+        const idx = Math.max(0, Math.min(tiers.length - 1, continuousFailWeeks - 1));
+        const amount = toNum(tiers[idx]);
+        // 红包个数：默认 5 个拼手气；组内人数少于 6 时按「人数-1」发
+        const gmCnt = await db.collection('winter_member')
+          .where({ groupId: m.groupId, status: _.in(['approved', 'quit-suggested']) }).count().catch(() => ({ total: 0 }));
+        const memberCount = gmCnt.total || 0;
+        let packets = toNum(cfg.finePackets) || 5;
+        if (memberCount >= 2 && memberCount - 1 < packets) packets = memberCount - 1;
         await db.collection('winter_fine').add({
           data: {
             userId: m.userId, groupId: m.groupId, weekIndex,
-            amount: toNum(cfg.finePerWeek), packets: toNum(cfg.finePackets),
+            continuousFailWeeks, amount, packets,
             status: 'due', createTime: new Date(),
           },
         });
+        fineTotal += amount;
       }
-      fineTotal += toNum(cfg.finePerWeek);
       failCnt++;
     } else if (completed) {
       doneCnt++;

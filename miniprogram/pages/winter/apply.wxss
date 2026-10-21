@@ -1,3 +1,6 @@
 @import './common.wxss';
 .loading { text-align: center; padding: 80rpx; color: #999; }
 .adjust-on { color: #1aad19; font-weight: 600; }
+/* 组别建议人数与参考 KPI 区间（破冬行动：按全马目标档位分组） */
+.group-target { color: #1aad19; font-weight: 600; }
+.group-meta { display: block; line-height: 1.5; }

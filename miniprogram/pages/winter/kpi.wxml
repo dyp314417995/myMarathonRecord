@@ -7,6 +7,7 @@
       <view class="card">
         <text class="card-title">设定本组 KPI 区间</text>
         <text class="card-sub">保存即生效，队员只能在本区间内填报</text>
+        <view class="notice-bar" wx:if="{{draftTip}}">📋 {{draftTip}}</view>
         <view class="field">
           <text class="field-label">考核类型</text>
           <view class="chip-row">

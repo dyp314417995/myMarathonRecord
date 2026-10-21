@@ -1,68 +1,133 @@
-<!-- pages/winter/rules.wxml - 冬训规则 -->
+<!-- pages/winter/rules.wxml - 破冬行动 · 冬训规则（对齐《100天能力组冬训招募方案》） -->
 <view class="winter-page">
   <view class="card">
-    <text class="card-title">当前状态</text>
-    <text class="row-value">{{phaseText}} · 共 {{totalWeeks}} 周</text>
+    <text class="card-title">破冬行动 · 100 天能力组冬训</text>
+    <text class="row-value">主办：九州战马联盟冬训管理组</text>
+    <text class="card-sub" style="margin-top:10rpx">不卷跑量，只卷出现。按能力分组抱团，自己定 KPI，完成有奖，未完成小红包提醒，娱乐为主、安全第一。</text>
+    <view style="margin-top:16rpx">
+      <text class="tag tag-green">{{phaseText}}</text>
+      <text class="tag tag-blue" wx:if="{{weekIndex > 0}}">第 {{weekIndex}} / {{totalWeeks}} 周</text>
+      <text class="tag tag-orange">目标 {{scale.target}} 人 · 上限 {{scale.max}} 人</text>
+    </view>
   </view>
 
   <view class="card">
-    <text class="card-title">一、完成判定</text>
-    <text class="rule-line">1. KPI 类型由教练按组设定（跑量 或 出勤），含下限、上限与单次最低时长。</text>
-    <text class="rule-line">2. 队员在教练设定的区间内填报个人 KPI，区间内自动通过，越界不可提交。</text>
-    <text class="rule-line">3. 每日上传 1 张跑步记录截图 + 跑量或时长；队长/教练 24 小时内审核。</text>
-    <text class="rule-line">4. 本周（周一~周日）内均可提交或补交打卡，周日 24 点截止；周一零点起锁定上周，不再接受补卡。周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）。</text>
-    <text class="rule-line">5. 周完成率 = 实际 / 个人 KPI，≥100% 视为完成。</text>
+    <text class="card-title">一、时间线</text>
+    <view class="row"><text class="row-label">报名/建组/任命</text><text class="row-value">10月下旬—10月31日</text></view>
+    <view class="row"><text class="row-label">试运行</text><text class="row-value">11月1日—11月15日</text></view>
+    <view class="row"><text class="row-label">锁定缴费</text><text class="row-value">11月15日</text></view>
+    <view class="row"><text class="row-label">正式冬训</text><text class="row-value">11月16日—2027年2月23日（100天）</text></view>
+    <view class="row"><text class="row-label">正式第1周</text><text class="row-value">11月16日—22日（警告周）</text></view>
+    <view class="row"><text class="row-label">计罚开始</text><text class="row-value">11月23日</text></view>
+    <view class="row"><text class="row-label">春节放假</text><text class="row-value">2月5日—2月11日（7天不考核）</text></view>
+    <view class="row"><text class="row-label">节后过渡</text><text class="row-value">2月12日—2月16日（可申请降档）</text></view>
+    <view class="row"><text class="row-label">收尾降档周</text><text class="row-value">2月17日—2月23日</text></view>
+    <view class="row"><text class="row-label">结营</text><text class="row-value">2月23日</text></view>
+    <text class="rule-line" style="margin-top:14rpx">试运行期：不罚款、不计连续、不结算榜单；可免费退出 / 调组 / 换角色。</text>
+    <text class="rule-line">正式第 {{warnWeek}} 周为警告周：未完成只提醒不罚。</text>
+    <text class="rule-line">第 {{tailWeek}} 周起为收尾降档周（2月17日—23日）：自动降档，完成 1 次即达标。</text>
   </view>
 
   <view class="card">
-    <text class="card-title">二、审核规则</text>
-    <text class="rule-line">1. 队长与教练在本组正常打卡、正常考核，不去其他组当队员。</text>
-    <text class="rule-line">2. 队长/教练不能审核自己的打卡，两人互相审核。</text>
-    <text class="rule-line">3. 组内只有 1 名管理角色时自动通过，由管理组抽查。</text>
-    <text class="rule-line">4. 审核页只出现「我所在组」的待审打卡。</text>
+    <text class="card-title">二、分组 = 组队</text>
+    <text class="rule-line">每组即一队，一人只报名一次，只进一个组，只选一个角色。每组下限 6 人、上限 20 人；少于 6 人合并或调剂，超过 20 人拆二队或加教练。按近期成绩或自报选组，不比绝对跑量、不排名配速。</text>
+    <view class="member-row" wx:for="{{groups}}" wx:key="_id">
+      <view class="member-info">
+        <text class="member-name">{{item.emblem}} {{item.name}}</text>
+        <text class="member-meta">{{item.desc}} · 建议 {{item.targetSize}}</text>
+        <text class="member-meta" wx:if="{{item.suggest}}">参考区间：跑量 {{item.suggest.distance.min}}—{{item.suggest.distance.max}}km / 出勤 {{item.suggest.attendance.min}}—{{item.suggest.attendance.max}} 次</text>
+      </view>
+      <view class="member-right"><text class="tag tag-gray">{{item.memberCount}} 人</text></view>
+    </view>
   </view>
 
   <view class="card">
-    <text class="card-title">三、连续未完成与退出</text>
-    <text class="rule-line">1. 系统每周统计个人完成率，未完成则连续计数 +1。</text>
-    <text class="rule-line">2. 连续未完成由系统自动提醒。</text>
-    <text class="rule-line">3. 连续第 4 周标记「建议退出」，由管理组确认后退出冬训营。</text>
+    <text class="card-title">三、队长与教练</text>
+    <text class="rule-line">每组配置：队长 1 名 + 教练 1—2 名 + 队员。人少可队长兼教练，补贴合并。</text>
+    <text class="rule-line">队长（每队 1 名）：审核本组打卡（24 小时内通过/驳回并填原因）；每周统计本组完成情况、发布周榜；连续未完成时先私聊提醒再记录小红包；催打卡、发通知、维护气氛。</text>
+    <text class="rule-line">教练（每队 1—2 名）：设定本组 KPI 区间（跑量或出勤，含上下限、单次最低时长），直接生效；每周日定稿、周一发布周课表（三档建议、质量课、力量拉伸、替代方案、降档规则）；发训练建议、组织云约练、答疑；对疲劳伤病队员给出降档建议。</text>
+    <text class="rule-line">队长与教练本人在本组正常打卡、正常考核，不额外免罚；可参评「最佳队长」「最佳教练」，奖池出小奖品 / 证书。队长和教练补贴同一标准，按实际岗位人数均摊，总额内调整。</text>
   </view>
 
   <view class="card">
-    <text class="card-title">四、费用与罚金</text>
-    <text class="rule-line">1. 参赛费 {{fee.entry}} 元 + 教练费 {{fee.coach}} 元 + 奖池 {{fee.pool}} 元，线下收取，系统只记录缴费状态。</text>
-    <text class="rule-line">2. 未完成周产生罚金（红包线下发放），系统只记录「应发 / 已发 / 未发」。</text>
-    <text class="rule-line">3. 队长/教练补贴、奖池收支由管理组公示。</text>
+    <text class="card-title">四、KPI 区间与个人填报</text>
+    <text class="rule-line">1. 教练设定组 KPI 区间，直接生效；个人只能在区间内填报。</text>
+    <text class="rule-line">2. 能力组默认跑量 KPI，可申请出勤 KPI 降档；动起来组默认出勤 KPI。</text>
+    <text class="rule-line">3. 每人只设 1 个主 KPI，跑量和出勤不双考核。</text>
+    <text class="rule-line">4. 区间内提交自动通过；低于下限或高于上限不可提交，线下找教练调区间。</text>
+    <text class="rule-line">5. 第一周、春节前一周自动降档；区间每月可调 1 次，周中不改，开营前公示。</text>
   </view>
 
   <view class="card">
-    <text class="card-title">五、转组与伤病</text>
-    <text class="rule-line">1. 不开放自助转组；确需调整由管理组后台操作并备注原因与时点。</text>
-    <text class="rule-line">2. 伤病情况由管理组备注，可同时决定是否清零连续未完成计数。</text>
-    <text class="rule-line">3. 所有调组与伤病备注全程留痕。</text>
+    <text class="card-title">五、打卡与审核</text>
+    <text class="rule-line">1. 每天最多 1 条：上传 1 张图 + 填跑量或运动时长 + 备注。</text>
+    <text class="rule-line">2. 本周（周一~周日）内均可提交或补交，周日 24 点截止；周一零点起锁定上周，不再接受补卡。</text>
+    <text class="rule-line">3. 图片建议含日期或距离信息；不做图片识别、不做 GPS 校验。</text>
+    <text class="rule-line">4. 队长/教练 24 小时内通过或驳回并填原因，队员可改后重提；不能审核自己的打卡，队长教练互审；组内只有 1 名管理角色时自动通过。</text>
+    <text class="rule-line">5. 每周日 24 点截止，周一 18:00 前审完；逾期未审默认通过，管理组抽查。</text>
   </view>
 
   <view class="card">
-    <text class="card-title">六、春节假期</text>
-    <text class="rule-line">1. 春节假期周自动冻结：考核判定、连续未完成计数、罚金与榜单。</text>
-    <text class="rule-line">2. 冻结期间打卡仍可提交，但不计入考核。</text>
+    <text class="card-title">六、完成 / 未完成判定</text>
+    <text class="rule-line">按周判定，不设豁免、不设复活卡、不补卡。</text>
+    <text class="rule-line">· 跑量 KPI：本周审核通过跑量 ÷ 个人承诺跑量，封顶 100%。</text>
+    <text class="rule-line">· 出勤 KPI：本周有效打卡次数 ÷ 个人承诺次数。</text>
+    <text class="rule-line">· 完成 = 完成率 ≥ 100%；未完成 = 未达承诺。</text>
+    <text class="rule-line">· 连续未完成按周累计；中间完成一周，连续计数清零。</text>
+    <text class="rule-line">· 春节放假周冻结连续计数：不增加、不清零；节后继续。</text>
+    <text class="rule-line">· 试运行期不计连续、不结算。100 天总周期只用于最终评奖和证书。</text>
   </view>
 
   <view class="card">
-    <text class="card-title">七、其他说明</text>
-    <text class="rule-line">1. 一人只报名一次，只进一个组，只担任一个角色。</text>
-    <text class="rule-line">2. 不设豁免、复活卡与跨周补卡（仅限本周内补交）。</text>
-    <text class="rule-line">3. 娱乐跑量榜不计入积分与考核。</text>
+    <text class="card-title">七、小红包提醒</text>
+    <text class="rule-line">连续未完成时发小红包，不进奖池、不归队长教练，只是轻松提醒：</text>
+    <text class="rule-line">· 连续第 1 周未完成：群发 {{fineTiers[0]}} 元红包</text>
+    <text class="rule-line">· 连续第 2 周：{{fineTiers[1]}} 元</text>
+    <text class="rule-line">· 连续第 3 周：{{fineTiers[2]}} 元封顶</text>
+    <text class="rule-line">· 第 4 周仍未完成且未沟通：退出冬训营，保留社群身份和回归资格</text>
+    <text class="rule-line">红包发 {{finePackets}} 个拼手气，组内人少按「人数-1」发。量力而行，真有特殊情况提前沟通。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">八、费用说明</text>
+    <text class="rule-line">每人 {{fee.entry}} 元参赛费 = {{fee.coach}} 元队长和教练辛苦补贴 + {{fee.pool}} 元结营奖池。</text>
+    <text class="rule-line">补贴是感谢队长审打卡、做统计、催进度，教练出课表、答疑、组织约练；奖池用于小奖品、证书和物料。收费和支出结营后公示。</text>
+    <text class="rule-line">不收押金；参赛费确认报名后进入统一支出，不再退还。系统只记录缴费状态，线下收款。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">九、转组与退出</text>
+    <text class="rule-line">转组：队员如需升 / 降组，私聊管理组，由管理组手动调整并备注；队长 / 教练不转组；伤病只申请降档 KPI 或退出，不换组。转组不重复交费，连续未完成周数不清零。每月初集中处理，伤病随时处理。</text>
+    <text class="rule-line">伤病等原因退出：可申请退出，退出后不再计罚，不影响之后回社群；参赛费已进入统一支出，无法退还。</text>
+    <text class="rule-line">其他原因主动退出：尊重选择，退出后不再计罚；参赛费同样不退。</text>
+    <text class="rule-line">连续 4 周未完成且未沟通：先提醒、私聊，之后退出冬训营，但保留社群身份和回归资格。</text>
+    <text class="rule-line">能坚持最好，坚持不了也别硬扛，提前说一声，大家都理解。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">十、积分与奖励</text>
+    <text class="rule-line">积分奖打卡、完成本周 KPI、互助 / 约练、集体云约练、连续达标、首次 / 唤醒打卡；不奖跑量。</text>
+    <text class="rule-line">队伍榜按人均 KPI 完成率，不按总跑量；个人娱乐跑量榜只展示不计分。</text>
+    <text class="rule-line">奖励：周 / 月破冬者勋章；百天破冬者证书（完成周数 ÷ 有效考核周数 ≥ 80% 且未退出冬训营）；全勤奖；最佳队长、最佳教练、最佳课表组、最佳唤醒奖、最暖队友；不设最快组奖。</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">十一、安全提示、诚信与免责</text>
+    <text class="rule-line">1. 自愿参加。本次冬训为社群自发组织的线上活动，根据自身情况自愿报名。</text>
+    <text class="rule-line">2. 量力而行，安全第一。冬季气温低、路面湿滑，训练请充分热身、注意保暖；遇冰雪、雾霾、极端低温等天气，建议改为室内运动或休息，不鼓励冒险外出。</text>
+    <text class="rule-line">3. 健康自负。有基础疾病、心血管问题、伤病未愈者，请先咨询医生再决定是否参加；训练中如有不适，立即停止并就医。</text>
+    <text class="rule-line">4. 风险自担。参加者自行评估运动风险，建议自行购买运动意外保险。活动组织方、队长、教练不承担训练过程中发生的意外伤害、健康损害及财产损失责任。</text>
+    <text class="rule-line">5. 课表为参考。教练课表和建议仅供参考，不替代医疗或专业指导，执行与否由个人根据身体情况决定。</text>
+    <text class="rule-line">6. 诚信打卡。请真实上传本人运动记录，不盗图、不虚报；发现明显造假，管理组可提醒、警告，情节严重退出冬训营。</text>
+    <text class="rule-line">7. 隐私保护。打卡图片仅用于队内审核和统计，不对外传播、不用于商业宣传；如活动需要展示，会提前征得本人同意。</text>
+    <text class="rule-line">8. 友善交流。群内不嘲笑配速、不攀比跑量、不人身攻击。</text>
+    <text class="rule-line">9. 规则微调。如遇极端天气、平台故障、不可抗力等，管理组可对节奏和规则做临时微调，并提前公告。</text>
+    <text class="rule-line">10. 异议处理。对审核结果、处罚、费用等有异议，先找队长 / 教练沟通，沟通不畅找管理组；管理组 3 天内答复。</text>
+    <text class="rule-line">11. 最终解释权归九州战马联盟冬训管理组所有。</text>
   </view>
 
   <view class="card" wx:if="{{rulesText}}">
     <text class="card-title">补充说明</text>
     <text class="rule-line">{{rulesText}}</text>
-  </view>
-
-  <view class="card">
-    <text class="card-title">⚠️ 安全与免责声明</text>
-    <text class="rule-line">冬训营为自愿参与的训练互助活动，参与者应根据自身身体状况科学训练。训练过程中如出现不适请立即停止并就医。活动组织方不承担因个人身体原因、训练方式或意外导致的任何责任。</text>
   </view>
 </view>
