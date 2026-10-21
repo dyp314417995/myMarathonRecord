@@ -13,6 +13,12 @@ Page({
 
   onTab(e) { this.setData({ tab: e.currentTarget.dataset.v }); },
 
+  // 头像加载失败（临时链接过期/文件缺失）：置空，改用文字头像兜底
+  onAvatarError(e) {
+    const i = Number(e.currentTarget.dataset.i);
+    if (this.data.personal[i]) this.setData({ [`personal[${i}].avatarUrl`]: '' });
+  },
+
   async load() {
     const r = await w.api.weeklyStats({});
     if (!r.ok) {
@@ -24,7 +30,7 @@ Page({
       loading: false,
       weekIndex: r.weekIndex, frozen: r.frozen,
       frozenText: w.FROZEN_TEXT[r.frozenReason] || (r.frozen ? '本周不考核，打卡照常开放' : ''),
-      teamRank: r.teamRank || [], personal: r.personal || [],
+      teamRank: r.teamRank || [], personal: await w.resolveAvatars(r.personal || []),
       myStat: r.myStat, groupAvgRate: r.groupAvgRate, completedCount: r.completedCount,
     });
   },

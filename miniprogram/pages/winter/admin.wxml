@@ -72,7 +72,8 @@
       <block wx:if="{{tab === 'applies'}}">
         <view class="card" wx:for="{{applies}}" wx:key="_id">
           <view class="member-row">
-            <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="applies" data-i="{{index}}" />
+            <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
             <view class="member-info">
               <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
               <text class="member-meta">{{item.groupName}} · 近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
@@ -92,7 +93,8 @@
       <block wx:if="{{tab === 'members'}}">
         <view class="card" wx:for="{{members}}" wx:key="_id">
           <view class="member-row">
-            <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="members" data-i="{{index}}" />
+            <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
             <view class="member-info">
               <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
               <text class="member-meta">{{item.groupName}} · {{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>

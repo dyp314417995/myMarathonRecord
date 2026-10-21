@@ -31,7 +31,8 @@
     <view class="card" wx:else>
       <text class="card-title">本周个人完成率</text>
       <view class="member-row" wx:for="{{personal}}" wx:key="userId">
-        <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-i="{{index}}" />
+        <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
         <view class="member-info">
           <text class="member-name">{{index + 1}}. {{item.nickName}} <text class="tag {{item.role === 'leader' ? 'tag-green' : (item.role === 'coach' ? 'tag-blue' : 'tag-gray')}}">{{item.roleText}}</text></text>
           <text class="member-meta">目标 {{item.target}}{{item.kpiType === 'attendance' ? '天' : '公里'}} · 实际 {{item.actual}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>

@@ -43,6 +43,13 @@
       "runtime": "Nodejs16.13",
       "handler": "index.main",
       "memorySize": 512
+    },
+    {
+      "name": "getImageUrls",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
     }
   ]
 }

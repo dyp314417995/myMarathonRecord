@@ -21,10 +21,10 @@ Page({
       this.setData({ loading: false, noPerm: true, errMsg: r.error });
       return;
     }
-    // 加载图片临时链接
-    const list = [];
-    for (const c of (r.list || [])) {
-      list.push({ ...c, tempImage: await w.toTempUrl(c.imageFileID) });
+    // 加载图片临时链接；头像同样要把 cloud:// 转成 https（image 组件不支持 cloud://）
+    const list = await w.resolveAvatars(r.list || []);
+    for (const c of list) {
+      c.tempImage = await w.toTempUrl(c.imageFileID);
     }
     this.setData({
       loading: false, list, myRole: r.myRole,
@@ -35,6 +35,12 @@ Page({
   onPreview(e) {
     const url = e.currentTarget.dataset.url;
     if (url) wx.previewImage({ urls: [url] });
+  },
+
+  // 头像加载失败：置空，改用文字头像兜底
+  onAvatarError(e) {
+    const i = Number(e.currentTarget.dataset.i);
+    if (this.data.list[i]) this.setData({ [`list[${i}].avatarUrl`]: '' });
   },
 
   async doReview(id, pass, note) {

@@ -71,6 +71,52 @@ async function toTempUrl(fileID) {
   return fileID;
 }
 
+// 批量把列表里的 cloud:// 头像转成 https 临时链接。
+// 注意：image 组件不支持 cloud:// 协议，且临时链接带签名(t)会过期，故每次加载都要重新转换。
+async function resolveAvatars(list) {
+  if (!Array.isArray(list) || !list.length) return list || [];
+  const ids = [];
+  const seen = {};
+  list.forEach((it) => {
+    const a = it && it.avatarUrl;
+    if (a && String(a).indexOf('cloud://') === 0 && !seen[a]) { seen[a] = 1; ids.push(a); }
+  });
+  if (!ids.length) return list;
+
+  const map = {};
+  try {
+    const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: ids } });
+    (res.result || []).forEach((f) => { if (f && f.tempFileURL) map[f.fileID] = f.tempFileURL; });
+  } catch (e) { /* ignore */ }
+  // 批量接口部分失败时逐个兜底重试
+  for (const id of ids) {
+    if (map[id]) continue;
+    try {
+      const r = await wx.cloud.getTempFileURL({ fileList: [id] });
+      const f = r.fileList && r.fileList[0];
+      if (f && f.tempFileURL) map[id] = f.tempFileURL;
+    } catch (e) { /* ignore */ }
+  }
+  return list.map((it) => {
+    if (!it) return it;
+    let avatarUrl = it.avatarUrl || '';
+    if (map[avatarUrl]) {
+      avatarUrl = map[avatarUrl];
+    } else if (String(avatarUrl).indexOf('cloud://') === 0) {
+      avatarUrl = ''; // 转换失败：置空，避免 image 拿到 cloud:// 报渲染层错误，改由文字头像兜底
+    }
+    const nick = String(it.nickName || it.name || '').trim();
+    return { ...it, avatarUrl, avatarInitial: nick ? nick.charAt(0).toUpperCase() : '?' };
+  });
+}
+
+// 单个对象/列表统一处理：头像转链失败时置空，交给 wxml 兜底显示文字头像
+async function pickAvatar(obj) {
+  if (!obj) return obj;
+  const one = await resolveAvatars([obj]);
+  return one[0];
+}
+
 const ROLE_TEXT = { member: '队员', leader: '队长', coach: '教练' };
 const PHASE_TEXT = { closed: '未开放', trial: '报名/试运行', formal: '正式进行', holiday: '春节假期（不考核）' };
 
@@ -81,4 +127,7 @@ const FROZEN_TEXT = {
 };
 const STATUS_TEXT = { pending: '待审核', approved: '已通过', rejected: '已驳回', 'quit-suggested': '建议退出', quit: '已退出' };
 
-module.exports = { api, uploadCheckinImage, toTempUrl, ROLE_TEXT, PHASE_TEXT, STATUS_TEXT, FROZEN_TEXT };
+module.exports = {
+  api, uploadCheckinImage, toTempUrl, resolveAvatars, pickAvatar,
+  ROLE_TEXT, PHASE_TEXT, STATUS_TEXT, FROZEN_TEXT,
+};

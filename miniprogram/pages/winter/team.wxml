@@ -24,7 +24,8 @@
     <view class="card">
       <text class="card-title">队长 / 教练</text>
       <view class="member-row" wx:if="{{leader}}">
-        <image class="member-avatar" src="{{leader.avatarUrl}}" mode="aspectFill" />
+        <image wx:if="{{leader.avatarUrl}}" class="member-avatar" src="{{leader.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="leader" />
+        <view wx:else class="member-avatar avatar-fallback">{{leader.avatarInitial || '?'}}</view>
         <view class="member-info">
           <text class="member-name">{{leader.nickName}} <text class="tag tag-green">队长</text></text>
           <text class="member-meta">KPI {{leader.kpiValue}}{{leader.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{leader.remark ? ' · ' + leader.remark : ''}}</text>
@@ -33,7 +34,8 @@
       </view>
       <view class="empty" wx:else style="padding:24rpx">队长待任命</view>
       <view class="member-row" wx:if="{{coach}}">
-        <image class="member-avatar" src="{{coach.avatarUrl}}" mode="aspectFill" />
+        <image wx:if="{{coach.avatarUrl}}" class="member-avatar" src="{{coach.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="coach" />
+        <view wx:else class="member-avatar avatar-fallback">{{coach.avatarInitial || '?'}}</view>
         <view class="member-info">
           <text class="member-name">{{coach.nickName}} <text class="tag tag-blue">教练</text></text>
           <text class="member-meta">KPI {{coach.kpiValue}}{{coach.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{coach.remark ? ' · ' + coach.remark : ''}}</text>
@@ -45,7 +47,8 @@
     <view class="card">
       <text class="card-title">队员（{{mates.length}} 人）</text>
       <view class="member-row" wx:for="{{mates}}" wx:key="_id">
-        <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="mates" data-i="{{index}}" />
+        <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
         <view class="member-info">
           <text class="member-name">{{item.nickName}}</text>
           <text class="member-meta">KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{item.remark ? ' · ' + item.remark : ''}}</text>

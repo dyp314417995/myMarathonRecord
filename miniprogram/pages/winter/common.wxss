@@ -58,6 +58,8 @@ page { background: #f5f6f7; }
 
 .member-row { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 2rpx solid #f5f5f5; }
 .member-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; background: #eee; margin-right: 20rpx; }
+/* 头像缺失或转链失败时的文字兜底，避免 image 拿到无效/过期地址报渲染层错误 */
+.member-avatar.avatar-fallback { display: flex; align-items: center; justify-content: center; background: #d8dee9; color: #5b6b82; font-size: 30rpx; font-weight: 600; }
 .member-info { flex: 1; }
 .member-name { font-size: 28rpx; color: #222; }
 .member-meta { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }

@@ -11,7 +11,8 @@
 
       <view class="card" wx:for="{{list}}" wx:key="_id">
         <view class="member-row">
-          <image class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-i="{{index}}" />
+          <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
           <view class="member-info">
             <text class="member-name">{{item.nickName}}</text>
             <text class="member-meta">{{item.date}} · {{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}</text>

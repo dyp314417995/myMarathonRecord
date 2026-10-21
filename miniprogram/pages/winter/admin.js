@@ -47,13 +47,21 @@ Page({
     if (tab === 'finance') this.loadFinance();
   },
 
+  // 头像加载失败：置空，改用文字头像兜底
+  onAvatarError(e) {
+    const k = e.currentTarget.dataset.k;
+    const i = Number(e.currentTarget.dataset.i);
+    if (k === 'applies' && this.data.applies[i]) this.setData({ [`applies[${i}].avatarUrl`]: '' });
+    else if (k === 'members' && this.data.members[i]) this.setData({ [`members[${i}].avatarUrl`]: '' });
+  },
+
   async loadApplies() {
     const r = await w.api.adminApplies({ status: 'pending' });
-    if (r.ok) this.setData({ applies: r.list });
+    if (r.ok) this.setData({ applies: await w.resolveAvatars(r.list || []) });
   },
   async loadMembers() {
     const r = await w.api.adminMembers({});
-    if (r.ok) this.setData({ members: r.list, allGroups: r.groups });
+    if (r.ok) this.setData({ members: await w.resolveAvatars(r.list || []), allGroups: r.groups });
   },
   async loadCheckins() {
     const r = await w.api.adminCheckins({ status: 'pending' });
