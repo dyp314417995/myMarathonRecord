@@ -30,7 +30,8 @@
 
   <view class="card">
     <text class="card-title">二、分组 = 组队</text>
-    <text class="rule-line">每组即一队，一人只报名一次，只进一个组，只选一个角色。每组下限 6 人、上限 20 人；少于 6 人合并或调剂，超过 20 人拆二队或加教练。按近期成绩或自报选组，不比绝对跑量、不排名配速。</text>
+    <text class="rule-line">每组即一队，一人只报名一次，只进一个组，只选一个角色。每组下限 6 人、上限 20 人；少于 6 人合并或调剂，超过 20 人拆二队或加教练。按全马目标档位选组（S 精英 / A 300 / B 310 / C 320 / D 330 / E 345 / F 400 / 动起来），不比绝对跑量、不排名配速。</text>
+    <text class="rule-line">没有全马成绩的，按「半马成绩 × 2 + 10 分钟」估算：如半马 1:45:00 → 全马约 3:40:00。该水平可报 D 组（330）冲一冲，也可报 E 组（345）稳一点，按你的目标激进程度选。</text>
     <view class="member-row" wx:for="{{groups}}" wx:key="_id">
       <view class="member-info">
         <text class="member-name">{{item.emblem}} {{item.name}}</text>

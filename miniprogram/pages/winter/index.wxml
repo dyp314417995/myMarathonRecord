@@ -30,6 +30,7 @@
 
       <view class="card">
         <text class="card-title">8 个能力组（每组即一队）</text>
+        <text class="card-sub">按全马目标档位选组；没有全马成绩，按「半马成绩 × 2 + 10 分钟」估算后对号入座</text>
         <view class="member-row" wx:for="{{groups}}" wx:key="_id">
           <view class="member-info">
             <text class="member-name">{{item.emblem}} {{item.name}}</text>

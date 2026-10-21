@@ -10,16 +10,20 @@
       </view>
       <view class="field">
         <text class="field-label">近期成绩</text>
-        <input class="input" value="{{recentResult}}" data-f="recentResult" bindinput="onInput" placeholder="如：全马 3:45:00 / 半马 1:45:00" />
+        <input class="input" value="{{recentResult}}" data-f="recentResult" bindinput="onInput" placeholder="如：全马 3:45:00" />
+        <text class="field-tip">填写最近一次比赛成绩，全马 / 半马 / 10 公里均可</text>
+        <text class="field-tip">没有全马成绩？按「半马成绩 × 2 + 10 分钟」估算：如半马 1:45:00 → 全马约 3:40:00</text>
       </view>
       <view class="field">
         <text class="field-label">冬训目标</text>
-        <input class="input" value="{{target}}" data-f="target" bindinput="onInput" placeholder="如：半马破 1:40 / 月跑量 200km" />
+        <input class="input" value="{{target}}" data-f="target" bindinput="onInput" placeholder="如：全马破 330" />
+        <text class="field-tip">例：全马破 330 / 半马破 1:40 / 月跑量 200km / 养成每周 3 练习惯</text>
       </view>
     </view>
 
     <view class="card">
       <text class="card-title">选择组别 *</text>
+      <text class="card-sub">按你的全马目标选组；没有全马成绩，按「半马成绩 × 2 + 10 分钟」估算后对号入座</text>
       <view class="group-item {{groupId === item._id ? 'on' : ''}} {{(item.capacity && item.memberCount >= item.capacity) ? 'disabled' : ''}}"
         wx:for="{{groups}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPickGroup">
         <view class="group-left">
