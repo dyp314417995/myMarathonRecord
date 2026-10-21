@@ -9,7 +9,7 @@
         <text class="card-title">今日打卡</text>
         <view class="row">
           <text class="row-label">打卡日期</text>
-          <picker mode="date" value="{{date}}" end="{{maxDate}}" bindchange="onDateChange">
+          <picker mode="date" value="{{date}}" start="{{weekStart}}" end="{{maxDate}}" bindchange="onDateChange">
             <text class="row-value">{{date}} ›</text>
           </picker>
         </view>
@@ -55,7 +55,7 @@
       </view>
 
       <view class="notice-bar">
-        ⏰ 周日 24 点截止本周打卡；队长/教练需在周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）
+        ⏰ 本周（周一~周日）内均可提交打卡，周日 24 点截止；周一零点起锁定上周，不可再补卡。队长/教练需在周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）
       </view>
 
       <button class="btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">提交打卡</button>

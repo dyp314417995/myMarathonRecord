@@ -4,7 +4,7 @@ const w = require('../../../utils/winter');
 Page({
   data: {
     loading: true, submitting: false,
-    date: '', maxDate: '',
+    date: '', maxDate: '', weekStart: '',
     imageFileID: '', tempImage: '',
     distance: '', duration: '', note: '',
     kpiType: 'distance', needDistance: true,
@@ -18,7 +18,7 @@ Page({
 
   async load() {
     const today = this.fmt(new Date());
-    // 默认今天；可补录最近 7 天
+    // 可选范围：本周一 ~ 今天（周一零点起上周锁定，不可跨周补卡）
     const r = await w.api.myCheckins({});
     const my = await w.api.myGroup();
     if (!my.ok) {
@@ -32,6 +32,7 @@ Page({
       loading: false,
       date: today,
       maxDate: today,
+      weekStart: this.mondayOf(today),
       kpiType: my.me.kpiType || 'distance',
       needDistance: (my.me.kpiType || 'distance') === 'distance',
       todayRecord,
@@ -47,6 +48,14 @@ Page({
 
   fmt(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+
+  // 该日期所在周的周一
+  mondayOf(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=周日
+    const back = dow === 0 ? 6 : dow - 1;
+    return this.fmt(new Date(Date.UTC(y, m - 1, d) - back * 86400000));
   },
 
   onDateChange(e) { this.setData({ date: e.detail.value }); },

@@ -413,8 +413,14 @@ async function actionDoCheckin(userId, data) {
 
   const date = data.date || todayStr();
   const today = todayStr();
-  if (diffDays(today, date) > 0) return fail('不能给未来的日期打卡');
-  if (diffDays(today, date) > 7) return fail('仅可补录最近 7 天的打卡');
+  // 补卡规则：本周（周一 00:00 ~ 周日 23:59:59）内的日期均可提交；
+  // 周一零点起本周锁定，上周打卡不可再补（不设跨周补卡入口）
+  const weekStart = mondayOf(today);
+  // 注意 diffDays(a,b) = a-b：前者在后才是正数
+  if (diffDays(date, today) > 0) return fail('不能给未来的日期打卡');
+  if (diffDays(date, weekStart) < 0) {
+    return fail('打卡已于周日 24 点截止，周一零点起不可再补上周的卡');
+  }
 
   const imageFileID = String((data.imageFileID || data.image || '')).trim();
   const distance = toNum(data.distance);

@@ -10,7 +10,7 @@
     <text class="rule-line">1. KPI 类型由教练按组设定（跑量 或 出勤），含下限、上限与单次最低时长。</text>
     <text class="rule-line">2. 队员在教练设定的区间内填报个人 KPI，区间内自动通过，越界不可提交。</text>
     <text class="rule-line">3. 每日上传 1 张跑步记录截图 + 跑量或时长；队长/教练 24 小时内审核。</text>
-    <text class="rule-line">4. 周日 24 点截止本周打卡，周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）。</text>
+    <text class="rule-line">4. 本周（周一~周日）内均可提交或补交打卡，周日 24 点截止；周一零点起锁定上周，不再接受补卡。周一 18:00 前完成审核，逾期未审默认通过（管理组抽查）。</text>
     <text class="rule-line">5. 周完成率 = 实际 / 个人 KPI，≥100% 视为完成。</text>
   </view>
 
@@ -52,7 +52,7 @@
   <view class="card">
     <text class="card-title">七、其他说明</text>
     <text class="rule-line">1. 一人只报名一次，只进一个组，只担任一个角色。</text>
-    <text class="rule-line">2. 不设豁免、复活卡与补卡入口。</text>
+    <text class="rule-line">2. 不设豁免、复活卡与跨周补卡（仅限本周内补交）。</text>
     <text class="rule-line">3. 娱乐跑量榜不计入积分与考核。</text>
   </view>
 
