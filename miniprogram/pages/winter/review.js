@@ -1,5 +1,5 @@
 // pages/winter/review.js - 队长/教练审核本组打卡（互审）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

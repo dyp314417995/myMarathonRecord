@@ -1,5 +1,5 @@
 // pages/winter/checkin.js - 每日打卡（上传图片 + 跑量/时长）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

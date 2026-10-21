@@ -1,5 +1,5 @@
 // pages/winter/apply.js - 冬训练报名
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 const ROLES = [
   { v: 'member', t: '队员', desc: '在教练设定的区间内填报 KPI，每日打卡' },

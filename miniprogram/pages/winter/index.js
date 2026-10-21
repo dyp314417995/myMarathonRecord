@@ -1,5 +1,5 @@
 // pages/winter/index.js - 冬训营首页（未报名：介绍+报名；已报名：我的概览）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

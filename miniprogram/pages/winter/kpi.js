@@ -1,5 +1,5 @@
 // pages/winter/kpi.js - KPI 填报（队员）/ 区间设定（教练）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

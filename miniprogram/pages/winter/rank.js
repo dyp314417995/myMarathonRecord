@@ -1,5 +1,5 @@
 // pages/winter/rank.js - 榜单（队伍人均完成率 + 个人完成率）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

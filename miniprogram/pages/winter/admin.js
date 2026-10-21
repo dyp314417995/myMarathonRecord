@@ -1,5 +1,5 @@
 // pages/winter/admin.js - 管理组后台（概览/建组/报名审核/成员/抽查/财务/结算/开关）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 const PHASES = [
   { v: 'closed', t: '未开放' },

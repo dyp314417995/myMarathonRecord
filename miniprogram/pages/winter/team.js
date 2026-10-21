@@ -1,5 +1,5 @@
 // pages/winter/team.js - 我的组（名单 + KPI 区间）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

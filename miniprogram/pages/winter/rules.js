@@ -1,5 +1,5 @@
 // pages/winter/rules.js - 冬训规则页
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

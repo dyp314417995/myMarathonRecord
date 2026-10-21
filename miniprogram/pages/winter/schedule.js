@@ -1,5 +1,5 @@
 // pages/winter/schedule.js - 周课表（教练发布 / 队员查看+反馈）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {

@@ -1,5 +1,5 @@
 // pages/winter/profile.js - 我的冬训档案（KPI / 连续未完成 / 罚金 / 费用 / 周历史）
-const w = require('../../../utils/winter');
+const w = require('../../utils/winter');
 
 Page({
   data: {
