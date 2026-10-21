@@ -4,7 +4,7 @@ const w = require('../../utils/winter');
 Page({
   data: {
     loading: true,
-    phase: '', phaseText: '', weekIndex: 0, frozen: false,
+    phase: '', phaseText: '', weekIndex: 0, frozen: false, frozenText: '',
     joined: false,
     member: null, group: null, kpiRange: null, todayCheckin: null, pendingCount: 0,
     cfg: {}, isAdmin: false,
@@ -56,6 +56,7 @@ Page({
       phaseText: w.PHASE_TEXT[r.cfg.phase] || '',
       weekIndex: r.weekIndex,
       frozen: r.frozen,
+      frozenText: w.FROZEN_TEXT[r.frozenReason] || (r.frozen ? '本周不考核，打卡照常开放' : ''),
       joined: r.joined,
       member: r.member,
       group: r.group,

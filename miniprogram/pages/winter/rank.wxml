@@ -5,7 +5,7 @@
     <view class="hero">
       <text class="hero-title">第 {{weekIndex}} 周榜单</text>
       <text class="hero-sub">本组完成率 {{groupAvgRate}}% · 已完成 {{completedCount}} 人</text>
-      <text class="hero-tip" wx:if="{{frozen}}">❄️ 春节假期周，榜单已冻结</text>
+      <text class="hero-tip" wx:if="{{frozen}}">{{frozenText}}</text>
     </view>
 
     <view class="chip-row" style="margin-bottom:24rpx">
@@ -38,14 +38,15 @@
           <view class="bar-wrap"><view class="bar-inner" style="width:{{item.rate}}%"></view></view>
         </view>
         <view class="member-right">
-          <text class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.rate}}%</text>
+          <text wx:if="{{item.completed === null}}" class="tag tag-gray">不考核</text>
+          <text wx:else class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.rate}}%</text>
         </view>
       </view>
       <view class="empty" wx:if="{{personal.length === 0}}">暂无数据</view>
     </view>
 
     <view class="notice-bar" wx:if="{{myStat}}">
-      📊 我的本周：目标 {{myStat.target}}{{myStat.kpiType === 'attendance' ? '天' : '公里'}}，实际 {{myStat.actual}}，完成率 {{myStat.rate}}%{{myStat.completed ? ' ✅ 已完成' : ' ⚠️ 未完成'}}
+      📊 我的本周：目标 {{myStat.target}}{{myStat.kpiType === 'attendance' ? '天' : '公里'}}，实际 {{myStat.actual}}，完成率 {{myStat.rate}}%{{myStat.completed === null ? '（本周不考核）' : (myStat.completed ? ' ✅ 已完成' : ' ⚠️ 未完成')}}
     </view>
     <view class="notice-bar">
       🏃 娱乐跑量榜不计入积分与考核，仅作展示参考

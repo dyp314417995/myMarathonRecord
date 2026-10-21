@@ -3,7 +3,7 @@ const w = require('../../utils/winter');
 
 Page({
   data: {
-    loading: true, weekIndex: 0, frozen: false,
+    loading: true, weekIndex: 0, frozen: false, frozenText: '',
     teamRank: [], personal: [], myStat: null, groupAvgRate: 0, completedCount: 0,
     tab: 'team',
   },
@@ -23,6 +23,7 @@ Page({
     this.setData({
       loading: false,
       weekIndex: r.weekIndex, frozen: r.frozen,
+      frozenText: w.FROZEN_TEXT[r.frozenReason] || (r.frozen ? '本周不考核，打卡照常开放' : ''),
       teamRank: r.teamRank || [], personal: r.personal || [],
       myStat: r.myStat, groupAvgRate: r.groupAvgRate, completedCount: r.completedCount,
     });

@@ -24,7 +24,7 @@
     <view class="row"><text class="row-label">收尾降档周</text><text class="row-value">2月17日—2月23日</text></view>
     <view class="row"><text class="row-label">结营</text><text class="row-value">2月23日</text></view>
     <text class="rule-line" style="margin-top:14rpx">试运行期：不罚款、不计连续、不结算榜单；可免费退出 / 调组 / 换角色。</text>
-    <text class="rule-line">正式第 {{warnWeek}} 周为警告周：未完成只提醒不罚。</text>
+    <text class="rule-line">正式第 {{warnWeek}} 周为警告周：未完成只提醒不罚，也不计入连续周数（计罚自第 2 周起，首罚 {{fineTiers[0]}} 元）。</text>
     <text class="rule-line">第 {{tailWeek}} 周起为收尾降档周（2月17日—23日）：自动降档，完成 1 次即达标。</text>
   </view>
 
@@ -74,7 +74,7 @@
     <text class="rule-line">· 出勤 KPI：本周有效打卡次数 ÷ 个人承诺次数。</text>
     <text class="rule-line">· 完成 = 完成率 ≥ 100%；未完成 = 未达承诺。</text>
     <text class="rule-line">· 连续未完成按周累计；中间完成一周，连续计数清零。</text>
-    <text class="rule-line">· 春节放假周冻结连续计数：不增加、不清零；节后继续。</text>
+    <text class="rule-line">· 春节放假周：打卡照常开放（可自愿打卡并记录），但跳过考核——不计 KPI、不计连续（不增加也不清零）、不发红包、不参与榜单；节后继续。</text>
     <text class="rule-line">· 试运行期不计连续、不结算。100 天总周期只用于最终评奖和证书。</text>
   </view>
 

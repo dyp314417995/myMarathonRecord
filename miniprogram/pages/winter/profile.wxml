@@ -41,11 +41,12 @@
         <text class="card-title">周完成记录</text>
         <view class="member-row" wx:for="{{weekly}}" wx:key="_id">
           <view class="member-info">
-            <text class="member-name">第 {{item.weekIndex}} 周 <text class="tag tag-gray" wx:if="{{item.isHoliday}}">春节</text></text>
+            <text class="member-name">第 {{item.weekIndex}} 周 <text class="tag tag-gray" wx:if="{{item.isHoliday}}">跳过考核</text></text>
             <text class="member-meta">目标 {{item.target}} · 实际 {{item.actual}} · {{item.rate}}%</text>
           </view>
           <view class="member-right">
-            <text class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.completed ? '完成' : '未完成'}}</text>
+            <text wx:if="{{item.completed === null}}" class="tag tag-gray">不考核</text>
+            <text wx:else class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.completed ? '完成' : '未完成'}}</text>
           </view>
         </view>
         <view class="empty" wx:if="{{weekly.length === 0}}">暂无周结算记录（由管理组每周结算生成）</view>

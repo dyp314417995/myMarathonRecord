@@ -11,7 +11,7 @@
         <text class="tag {{phase === 'formal' ? 'tag-green' : (phase === 'trial' ? 'tag-orange' : 'tag-gray')}}">{{phaseText}}</text>
         <text class="tag tag-blue" wx:if="{{weekIndex > 0}}">第 {{weekIndex}} 周</text>
       </view>
-      <text class="hero-tip" wx:if="{{frozen}}">❄️ 春节假期中：考核、连续计数、罚金与榜单已冻结</text>
+      <text class="hero-tip" wx:if="{{frozen}}">{{frozenText}}</text>
     </view>
 
     <!-- 未报名：介绍 + 报名入口 -->
@@ -48,7 +48,7 @@
         <view class="row"><text class="row-label">正式冬训</text><text class="row-value">11月16日—2027年2月23日</text></view>
         <view class="row"><text class="row-label">春节放假</text><text class="row-value">2月5日—11日</text></view>
         <view class="row"><text class="row-label">结营</text><text class="row-value">2月23日</text></view>
-        <text class="card-sub" style="margin-top:12rpx">试运行期不罚款、不计连续、可免费调组；正式第 1 周为警告周，只提醒不罚。</text>
+        <text class="card-sub" style="margin-top:12rpx">试运行期不罚款、不计连续、可免费调组；正式第 1 周为警告周，只提醒不罚；春节两周打卡照常，仅跳过考核。</text>
       </view>
 
       <view class="card">

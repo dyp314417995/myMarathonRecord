@@ -198,7 +198,10 @@ async function actionBootstrap(userId) {
   const isAdmin = await isSuperAdmin(userId);
   const member = await getMyMember(userId);
   const weekIndex = calcWeekIndex(cfg);
-  const frozen = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  const trialRun2 = cfg.phase === 'trial';
+  const holidayNow2 = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  const frozen = trialRun2 || holidayNow2;
+  const frozenReason = trialRun2 ? 'trial' : (holidayNow2 ? 'holiday' : '');
 
   const result = {
     cfg: {
@@ -209,7 +212,7 @@ async function actionBootstrap(userId) {
       fineTiers: cfg.fineTiers || [5, 10, 20], finePackets: cfg.finePackets || 5,
       warnWeek: Number(cfg.warnWeek) || 1, tailWeek: Number(cfg.tailWeek) || 0,
     },
-    weekIndex, frozen,
+    weekIndex, frozen, frozenReason,
     isAdmin,
     joined: !!member,
     member: null, group: null, kpiRange: null, todayCheckin: null, pendingCount: 0, myRole: '',
@@ -375,7 +378,8 @@ async function actionGetMyGroup(userId) {
       status: member.status, remark: member.remark || '',
     },
     weekIndex,
-    frozen: cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex),
+    frozen: cfg.phase === 'trial' || cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex),
+    frozenReason: cfg.phase === 'trial' ? 'trial' : ((cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex)) ? 'holiday' : ''),
   });
 }
 
@@ -555,7 +559,11 @@ async function actionWeeklyStats(userId, data) {
   const weekIndex = data.weekIndex ? Number(data.weekIndex) : calcWeekIndex(cfg);
   const myMember = await getMyMember(userId);
   const groupId = data.groupId || (myMember && myMember.groupId) || '';
-  const frozen = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  // 试运行周、春节周均「跳过考核」：打卡照常记录，但不计完成率、不计完成人数、不排名
+  const trialRun = cfg.phase === 'trial';
+  const holidayNow = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  const frozen = trialRun || holidayNow;
+  const frozenReason = trialRun ? 'trial' : (holidayNow ? 'holiday' : '');
 
   // 本组本周打卡汇总
   const memberList = groupId ? await getMemberListOfGroup(groupId) : (myMember ? await getMemberListOfGroup(myMember.groupId) : []);
@@ -574,7 +582,8 @@ async function actionWeeklyStats(userId, data) {
       actual = m.kpiType === 'attendance' ? days : totalDistance;
       rate = Math.min(1, actual / target);
     }
-    const completed = frozen ? true : (target > 0 && rate >= 1);
+    // frozen 周完成状态为 null（不考核），避免虚增完成人数
+    const completed = frozen ? null : (target > 0 && rate >= 1);
     if (completed) completedCnt++;
     sumRate += rate;
     const u = await getUser(m.userId);
@@ -607,7 +616,7 @@ async function actionWeeklyStats(userId, data) {
       let rate = 0;
       if (target > 0) rate = Math.min(1, (m.kpiType === 'attendance' ? days : totalDistance) / target);
       sum += rate;
-      if (frozen || rate >= 1) done++;
+      if (!frozen && rate >= 1) done++; // 春节/试运行周不考核，不计入完成人数
     }
     teamRank.push({
       groupId: g._id, name: g.name, emblem: g.emblem || '',
@@ -618,7 +627,7 @@ async function actionWeeklyStats(userId, data) {
   teamRank.sort((a, b) => b.avgRate - a.avgRate);
 
   return ok({
-    weekIndex, frozen,
+    weekIndex, frozen, frozenReason,
     groupId: gid,
     myUserId: userId,
     personal: stats.sort((a, b) => b.rate - a.rate),
@@ -974,6 +983,10 @@ async function actionAdminCalcWeek(userId, data) {
   // 试运行阶段：不计连续、不结算榜单、不罚款（11/1—11/15）
   const trialRun = cfg.phase === 'trial';
   const frozen = trialRun || cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  // 周次相关的固定规则（循环外计算一次）
+  const warnWeek = Number(cfg.warnWeek) || 0;                 // 正式第1周：只提醒不罚、不累加连续
+  const tailWeek = Number(cfg.tailWeek) || 0;                 // 收尾降档起始周
+  const tailOnce = cfg.tailPassOnce !== false && tailWeek > 0 && weekIndex >= tailWeek;
   const all = await db.collection('winter_member').where({ status: _.in(['approved', 'quit-suggested']) }).limit(500).get().catch(() => null);
   const members = (all && all.data) || [];
 
@@ -990,15 +1003,15 @@ async function actionAdminCalcWeek(userId, data) {
       rate = Math.min(1, actual / target);
     }
     // 收尾降档周（规则 2/17—2/23，跨第 14、15 周）：自 tailWeek 起自动降档，完成 1 次即达标
-    const tailWeek = Number(cfg.tailWeek) || 0;
-    const tailOnce = cfg.tailPassOnce !== false && tailWeek > 0 && weekIndex >= tailWeek;
     const oncePass = tailOnce && days >= 1;
-    const completed = frozen || oncePass || (target > 0 && rate >= 1);
-    // 更新连续未完成（春节周冻结）
+    // 冻结周（试运行/春节）完成状态记为 null = 不考核，不虚增完成周数
+    const completed = frozen ? null : (oncePass || (target > 0 && rate >= 1));
+    // 更新连续未完成（春节/试运行周冻结；警告周只提醒，不累加连续，保证 11/23 计罚从 5 元起）
     let continuousFailWeeks = m.continuousFailWeeks || 0;
     if (!frozen) {
-      if (!completed && target > 0) continuousFailWeeks += 1;
-      else if (completed) continuousFailWeeks = 0;
+      if (!completed && target > 0) {
+        if (weekIndex !== warnWeek) continuousFailWeeks += 1;
+      } else if (completed) continuousFailWeeks = 0;
     }
     // 第 4 周标记「建议退出」
     let status = m.status;
@@ -1019,7 +1032,6 @@ async function actionAdminCalcWeek(userId, data) {
       await db.collection('winter_weekly').add({ data: { ...stat, createTime: new Date() } });
     }
     // 小红包提醒：仅未完成 + 非冻结周 + 非警告周（正式第 1 周只提醒不罚）
-    const warnWeek = Number(cfg.warnWeek) || 0;
     const noFine = frozen || weekIndex === warnWeek;
     if (!completed && target > 0 && !noFine) {
       const fineExist = await db.collection('winter_fine').where({ userId: m.userId, weekIndex }).limit(1).get().catch(() => null);
@@ -1060,12 +1072,18 @@ async function actionAdminSetPhase(userId, data) {
   const update = { phase, updateTime: new Date() };
   if (data.signupOpen !== undefined) update.signupOpen = !!data.signupOpen;
   if (data.startMonday !== undefined) update.startMonday = String(data.startMonday || '');
-  if (data.totalWeeks !== undefined) update.totalWeeks = Number(data.totalWeeks) || 12;
+  if (data.totalWeeks !== undefined) update.totalWeeks = Number(data.totalWeeks) || 15;
   if (data.holidayWeeks !== undefined) {
     update.holidayWeeks = Array.isArray(data.holidayWeeks) ? data.holidayWeeks.map(Number).filter(n => !isNaN(n)) : [];
   }
-  if (data.finePerWeek !== undefined) update.finePerWeek = Number(data.finePerWeek) || 0;
-  if (data.finePackets !== undefined) update.finePackets = Number(data.finePackets) || 0;
+  // 小红包梯度（如 [5,10,20]）
+  if (data.fineTiers !== undefined) {
+    update.fineTiers = Array.isArray(data.fineTiers) ? data.fineTiers.map(Number).filter(n => !isNaN(n)) : [];
+  }
+  if (data.finePackets !== undefined) update.finePackets = Number(data.finePackets) || 5;
+  if (data.warnWeek !== undefined) update.warnWeek = Number(data.warnWeek) || 0;
+  if (data.tailWeek !== undefined) update.tailWeek = Number(data.tailWeek) || 0;
+  if (data.scale !== undefined) update.scale = data.scale;
   if (data.intro !== undefined) update.intro = String(data.intro || '');
   if (data.rulesText !== undefined) update.rulesText = String(data.rulesText || '');
   if (data.fee !== undefined) update.fee = data.fee;

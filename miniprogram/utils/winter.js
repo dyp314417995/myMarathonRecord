@@ -72,7 +72,13 @@ async function toTempUrl(fileID) {
 }
 
 const ROLE_TEXT = { member: '队员', leader: '队长', coach: '教练' };
-const PHASE_TEXT = { closed: '未开放', trial: '试运行', formal: '正式进行', holiday: '春节假期' };
+const PHASE_TEXT = { closed: '未开放', trial: '报名/试运行', formal: '正式进行', holiday: '春节假期（不考核）' };
+
+// 跳过考核的原因 → 页面提示（此时打卡照常开放，仅不做考核判定）
+const FROZEN_TEXT = {
+  trial: '🌱 报名/试运行阶段：可正常打卡，不计 KPI、不计连续、不结算榜单',
+  holiday: '❄️ 春节放假周：可自愿打卡，本周不计 KPI、不计连续、不发红包、不参与榜单',
+};
 const STATUS_TEXT = { pending: '待审核', approved: '已通过', rejected: '已驳回', 'quit-suggested': '建议退出', quit: '已退出' };
 
-module.exports = { api, uploadCheckinImage, toTempUrl, ROLE_TEXT, PHASE_TEXT, STATUS_TEXT };
+module.exports = { api, uploadCheckinImage, toTempUrl, ROLE_TEXT, PHASE_TEXT, STATUS_TEXT, FROZEN_TEXT };

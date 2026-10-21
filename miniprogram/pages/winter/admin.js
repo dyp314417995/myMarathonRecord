@@ -5,7 +5,7 @@ const PHASES = [
   { v: 'closed', t: '未开放' },
   { v: 'trial', t: '报名/试运行' },
   { v: 'formal', t: '正式进行' },
-  { v: 'holiday', t: '春节假期（冻结）' },
+  { v: 'holiday', t: '春节假期（跳过考核）' },
 ];
 
 Page({
@@ -209,7 +209,7 @@ Page({
     const v = e.currentTarget.dataset.v;
     const text = (this.data.phases.find(p => p.v === v) || {}).t || v;
     const tipMap = {
-      holiday: '切换到春节假期将冻结考核、连续计数、罚金与榜单（2/5—2/11 放假，对应第 12、13 周）',
+      holiday: '切换到春节假期：打卡照常开放，仅跳过考核——不计 KPI、不计连续、不发红包、不参与榜单（2/5—2/11 放假，对应第 12、13 周）',
       formal: '正式进行期间正常计 KPI、连续未完成与罚金（注意：第 1 周为警告周，只提醒不罚）',
       trial: '报名/试运行：不罚款、不计连续、不结算榜单，可免费调组换角色',
     };
@@ -255,7 +255,7 @@ Page({
         if (!r.ok) return wx.showToast({ title: r.error || '结算失败', icon: 'none' });
         wx.showModal({
           title: '结算完成',
-          content: `完成 ${r.done} 人 · 未完成 ${r.failed} 人 · 罚金合计 ${r.fineTotal} 元${r.frozen ? '（春节周已冻结）' : ''}`,
+          content: `完成 ${r.done} 人 · 未完成 ${r.failed} 人 · 罚金合计 ${r.fineTotal} 元${r.frozen ? '（本周跳过考核：不计连续、不发红包、不参与榜单，打卡记录保留）' : ''}`,
           showCancel: false,
         });
         this.load();
