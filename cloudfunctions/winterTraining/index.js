@@ -538,26 +538,41 @@ async function saveWeekKpi(m, weekIndex, type, value, auto) {
 }
 
 // 本周还没目标时自动继承上一周（最多回溯 4 周），保证用户不用每周必点一次
-async function ensureWeekKpi(m, cfg) {
+async function ensureWeekKpi(m, cfg, rangeOpt) {
   const weekIndex = calcWeekIndex(cfg);
   if (m.kpiWeek === weekIndex && toNum(m.kpiValue) > 0) {
     return { weekIndex, type: m.kpiType, value: toNum(m.kpiValue), inherited: false };
   }
   for (let w = weekIndex - 1; w >= 0 && w >= weekIndex - 4; w--) {
+    // 只继承「同一个组」的目标：换组后旧组的目标不能带到新组
     const r = await db.collection('winter_kpi')
-      .where({ userId: m.userId, weekIndex: w }).limit(1).get().catch(() => null);
+      .where({ userId: m.userId, weekIndex: w, groupId: m.groupId }).limit(1).get().catch(() => null);
     const d = r && r.data && r.data[0];
     if (d && toNum(d.value) > 0) {
-      await saveWeekKpi(m, weekIndex, d.type, toNum(d.value), true);
-      return { weekIndex, type: d.type, value: toNum(d.value), inherited: true };
+      const a = await alignToRange(m.groupId, d.type, toNum(d.value), rangeOpt);
+      await saveWeekKpi(m, weekIndex, a.type, a.value, true);
+      return { weekIndex, type: a.type, value: a.value, inherited: true };
     }
   }
-  // 改版前的老数据：成员上有值但没有周记录，直接补一条本周记录
+  // 改版前的老数据：成员上有值但没有周记录，按当前区间对齐后补一条
   if (toNum(m.kpiValue) > 0) {
-    await saveWeekKpi(m, weekIndex, m.kpiType, toNum(m.kpiValue), true);
-    return { weekIndex, type: m.kpiType, value: toNum(m.kpiValue), inherited: true };
+    const a = await alignToRange(m.groupId, m.kpiType, toNum(m.kpiValue), rangeOpt);
+    await saveWeekKpi(m, weekIndex, a.type, a.value, true);
+    return { weekIndex, type: a.type, value: a.value, inherited: true };
   }
   return null;
+}
+
+// 继承来的目标可能落在教练新设的区间之外（甚至类型都换了），对齐后再继承
+// 只收上限、不抬下限：超上限会永远完不成，低于下限只是更宽松，不能擅自加重负担
+async function alignToRange(groupId, type, value, rangeOpt) {
+  const range = rangeOpt || await getKpiRange(groupId);
+  if (!range) return { type, value };
+  // 区间类型变了（跑量↔出勤），旧数值没有可比性，按下限起步
+  if (type !== range.type) return { type: range.type, value: toNum(range.min) };
+  let v = value;
+  if (v > toNum(range.max)) v = toNum(range.max);
+  return { type, value: v };
 }
 
 // 队员：区间内填报本周 KPI（自动通过，越界拒绝）
@@ -594,8 +609,9 @@ async function actionDoCheckin(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   if (member.status !== 'approved' && member.status !== 'quit-suggested') return fail('报名未通过');
+  const range = await getKpiRange(member.groupId);
   // 周 KPI：本周还没目标的自动继承上周目标，没有历史才要求先填
-  const weekKpi = await ensureWeekKpi(member, cfg);
+  const weekKpi = await ensureWeekKpi(member, cfg, range);
   if (!weekKpi) return fail('请先填报本周 KPI');
 
   const date = data.date || todayStr();
@@ -617,8 +633,7 @@ async function actionDoCheckin(userId, data) {
   if (weekKpi.type === 'distance' && distance <= 0) return fail('请填写本次跑量（公里）');
   if (weekKpi.type === 'attendance' && duration <= 0) return fail('请填写本次时长（分钟）');
 
-  // 单次最低时长校验
-  const range = await getKpiRange(member.groupId);
+  // 单次最低时长校验（区间已在前面取好，复用）
   if (range && range.minDuration && duration > 0 && duration < range.minDuration) {
     return fail(`单次训练时长不得低于 ${range.minDuration} 分钟`);
   }
@@ -1271,7 +1286,11 @@ async function actionAdminTransfer(userId, data) {
     const cnt = await db.collection('winter_member').where({ groupId: newGroupId, status: 'approved' }).count().catch(() => ({ total: 0 }));
     if ((cnt.total || 0) >= g.data.capacity) return fail('目标组别人数已满');
   }
-  const updateData = { groupId: newGroupId, updateTime: new Date() };
+  // 换组后区间不同，清掉原 KPI：必须在新组按新区间重新填报
+  const updateData = {
+    groupId: newGroupId, updateTime: new Date(),
+    kpiType: '', kpiValue: 0, kpiWeek: 0, kpiSubmitTime: null,
+  };
   if (clearFail) updateData.continuousFailWeeks = 0;
   await db.collection('winter_member').doc(targetId).update({ data: updateData });
   // 备注写入（伤病/调整原因）
