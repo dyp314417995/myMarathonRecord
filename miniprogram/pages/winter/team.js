@@ -60,6 +60,12 @@ Page({
       kpiRangeText: r.kpiRange
         ? `${r.kpiRange.type === 'distance' ? '跑量' : '出勤'} ${r.kpiRange.min} ~ ${r.kpiRange.max}${r.kpiRange.type === 'distance' ? ' 公里/周' : ' 天/周'}${r.kpiRange.minDuration ? (' · 单次≥' + r.kpiRange.minDuration + '分钟') : ''}`
         : '教练尚未设定 KPI 区间',
+      // 文案放在 JS 里拼，避免 WXML 里嵌套三元 + 全角括号被解析器吞字符
+      kpiBtnText: (() => {
+        if (!me.kpiValue || me.kpiValue <= 0) return '填报我的 KPI';
+        const unit = me.kpiType === 'attendance' ? ' 天' : ' 公里';
+        return `我的 KPI：${me.kpiValue}${unit}${me.kpiLocked ? '（已锁定）' : ''}`;
+      })(),
     });
   },
 

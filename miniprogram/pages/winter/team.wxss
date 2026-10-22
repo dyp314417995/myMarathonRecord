@@ -1,2 +1,4 @@
 @import './common.wxss';
 .loading { text-align: center; padding: 80rpx; color: #999; }
+/* KPI 按钮：文案含「（已锁定）」，默认 button 的 overflow:hidden 会把末尾括号裁掉，这里允许换行 */
+.kpi-btn { white-space: normal; line-height: 1.5; padding: 18rpx 20rpx; font-size: 30rpx; overflow: visible; }
