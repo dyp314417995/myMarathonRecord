@@ -5,10 +5,34 @@
     <view class="hero">
       <text class="hero-title">{{group.emblem}} {{group.name}}</text>
       <text class="hero-sub">{{group.desc}}</text>
-      <text class="hero-tip">第 {{weekIndex}} 周 · 我的角色：{{me.roleText}}</text>
+      <text class="hero-tip">{{weekText}} · 我的角色：{{me.roleText}}</text>
     </view>
 
-    <view class="frozen-bar notice-bar" wx:if="{{frozen}}">❄️ 本周为春节假期，考核、连续计数、罚金与榜单均已冻结</view>
+    <view class="frozen-bar notice-bar" wx:if="{{frozen}}">{{frozenText}}</view>
+
+    <!-- 队长：待审批入队申请 -->
+    <view class="card" wx:if="{{isLeader && pendingApplies.length > 0}}">
+      <text class="card-title">待审批入队（{{pendingApplies.length}} 人）</text>
+      <text class="card-sub">线下确认缴费并标记为「已缴费」后，才能点通过</text>
+      <view class="member-row" wx:for="{{pendingApplies}}" wx:key="userId">
+        <view class="member-info">
+          <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>
+          <text class="member-meta">近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
+          <text class="member-meta" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
+          <text class="member-meta">
+            缴费：
+            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}">{{item.feeStatus === 'paid' ? '已缴费' : '未缴费'}}</text>
+          </text>
+        </view>
+        <view class="member-right">
+          <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改为未缴' : '标记已缴'}}</text>
+          <view class="mini-btn-row">
+            <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onLeaderReview">驳回</text>
+            <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onLeaderReview">通过</text>
+          </view>
+        </view>
+      </view>
+    </view>
 
     <view class="card">
       <text class="card-title">本组 KPI 区间</text>
@@ -17,7 +41,7 @@
       <text class="card-sub" style="margin-top:16rpx" wx:else>等待教练发布区间后，队员即可在区间内填报 KPI</text>
       <view style="margin-top:20rpx">
         <button class="btn btn-ghost" wx:if="{{me.role === 'coach'}}" bindtap="onGoKpi">设定 / 更新区间</button>
-        <button class="btn" wx:else bindtap="onGoKpi">{{me.kpiValue > 0 ? '我的 KPI：' + me.kpiValue + (me.kpiType === 'attendance' ? ' 天' : ' 公里') : '填报我的 KPI'}}</button>
+        <button class="btn" wx:else bindtap="onGoKpi">{{me.kpiValue > 0 ? ('我的 KPI：' + me.kpiValue + (me.kpiType === 'attendance' ? ' 天' : ' 公里') + (me.kpiLocked ? '（已锁定）' : '')) : '填报我的 KPI'}}</button>
       </view>
     </view>
 
@@ -42,6 +66,7 @@
         </view>
       </view>
       <view class="empty" wx:else style="padding:24rpx">教练待任命</view>
+      <text class="card-sub" wx:if="{{isBoss}}" style="margin-top:16rpx">需要交接？在下方队员列表点「转让{{me.roleText}}」即可，无需审批</text>
     </view>
 
     <view class="card">
@@ -50,8 +75,14 @@
         <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="mates" data-i="{{index}}" />
         <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
         <view class="member-info">
-          <text class="member-name">{{item.nickName}}</text>
+          <text class="member-name">{{item.nickName}}
+            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}">{{item.feeStatus === 'paid' ? '已缴费' : '未缴费'}}</text>
+          </text>
           <text class="member-meta">KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{item.remark ? ' · ' + item.remark : ''}}</text>
+          <view class="mini-btn-row" wx:if="{{isLeader || isBoss}}">
+            <text wx:if="{{isLeader}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改为未缴' : '标记已缴'}}</text>
+            <text wx:if="{{isBoss}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-nick="{{item.nickName}}" bindtap="onTransferRole">转让{{me.roleText}}</text>
+          </view>
         </view>
         <view class="member-right">
           <text class="tag {{item.continuousFailWeeks > 0 ? 'tag-red' : 'tag-green'}}">{{item.continuousFailWeeks > 0 ? ('未完成' + item.continuousFailWeeks + '周') : '正常'}}</text>
@@ -60,6 +91,7 @@
       <view class="empty" wx:if="{{mates.length === 0}}">暂无队员</view>
     </view>
 
-    <button class="btn" bindtap="onGoCheckin">去打卡</button>
+    <button class="btn" bindtap="onGoCheckin" style="margin-bottom:20rpx">去打卡</button>
+    <button class="btn btn-ghost" bindtap="onGoRecords">组内打卡记录</button>
   </block>
 </view>

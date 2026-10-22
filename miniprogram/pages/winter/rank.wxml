@@ -3,7 +3,7 @@
   <view class="loading" wx:if="{{loading}}">加载中…</view>
   <block wx:else>
     <view class="hero">
-      <text class="hero-title">第 {{weekIndex}} 周榜单</text>
+      <text class="hero-title">{{weekIndex > 0 ? ('第 ' + weekIndex + ' 周榜单') : '试运行期榜单'}}</text>
       <text class="hero-sub">本组完成率 {{groupAvgRate}}% · 已完成 {{completedCount}} 人</text>
       <text class="hero-tip" wx:if="{{frozen}}">{{frozenText}}</text>
     </view>

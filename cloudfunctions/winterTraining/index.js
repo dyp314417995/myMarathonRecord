@@ -104,11 +104,12 @@ async function isSuperAdmin(userId) {
   return !!(u && u.role === 'super_admin');
 }
 
-// 当前周次下标（1 起算），未到开营周返回 0
+// 当前周次下标（1 起算），未到开营周返回 0（前端据此显示「试运行」，不显示负数周）
 function calcWeekIndex(cfg) {
   if (!cfg.startMonday) return 0;
   const curMonday = mondayOf(todayStr());
-  return Math.floor(diffDays(curMonday, cfg.startMonday) / 7) + 1;
+  const idx = Math.floor(diffDays(curMonday, cfg.startMonday) / 7) + 1;
+  return idx < 1 ? 0 : idx;
 }
 function isHolidayWeek(cfg, weekIndex) {
   return (cfg.holidayWeeks || []).indexOf(weekIndex) >= 0;
@@ -198,10 +199,10 @@ async function actionBootstrap(userId) {
   const isAdmin = await isSuperAdmin(userId);
   const member = await getMyMember(userId);
   const weekIndex = calcWeekIndex(cfg);
-  const trialRun2 = cfg.phase === 'trial';
+  // 试运行期照常考核，仅春节周跳过考核
   const holidayNow2 = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
-  const frozen = trialRun2 || holidayNow2;
-  const frozenReason = trialRun2 ? 'trial' : (holidayNow2 ? 'holiday' : '');
+  const frozen = holidayNow2;
+  const frozenReason = holidayNow2 ? 'holiday' : '';
 
   const result = {
     cfg: {
@@ -326,8 +327,22 @@ async function actionSubmitApply(userId, data) {
     if ((dup.total || 0) > 0) return fail(`该组别已有${ROLE_TEXT[role]}申请，请更换组别或角色`);
   }
 
-  // 队员自动通过；队长/教练需管理组任命
-  const autoPass = role === 'member' && cfg.autoApproveMember;
+  // 审批规则（2026-10 调整）：
+  // · 队长：由管理组（超管）审批任命
+  // · 教练 / 队员：由本组队长审批，且需队长线下确认缴费后才会通过
+  // · 没有队长的组，不允许队员 / 教练申请加入
+  // 一律不自动通过，全部走 pending
+  let applyReviewer = 'leader';
+  if (role === 'leader') {
+    applyReviewer = 'admin';
+  } else {
+    const leaderCnt = await db.collection('winter_member')
+      .where({ groupId, role: 'leader', status: 'approved' }).count().catch(() => ({ total: 0 }));
+    if (!(leaderCnt.total > 0)) {
+      return fail('该组暂无队长，暂不可加入（待管理组任命队长后开放）');
+    }
+  }
+
   const record = {
     _id: userId,
     userId,
@@ -338,7 +353,8 @@ async function actionSubmitApply(userId, data) {
     role,
     reason: String(data.reason || ''),
     acceptAdjust: !!data.acceptAdjust,
-    status: autoPass ? 'approved' : 'pending',
+    status: 'pending',
+    applyReviewer,                 // leader = 本组队长审；admin = 管理组审
     kpiType: '',
     kpiValue: 0,
     continuousFailWeeks: 0,
@@ -347,10 +363,11 @@ async function actionSubmitApply(userId, data) {
     updateTime: new Date(),
   };
   await db.collection('winter_member').add({ data: record });
-  if (autoPass) {
-    await saveLog({ type: 'apply', action: 'auto-approve', operatorId: userId, targetUserId: userId, detail: `报名${g.data.name}，队员自动通过` });
-  }
-  return ok({ status: record.status, needReview: record.status === 'pending' });
+  await saveLog({
+    type: 'apply', action: 'submit', operatorId: userId, targetUserId: userId,
+    detail: `${ROLE_TEXT[role]} → ${g.data.name}，待${applyReviewer === 'admin' ? '管理组' : '队长'}审批`,
+  });
+  return ok({ status: 'pending', needReview: true, reviewer: applyReviewer });
 }
 
 // 我的组（名单 + 区间 + 我的 KPI）
@@ -364,6 +381,8 @@ async function actionGetMyGroup(userId) {
   const kpiRange = await getKpiRange(member.groupId);
   const cfg = await getConfig();
   const weekIndex = calcWeekIndex(cfg);
+  // 试运行期照常考核，只有春节周跳过考核
+  const holidayNow = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
   return ok({
     group,
     members: members.sort((a, b) => {
@@ -376,10 +395,13 @@ async function actionGetMyGroup(userId) {
       kpiType: member.kpiType || '', kpiValue: member.kpiValue || 0,
       continuousFailWeeks: member.continuousFailWeeks || 0,
       status: member.status, remark: member.remark || '',
+      feeStatus: member.feeStatus || 'unpaid',
+      kpiLocked: !!(member.kpiType && member.kpiValue), // 已填报即锁定，不允许修改
     },
     weekIndex,
-    frozen: cfg.phase === 'trial' || cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex),
-    frozenReason: cfg.phase === 'trial' ? 'trial' : ((cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex)) ? 'holiday' : ''),
+    phase: cfg.phase,
+    frozen: holidayNow,
+    frozenReason: holidayNow ? 'holiday' : '',
   });
 }
 
@@ -417,12 +439,16 @@ async function actionSubmitKpi(userId, data) {
   if (!range) return fail('教练尚未设定 KPI 区间');
   const type = String(data.kpiType || range.type);
   if (type !== range.type) return fail(`本组 KPI 类型为${range.type === 'distance' ? '跑量' : '出勤'}，不可更改`);
+  // 已提交过即锁定，不允许修改（如需调整请联系教练/管理组）
+  if (member.kpiType && member.kpiValue) {
+    return fail('本周 KPI 已提交，不可修改；如需调整请联系教练或管理组');
+  }
   const value = toNum(data.kpiValue);
   if (value < range.min || value > range.max) {
     return fail(`KPI 需在 ${range.min} ~ ${range.max} 之间`);
   }
   await db.collection('winter_member').doc(userId).update({
-    data: { kpiType: type, kpiValue: value, updateTime: new Date() },
+    data: { kpiType: type, kpiValue: value, kpiSubmitTime: new Date(), updateTime: new Date() },
   });
   return ok({ kpiType: type, kpiValue: value });
 }
@@ -474,18 +500,29 @@ async function actionDoCheckin(userId, data) {
     kpiType: member.kpiType,
     updateTime: new Date(),
   };
-  if (exist && exist.data && exist.data.length) {
-    if (exist.data[0].status === 'approved') return fail('该日期打卡已通过审核，不可修改');
-    payload.status = 'pending';
-    payload.reviewerId = '';
-    payload.reviewNote = '';
-    await db.collection('winter_checkin').doc(exist.data[0]._id).update({ data: payload });
-    return ok({ id: exist.data[0]._id, updated: true });
+  // 队长 / 教练的打卡无需他人审核，直接通过（他们只负责审队员）
+  const selfPass = member.role === 'leader' || member.role === 'coach';
+  if (selfPass) {
+    payload.status = 'approved';
+    payload.reviewerId = 'system';
+    payload.reviewNote = '队长/教练打卡自动通过';
+    payload.reviewTime = new Date();
+    payload.autoApproved = true;
   }
-  payload.status = 'pending';
+  if (exist && exist.data && exist.data.length) {
+    if (exist.data[0].status === 'approved' && !selfPass) return fail('该日期打卡已通过审核，不可修改');
+    if (!selfPass) {
+      payload.status = 'pending';
+      payload.reviewerId = '';
+      payload.reviewNote = '';
+    }
+    await db.collection('winter_checkin').doc(exist.data[0]._id).update({ data: payload });
+    return ok({ id: exist.data[0]._id, updated: true, status: payload.status });
+  }
+  if (!selfPass) payload.status = 'pending';
   payload.createTime = new Date();
   const addRes = await db.collection('winter_checkin').add({ data: payload });
-  return ok({ id: addRes._id });
+  return ok({ id: addRes._id, status: payload.status });
 }
 
 // 我的打卡记录
@@ -497,6 +534,136 @@ async function actionMyCheckins(userId, data) {
   const r = await db.collection('winter_checkin').where({ userId, weekIndex })
     .orderBy('date', 'asc').limit(100).get().catch(() => null);
   return ok({ weekIndex, list: (r && r.data) || [] });
+}
+
+// 组内打卡记录：本组成员互相可见（不仅是自己的）
+async function actionGroupCheckins(userId, data) {
+  const member = await getMyMember(userId);
+  if (!member) return fail('尚未报名');
+  if (member.status !== 'approved' && member.status !== 'quit-suggested') return fail('报名未通过');
+  const cfg = await getConfig();
+  const weekIndex = data.weekIndex !== undefined ? Number(data.weekIndex) : calcWeekIndex(cfg);
+  const where = { groupId: member.groupId };
+  if (weekIndex > 0) where.weekIndex = weekIndex;
+  const r = await db.collection('winter_checkin').where(where)
+    .orderBy('date', 'desc').limit(200).get().catch(() => null);
+  const list = (r && r.data) || [];
+  const out = [];
+  for (const c of list) {
+    const u = await getUser(c.userId);
+    out.push({
+      ...c,
+      nickName: (u && (u.nickName || u.nickname)) || '未知',
+      avatarUrl: (u && u.avatarUrl) || '',
+      isMe: c.userId === userId,
+    });
+  }
+  return ok({ weekIndex, list: out, myRole: member.role });
+}
+
+// 队长：查看本组待审的入队申请（队员/教练）
+async function actionLeaderApplies(userId) {
+  const member = await getMyMember(userId);
+  if (!member) return fail('尚未报名');
+  if (member.role !== 'leader') return fail('仅队长可审核入队申请');
+  if (member.status !== 'approved') return fail('你尚未通过任命');
+  const r = await db.collection('winter_member')
+    .where({ groupId: member.groupId, status: 'pending', role: _.in(['member', 'coach']) })
+    .limit(100).get().catch(() => null);
+  const list = ((r && r.data) || []).map(m => ({
+    _id: m._id, userId: m.userId, nickName: m.nickName,
+    role: m.role, roleText: ROLE_TEXT[m.role] || '',
+    recentResult: m.recentResult || '', target: m.target || '',
+    reason: m.reason || '', feeStatus: m.feeStatus || 'unpaid',
+    createTime: m.createTime || null,
+  }));
+  return ok({ list });
+}
+
+// 队长：审批入队申请（规则：确认线下缴费后才可通过）
+async function actionLeaderReviewApply(userId, data) {
+  const me = await getMyMember(userId);
+  if (!me) return fail('尚未报名');
+  if (me.role !== 'leader' || me.status !== 'approved') return fail('仅本组队长可审批');
+  const targetId = String(data.userId || data.id || '');
+  const pass = data.pass === true || String(data.pass) === 'true';
+  if (!targetId) return fail('缺少成员');
+  const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
+  if (!t || !t.data) return fail('报名记录不存在');
+  const m = t.data;
+  if (m.groupId !== me.groupId) return fail('只能审批本组申请');
+  if (m.status !== 'pending') return fail('该申请已处理');
+
+  if (!pass) {
+    await db.collection('winter_member').doc(targetId).update({
+      data: { status: 'rejected', rejectReason: String(data.note || ''), updateTime: new Date() },
+    });
+    await saveLog({ type: 'apply', action: 'leader-reject', operatorId: userId, targetUserId: targetId, detail: String(data.note || '') });
+    return ok({ status: 'rejected' });
+  }
+  // 线下缴费后才能审批通过
+  if ((m.feeStatus || 'unpaid') !== 'paid') {
+    return fail('请先确认该成员已完成线下缴费，在成员列表切换为「已缴费」后再通过');
+  }
+  // 容量复核
+  const g = await db.collection('winter_group').doc(m.groupId).get().catch(() => null);
+  if (g && g.data && g.data.capacity) {
+    const cnt = await db.collection('winter_member').where({ groupId: m.groupId, status: 'approved' }).count().catch(() => ({ total: 0 }));
+    if ((cnt.total || 0) >= g.data.capacity) return fail('本组人数已满');
+  }
+  // 教练唯一性
+  if (m.role === 'coach') {
+    const dup = await db.collection('winter_member').where({ groupId: m.groupId, role: 'coach', status: 'approved' }).count().catch(() => ({ total: 0 }));
+    if ((dup.total || 0) > 0) return fail('本组已有教练');
+  }
+  await db.collection('winter_member').doc(targetId).update({
+    data: { status: 'approved', rejectReason: '', approveTime: new Date(), updateTime: new Date() },
+  });
+  await saveLog({ type: 'apply', action: 'leader-approve', operatorId: userId, targetUserId: targetId, detail: ROLE_TEXT[m.role] });
+  return ok({ status: 'approved' });
+}
+
+// 缴费状态切换（队长可改本组，管理组可改全部）
+async function actionSetFeeStatus(userId, data) {
+  const me = await getMyMember(userId);
+  const isAdmin = await isSuperAdmin(userId);
+  if (!me && !isAdmin) return fail('无权操作');
+  const targetId = String(data.userId || '');
+  const feeStatus = String(data.feeStatus || '') === 'paid' ? 'paid' : 'unpaid';
+  if (!targetId) return fail('缺少成员');
+  const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
+  if (!t || !t.data) return fail('成员不存在');
+  if (!isAdmin) {
+    if (!me || me.role !== 'leader' || me.status !== 'approved') return fail('仅队长可修改缴费状态');
+    if (t.data.groupId !== me.groupId) return fail('只能修改本组成员');
+  }
+  await db.collection('winter_member').doc(targetId).update({
+    data: { feeStatus, feeTime: feeStatus === 'paid' ? new Date() : null, updateTime: new Date() },
+  });
+  await saveLog({ type: 'fee', action: feeStatus, operatorId: userId, targetUserId: targetId });
+  return ok({ feeStatus });
+}
+
+// 角色转让：队长/教练把角色交给本组队员，无需审批
+async function actionTransferRole(userId, data) {
+  const me = await getMyMember(userId);
+  if (!me) return fail('尚未报名');
+  if (!['leader', 'coach'].includes(me.role)) return fail('仅队长/教练可转让角色');
+  if (me.status !== 'approved') return fail('你的状态异常，无法转让');
+  const targetId = String(data.userId || '');
+  if (!targetId) return fail('请选择接任的队员');
+  if (targetId === userId) return fail('不能转让给自己');
+  const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
+  if (!t || !t.data) return fail('成员不存在');
+  const m = t.data;
+  if (m.groupId !== me.groupId) return fail('只能转让给本组成员');
+  if (m.status !== 'approved') return fail('该队员尚未通过审核');
+  if (m.role !== 'member') return fail('只能转让给队员');
+  const role = me.role;
+  await db.collection('winter_member').doc(targetId).update({ data: { role, updateTime: new Date() } });
+  await db.collection('winter_member').doc(userId).update({ data: { role: 'member', updateTime: new Date() } });
+  await saveLog({ type: 'role', action: 'transfer', operatorId: userId, targetUserId: targetId, detail: `${ROLE_TEXT[role]} 转让` });
+  return ok({ role, newRole: 'member' });
 }
 
 // 待审核列表（仅队长/教练可见本组，排除自己）
@@ -560,10 +727,10 @@ async function actionWeeklyStats(userId, data) {
   const myMember = await getMyMember(userId);
   const groupId = data.groupId || (myMember && myMember.groupId) || '';
   // 试运行周、春节周均「跳过考核」：打卡照常记录，但不计完成率、不计完成人数、不排名
-  const trialRun = cfg.phase === 'trial';
+  // 试运行期照常考核，仅春节周跳过考核
   const holidayNow = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
-  const frozen = trialRun || holidayNow;
-  const frozenReason = trialRun ? 'trial' : (holidayNow ? 'holiday' : '');
+  const frozen = holidayNow;
+  const frozenReason = holidayNow ? 'holiday' : '';
 
   // 本组本周打卡汇总
   const memberList = groupId ? await getMemberListOfGroup(groupId) : (myMember ? await getMemberListOfGroup(myMember.groupId) : []);
@@ -813,8 +980,10 @@ async function actionAdminApplies(userId, data) {
   const status = String(data.status || 'pending');
   const r = await db.collection('winter_member').where({ status }).limit(200).get().catch(() => null);
   const list = (r && r.data) || [];
+  // 队员/教练的入队申请由本组队长审批；管理组只处理队长任命（旧数据无 applyReviewer 字段，一并显示）
+  const scoped = status === 'pending' ? list.filter(m => m.applyReviewer !== 'leader') : list;
   const out = [];
-  for (const m of list) {
+  for (const m of scoped) {
     const u = await getUser(m.userId);
     const g = m.groupId ? await db.collection('winter_group').doc(m.groupId).get().catch(() => null) : null;
     out.push({
@@ -825,6 +994,7 @@ async function actionAdminApplies(userId, data) {
       role: m.role, roleText: ROLE_TEXT[m.role] || '',
       recentResult: m.recentResult || '', target: m.target || '', reason: m.reason || '',
       acceptAdjust: !!m.acceptAdjust, createTime: m.createTime,
+      feeStatus: m.feeStatus || 'unpaid',
     });
   }
   return ok({ list: out });
@@ -981,8 +1151,8 @@ async function actionAdminCalcWeek(userId, data) {
   if (weekIndex < 1) return fail('冬训尚未开始');
   await autoApproveOverdue('');
   // 试运行阶段：不计连续、不结算榜单、不罚款（11/1—11/15）
-  const trialRun = cfg.phase === 'trial';
-  const frozen = trialRun || cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+  // 试运行期照常考核，仅春节周跳过考核
+  const frozen = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
   // 周次相关的固定规则（循环外计算一次）
   const warnWeek = Number(cfg.warnWeek) || 0;                 // 正式第1周：只提醒不罚、不累加连续
   const tailWeek = Number(cfg.tailWeek) || 0;                 // 收尾降档起始周
@@ -1065,6 +1235,36 @@ async function actionAdminCalcWeek(userId, data) {
 }
 
 // 阶段开关（试运行/正式/春节假期）
+// 清理试运行数据：试运行期照常考核，但正式开始时全部作废重来
+// 清除范围：第 0 周（开营前）的打卡、周统计、罚金；成员 KPI 与连续未完成重置
+// 保留范围：报名记录、分组、角色、缴费状态、群组配置
+async function cleanupTrialData() {
+  const res = { checkin: 0, weekly: 0, fine: 0, members: 0 };
+  try {
+    const r1 = await db.collection('winter_checkin').where({ weekIndex: _.lte(0) }).remove();
+    res.checkin = (r1 && r1.stats && r1.stats.removed) || 0;
+  } catch (e) { /* ignore */ }
+  try {
+    const r2 = await db.collection('winter_weekly').where({ weekIndex: _.lte(0) }).remove();
+    res.weekly = (r2 && r2.stats && r2.stats.removed) || 0;
+  } catch (e) { /* ignore */ }
+  try {
+    const r3 = await db.collection('winter_fine').where({ weekIndex: _.lte(0) }).remove();
+    res.fine = (r3 && r3.stats && r3.stats.removed) || 0;
+  } catch (e) { /* ignore */ }
+  const ms = await db.collection('winter_member').limit(500).get().catch(() => null);
+  for (const m of ((ms && ms.data) || [])) {
+    await db.collection('winter_member').doc(m._id).update({
+      data: {
+        kpiType: '', kpiValue: 0, continuousFailWeeks: 0,
+        kpiSubmitTime: null, updateTime: new Date(),
+      },
+    }).catch(() => {});
+    res.members++;
+  }
+  return res;
+}
+
 async function actionAdminSetPhase(userId, data) {
   await requireAdmin(userId);
   const phase = String(data.phase || '');
@@ -1087,11 +1287,19 @@ async function actionAdminSetPhase(userId, data) {
   if (data.intro !== undefined) update.intro = String(data.intro || '');
   if (data.rulesText !== undefined) update.rulesText = String(data.rulesText || '');
   if (data.fee !== undefined) update.fee = data.fee;
+  const oldCfg = await getConfig();
   await db.collection('winter_config').doc(CONFIG_ID).update({ data: update }).catch(async () => {
     await db.collection('winter_config').add({ data: { _id: CONFIG_ID, ...update } });
   });
   await saveLog({ type: 'phase', action: 'set', operatorId: userId, detail: phase });
-  return ok({ phase });
+
+  // 切入正式阶段：清空试运行期间产生的考核数据（可传 cleanupTrial:false 跳过）
+  let cleaned = null;
+  if (phase === 'formal' && oldCfg.phase !== 'formal' && data.cleanupTrial !== false) {
+    cleaned = await cleanupTrialData();
+    await saveLog({ type: 'phase', action: 'cleanup-trial', operatorId: userId, detail: JSON.stringify(cleaned) });
+  }
+  return ok({ phase, cleaned });
 }
 
 // 费用与奖池
@@ -1162,6 +1370,11 @@ exports.main = async (event = {}) => {
       case 'submitKpi': return await actionSubmitKpi(userId, data);
       case 'checkin': return await actionDoCheckin(userId, data);
       case 'myCheckins': return await actionMyCheckins(userId, data);
+    case 'groupCheckins': return await actionGroupCheckins(userId, data);
+    case 'leaderApplies': return await actionLeaderApplies(userId);
+    case 'leaderReviewApply': return await actionLeaderReviewApply(userId, data);
+    case 'setFeeStatus': return await actionSetFeeStatus(userId, data);
+    case 'transferRole': return await actionTransferRole(userId, data);
       case 'pendingReview': return await actionPendingReview(userId, data);
       case 'reviewCheckin': return await actionReviewCheckin(userId, data);
       case 'weeklyStats': return await actionWeeklyStats(userId, data);

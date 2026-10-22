@@ -1,0 +1,38 @@
+<!-- pages/winter/records.wxml - 组内打卡记录 -->
+<view class="winter-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="notice-bar">
+      📸 {{weekText}} · 本组共 {{list.length}} 条打卡记录，组内成员互相可见
+    </view>
+
+    <view class="chip-row" style="margin-bottom:20rpx">
+      <text class="chip {{filter === 'all' ? 'on' : ''}}" data-v="all" bindtap="onFilter">全组</text>
+      <text class="chip {{filter === 'mine' ? 'on' : ''}}" data-v="mine" bindtap="onFilter">只看我的</text>
+    </view>
+
+    <view class="card" wx:for="{{viewList}}" wx:key="_id">
+      <view class="member-row" style="border-bottom:none">
+        <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-i="{{index}}" />
+        <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
+        <view class="member-info">
+          <text class="member-name">{{item.nickName}}<text class="tag tag-blue" wx:if="{{item.isMe}}" style="margin-left:8rpx">我</text></text>
+          <text class="member-meta">{{item.date}} · {{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}</text>
+        </view>
+        <view class="member-right">
+          <text wx:if="{{item.status === 'approved'}}" class="tag tag-green">已通过</text>
+          <text wx:elif="{{item.status === 'rejected'}}" class="tag tag-red">已驳回</text>
+          <text wx:else class="tag tag-orange">待审核</text>
+        </view>
+      </view>
+
+      <text class="record-note" wx:if="{{item.note}}">{{item.note}}</text>
+      <text class="record-note" wx:if="{{item.status === 'rejected' && item.reviewNote}}" style="color:#e74c3c">驳回原因：{{item.reviewNote}}</text>
+
+      <image wx:if="{{item.tempImage}}" class="record-img" src="{{item.tempImage}}" mode="aspectFill" data-url="{{item.tempImage}}" bindtap="onPreview" />
+      <view wx:else class="record-img-empty">截图加载失败</view>
+    </view>
+
+    <view class="empty" wx:if="{{viewList.length === 0}}">本周还没有打卡记录</view>
+  </block>
+</view>

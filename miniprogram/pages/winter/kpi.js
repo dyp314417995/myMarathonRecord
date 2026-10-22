@@ -43,6 +43,7 @@ Page({
       kpiRange: range,
       kpiType: range ? range.type : '',
       myKpiValue: r.me.kpiValue || 0,
+      kpiLocked: !!r.me.kpiLocked,   // 已提交即锁定，不允许修改
       kpiValue: r.me.kpiValue ? String(r.me.kpiValue) : '',
       rangeText: range
         ? `${range.type === 'distance' ? '跑量' : '出勤'} ${range.min} ~ ${range.max}${range.type === 'distance' ? ' 公里/周' : ' 天/周'}`

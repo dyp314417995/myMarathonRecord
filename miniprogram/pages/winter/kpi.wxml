@@ -41,13 +41,20 @@
         <text class="card-title">本组 KPI 区间</text>
         <text class="range-big">{{kpiRange.min}} ~ {{kpiRange.max}}</text>
         <text class="card-sub">{{kpiRange.type === 'distance' ? '公里 / 周' : '天 / 周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
-        <view class="field" style="margin-top:24rpx">
-          <text class="field-label">我的本周 KPI（{{unit}}）</text>
-          <input class="input" type="digit" value="{{kpiValue}}" bindinput="onInputValue" placeholder="请输入 {{kpiRange.min}} ~ {{kpiRange.max}} 之间的值" />
-          <text class="field-tip" wx:if="{{kpiValue && !inRange}}">⚠️ 超出教练设定区间，无法提交</text>
-          <text class="ok-tip" wx:elif="{{kpiValue && inRange}}">✅ 在区间内，提交后自动通过</text>
+        <!-- 已提交：锁定展示，不可再改 -->
+        <view class="locked-box" wx:if="{{kpiLocked}}">
+          <text class="locked-value">我的本周 KPI：{{myKpiValue}} {{unit}}</text>
+          <text class="field-tip">✅ 已提交并锁定，不可修改；如需调整请联系教练或管理组</text>
         </view>
-        <button class="btn {{inRange && kpiValue ? '' : 'btn-gray'}}" disabled="{{!inRange || !kpiValue || submitting}}" loading="{{submitting}}" bindtap="onSubmitKpi">提交 KPI</button>
+        <block wx:else>
+          <view class="field" style="margin-top:24rpx">
+            <text class="field-label">我的本周 KPI（{{unit}}）</text>
+            <input class="input" type="digit" value="{{kpiValue}}" bindinput="onInputValue" placeholder="请输入 {{kpiRange.min}} ~ {{kpiRange.max}} 之间的值" />
+            <text class="field-tip" wx:if="{{kpiValue && !inRange}}">⚠️ 超出教练设定区间，无法提交</text>
+            <text class="ok-tip" wx:elif="{{kpiValue && inRange}}">✅ 在区间内，提交后自动通过</text>
+          </view>
+          <button class="btn {{inRange && kpiValue ? '' : 'btn-gray'}}" disabled="{{!inRange || !kpiValue || submitting}}" loading="{{submitting}}" bindtap="onSubmitKpi">提交 KPI</button>
+        </block>
       </view>
 
       <view class="card" wx:else>

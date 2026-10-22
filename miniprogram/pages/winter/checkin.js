@@ -5,7 +5,7 @@ Page({
   data: {
     loading: true, submitting: false,
     date: '', maxDate: '', weekStart: '',
-    imageFileID: '', tempImage: '',
+    imageFileID: '', tempImage: '', _localPath: '',
     distance: '', duration: '', note: '',
     kpiType: 'distance', needDistance: true,
     todayRecord: null, statusText: '',
@@ -28,6 +28,9 @@ Page({
     }
     const list = (r.ok ? r.list : []) || [];
     const todayRecord = list.find(x => x.date === today) || null;
+    // 已选但还没上传成功的本地图片要保留：
+    // openMedia 会触发 onHide/onShow，若这里无条件用服务端数据覆盖，刚选好的照片会被清空
+    const pendingLocal = (!this.data.imageFileID && this.data._localPath) ? this.data._localPath : '';
     this.setData({
       loading: false,
       date: today,
@@ -37,8 +40,8 @@ Page({
       needDistance: (my.me.kpiType || 'distance') === 'distance',
       todayRecord,
       statusText: todayRecord ? ({ pending: '审核中', approved: '已通过', rejected: '已驳回' }[todayRecord.status] || '') : '',
-      imageFileID: todayRecord ? todayRecord.imageFileID : '',
-      tempImage: todayRecord && todayRecord.imageFileID ? await w.toTempUrl(todayRecord.imageFileID) : '',
+      imageFileID: pendingLocal ? '' : (todayRecord ? todayRecord.imageFileID : ''),
+      tempImage: pendingLocal || (todayRecord && todayRecord.imageFileID ? await w.toTempUrl(todayRecord.imageFileID) : ''),
       distance: todayRecord && todayRecord.distance ? String(todayRecord.distance) : '',
       duration: todayRecord && todayRecord.duration ? String(todayRecord.duration) : '',
       note: todayRecord ? (todayRecord.note || '') : '',
@@ -94,6 +97,8 @@ Page({
     try {
       if (!imageFileID && d._localPath) {
         imageFileID = await w.uploadCheckinImage(d._localPath);
+        // 回写已上传的 fileID，避免 onShow 再次把这张图当成本地待提交图
+        this.setData({ imageFileID });
       }
       const r = await w.api.checkin({
         date: d.date,

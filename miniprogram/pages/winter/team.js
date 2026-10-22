@@ -1,11 +1,14 @@
-// pages/winter/team.js - 我的组（名单 + KPI 区间）
+// pages/winter/team.js - 我的组（名单 + KPI 区间 + 队长管理）
 const w = require('../../utils/winter');
 
 Page({
   data: {
     loading: true, group: null, members: [], kpiRange: null, me: {},
-    weekIndex: 0, frozen: false,
+    weekIndex: 0, weekText: '', frozen: false, frozenText: '',
     leader: null, coach: null, mates: [],
+    isLeader: false, isBoss: false,
+    pendingApplies: [],
+    busy: false,
   },
 
   async onShow() {
@@ -27,14 +30,31 @@ Page({
     const members = await w.resolveAvatars(r.members || []);
     const leader = members.find(m => m.role === 'leader') || null;
     const coach = members.find(m => m.role === 'coach') || null;
+    const me = r.me || {};
+    const isLeader = me.role === 'leader' && me.status === 'approved';
+    const isBoss = (me.role === 'leader' || me.role === 'coach') && me.status === 'approved';
+
+    // 队长：拉取本组待审批入队申请
+    let pendingApplies = [];
+    if (isLeader) {
+      const ap = await w.api.leaderApplies();
+      if (ap.ok) pendingApplies = ap.list || [];
+    }
+
     this.setData({
       loading: false,
       group: r.group,
       members,
       kpiRange: r.kpiRange,
-      me: r.me,
+      me,
+      isLeader,
+      isBoss,
+      pendingApplies,
       weekIndex: r.weekIndex,
+      // 未开营（第 0 周）显示「试运行」，不显示 0 或负数周
+      weekText: r.weekIndex > 0 ? ('第 ' + r.weekIndex + ' 周') : '试运行',
       frozen: r.frozen,
+      frozenText: w.FROZEN_TEXT[r.frozenReason] || (r.frozen ? '本周不考核，打卡照常开放' : ''),
       leader, coach,
       mates: members.filter(m => m.role === 'member'),
       kpiRangeText: r.kpiRange
@@ -45,6 +65,72 @@ Page({
 
   onGoKpi() { wx.navigateTo({ url: '/pages/winter/kpi' }); },
   onGoCheckin() { wx.navigateTo({ url: '/pages/winter/checkin' }); },
+  onGoRecords() { wx.navigateTo({ url: '/pages/winter/records' }); },
+
+  // 队长：切换某成员缴费状态
+  async onToggleFee(e) {
+    if (this.data.busy) return;
+    const uid = e.currentTarget.dataset.uid;
+    const fee = e.currentTarget.dataset.fee;
+    const next = fee === 'paid' ? 'unpaid' : 'paid';
+    this.setData({ busy: true });
+    const r = await w.api.setFeeStatus({ userId: uid, feeStatus: next });
+    this.setData({ busy: false });
+    if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+    wx.showToast({ title: next === 'paid' ? '已标记：已缴费' : '已标记：未缴费', icon: 'none' });
+    this.load();
+  },
+
+  // 队长：通过 / 驳回入队申请
+  async onLeaderReview(e) {
+    if (this.data.busy) return;
+    const uid = e.currentTarget.dataset.uid;
+    const pass = e.currentTarget.dataset.pass === true || e.currentTarget.dataset.pass === 'true';
+    if (!pass) {
+      wx.showModal({
+        title: '驳回申请',
+        editable: true,
+        placeholderText: '填写驳回原因（选填）',
+        success: async (res) => {
+          if (!res.confirm) return;
+          const r = await w.api.leaderReviewApply({ userId: uid, pass: false, note: res.content || '' });
+          if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+          wx.showToast({ title: '已驳回', icon: 'none' });
+          this.load();
+        },
+      });
+      return;
+    }
+    this.setData({ busy: true });
+    const r = await w.api.leaderReviewApply({ userId: uid, pass: true });
+    this.setData({ busy: false });
+    if (!r.ok) {
+      // 常见原因：未标记缴费
+      return wx.showModal({ title: '无法通过', content: r.error || '操作失败', showCancel: false });
+    }
+    wx.showToast({ title: '已通过', icon: 'success' });
+    this.load();
+  },
+
+  // 队长/教练：把角色转让给某队员（无需审批）
+  onTransferRole(e) {
+    const uid = e.currentTarget.dataset.uid;
+    const nick = e.currentTarget.dataset.nick || '该队员';
+    const roleName = this.data.me.roleText || '';
+    wx.showModal({
+      title: '转让' + roleName,
+      content: `确认把「${roleName}」转让给 ${nick}？转让后你将成为普通队员，操作不可撤销。`,
+      confirmText: '确认转让',
+      confirmColor: '#e6a23c',
+      success: async (res) => {
+        if (!res.confirm) return;
+        const r = await w.api.transferRole({ userId: uid });
+        if (!r.ok) return wx.showToast({ title: r.error || '转让失败', icon: 'none' });
+        wx.showToast({ title: '已转让', icon: 'success' });
+        this.load();
+      },
+    });
+  },
 
   // 头像加载失败：置空，改用文字头像兜底
   onAvatarError(e) {

@@ -66,6 +66,12 @@ page { background: #f5f6f7; }
 .member-meta { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }
 .member-right { text-align: right; }
 
+/* 成员行内的小操作按钮（缴费切换、角色转让、审批） */
+.mini-btn { display: inline-block; padding: 8rpx 18rpx; background: #1aad19; color: #fff; border-radius: 8rpx; font-size: 22rpx; }
+.mini-btn.mini-ghost { background: #fff; color: #888; border: 2rpx solid #ddd; }
+.mini-btn-row { display: flex; flex-wrap: wrap; margin-top: 10rpx; }
+.mini-btn-row .mini-btn { margin: 0 10rpx 8rpx 0; }
+
 .bar-wrap { height: 16rpx; background: #f0f0f0; border-radius: 8rpx; overflow: hidden; margin-top: 12rpx; }
 .bar-inner { height: 100%; background: #1aad19; border-radius: 8rpx; }
 

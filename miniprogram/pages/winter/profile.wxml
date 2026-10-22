@@ -27,7 +27,7 @@
         <text class="card-title">罚金记录（红包线下发放）</text>
         <view class="member-row" wx:for="{{fines}}" wx:key="_id">
           <view class="member-info">
-            <text class="member-name">第 {{item.weekIndex}} 周未完成</text>
+            <text class="member-name">{{item.weekIndex > 0 ? ('第 ' + item.weekIndex + ' 周') : '试运行期'}}未完成</text>
             <text class="member-meta">{{item.amount}} 元 · {{item.packets}} 个红包</text>
           </view>
           <view class="member-right">
@@ -41,7 +41,7 @@
         <text class="card-title">周完成记录</text>
         <view class="member-row" wx:for="{{weekly}}" wx:key="_id">
           <view class="member-info">
-            <text class="member-name">第 {{item.weekIndex}} 周 <text class="tag tag-gray" wx:if="{{item.isHoliday}}">跳过考核</text></text>
+            <text class="member-name">{{item.weekIndex > 0 ? ('第 ' + item.weekIndex + ' 周') : '试运行期'}} <text class="tag tag-gray" wx:if="{{item.isHoliday}}">跳过考核</text></text>
             <text class="member-meta">目标 {{item.target}} · 实际 {{item.actual}} · {{item.rate}}%</text>
           </view>
           <view class="member-right">

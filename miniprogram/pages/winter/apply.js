@@ -40,6 +40,10 @@ Page({
     const id = e.currentTarget.dataset.id;
     const g = this.data.groups.find(x => x._id === id);
     if (!g || g.open === false) return;
+    // 没有队长的组暂不能加入队员/教练（队长需先由管理组任命）
+    if (!(g.leaders && g.leaders.length) && this.data.role !== 'leader') {
+      wx.showToast({ title: '该组暂无队长，需先申请队长并通过任命', icon: 'none' });
+    }
     if (g.capacity && g.memberCount >= g.capacity && !this.data.acceptAdjust) {
       wx.showToast({ title: '该组已满，可勾选接受调剂', icon: 'none' });
     }
@@ -53,6 +57,13 @@ Page({
   },
 
   onToggleAdjust() { this.setData({ acceptAdjust: !this.data.acceptAdjust }); },
+
+  // 申请理由框在页面下部，聚焦时滚到可视区，避免被输入法挡住
+  onReasonFocus() {
+    setTimeout(() => {
+      wx.pageScrollTo({ scrollTop: 99999, duration: 200 });
+    }, 200);
+  },
   onInput(e) {
     const f = e.currentTarget.dataset.f;
     this.setData({ [f]: e.detail.value });
@@ -72,20 +83,16 @@ Page({
     });
     this.setData({ submitting: false });
     if (!r.ok) return wx.showToast({ title: r.error || '提交失败', icon: 'none' });
-    if (r.needReview) {
-      wx.showModal({
-        title: '提交成功',
-        content: '你的职位申请已提交，等待管理组审核任命',
-        showCancel: false,
-        success: () => wx.navigateBack(),
-      });
-    } else {
-      wx.showModal({
-        title: '报名成功',
-        content: '你已加入「' + d.groupName + '」组，等待教练发布 KPI 区间',
-        showCancel: false,
-        success: () => wx.navigateBack(),
-      });
-    }
+    // 全部走审核：队长由管理组任命；队员/教练由本组队长审批（须线下缴费后通过）
+    const reviewer = r.reviewer === 'admin' ? '管理组审核任命' : '本组队长审核';
+    const tip = r.reviewer === 'admin'
+      ? `你的队长申请已提交，等待${reviewer}`
+      : `你的入队申请已提交，等待${reviewer}；队长确认线下缴费后即可通过`;
+    wx.showModal({
+      title: '提交成功',
+      content: tip,
+      showCancel: false,
+      success: () => wx.navigateBack(),
+    });
   },
 });

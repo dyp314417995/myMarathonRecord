@@ -54,7 +54,10 @@
 
     <view class="card">
       <text class="card-title">申请理由</text>
-      <textarea class="textarea" value="{{reason}}" data-f="reason" bindinput="onInput" placeholder="{{role === 'member' ? '可简单介绍自己的跑步经历（选填）' : '说明你的带队/执教经验（队长教练必填）'}}"></textarea>
+      <textarea class="textarea" value="{{reason}}" data-f="reason" bindinput="onInput"
+        adjust-position="{{true}}" cursor-spacing="160" show-confirm-bar="{{false}}"
+        bindfocus="onReasonFocus"
+        placeholder="{{role === 'member' ? '可简单介绍自己的跑步经历（选填）' : '说明你的带队/执教经验（队长教练必填）'}}"></textarea>
     </view>
 
     <view class="notice-bar">

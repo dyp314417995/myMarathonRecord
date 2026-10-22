@@ -3,7 +3,7 @@
   <view class="loading" wx:if="{{loading}}">加载中…</view>
   <block wx:else>
     <view class="hero">
-      <text class="hero-title">第 {{weekIndex}} 周课表</text>
+      <text class="hero-title">{{weekIndex > 0 ? ('第 ' + weekIndex + ' 周课表') : '试运行期课表'}}</text>
       <text class="hero-sub" wx:if="{{schedule}}">发布人：{{schedule.publisherName || '教练'}} · 已读 {{schedule.readCount}} 人</text>
       <text class="hero-sub" wx:else>本周课表尚未发布</text>
     </view>

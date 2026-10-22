@@ -35,7 +35,7 @@
             <text class="row-label">报名通道</text>
             <text class="tag {{cfg.signupOpen ? 'tag-green' : 'tag-red'}}" bindtap="onToggleSignup">{{cfg.signupOpen ? '开放中（点击关闭）' : '已关闭（点击开放）'}}</text>
           </view>
-          <text class="card-sub">当前第 {{weekIndex}} 周 / 共 {{cfg.totalWeeks}} 周 · 第 {{cfg.warnWeek}} 周为警告周（只提醒不罚） · 第 {{cfg.tailWeek}} 周收尾降档（完成 1 次即达标）{{cfg.holidayWeeks.length ? (' · 春节跳过考核周：' + cfg.holidayWeeks.join('、')) : ''}}</text>
+          <text class="card-sub">{{weekIndex > 0 ? ('当前第 ' + weekIndex + ' 周 / 共 ' + cfg.totalWeeks + ' 周') : ('开营前（试运行，共 ' + cfg.totalWeeks + ' 周）')}} · 第 {{cfg.warnWeek}} 周为警告周（只提醒不罚） · 第 {{cfg.tailWeek}} 周收尾降档（完成 1 次即达标）{{cfg.holidayWeeks.length ? (' · 春节跳过考核周：' + cfg.holidayWeeks.join('、')) : ''}}</text>
           <text class="card-sub">小红包梯度：连续第 1/2/3 周分别为 {{cfg.fineTiers[0]}}/{{cfg.fineTiers[1]}}/{{cfg.fineTiers[2]}} 元（封顶），每个 {{cfg.finePackets}} 个拼手气 · 规模目标 {{cfg.scale.target}} 人 / 上限 {{cfg.scale.max}} 人</text>
           <view style="margin-top:20rpx"><button class="btn" bindtap="onCalcWeek">结算本周（第 {{weekIndex}} 周）</button></view>
         </view>
@@ -68,7 +68,7 @@
         </view>
       </block>
 
-      <!-- 报名审核 -->
+      <!-- 队长任命（队员/教练入队由本组队长审批，不在此列） -->
       <block wx:if="{{tab === 'applies'}}">
         <view class="card" wx:for="{{applies}}" wx:key="_id">
           <view class="member-row">
