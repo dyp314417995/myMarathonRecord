@@ -262,10 +262,10 @@
     </view>
 
     <view class="qr-notice-btn {{notifyingOwner || cooldownLeft > 0 ? 'disabled' : ''}}" catchtap="onNotifyOwner">
-      <text>{{notifyingOwner ? '催办中…' : (cooldownLeft > 0 ? ('已催过，' + cooldownLeft + ' 秒后可再催') : (myReminded ? '🔔 再催一次' : '🔔 催管理员建群'))}}</text>
+      <text>{{notifyingOwner ? '催办中…' : (cooldownText ? ('已催过，' + cooldownText) : (myReminded ? '🔔 再催一次' : '🔔 催管理员建群'))}}</text>
     </view>
     <button class="qr-share-btn" open-type="share">💬 拉同场跑友一起催</button>
-    <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒；也可以先把链接发给同场跑友' : '同一场赛事满 3 人即达标；每人 10 分钟内限催一次'}}</text>
+    <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒；也可以先把链接发给同场跑友' : '满 3 人即达标；同一个人 10 分钟内限催一次，不同的人可各自催'}}</text>
   </view>
 
   <!-- 自定义关注操作面板 -->

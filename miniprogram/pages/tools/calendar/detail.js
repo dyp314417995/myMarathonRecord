@@ -38,7 +38,8 @@ Page({
     remindList: [],         // 催办名单
     remindDone: false,      // 是否已达标
     myReminded: false,      // 我是否已催过
-    cooldownLeft: 0,        // 我还要等多少秒才能再催
+    cooldownLeft: 0,        // 我还要等多少秒才能再催（仅对我生效）
+    cooldownText: '',       // 冷却文案（分钟/秒）
     notifyingOwner: false,
   },
 
@@ -528,6 +529,7 @@ Page({
 
   // 把云函数返回的进度写到页面，并顺带把分享标题改成带进度的话术
   applyRemindStatus(res) {
+    const left = res.cooldownLeft || 0;
     this.setData({
       remindCount: res.count || 0,
       remindTarget: res.target || 3,
@@ -535,7 +537,11 @@ Page({
       remindList: res.list || [],
       remindDone: !!res.done,
       myReminded: !!res.myReminded,
-      cooldownLeft: res.cooldownLeft || 0,
+      cooldownLeft: left,
+      // 只有「我」有冷却，别人随时能催
+      cooldownText: left > 0
+        ? (left >= 60 ? `${Math.ceil(left / 60)} 分钟后可再催` : `${left} 秒后可再催`)
+        : '',
     });
     const count = res.count || 0;
     const name = (this.data.event && this.data.event.name) || '这赛事';

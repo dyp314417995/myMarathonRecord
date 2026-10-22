@@ -21,10 +21,8 @@ const QR_MSG_KEYS = { name: 'thing1', content: 'thing2', tip: 'thing3' };
 
 // 催办达到该人数即视为「民意达标」，提醒管理员建群
 const TARGET = 3;
-// 同一人同一赛事的最小催办间隔
+// 同一人同一赛事的最小催办间隔（冷却只按人算：不同的人各自独立，互不影响）
 const COOLDOWN_MS = 10 * 60 * 1000;
-// 同一赛事的最小推送间隔（避免 3 个人连点把管理员打爆）
-const PUSH_GAP_MS = 10 * 60 * 1000;
 
 const REMIND_COLL = 'race_qr_remind';
 
@@ -144,16 +142,6 @@ function buildStatus(list, userId) {
     myReminded: !!mine,
     cooldownLeft,
   };
-}
-
-// 该赛事是否允许再推送（10 分钟内已推过则静默，只更新进度）
-async function shouldPush(eventId) {
-  const r = await db.collection('qr_owner_notify_log')
-    .where({ eventId, sentCount: _.gt(0) })
-    .orderBy('createTime', 'desc').limit(1).get().catch(() => null);
-  const last = r && r.data && r.data[0];
-  if (!last) return true;
-  return Date.now() - new Date(last.createTime).getTime() > PUSH_GAP_MS;
 }
 
 // 给负责该省的管理员推送订阅消息，返回 { sentCount, adminCount, errors }
@@ -328,11 +316,13 @@ exports.main = async (event) => {
     const list = await loadRemindList(eventId);
     const status = buildStatus(list, reporterId);
 
-    // 推送负责人：新用户催办时推送；同赛事 10 分钟内只推一次；达标必推
+    // 推送负责人：冷却只作用于「同一个人」，任何新用户催办都立刻推送
+    //   同一人 10 分钟内重复催 → 走上面的 cooldown 分支，不推送、不累加人数
+    //   不同的人 → 各自独立，都能催、都会推送（消息里带最新进度 N/3）
     let sentCount = 0;
     let adminCount = 0;
     let pushed = false;
-    if (isNew && (status.done || await shouldPush(eventId))) {
+    if (isNew) {
       const p = await pushToOwners(eventId, province, raceName, reason, status.count, reporterId);
       sentCount = p.sentCount;
       adminCount = p.adminCount;
