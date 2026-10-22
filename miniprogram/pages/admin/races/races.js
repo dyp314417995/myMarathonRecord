@@ -228,10 +228,54 @@ Page({
         responsibleAdminCount: owners.length,
       };
     });
-    const merged = skip === 0 ? list : [...this.data.allRaceList, ...list];
+    const mergedRaw = skip === 0 ? list : [...this.data.allRaceList, ...list];
+    // 补充「有多少跑友在催建群」，管理员据此直接拉人进群
+    const merged = await this.loadRemindStats(mergedRaw);
     this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
     this.updateQrIssueTip(merged);
     this.applyAdminFilter();
+  },
+
+  // 批量拉取未建群赛事的催办人数与名单（最多 50 个，够当前页用）
+  async loadRemindStats(list) {
+    const ids = (list || []).filter(r => !r.qrCode).map(r => r._id).slice(0, 50);
+    if (!ids.length) return list || [];
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'notifyRaceQrOwner',
+        data: { action: 'listReminds', eventIds: ids },
+      });
+      const map = (res && res.result && res.result.map) || {};
+      return list.map(r => {
+        const m = map[r._id];
+        if (!m || !m.count) return r;
+        return { ...r, remindCount: m.count, remindList: m.list || [] };
+      });
+    } catch (e) {
+      console.warn('loadRemindStats fail', e);
+      return list;
+    }
+  },
+
+  // 查看谁在催建群（管理员可直接把这些昵称拉进群）
+  onShowReminds(e) {
+    const id = e.currentTarget.dataset.id;
+    const r = (this.data.raceList || []).find(x => x._id === id)
+      || (this.data.allRaceList || []).find(x => x._id === id);
+    if (!r) return;
+    const list = r.remindList || [];
+    if (!list.length) return wx.showToast({ title: '还没有人催建群', icon: 'none' });
+    const names = list.slice(0, 15).map((u, i) => `${i + 1}. ${u.nickName || '跑友'}`).join('\n');
+    const more = list.length > 15 ? `\n…共 ${list.length} 人` : '';
+    wx.showModal({
+      title: `${r.remindCount || list.length} 位跑友在催建群`,
+      content: `${names}${more}\n\n可直接把这些人拉进群；上传群二维码后，催办入口会自动关闭。`,
+      confirmText: '去传二维码',
+      cancelText: '知道了',
+      success: (m) => {
+        if (m.confirm) this.onEdit({ currentTarget: { dataset: { id: r._id } } });
+      },
+    });
   },
 
   // 待处理二维码统计（仅 qrScope=all 时 allRaceList 是全量，此时才有意义）

@@ -31,6 +31,14 @@ Page({
     qrCodeUrl: '',          // 群二维码展示 URL（cloud:// 文件ID 或 http 链接，image 直接渲染）
     qrCodeTempUrl: '',      // 群二维码临时 http 链接（previewImage 用，异步获取）
     raceFinished: false,    // 赛事是否已举办完成（完成后不再提示通知负责人）
+    // ===== 催建群进度 =====
+    remindCount: 0,         // 已催办人数（按人去重）
+    remindTarget: 3,        // 达标人数
+    remindPercent: 0,       // 进度百分比
+    remindList: [],         // 催办名单
+    remindDone: false,      // 是否已达标
+    myReminded: false,      // 我是否已催过
+    cooldownLeft: 0,        // 我还要等多少秒才能再催
     notifyingOwner: false,
   },
 
@@ -213,6 +221,8 @@ Page({
               .catch(() => apply(''));
           });
       }
+      // 催建群进度（未建群 / 二维码过期时才显示）
+      this.loadRemindStatus();
       // 加载他人评价
       if (event.raceGroup) this.loadOtherReviews();
     } catch (err) {
@@ -497,50 +507,85 @@ Page({
     }
   },
 
-  // 通知赛事负责人处理二维码
+  // 查该赛事的催建群进度（谁催过、还差几人）
+  async loadRemindStatus() {
+    const { eventId, qrStatus, raceFinished } = this.data;
+    if (!eventId || raceFinished) return;
+    if (qrStatus !== 'none' && qrStatus !== 'expired') return;
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    const reporterId = userInfo._id || userInfo.openid || '';
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'notifyRaceQrOwner',
+        data: { action: 'status', eventId, reporterId },
+      });
+      const res = (r && r.result) || {};
+      if (res.success) this.applyRemindStatus(res);
+    } catch (e) {
+      console.warn('loadRemindStatus fail', e);
+    }
+  },
+
+  // 把云函数返回的进度写到页面，并顺带把分享标题改成带进度的话术
+  applyRemindStatus(res) {
+    this.setData({
+      remindCount: res.count || 0,
+      remindTarget: res.target || 3,
+      remindPercent: res.percent || 0,
+      remindList: res.list || [],
+      remindDone: !!res.done,
+      myReminded: !!res.myReminded,
+      cooldownLeft: res.cooldownLeft || 0,
+    });
+    const count = res.count || 0;
+    const name = (this.data.event && this.data.event.name) || '这赛事';
+    if (count > 0) {
+      this.setData({
+        _shareTitle: res.done
+          ? `「${name}」${count} 位跑友都在等建群，进群一起备赛！`
+          : `「${name}」还没建群，${count} 位跑友在催，一起来！`,
+      });
+    }
+  },
+
+  // 催管理员建群（同一人 10 分钟内只能催一次，重复催不重复计数）
   async onNotifyOwner() {
-    const { qrStatus, eventId, event, notifyingOwner, raceFinished } = this.data;
+    const { qrStatus, eventId, notifyingOwner, raceFinished, cooldownLeft } = this.data;
     if (notifyingOwner) return;
     if (raceFinished) {
-      return wx.showToast({ title: '赛事已举办完成，无需通知', icon: 'none' });
+      return wx.showToast({ title: '赛事已举办完成，无需建群', icon: 'none' });
     }
     if (qrStatus !== 'expired' && qrStatus !== 'none') {
-      return wx.showToast({ title: '当前二维码状态无需通知', icon: 'none' });
+      return wx.showToast({ title: '管理员已建群 🎉', icon: 'none' });
     }
-    // 手动催办始终送达，不受定时提醒开关影响
+    if (cooldownLeft > 0) {
+      return wx.showToast({ title: `${Math.ceil(cooldownLeft / 60)} 分钟后再试`, icon: 'none' });
+    }
     const reason = qrStatus === 'none' ? 'missing' : 'expired';
-    const reasonText = reason === 'missing' ? '还没上传二维码' : '二维码过期啦';
 
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || (!userInfo._id && !userInfo.openid)) {
       return wx.navigateTo({ url: '/pages/login/login' });
     }
 
-    // 先请求订阅消息授权（一次性）
-    // 注：模板已切换为二维码通知专用模板，管理员每次点此按钮为自己累积 1 条接收额度
+    // 订阅消息授权（软依赖，拒绝也放行；管理员每次收到通知前需有人授权过）
     try {
-      await new Promise((resolve, reject) => {
+      await new Promise((resolve) => {
         wx.requestSubscribeMessage({
           tmplIds: ['mcDtCsiTEPabnEEWb317RnQT4K12zkoknB02GfQZHN4'],
-          success: (r) => {
-            // 用户同意或拒绝都放行（订阅是软依赖）
-            resolve(r);
-          },
-          fail: (e) => {
-            // 用户拒绝/系统异常都不阻断流程，云函数侧会记录错误
-            console.warn('requestSubscribeMessage fail', e);
-            resolve({});
-          },
+          success: (r) => resolve(r),
+          fail: (e) => { console.warn('requestSubscribeMessage fail', e); resolve({}); },
         });
       });
     } catch (e) { console.warn('subscribe exception', e); }
 
-    wx.showLoading({ title: '通知中' });
+    wx.showLoading({ title: '催办中' });
     this.setData({ notifyingOwner: true });
     try {
       const r = await wx.cloud.callFunction({
         name: 'notifyRaceQrOwner',
         data: {
+          action: 'remind',
           eventId,
           reporterId: userInfo._id || userInfo.openid || '',
           reason,
@@ -549,27 +594,43 @@ Page({
       wx.hideLoading();
       this.setData({ notifyingOwner: false });
       const res = (r && r.result) || {};
-      if (res.success && res.deduped) {
-        wx.showToast({ title: '今日已通知过负责人了', icon: 'none' });
-      } else if (res.success && res.sentCount > 0) {
-        wx.showToast({ title: `已通知 ${res.sentCount} 位负责人`, icon: 'success' });
-      } else if (res.success && res.adminCount > 0) {
-        // 匹配到了负责人但都没送达：一般是对方还没订阅过通知模板
+      if (!res.success) {
+        return wx.showToast({ title: res.error || '催办失败', icon: 'none' });
+      }
+      if (res.skipped) return wx.showToast({ title: res.message || '赛事已结束', icon: 'none' });
+      if (res.alreadyCreated) {
+        this.applyRemindStatus(res);
+        return wx.showToast({ title: '管理员已建群 🎉', icon: 'success' });
+      }
+
+      this.applyRemindStatus(res);
+
+      if (res.cooldown) {
+        return wx.showToast({ title: `刚催过了，${Math.ceil((res.cooldownLeft || 0) / 60)} 分钟后再试`, icon: 'none' });
+      }
+      if (res.done) {
         wx.showModal({
-          title: '暂时没送达',
-          content: `已匹配到 ${res.adminCount} 位负责人，但都未成功送达。请各管理员在赛事详情页点一次「通知负责人处理」并允许订阅，之后即可收到消息。`,
+          title: '🎉 3 人达成！',
+          content: `已有 ${res.count} 位跑友在催「${this.data.event.name}」建群，负责人已收到通知。\n把链接甩给同场跑友，人越多建群越快。`,
+          confirmText: '知道了',
           showCancel: false,
         });
-      } else if (res.success && res.sentCount === 0) {
-        wx.showToast({ title: '该省暂未分配负责人，请联系超管分配', icon: 'none', duration: 2500 });
+      } else if (res.repeat) {
+        wx.showToast({ title: `又催了一次，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
       } else {
-        wx.showToast({ title: '通知失败：' + (res.error || '未知错误'), icon: 'none' });
+        wx.showToast({ title: `已催办，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
+      }
+      // 未达标时提示分享（此时页面已出现按钮，用户可直接点）
+      if (!res.done && !res.repeat && res.count === 1) {
+        setTimeout(() => {
+          wx.showToast({ title: '你是第一个！拉个同场跑友一起催吧', icon: 'none', duration: 2500 });
+        }, 1200);
       }
     } catch (err) {
       wx.hideLoading();
       this.setData({ notifyingOwner: false });
       console.error('notifyRaceQrOwner fail', err);
-      wx.showToast({ title: '通知失败，请重试', icon: 'none' });
+      wx.showToast({ title: '催办失败，请重试', icon: 'none' });
     }
   },
 

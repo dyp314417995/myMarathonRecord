@@ -215,6 +215,8 @@
 .qr-tag.qr-ok { background: #e8f5e9; color: #1aad19; }
 .qr-tag.qr-expired { background: #fff3e0; color: #ff9800; }
 .qr-tag.qr-missing { background: #ffebee; color: #ff4d4f; }
+/* 催建群人数标签：可点击查看名单 */
+.qr-tag.qr-remind { background: #fff2e8; color: #fa541c; font-weight: 600; border: 1rpx solid #ffbb96; }
 
 .my-province-tip { padding: 8rpx 12rpx; font-size: 22rpx; color: #666; display: flex; flex-wrap: wrap; gap: 6rpx; align-items: center; background: #f8fdf6; border-radius: 8rpx; margin-top: 4rpx; }
 .my-province-tag { font-size: 22rpx; padding: 2rpx 10rpx; background: #e8f5e9; color: #1aad19; border-radius: 6rpx; }

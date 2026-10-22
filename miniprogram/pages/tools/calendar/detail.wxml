@@ -237,17 +237,35 @@
     </view>
   </view>
 
-  <!-- 二维码异常：通知负责人（已举办完成/管理员已关闭提醒的赛事不再提示） -->
+  <!-- 二维码异常：催管理员建群 / 更新二维码（3 人即达标，进度与名单可见） -->
   <view class="card qr-notice" wx:if="{{!raceFinished && (qrStatus === 'expired' || qrStatus === 'none')}}">
     <view class="section-title">
-      <text>{{qrStatus === 'expired' ? '⚠️ 群二维码已过期' : '📭 该赛事还未上传群二维码'}}</text>
+      <text>{{qrStatus === 'expired' ? '⚠️ 群二维码已过期' : '📭 该赛事还没建群'}}</text>
     </view>
-    <view class="qr-notice-text">
-      {{qrStatus === 'expired' ? '发现二维码已过期？点击通知负责该省的管理员尽快更新' : '还没看到群二维码？点击通知负责该省的管理员尽快上传'}}
+
+    <!-- 催办进度：满 3 人 100% -->
+    <view class="qr-progress">
+      <view class="qr-progress-head">
+        <text class="qr-progress-num">{{remindCount}}<text class="qr-progress-total">/{{remindTarget}} 人已催</text></text>
+        <text class="qr-progress-hint {{remindDone ? 'done' : ''}}">{{remindDone ? '已达标，负责人正在处理' : (remindCount > 0 ? ('还差 ' + (remindTarget - remindCount) + ' 人') : '还没人催，做第一个')}}</text>
+      </view>
+      <view class="qr-bar-wrap">
+        <view class="qr-bar {{remindDone ? 'done' : ''}}" style="width:{{remindPercent}}%"></view>
+      </view>
+      <view class="qr-avatars" wx:if="{{remindList.length}}">
+        <view class="qr-avatar" wx:for="{{remindList}}" wx:key="userId">
+          <image wx:if="{{item.avatarUrl}}" class="qr-avatar-img" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="qr-avatar-img qr-avatar-fb">🏃</view>
+          <text class="qr-avatar-name">{{item.isMe ? '我' : item.nickName}}</text>
+        </view>
+      </view>
     </view>
-    <view class="qr-notice-btn {{notifyingOwner ? 'disabled' : ''}}" catchtap="onNotifyOwner">
-      <text>{{notifyingOwner ? '通知中…' : '🔔 通知负责人处理'}}</text>
+
+    <view class="qr-notice-btn {{notifyingOwner || cooldownLeft > 0 ? 'disabled' : ''}}" catchtap="onNotifyOwner">
+      <text>{{notifyingOwner ? '催办中…' : (cooldownLeft > 0 ? ('已催过，' + cooldownLeft + ' 秒后可再催') : (myReminded ? '🔔 再催一次' : '🔔 催管理员建群'))}}</text>
     </view>
+    <button class="qr-share-btn" open-type="share">💬 拉同场跑友一起催</button>
+    <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒；也可以先把链接发给同场跑友' : '同一场赛事满 3 人即达标；每人 10 分钟内限催一次'}}</text>
   </view>
 
   <!-- 自定义关注操作面板 -->

@@ -86,6 +86,7 @@
             <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
             <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
             <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}<text wx:if="{{item.qrNotifyMode === 'expired'}}"> ·已关提醒</text></text>
+            <text class="qr-tag qr-remind" wx:if="{{item.remindCount > 0}}" data-id="{{item._id}}" catchtap="onShowReminds">🔥 {{item.remindCount}} 人催建群</text>
             <text class="tag tag-blue owner-tag" wx:if="{{item.province}}">👤 {{item.responsibleAdminName}}</text>
           </view>
         </view>

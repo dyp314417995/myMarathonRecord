@@ -171,6 +171,25 @@
 .qr-notice-btn { background: #ff7a45; color: #fff; padding: 20rpx; border-radius: 12rpx; font-size: 28rpx; text-align: center; }
 .qr-notice-btn.disabled { background: #ffbf96; }
 
+/* ===== 催建群进度 ===== */
+.qr-progress { margin: 12rpx 0 22rpx; }
+.qr-progress-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12rpx; }
+.qr-progress-num { font-size: 44rpx; font-weight: 700; color: #ff7a45; line-height: 1; }
+.qr-progress-total { font-size: 24rpx; font-weight: 400; color: #8c8c8c; margin-left: 6rpx; }
+.qr-progress-hint { font-size: 24rpx; color: #d4380d; }
+.qr-progress-hint.done { color: #1aad19; font-weight: 600; }
+.qr-bar-wrap { height: 16rpx; background: #ffe7d6; border-radius: 8rpx; overflow: hidden; }
+.qr-bar { height: 100%; background: linear-gradient(90deg, #ff9c6e, #ff7a45); border-radius: 8rpx; transition: width 0.35s ease; }
+.qr-bar.done { background: linear-gradient(90deg, #73d13d, #1aad19); }
+.qr-avatars { display: flex; flex-wrap: wrap; margin-top: 18rpx; }
+.qr-avatar { display: flex; flex-direction: column; align-items: center; width: 96rpx; margin-right: 8rpx; }
+.qr-avatar-img { width: 56rpx; height: 56rpx; border-radius: 50%; background: #ffe7d6; }
+.qr-avatar-fb { display: flex; align-items: center; justify-content: center; font-size: 26rpx; }
+.qr-avatar-name { font-size: 20rpx; color: #8c8c8c; margin-top: 6rpx; max-width: 92rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qr-share-btn { margin-top: 16rpx; background: #fff; color: #ff7a45; border: 2rpx solid #ff7a45; border-radius: 12rpx; font-size: 26rpx; line-height: 2.6; padding: 0; }
+.qr-share-btn::after { border: none; }
+.qr-notice-foot { display: block; font-size: 22rpx; color: #bfbfbf; text-align: center; margin-top: 14rpx; line-height: 1.5; }
+
 /* 自定义底部操作面板 */
 .action-sheet-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; }
 .action-sheet { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 20rpx 20rpx 0 0; z-index: 201; padding: 20rpx 0; }

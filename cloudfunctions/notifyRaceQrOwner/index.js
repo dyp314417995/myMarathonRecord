@@ -1,11 +1,12 @@
-// cloudfunctions/notifyRaceQrOwner - 客户端触发：通知赛事负责人二维码过期/缺失
-// 入参: { eventId, reporterId, reason: 'expired'|'missing' }
-// 流程:
-//   1. 读取赛事 (race_events) 拿到 province / name
-//   2. 在 admins 集合查所有 status='active' 且 provinces 含此 province 的管理员
-//   3. 在 users 集合拿这些管理员的 openid
-//   4. 通过 sendSubscribeMsg 给每个管理员推送订阅消息
-//   5. 写入 qr_owner_notify_log 集合（去重/防骚扰：同一赛事同一原因一天只通知一次）
+// cloudfunctions/notifyRaceQrOwner - 催建群 / 通知赛事负责人上传群二维码
+//
+// 三种调用：
+//   1. { eventId, reporterId }                        -> 查进度（default action='status'）
+//   2. { eventId, reporterId, reason, action:'remind' } -> 催办（按人去重，同一人 10 分钟冷却）
+//   3. { eventIds: [...], action:'listReminds' }       -> 管理端批量查催办统计
+//
+// 进度规则：3 人催办即达标（100%）。同一人重复催只更新 updateTime，不重复计数。
+// 推送规则：新用户催办时推送负责人；同一赛事 10 分钟内最多推送一次，达标时必推（防刷屏）。
 const cloud = require('wx-server-sdk');
 cloud.init({ env: 'cloud1-d5gy0iuiba5f9300f' });
 const db = cloud.database();
@@ -15,10 +16,17 @@ const _ = db.command;
 const TEMPLATE_ID = 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew';
 
 // ===== 二维码通知专用模板 =====
-// 公众平台创建的专用模板；实际字段：thing1/thing2/thing3（time3 不是模板字段，已实测）
 const QR_TEMPLATE_ID = 'mcDtCsiTEPabnEEWb317RnQT4K12zkoknB02GfQZHN4';
-// 按实际模板的关键词 ID 调整（公众平台模板详情里的 thing1/thing2/thing3 等字段名）
 const QR_MSG_KEYS = { name: 'thing1', content: 'thing2', tip: 'thing3' };
+
+// 催办达到该人数即视为「民意达标」，提醒管理员建群
+const TARGET = 3;
+// 同一人同一赛事的最小催办间隔
+const COOLDOWN_MS = 10 * 60 * 1000;
+// 同一赛事的最小推送间隔（避免 3 个人连点把管理员打爆）
+const PUSH_GAP_MS = 10 * 60 * 1000;
+
+const REMIND_COLL = 'race_qr_remind';
 
 // thing2 字段限制 20 字以内，做截断
 const truncate = (s, n) => {
@@ -28,8 +36,6 @@ const truncate = (s, n) => {
 };
 
 // ===== 省份名归一化 =====
-// 管理员配置的省份是全称（吉林省/广西壮族自治区），赛事数据的 province 是简称（吉林/广西），
-// 直接精确匹配会查不到负责人，统一展开成多种写法后再查询
 const PROVINCE_ALIAS = {
   '北京市': '北京', '天津市': '天津', '上海市': '上海', '重庆市': '重庆',
   '内蒙古自治区': '内蒙古', '广西壮族自治区': '广西', '西藏自治区': '西藏',
@@ -57,33 +63,22 @@ function provinceVariants(name) {
   return v;
 }
 
-function getMsg(reason, raceName) {
+function getMsg(reason, raceName, count) {
   const today = new Date();
   const ds = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const name = truncate(raceName, 10); // 给 thing2 留 10 字给"过期/未上传"
-  // 注：time3 是时间类型字段，只接受日期/时间格式（与 checkRaceNotify 保持一致传 ds）
+  const name = truncate(raceName, 10);
   if (reason === 'expired') {
-    return {
-      date1: { value: ds },
-      thing2: { value: `${name}二维码过期啦` },
-      time3: { value: ds },
-    };
+    return { date1: { value: ds }, thing2: { value: `${name}二维码过期啦` }, time3: { value: ds } };
   }
-  // missing
-  return {
-    date1: { value: ds },
-    thing2: { value: `${name}还没上传二维码` },
-    time3: { value: ds },
-  };
+  return { date1: { value: ds }, thing2: { value: `${name}还没建群(${count}人催)` }, time3: { value: ds } };
 }
 
-// 专用模板的消息体：赛事名称 + 提醒内容 + 时间/提示
-function getQrMsg(reason, raceName) {
+function getQrMsg(reason, raceName, count) {
   const today = new Date();
   const ds = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const content = reason === 'expired'
     ? '群二维码已过期，请尽快更新'
-    : '群二维码未上传，请尽快上传';
+    : `${count} 位跑友在等你建群`;
   return {
     [QR_MSG_KEYS.name]: { value: truncate(raceName, 20) },
     [QR_MSG_KEYS.content]: { value: truncate(content, 20) },
@@ -91,139 +86,281 @@ function getQrMsg(reason, raceName) {
   };
 }
 
-exports.main = async (event, context) => {
-  const { eventId, reporterId, reason } = event || {};
+// 首次写入前集合可能不存在（-502005）：自动建表后重试一次
+async function addRemind(data) {
+  try {
+    return await db.collection(REMIND_COLL).add({ data });
+  } catch (e) {
+    const code = String((e && e.errCode) || '');
+    const msg = String((e && (e.errMsg || e.message)) || '');
+    if (code === '-502005' || /not exist/i.test(msg) || /collection.*not/i.test(msg)) {
+      try { await db.createCollection(REMIND_COLL); } catch (_) { /* 已存在 */ }
+      return await db.collection(REMIND_COLL).add({ data });
+    }
+    throw e;
+  }
+}
+
+// 读取某赛事的催办名单（按 userId 去重，保留最早一条）
+async function loadRemindList(eventId) {
+  const r = await db.collection(REMIND_COLL)
+    .where({ eventId })
+    .orderBy('createTime', 'asc')
+    .limit(200).get().catch(() => null);
+  const raw = (r && r.data) || [];
+  const seen = {};
+  const uniq = [];
+  for (const it of raw) {
+    const k = it.userId || it._id;
+    if (seen[k]) continue;
+    seen[k] = 1;
+    uniq.push(it);
+  }
+  return uniq;
+}
+
+// 组装给前端的进度结构
+function buildStatus(list, userId) {
+  const count = list.length;
+  const mine = userId ? list.find(it => it.userId === userId) : null;
+  let cooldownLeft = 0;
+  if (mine) {
+    const t = new Date(mine.updateTime || mine.createTime).getTime();
+    const left = COOLDOWN_MS - (Date.now() - t);
+    if (left > 0) cooldownLeft = Math.ceil(left / 1000);
+  }
+  return {
+    count,
+    target: TARGET,
+    percent: Math.min(100, Math.round((count / TARGET) * 100)),
+    done: count >= TARGET,
+    list: list.slice(0, 20).map(it => ({
+      userId: it.userId,
+      nickName: it.nickName || '跑友',
+      avatarUrl: it.avatarUrl || '',
+      time: it.createTime,
+      isMe: !!userId && it.userId === userId,
+    })),
+    myReminded: !!mine,
+    cooldownLeft,
+  };
+}
+
+// 该赛事是否允许再推送（10 分钟内已推过则静默，只更新进度）
+async function shouldPush(eventId) {
+  const r = await db.collection('qr_owner_notify_log')
+    .where({ eventId, sentCount: _.gt(0) })
+    .orderBy('createTime', 'desc').limit(1).get().catch(() => null);
+  const last = r && r.data && r.data[0];
+  if (!last) return true;
+  return Date.now() - new Date(last.createTime).getTime() > PUSH_GAP_MS;
+}
+
+// 给负责该省的管理员推送订阅消息，返回 { sentCount, adminCount, errors }
+async function pushToOwners(eventId, province, raceName, reason, count, reporterId) {
+  const now = new Date();
+  const adminsRes = await db.collection('admins').where({
+    status: 'active',
+    validFrom: _.lte(now),
+    validTo: _.gte(now),
+    provinces: _.in(provinceVariants(province)),
+  }).get();
+  let admins = adminsRes.data || [];
+
+  // 没有匹配省份的管理员时，回退到负责全国（provinces 为空/缺失）的管理员
+  if (admins.length === 0) {
+    const allRes = await db.collection('admins').where({
+      status: 'active',
+      validFrom: _.lte(now),
+      validTo: _.gte(now),
+    }).get();
+    admins = (allRes.data || []).filter(a => !Array.isArray(a.provinces) || a.provinces.length === 0);
+  }
+  if (admins.length === 0) return { sentCount: 0, adminCount: 0, errors: [{ reason: 'no_admin' }] };
+
+  const userIds = admins.map(a => a.userId).filter(Boolean);
+  const userRes = await db.collection('users').where({ _id: _.in(userIds) }).get();
+  const userMap = {};
+  (userRes.data || []).forEach(u => { userMap[u._id] = u; });
+
+  const useQrTpl = !!QR_TEMPLATE_ID;
+  const msgData = useQrTpl ? getQrMsg(reason, raceName, count) : getMsg(reason, raceName, count);
+  let sentCount = 0;
+  const errors = [];
+
+  for (const a of admins) {
+    const u = userMap[a.userId];
+    if (!u || !u.openid) { errors.push({ adminId: a._id, reason: 'no_openid' }); continue; }
+    try {
+      const r = await cloud.callFunction({
+        name: 'sendSubscribeMsg',
+        data: {
+          openid: u.openid,
+          templateId: useQrTpl ? QR_TEMPLATE_ID : TEMPLATE_ID,
+          page: `/pages/admin/races/races?editEventId=${eventId}`,
+          data: msgData,
+        },
+      });
+      if (r && r.result && r.result.ok) sentCount++;
+      else errors.push({ adminId: a._id, reason: 'send_fail', err: (r && r.result && r.result.error) || 'unknown' });
+    } catch (err) {
+      errors.push({ adminId: a._id, reason: 'exception', err: err.message });
+    }
+  }
+  return { sentCount, adminCount: admins.length, errors };
+}
+
+exports.main = async (event) => {
+  const { action = 'status', eventId, reporterId, reason, eventIds } = event || {};
+
+  // ---------- 管理端：批量查催办统计 ----------
+  if (action === 'listReminds') {
+    const ids = Array.isArray(eventIds) ? eventIds.slice(0, 50) : [];
+    if (!ids.length) return { success: true, map: {} };
+    const r = await db.collection(REMIND_COLL)
+      .where({ eventId: _.in(ids) })
+      .limit(500).get().catch(() => null);
+    const rows = (r && r.data) || [];
+    const map = {};
+    for (const it of rows) {
+      const k = it.eventId;
+      if (!map[k]) map[k] = { count: 0, seen: {}, list: [] };
+      const uid = it.userId || it._id;
+      if (map[k].seen[uid]) continue;
+      map[k].seen[uid] = 1;
+      map[k].count++;
+      map[k].list.push({
+        userId: it.userId,
+        nickName: it.nickName || '跑友',
+        avatarUrl: it.avatarUrl || '',
+        createTime: it.createTime,
+      });
+    }
+    Object.keys(map).forEach(k => { delete map[k].seen; });
+    return { success: true, map, target: TARGET };
+  }
+
   if (!eventId) return { success: false, error: '缺少 eventId' };
-  if (!['expired', 'missing'].includes(reason)) return { success: false, error: 'reason 必须为 expired 或 missing' };
+
+  // ---------- 查进度 ----------
+  if (action === 'status') {
+    const list = await loadRemindList(eventId);
+    return { success: true, ...buildStatus(list, reporterId) };
+  }
+
+  // ---------- 催办 ----------
+  if (reason !== 'expired' && reason !== 'missing') {
+    return { success: false, error: 'reason 必须为 expired 或 missing' };
+  }
+  if (!reporterId) return { success: false, error: '请先登录后再催办' };
 
   try {
-    // 0. 查赛事
     const raceRes = await db.collection('race_events').doc(eventId).get().catch(() => null);
     if (!raceRes || !raceRes.data) return { success: false, error: '赛事不存在' };
     const race = raceRes.data;
     const province = race.province;
     const raceName = race.name || '赛事';
-
     if (!province) return { success: false, error: '该赛事未设置举办省份，无法定位负责人' };
 
-    // 0.1 手动催办始终送达，不受定时提醒开关影响
-    //   （开关仅控制 raceQrExpireNotify 的每日定时汇总）
-
-    // 0.2 已举办完成的赛事不再通知（date < 北京时间今天0点 或 status='finished'）
-    //    注：status 仅导入时计算不实时刷新，故以 date 为准
+    // 已举办完成的赛事不再催办
     const startOfToday = (() => {
       const bj = new Date(Date.now() + 8 * 3600 * 1000);
       return new Date(Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 8 * 3600 * 1000);
     })();
-    const raceDate = new Date(race.date);
-    if (race.status === 'finished' || raceDate.getTime() < startOfToday.getTime()) {
-      return { success: true, skipped: true, message: '赛事已举办完成，无需通知' };
+    if (race.status === 'finished' || new Date(race.date).getTime() < startOfToday.getTime()) {
+      return { success: true, skipped: true, message: '赛事已举办完成，无需建群' };
+    }
+    // 已经建群（上传了二维码）就不用催了
+    if (race.qrCode) {
+      const list = await loadRemindList(eventId);
+      return { success: true, alreadyCreated: true, message: '管理员已建群', ...buildStatus(list, reporterId) };
     }
 
-    // 0.5 防骚扰：同一赛事同一原因每天只成功通知一次
-    // 注1：只对 sentCount>0 的记录去重——之前"未找到负责人/发送失败"的尝试不占用当日额度，配置好管理员后可立即重试
-    // 注2：集合不存在(-502005)等查询异常不阻断通知流程，仅跳过去重
-    const today = new Date();
-    const dayKey = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-    const dupRes = await db.collection('qr_owner_notify_log').where({
-      eventId,
-      reason,
-      dayKey,
-      sentCount: _.gt(0),
-    }).count().catch(() => null);
-    if (dupRes && dupRes.total > 0) {
-      return { success: true, deduped: true, message: '今日已通知过负责人' };
+    // 取昵称/头像冗余存档，方便管理员直接认人拉群
+    let nickName = '';
+    let avatarUrl = '';
+    const uRes = await db.collection('users').doc(reporterId).get().catch(() => null);
+    if (uRes && uRes.data) {
+      nickName = uRes.data.nickName || uRes.data.nickname || '';
+      avatarUrl = uRes.data.avatarUrl || '';
     }
 
-    // 1. 找负责该省的所有 active 管理员（省份名归一化：简称/全称都匹配）
     const now = new Date();
-    const adminsRes = await db.collection('admins').where({
-      status: 'active',
-      validFrom: _.lte(now),
-      validTo: _.gte(now),
-      provinces: _.in(provinceVariants(province)),
-    }).get();
-    let admins = adminsRes.data || [];
+    const existRes = await db.collection(REMIND_COLL)
+      .where({ eventId, userId: reporterId }).limit(1).get().catch(() => null);
+    const exist = existRes && existRes.data && existRes.data[0];
 
-    // 如果没有匹配省份的管理员，回退到负责全国（provinces 为空数组或字段不存在）的管理员
-    if (admins.length === 0) {
-      const allRes = await db.collection('admins').where({
-        status: 'active',
-        validFrom: _.lte(now),
-        validTo: _.gte(now),
-      }).get();
-      // provinces 缺失（老数据）或空数组都视为负责全国
-      admins = (allRes.data || []).filter(a => !Array.isArray(a.provinces) || a.provinces.length === 0);
+    let isNew = false;
+    if (exist) {
+      // 同一人 10 分钟内不允许再次提醒
+      const lastAt = new Date(exist.updateTime || exist.createTime).getTime();
+      const left = COOLDOWN_MS - (now.getTime() - lastAt);
+      if (left > 0) {
+        const list0 = await loadRemindList(eventId);
+        return {
+          success: true, cooldown: true, cooldownLeft: Math.ceil(left / 1000),
+          message: `刚刚催过了，${Math.ceil(left / 60)} 分钟后再试`,
+          ...buildStatus(list0, reporterId),
+        };
+      }
+      // 超过 10 分钟：允许再催，但人数不重复算
+      await db.collection(REMIND_COLL).doc(exist._id).update({
+        data: {
+          updateTime: now,
+          reason,
+          nickName: nickName || exist.nickName || '',
+          avatarUrl: avatarUrl || exist.avatarUrl || '',
+        },
+      }).catch(() => {});
+    } else {
+      isNew = true;
+      const addRes = await addRemind({
+        eventId, userId: reporterId, nickName, avatarUrl, reason,
+        createTime: now, updateTime: now,
+      }).catch(() => null);
+      if (!addRes) {
+        // 并发下同一人可能已写入，兜底按已存在处理
+        const again = await loadRemindList(eventId);
+        return { success: true, ...buildStatus(again, reporterId) };
+      }
     }
 
-    if (admins.length === 0) {
-      // 写日志便于排查
+    const list = await loadRemindList(eventId);
+    const status = buildStatus(list, reporterId);
+
+    // 推送负责人：新用户催办时推送；同赛事 10 分钟内只推一次；达标必推
+    let sentCount = 0;
+    let adminCount = 0;
+    let pushed = false;
+    if (isNew && (status.done || await shouldPush(eventId))) {
+      const p = await pushToOwners(eventId, province, raceName, reason, status.count, reporterId);
+      sentCount = p.sentCount;
+      adminCount = p.adminCount;
+      pushed = true;
+      // 记录推送日志（不参与去重，仅用于间隔控制与排查）
       await db.collection('qr_owner_notify_log').add({
         data: {
           eventId, raceName, province, reason,
-          reporterId: reporterId || '',
-          dayKey,
+          reporterId,
           createTime: new Date(),
-          status: 'no_admin',
-          sentCount: 0,
+          status: sentCount > 0 ? 'sent' : 'all_fail',
+          sentCount,
+          errors: p.errors,
+          remindCount: status.count,
+          milestone: status.done,
         },
       }).catch(() => {});
-      return { success: true, sentCount: 0, message: '未找到负责该省的活跃管理员' };
     }
 
-    // 2. 拿这些管理员的 openid
-    const userIds = admins.map(a => a.userId).filter(Boolean);
-    const userRes = await db.collection('users').where({ _id: _.in(userIds) }).get();
-    const userMap = {};
-    (userRes.data || []).forEach(u => { userMap[u._id] = u; });
-
-    // 优先用专用模板，未配置时回退报名提醒模板
-    const useQrTpl = !!QR_TEMPLATE_ID;
-    const msgData = useQrTpl ? getQrMsg(reason, raceName) : getMsg(reason, raceName);
-    let sentCount = 0;
-    const errors = [];
-
-    for (const a of admins) {
-      const u = userMap[a.userId];
-      if (!u || !u.openid) {
-        errors.push({ adminId: a._id, reason: 'no_openid' });
-        continue;
-      }
-      try {
-        const r = await cloud.callFunction({
-          name: 'sendSubscribeMsg',
-          data: {
-            openid: u.openid,
-            templateId: useQrTpl ? QR_TEMPLATE_ID : TEMPLATE_ID,
-            // 点击直达该赛事的编辑弹窗（races.js onLoad 读取 editEventId）
-            page: `/pages/admin/races/races?editEventId=${eventId}`,
-            data: msgData,
-          },
-        });
-        if (r && r.result && r.result.ok) {
-          sentCount++;
-        } else {
-          errors.push({ adminId: a._id, reason: 'send_fail', err: (r && r.result && r.result.error) || 'unknown' });
-        }
-      } catch (err) {
-        errors.push({ adminId: a._id, reason: 'exception', err: err.message });
-      }
-    }
-
-    // 3. 写日志
-    await db.collection('qr_owner_notify_log').add({
-      data: {
-        eventId, raceName, province, reason,
-        reporterId: reporterId || '',
-        dayKey,
-        createTime: new Date(),
-        status: sentCount > 0 ? 'sent' : 'all_fail',
-        sentCount,
-        errors,
-      },
-    }).catch(e => console.warn('write qr_owner_notify_log failed:', e.message));
-
-    return { success: true, sentCount, adminCount: admins.length, errors };
+    return {
+      success: true,
+      isNew,
+      repeat: !isNew,
+      pushed,
+      sentCount,
+      adminCount,
+      ...status,
+    };
   } catch (err) {
     console.error('notifyRaceQrOwner error:', err);
     return { success: false, error: err.message };
