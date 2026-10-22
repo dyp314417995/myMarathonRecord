@@ -240,10 +240,22 @@ async function actionBootstrap(userId) {
 
   if (member.role === 'leader' || member.role === 'coach') {
     await autoApproveOverdue(member.groupId);
-    const pr = await db.collection('winter_checkin').where({
-      groupId: member.groupId, status: 'pending', userId: _.neq(userId),
-    }).count().catch(() => null);
-    result.pendingCount = pr ? pr.total : 0;
+    // 待审打卡角标：总数减去本组队长/教练（含自己）的打卡——他们免审，不进待审
+    const staffRes = await db.collection('winter_member').where({
+      groupId: member.groupId, role: _.in(['leader', 'coach']), status: 'approved',
+    }).limit(20).get().catch(() => null);
+    const staffIds = ((staffRes && staffRes.data) || []).map(x => x.userId).filter(Boolean);
+    const prAll = await db.collection('winter_checkin').where({
+      groupId: member.groupId, status: 'pending',
+    }).count().catch(() => ({ total: 0 }));
+    let staffPending = 0;
+    if (staffIds.length) {
+      const prStaff = await db.collection('winter_checkin').where({
+        groupId: member.groupId, status: 'pending', userId: _.in(staffIds),
+      }).count().catch(() => ({ total: 0 }));
+      staffPending = prStaff.total || 0;
+    }
+    result.pendingCount = Math.max(0, (prAll.total || 0) - staffPending);
   }
   return ok(result);
 }
@@ -667,15 +679,40 @@ async function actionTransferRole(userId, data) {
 }
 
 // 待审核列表（仅队长/教练可见本组，排除自己）
+// 注：队长/教练本人打卡免审，不进待审列表；历史遗留的 pending 记录在这里补正为自动通过
 async function actionPendingReview(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   if (!['leader', 'coach'].includes(member.role)) return fail('仅队长/教练可审核');
   await autoApproveOverdue(member.groupId);
+
+  // 本组队长/教练（他们的打卡不需要任何人审核）
+  const staffRes = await db.collection('winter_member').where({
+    groupId: member.groupId, role: _.in(['leader', 'coach']), status: 'approved',
+  }).limit(20).get().catch(() => null);
+  const staffIds = ((staffRes && staffRes.data) || []).map(x => x.userId).filter(Boolean);
+
+  // 历史数据补正：免审改版前提交的队长/教练打卡仍是 pending，直接置为自动通过
+  if (staffIds.length) {
+    const fixRes = await db.collection('winter_checkin').where({
+      groupId: member.groupId, status: 'pending', userId: _.in(staffIds),
+    }).limit(200).get().catch(() => null);
+    for (const c of ((fixRes && fixRes.data) || [])) {
+      await db.collection('winter_checkin').doc(c._id).update({
+        data: {
+          status: 'approved', reviewerId: 'system',
+          reviewNote: '队长/教练打卡免审，自动通过', reviewTime: new Date(), autoApproved: true,
+        },
+      }).catch(() => {});
+    }
+  }
+
+  const staffSet = new Set(staffIds);
   const r = await db.collection('winter_checkin').where({
-    groupId: member.groupId, status: 'pending', userId: _.neq(userId),
+    groupId: member.groupId, status: 'pending',
   }).orderBy('date', 'desc').limit(100).get().catch(() => null);
-  const list = (r && r.data) || [];
+  // 只留队员的打卡：排除自己与本组队长/教练
+  const list = ((r && r.data) || []).filter(c => c.userId !== userId && !staffSet.has(c.userId));
   const decorated = [];
   for (const c of list) {
     const u = await getUser(c.userId);
@@ -926,8 +963,15 @@ async function actionAdminOverview(userId) {
       kpiRange: range ? `${range.type === 'distance' ? '跑量' : '出勤'} ${range.min}~${range.max}` : '未设定',
     });
   }
-  // 本周打卡待审总数
-  const pc = await db.collection('winter_checkin').where({ status: 'pending' }).count().catch(() => ({ total: 0 }));
+  // 本周打卡待审总数（队长/教练本人免审，不计入）
+  const staffIds = approved.filter(m => m.role === 'leader' || m.role === 'coach').map(m => m.userId).filter(Boolean);
+  const pcAll = await db.collection('winter_checkin').where({ status: 'pending' }).count().catch(() => ({ total: 0 }));
+  let pcStaff = 0;
+  if (staffIds.length) {
+    const r2 = await db.collection('winter_checkin').where({ status: 'pending', userId: _.in(staffIds) }).count().catch(() => ({ total: 0 }));
+    pcStaff = r2.total || 0;
+  }
+  const pc = { total: Math.max(0, (pcAll.total || 0) - pcStaff) };
   return ok({
     cfg: {
       phase: cfg.phase, signupOpen: cfg.signupOpen, startMonday: cfg.startMonday,
@@ -939,7 +983,10 @@ async function actionAdminOverview(userId) {
     },
     weekIndex,
     counts: {
-      total: members.length, pending: pending.length, approved: approved.length,
+      total: members.length,
+      // 管理后台只处理队长任命；队员/教练入队由本组队长在「待审」里审
+      pending: pending.filter(m => m.role === 'leader').length,
+      approved: approved.length,
       quitSuggested: quitSuggested.length, pendingCheckins: pc.total || 0,
     },
     groups,
@@ -980,8 +1027,8 @@ async function actionAdminApplies(userId, data) {
   const status = String(data.status || 'pending');
   const r = await db.collection('winter_member').where({ status }).limit(200).get().catch(() => null);
   const list = (r && r.data) || [];
-  // 队员/教练的入队申请由本组队长审批；管理组只处理队长任命（旧数据无 applyReviewer 字段，一并显示）
-  const scoped = status === 'pending' ? list.filter(m => m.applyReviewer !== 'leader') : list;
+  // 队员/教练的入队申请由本组队长在「待审」页审批；管理组只处理队长任命
+  const scoped = status === 'pending' ? list.filter(m => m.role === 'leader') : list;
   const out = [];
   for (const m of scoped) {
     const u = await getUser(m.userId);

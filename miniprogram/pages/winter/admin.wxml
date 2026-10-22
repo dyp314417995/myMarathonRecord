@@ -21,7 +21,7 @@
           <view class="grid-4">
             <view class="grid-item"><text class="grid-num">{{counts.total}}</text><text class="grid-label">报名人数 /{{cfg.scale.max}}</text></view>
             <view class="grid-item"><text class="grid-num">{{counts.approved}}</text><text class="grid-label">已在组</text></view>
-            <view class="grid-item"><text class="grid-num">{{counts.pending}}</text><text class="grid-label">待审报名</text></view>
+            <view class="grid-item"><text class="grid-num">{{counts.pending}}</text><text class="grid-label">待审队长</text></view>
             <view class="grid-item"><text class="grid-num">{{counts.pendingCheckins}}</text><text class="grid-label">待审打卡</text></view>
           </view>
         </view>
@@ -86,7 +86,7 @@
             <button class="btn" style="flex:1" data-id="{{item._id}}" data-pass="{{true}}" bindtap="onReviewApply">通过并任命</button>
           </view>
         </view>
-        <view class="empty" wx:if="{{applies.length === 0}}">暂无待审报名</view>
+        <view class="empty" wx:if="{{applies.length === 0}}">暂无待审队长任命</view>
       </block>
 
       <!-- 成员管理 -->
