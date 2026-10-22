@@ -40,7 +40,7 @@
       <text class="card-sub" style="margin-top:16rpx" wx:if="{{kpiRange}}">由教练在{{kpiRange.effectiveWeek ? ('第' + kpiRange.effectiveWeek + '周') : ''}}发布，保存即生效</text>
       <text class="card-sub" style="margin-top:16rpx" wx:else>等待教练发布区间后，队员即可在区间内填报 KPI</text>
       <view style="margin-top:20rpx">
-        <button class="btn btn-ghost" wx:if="{{me.role === 'coach'}}" bindtap="onGoKpi">设定 / 更新区间</button>
+        <button class="btn btn-ghost" wx:if="{{me.role === 'coach'}}" bindtap="onGoKpi">设定区间 · 填报我的 KPI</button>
         <button class="btn kpi-btn" wx:else bindtap="onGoKpi">{{kpiBtnText}}</button>
       </view>
     </view>

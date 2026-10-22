@@ -116,7 +116,7 @@
             <text class="grid-num">📷</text><text class="grid-label">今日打卡</text>
           </view>
           <view class="grid-item" bindtap="onGoKpi">
-            <text class="grid-num">🎯</text><text class="grid-label">{{myRoleText === '教练' ? '设定区间' : 'KPI填报'}}</text>
+            <text class="grid-num">🎯</text><text class="grid-label">{{myRoleText === '教练' ? 'KPI / 区间' : 'KPI填报'}}</text>
           </view>
           <view class="grid-item" bindtap="onGoSchedule">
             <text class="grid-num">📅</text><text class="grid-label">本周课表</text>

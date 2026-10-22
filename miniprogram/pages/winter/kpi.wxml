@@ -2,7 +2,7 @@
 <view class="winter-page">
   <view class="loading" wx:if="{{loading}}">加载中…</view>
   <block wx:else>
-    <!-- 教练：设定区间 -->
+    <!-- 教练：设定区间（教练同时也是队员，下方仍有自己的 KPI 填报） -->
     <block wx:if="{{isCoach}}">
       <view class="card">
         <text class="card-title">设定本组 KPI 区间</text>
@@ -35,36 +35,39 @@
       </view>
     </block>
 
-    <!-- 队员：区间内填报 -->
-    <block wx:else>
-      <view class="card" wx:if="{{kpiRange}}">
-        <text class="card-title">本组 KPI 区间</text>
-        <text class="range-big">{{kpiRange.min}} ~ {{kpiRange.max}}</text>
-        <text class="card-sub">{{kpiRange.type === 'distance' ? '公里 / 周' : '天 / 周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
-        <!-- 已提交：锁定展示，不可再改 -->
-        <view class="locked-box" wx:if="{{kpiLocked}}">
-          <text class="locked-value">我的本周 KPI：{{myKpiValue}} {{unit}}</text>
-          <text class="field-tip">✅ 已提交并锁定，不可修改；如需调整请联系教练或管理组</text>
+    <!-- 我的 KPI：教练 / 队长 / 队员一视同仁，不填报无法打卡 -->
+    <view class="card" wx:if="{{kpiRange}}">
+      <text class="card-title">{{isCoach ? '我的本周 KPI（教练也要打卡）' : '本组 KPI 区间'}}</text>
+      <text class="range-big">{{kpiRange.min}} ~ {{kpiRange.max}}</text>
+      <text class="card-sub">{{kpiRange.type === 'distance' ? '公里 / 周' : '天 / 周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
+      <!-- 已提交：锁定展示，不可再改 -->
+      <view class="locked-box" wx:if="{{kpiLocked}}">
+        <text class="locked-value">我的本周 KPI：{{myKpiValue}} {{unit}}</text>
+        <text class="field-tip">✅ 已提交并锁定，不可修改；如需调整请联系管理组</text>
+      </view>
+      <block wx:else>
+        <view class="field" style="margin-top:24rpx">
+          <text class="field-label">我的本周 KPI（{{unit}}）</text>
+          <input class="input" type="digit" value="{{kpiValue}}" bindinput="onInputValue" placeholder="请输入 {{kpiRange.min}} ~ {{kpiRange.max}} 之间的值" />
+          <text class="field-tip" wx:if="{{kpiValue && !inRange}}">⚠️ 超出本组区间，无法提交</text>
+          <text class="ok-tip" wx:elif="{{kpiValue && inRange}}">✅ 在区间内，提交后自动通过</text>
         </view>
-        <block wx:else>
-          <view class="field" style="margin-top:24rpx">
-            <text class="field-label">我的本周 KPI（{{unit}}）</text>
-            <input class="input" type="digit" value="{{kpiValue}}" bindinput="onInputValue" placeholder="请输入 {{kpiRange.min}} ~ {{kpiRange.max}} 之间的值" />
-            <text class="field-tip" wx:if="{{kpiValue && !inRange}}">⚠️ 超出教练设定区间，无法提交</text>
-            <text class="ok-tip" wx:elif="{{kpiValue && inRange}}">✅ 在区间内，提交后自动通过</text>
-          </view>
-          <button class="btn {{inRange && kpiValue ? '' : 'btn-gray'}}" disabled="{{!inRange || !kpiValue || submitting}}" loading="{{submitting}}" bindtap="onSubmitKpi">提交 KPI</button>
-        </block>
-      </view>
+        <button class="btn {{inRange && kpiValue ? '' : 'btn-gray'}}" disabled="{{!inRange || !kpiValue || submitting}}" loading="{{submitting}}" bindtap="onSubmitKpi">提交 KPI</button>
+      </block>
+    </view>
 
-      <view class="card" wx:else>
-        <text class="card-title">等待教练设定区间</text>
-        <text class="card-sub">教练发布 KPI 区间后，你即可在区间内填报本周目标</text>
-      </view>
+    <view class="card" wx:elif="{{isCoach}}">
+      <text class="card-title">先发布区间，再填报你的 KPI</text>
+      <text class="card-sub">教练本人也按本组区间考核，未填报 KPI 将无法打卡</text>
+    </view>
 
-      <view class="notice-bar">
-        💡 KPI 一经填报本周不可随意修改，如需调整请联系管理组
-      </view>
-    </block>
+    <view class="card" wx:else>
+      <text class="card-title">等待教练设定区间</text>
+      <text class="card-sub">教练发布 KPI 区间后，你即可在区间内填报本周目标</text>
+    </view>
+
+    <view class="notice-bar">
+      💡 KPI 一经填报本周不可随意修改，如需调整请联系管理组
+    </view>
   </block>
 </view>
