@@ -12,22 +12,22 @@
     <block wx:if="{{isCoach}}">
       <view class="card" wx:if="{{editing || !schedule}}">
         <text class="card-title">发布本周课表</text>
-        <text class="card-sub">三档建议，供不同水平的队员选择</text>
+        <text class="card-sub">三档建议，供不同水平的队员选择 · 每档最多 800 字</text>
         <view class="field">
           <text class="field-label">A 档（进阶）</text>
-          <textarea class="textarea" value="{{form.a}}" data-f="a" bindinput="onFormInput" placeholder="如：周二 间歇 8×800m，周四 节奏跑 10km"></textarea>
+          <textarea class="textarea" maxlength="800" value="{{form.a}}" data-f="a" bindinput="onFormInput" placeholder="如：周二 间歇 8×800m，周四 节奏跑 10km"></textarea>
         </view>
         <view class="field">
           <text class="field-label">B 档（标准）</text>
-          <textarea class="textarea" value="{{form.b}}" data-f="b" bindinput="onFormInput" placeholder="如：周二 轻松跑 8km，周六 长距离 18km"></textarea>
+          <textarea class="textarea" maxlength="800" value="{{form.b}}" data-f="b" bindinput="onFormInput" placeholder="如：周二 轻松跑 8km，周六 长距离 18km"></textarea>
         </view>
         <view class="field">
           <text class="field-label">C 档（基础/恢复）</text>
-          <textarea class="textarea" value="{{form.c}}" data-f="c" bindinput="onFormInput" placeholder="如：周三 轻松跑 5km，周日 休息拉伸"></textarea>
+          <textarea class="textarea" maxlength="800" value="{{form.c}}" data-f="c" bindinput="onFormInput" placeholder="如：周三 轻松跑 5km，周日 休息拉伸"></textarea>
         </view>
         <view class="field">
           <text class="field-label">训练建议 / 云约练安排</text>
-          <textarea class="textarea" value="{{form.advice}}" data-f="advice" bindinput="onFormInput" placeholder="注意事项、集体约练时间地点等"></textarea>
+          <textarea class="textarea" maxlength="800" value="{{form.advice}}" data-f="advice" bindinput="onFormInput" placeholder="注意事项、集体约练时间地点等"></textarea>
         </view>
         <view style="display:flex">
           <button class="btn btn-gray" style="flex:1;margin-right:12rpx" wx:if="{{schedule}}" bindtap="onCancelEdit">取消</button>

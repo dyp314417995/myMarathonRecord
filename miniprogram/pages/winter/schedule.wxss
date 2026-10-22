@@ -1,2 +1,8 @@
 @import './common.wxss';
 .loading { text-align: center; padding: 80rpx; color: #999; }
+
+/* 课表单档最多 800 字：编辑区加高，长文更好写 */
+.textarea { height: 260rpx; line-height: 1.6; }
+
+/* 展示区保留换行/空行，避免 800 字挤成一坨 */
+.card .row-value { display: block; white-space: pre-wrap; word-break: break-all; line-height: 1.75; }

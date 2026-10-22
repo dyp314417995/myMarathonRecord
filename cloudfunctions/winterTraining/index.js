@@ -851,12 +851,14 @@ async function actionPublishSchedule(userId, data) {
   const cfg = await getConfig();
   const weekIndex = Number(data.weekIndex) || calcWeekIndex(cfg);
   const tiers = Array.isArray(data.tiers) ? data.tiers : [];
+  // 每档上限 800 字（与前端 maxlength 一致，防止绕过前端提交超长内容）
+  const MAX_LEN = 800;
   const payload = {
     groupId: member.groupId, weekIndex,
-    a: String((tiers[0] || {}).content || data.a || ''),
-    b: String((tiers[1] || {}).content || data.b || ''),
-    c: String((tiers[2] || {}).content || data.c || ''),
-    advice: String(data.advice || ''),
+    a: String((tiers[0] || {}).content || data.a || '').slice(0, MAX_LEN),
+    b: String((tiers[1] || {}).content || data.b || '').slice(0, MAX_LEN),
+    c: String((tiers[2] || {}).content || data.c || '').slice(0, MAX_LEN),
+    advice: String(data.advice || '').slice(0, MAX_LEN),
     publisherId: userId,
     readBy: [],
     updateTime: new Date(),
