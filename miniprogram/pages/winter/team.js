@@ -61,10 +61,11 @@ Page({
         ? `${r.kpiRange.type === 'distance' ? '跑量' : '出勤'} ${r.kpiRange.min} ~ ${r.kpiRange.max}${r.kpiRange.type === 'distance' ? ' 公里/周' : ' 天/周'}${r.kpiRange.minDuration ? (' · 单次≥' + r.kpiRange.minDuration + '分钟') : ''}`
         : '教练尚未设定 KPI 区间',
       // 文案放在 JS 里拼，避免 WXML 里嵌套三元 + 全角括号被解析器吞字符
+      // 只显示数值，不再带「（已锁定）」标记
       kpiBtnText: (() => {
         if (!me.kpiValue || me.kpiValue <= 0) return '填报我的 KPI';
         const unit = me.kpiType === 'attendance' ? ' 天' : ' 公里';
-        return `我的 KPI：${me.kpiValue}${unit}${me.kpiLocked ? '（已锁定）' : ''}`;
+        return `我的 KPI：${me.kpiValue}${unit}`;
       })(),
     });
   },
@@ -72,6 +73,33 @@ Page({
   onGoKpi() { wx.navigateTo({ url: '/pages/winter/kpi' }); },
   onGoCheckin() { wx.navigateTo({ url: '/pages/winter/checkin' }); },
   onGoRecords() { wx.navigateTo({ url: '/pages/winter/records' }); },
+
+  // 主动退组：退出后可重新报名加入其他组
+  onQuitGroup() {
+    const me = this.data.me || {};
+    if (me.role === 'leader') {
+      return wx.showModal({
+        title: '队长不可直接退组',
+        content: '请先在成员列表把队长职务转让给其他队员，再联系管理组处理。',
+        showCancel: false,
+      });
+    }
+    wx.showModal({
+      title: '退出本组',
+      content: '退出后需要重新报名才能加入其他组。本组打卡记录会保留，本周 KPI 会清空，加入新组后按新区间重新填报。',
+      confirmText: '确认退出',
+      confirmColor: '#e74c3c',
+      success: async (m) => {
+        if (!m.confirm) return;
+        wx.showLoading({ title: '处理中' });
+        const r = await w.api.quitGroup();
+        wx.hideLoading();
+        if (!r.ok) return wx.showToast({ title: r.error || '退组失败', icon: 'none' });
+        wx.showToast({ title: '已退出本组', icon: 'success' });
+        setTimeout(() => wx.reLaunch({ url: '/pages/winter/index' }), 900);
+      },
+    });
+  },
 
   // 队长：切换某成员缴费状态
   async onToggleFee(e) {

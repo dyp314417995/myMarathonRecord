@@ -18,6 +18,7 @@ const api = {
   myCheckins: (data) => call('myCheckins', data),
   groupCheckins: (data) => call('groupCheckins', data),
   pendingReview: () => call('pendingReview'),
+  quitGroup: () => call('quitGroup'),
   reviewCheckin: (data) => call('reviewCheckin', data),
   // 队长：审批入队申请 / 切换缴费 / 转让角色
   leaderApplies: () => call('leaderApplies'),

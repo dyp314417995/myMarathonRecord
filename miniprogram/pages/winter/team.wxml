@@ -93,5 +93,10 @@
 
     <button class="btn" bindtap="onGoCheckin" style="margin-bottom:20rpx">去打卡</button>
     <button class="btn btn-ghost" bindtap="onGoRecords">组内打卡记录</button>
+
+    <view class="quit-row">
+      <text class="quit-link" bindtap="onQuitGroup">退出本组</text>
+      <text class="quit-tip">退出后可重新报名加入其他组；打卡记录保留，KPI 按新组重新填报</text>
+    </view>
   </block>
 </view>

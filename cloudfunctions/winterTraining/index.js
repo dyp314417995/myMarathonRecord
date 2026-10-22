@@ -215,7 +215,8 @@ async function actionBootstrap(userId) {
     },
     weekIndex, frozen, frozenReason,
     isAdmin,
-    joined: !!member,
+    // 已退组的人不算「已加入」，首页要重新露出售前/报名入口
+    joined: !!member && member.status !== 'quit',
     member: null, group: null, kpiRange: null, todayCheckin: null, pendingCount: 0, myRole: '',
   };
   if (!member) return ok(result);
@@ -313,8 +314,10 @@ async function actionSubmitApply(userId, data) {
   if (!groupId) return fail('请选择组别');
   if (!['member', 'leader', 'coach'].includes(role)) return fail('角色不合法');
 
+  // 已退组或被驳回的人可以重新报名（改组 / 回归），其余状态不可重复提交
   const exist = await getMyMember(userId);
-  if (exist) return fail('你已报名，不可重复提交');
+  const RENEW_STATUS = ['quit', 'rejected'];
+  if (exist && !RENEW_STATUS.includes(exist.status)) return fail('你已报名，不可重复提交');
 
   // 总规模上限：目标 100 人，上限 150 人，招满即止
   const scaleMax = Number((cfg.scale && cfg.scale.max) || 0);
@@ -374,12 +377,50 @@ async function actionSubmitApply(userId, data) {
     createTime: new Date(),
     updateTime: new Date(),
   };
+  if (exist) {
+    // 重新报名：沿用同一条成员记录，KPI/缴费等重新走一遍
+    const patch = Object.assign({}, record, { updateTime: new Date() });
+    delete patch._id;
+    delete patch.createTime;
+    await db.collection('winter_member').doc(userId).update({ data: patch });
+    await saveLog({
+      type: 'apply', action: 'resubmit', operatorId: userId, targetUserId: userId,
+      detail: `重新报名 ${ROLE_TEXT[role]} → ${g.data.name}（原状态 ${exist.status}）`,
+    });
+    return ok({ status: 'pending', needReview: true, reviewer: applyReviewer, reapplied: true });
+  }
   await db.collection('winter_member').add({ data: record });
   await saveLog({
     type: 'apply', action: 'submit', operatorId: userId, targetUserId: userId,
     detail: `${ROLE_TEXT[role]} → ${g.data.name}，待${applyReviewer === 'admin' ? '管理组' : '队长'}审批`,
   });
   return ok({ status: 'pending', needReview: true, reviewer: applyReviewer });
+}
+
+// 主动退组：退出后可重新报名加入其他组
+async function actionQuitGroup(userId, data) {
+  const member = await getMyMember(userId);
+  if (!member) return fail('尚未报名');
+  if (member.status === 'quit') return fail('你已退组，可直接重新报名');
+  if (member.role === 'leader') {
+    return fail('队长需先在成员页把队长职务移交他人，再联系管理组退组');
+  }
+  if (!['approved', 'pending', 'rejected', 'quit-suggested'].includes(member.status)) {
+    return fail('当前状态不可退组');
+  }
+  // 清掉本组 KPI：换组后区间不同，需要按新组重新填报
+  await db.collection('winter_member').doc(userId).update({
+    data: {
+      status: 'quit',
+      kpiType: '', kpiValue: 0, kpiSubmitTime: null,
+      quitTime: new Date(), updateTime: new Date(),
+    },
+  });
+  await saveLog({
+    type: 'quit', action: 'self', operatorId: userId, targetUserId: userId,
+    detail: `${ROLE_TEXT[member.role]} 主动退组`,
+  });
+  return ok({ status: 'quit' });
 }
 
 // 我的组（名单 + 区间 + 我的 KPI）
@@ -1414,6 +1455,7 @@ exports.main = async (event = {}) => {
       // ---- 用户侧 ----
       case 'bootstrap': return await actionBootstrap(userId);
       case 'submitApply': return await actionSubmitApply(userId, data);
+      case 'quitGroup': return await actionQuitGroup(userId, data);
       case 'myGroup': return await actionGetMyGroup(userId);
       case 'setKpiRange': return await actionSetKpiRange(userId, data);
       case 'submitKpi': return await actionSubmitKpi(userId, data);

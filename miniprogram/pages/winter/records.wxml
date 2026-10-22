@@ -29,8 +29,12 @@
       <text class="record-note" wx:if="{{item.note}}">{{item.note}}</text>
       <text class="record-note" wx:if="{{item.status === 'rejected' && item.reviewNote}}" style="color:#e74c3c">驳回原因：{{item.reviewNote}}</text>
 
-      <image wx:if="{{item.tempImage}}" class="record-img" src="{{item.tempImage}}" mode="aspectFill" data-url="{{item.tempImage}}" bindtap="onPreview" />
-      <view wx:else class="record-img-empty">截图加载失败</view>
+      <!-- 缩略图：完整显示不裁切，点击看大图 -->
+      <view class="record-img-wrap">
+        <image wx:if="{{item.tempImage}}" class="record-img" src="{{item.tempImage}}" mode="aspectFit" data-url="{{item.tempImage}}" bindtap="onPreview" />
+        <view wx:else class="record-img-empty">截图加载失败</view>
+        <text wx:if="{{item.tempImage}}" class="record-img-tip" data-url="{{item.tempImage}}" bindtap="onPreview">点击查看大图</text>
+      </view>
     </view>
 
     <view class="empty" wx:if="{{viewList.length === 0}}">本周还没有打卡记录</view>

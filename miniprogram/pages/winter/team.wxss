@@ -1,4 +1,9 @@
 @import './common.wxss';
 .loading { text-align: center; padding: 80rpx; color: #999; }
-/* KPI 按钮：文案含「（已锁定）」，默认 button 的 overflow:hidden 会把末尾括号裁掉，这里允许换行 */
+/* KPI 按钮：默认 button 的 overflow:hidden 会裁掉超宽末尾字符，这里允许换行 */
 .kpi-btn { white-space: normal; line-height: 1.5; padding: 18rpx 20rpx; font-size: 30rpx; overflow: visible; }
+
+/* 退出本组：弱化入口，避免误点 */
+.quit-row { text-align: center; margin-top: 48rpx; padding-bottom: 24rpx; }
+.quit-link { font-size: 26rpx; color: #c0c4cc; text-decoration: underline; }
+.quit-tip { display: block; font-size: 22rpx; color: #c0c4cc; margin-top: 12rpx; line-height: 1.5; padding: 0 40rpx; }
