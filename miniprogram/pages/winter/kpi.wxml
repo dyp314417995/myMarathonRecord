@@ -35,24 +35,23 @@
       </view>
     </block>
 
-    <!-- 我的 KPI：教练 / 队长 / 队员一视同仁，不填报无法打卡 -->
+    <!-- 我的本周 KPI：教练 / 队长 / 队员一视同仁，按周填报、按周考核 -->
     <view class="card" wx:if="{{kpiRange}}">
-      <text class="card-title">{{isCoach ? '我的本周 KPI（教练也要打卡）' : '本组 KPI 区间'}}</text>
-      <text class="range-big">{{kpiRange.min}} ~ {{kpiRange.max}}</text>
-      <text class="card-sub">{{kpiRange.type === 'distance' ? '公里 / 周' : '天 / 周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
-      <!-- 已提交：锁定展示，不可再改 -->
+      <text class="card-title">{{isCoach ? '我的本周 KPI（教练也要打卡）' : '我的本周 KPI'}}</text>
+      <text class="card-sub">第 {{weekIndex}} 周 · 本组区间 {{kpiRange.min}} ~ {{kpiRange.max}} {{kpiRange.type === 'distance' ? '公里/周' : '天/周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
+      <!-- 本周已打过卡：目标锁定，下周一解锁 -->
       <view class="locked-box" wx:if="{{kpiLocked}}">
-        <text class="locked-value">我的本周 KPI：{{myKpiValue}} {{unit}}</text>
-        <text class="field-tip">✅ 已提交并锁定，不可修改；如需调整请联系管理组</text>
+        <text class="locked-value">本周目标：{{myKpiValue}} {{unit}}</text>
+        <text class="field-tip">🔒 本周已有打卡，目标锁定；下周一可重新填报</text>
       </view>
       <block wx:else>
         <view class="field" style="margin-top:24rpx">
-          <text class="field-label">我的本周 KPI（{{unit}}）</text>
+          <text class="field-label">本周目标（{{unit}}）</text>
           <input class="input" type="digit" value="{{kpiValue}}" bindinput="onInputValue" placeholder="请输入 {{kpiRange.min}} ~ {{kpiRange.max}} 之间的值" />
           <text class="field-tip" wx:if="{{kpiValue && !inRange}}">⚠️ 超出本组区间，无法提交</text>
-          <text class="ok-tip" wx:elif="{{kpiValue && inRange}}">✅ 在区间内，提交后自动通过</text>
+          <text class="ok-tip" wx:elif="{{kpiValue && inRange}}">✅ 在区间内，本周按此目标考核</text>
         </view>
-        <button class="btn {{inRange && kpiValue ? '' : 'btn-gray'}}" disabled="{{!inRange || !kpiValue || submitting}}" loading="{{submitting}}" bindtap="onSubmitKpi">提交 KPI</button>
+        <button class="btn {{inRange && kpiValue ? '' : 'btn-gray'}}" disabled="{{!inRange || !kpiValue || submitting}}" loading="{{submitting}}" bindtap="onSubmitKpi">{{myKpiValue ? '修改本周 KPI' : '保存本周 KPI'}}</button>
       </block>
     </view>
 
@@ -66,8 +65,22 @@
       <text class="card-sub">教练发布 KPI 区间后，你即可在区间内填报本周目标</text>
     </view>
 
+    <!-- 历史记录：每周目标可追溯 -->
+    <view class="card" wx:if="{{kpiHistory.length}}">
+      <text class="card-title">我的 KPI 记录</text>
+      <view class="member-row" wx:for="{{kpiHistory}}" wx:key="weekIndex">
+        <view class="member-info">
+          <text class="member-name">第 {{item.weekIndex}} 周</text>
+          <text class="member-meta">{{item.value}} {{item.type === 'attendance' ? '天' : '公里'}}{{item.auto ? ' · 沿用上周' : ''}}</text>
+        </view>
+        <view class="member-right">
+          <text class="tag {{item.weekIndex === weekIndex ? 'tag-green' : 'tag-gray'}}">{{item.weekIndex === weekIndex ? '本周' : '已结束'}}</text>
+        </view>
+      </view>
+    </view>
+
     <view class="notice-bar">
-      💡 KPI 一经填报本周不可随意修改，如需调整请联系管理组
+      💡 KPI 按周填报：每周一可重新填报本周目标；本周一旦有打卡，目标即锁定不可改；新的一周没填则自动沿用上周目标。
     </view>
   </block>
 </view>

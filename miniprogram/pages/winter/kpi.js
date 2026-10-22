@@ -6,6 +6,7 @@ Page({
     loading: true, role: '', isCoach: false,
     kpiRange: null, rangeText: '',
     kpiType: '', kpiValue: '', inRange: true, myKpiValue: 0,
+    weekIndex: 0, kpiHistory: [],   // 周 KPI：当前周次 + 历史记录
     // 教练表单
     form: { type: 'distance', min: '', max: '', minDuration: '' },
     submitting: false,
@@ -33,6 +34,13 @@ Page({
       minDuration: sug.minDuration || 20,
     } : null);
     const isDraft = !range && !!seed; // 尚未发布，仅为参考初值
+    const weekIndex = r.weekIndex || 0;
+    const hist = r.kpiHistory || [];
+    // 本周已填 → 用本周值；新的一周还没填 → 预填上周目标（不填则自动沿用）
+    const isThisWeek = r.me.kpiWeek === weekIndex;
+    const seedValue = (isThisWeek && r.me.kpiValue)
+      ? r.me.kpiValue
+      : (hist[0] ? hist[0].value : 0);
     this.setData({
       loading: false,
       role: r.me.role,
@@ -42,9 +50,11 @@ Page({
       draftTip: isDraft ? '当前为本组建议参考区间，确认后点击「发布区间」正式生效' : '',
       kpiRange: range,
       kpiType: range ? range.type : '',
-      myKpiValue: r.me.kpiValue || 0,
-      kpiLocked: !!r.me.kpiLocked,   // 已提交即锁定，不允许修改
-      kpiValue: r.me.kpiValue ? String(r.me.kpiValue) : '',
+      weekIndex,
+      kpiHistory: hist,
+      myKpiValue: isThisWeek ? (r.me.kpiValue || 0) : 0,
+      kpiLocked: !!r.me.kpiLocked,   // 本周已打卡才锁定，新的一周自动解锁
+      kpiValue: seedValue ? String(seedValue) : '',
       rangeText: range
         ? `${range.type === 'distance' ? '跑量' : '出勤'} ${range.min} ~ ${range.max}${range.type === 'distance' ? ' 公里/周' : ' 天/周'}`
         : '教练尚未设定 KPI 区间',
@@ -54,7 +64,7 @@ Page({
       'form.max': seed ? String(seed.max) : '',
       'form.minDuration': seed && seed.minDuration ? String(seed.minDuration) : '20',
     });
-    if (r.me.kpiValue) this.checkRange(String(r.me.kpiValue));
+    if (seedValue) this.checkRange(String(seedValue));
   },
 
   checkRange(val) {
@@ -99,7 +109,7 @@ Page({
     const r = await w.api.submitKpi({ kpiType: this.data.kpiType, kpiValue: Number(v) });
     this.setData({ submitting: false });
     if (!r.ok) return wx.showToast({ title: r.error || '提交失败', icon: 'none' });
-    wx.showToast({ title: 'KPI 已保存（区间内自动通过）', icon: 'success' });
-    setTimeout(() => wx.navigateBack(), 1200);
+    wx.showToast({ title: `第 ${r.weekIndex || this.data.weekIndex} 周目标已保存`, icon: 'success' });
+    this.load(); // 刷新以显示锁定状态与历史记录
   },
 });

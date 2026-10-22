@@ -52,11 +52,12 @@
 
   <view class="card">
     <text class="card-title">四、KPI 区间与个人填报</text>
-    <text class="rule-line">1. 教练设定组 KPI 区间，直接生效；个人只能在区间内填报。</text>
+    <text class="rule-line">1. 教练设定组 KPI 区间（跑量或出勤，含上下限、单次最低时长），直接生效；个人只能在区间内填报。</text>
     <text class="rule-line">2. 能力组默认跑量 KPI，可申请出勤 KPI 降档；H 组默认出勤 KPI。</text>
     <text class="rule-line">3. 每人只设 1 个主 KPI，跑量和出勤不双考核。</text>
-    <text class="rule-line">4. 区间内提交自动通过；低于下限或高于上限不可提交，线下找教练调区间。</text>
-    <text class="rule-line">5. 第一周、春节前一周自动降档；区间每月可调 1 次，周中不改，开营前公示。</text>
+    <text class="rule-line">4. KPI 按周填报：每周一可重新填报本周目标；本周一旦有打卡记录，目标即锁定不可改，避免打完卡再把目标改低。</text>
+    <text class="rule-line">5. 新的一周没有填报，自动沿用上周目标，不影响打卡；目标只影响当周考核，历史目标在「我的 KPI 记录」里可查。</text>
+    <text class="rule-line">6. 低于下限或高于上限不可提交，线下找教练调区间；第一周、春节前一周自动降档。</text>
   </view>
 
   <view class="card">

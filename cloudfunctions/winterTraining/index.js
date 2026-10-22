@@ -43,7 +43,7 @@ function fail(msg, extra) { return { ok: false, error: msg, ...(extra || {}) }; 
 
 async function ensureCollections() {
   const names = ['winter_config', 'winter_group', 'winter_member', 'winter_kpi_range',
-    'winter_checkin', 'winter_weekly', 'winter_schedule', 'winter_fine', 'winter_log'];
+    'winter_checkin', 'winter_weekly', 'winter_kpi', 'winter_schedule', 'winter_fine', 'winter_log'];
   for (const n of names) {
     try { await db.createCollection(n); } catch (e) { /* 已存在 */ }
   }
@@ -372,6 +372,7 @@ async function actionSubmitApply(userId, data) {
     applyReviewer,                 // leader = 本组队长审；admin = 管理组审
     kpiType: '',
     kpiValue: 0,
+    kpiWeek: 0,
     continuousFailWeeks: 0,
     feeStatus: 'unpaid',
     createTime: new Date(),
@@ -412,7 +413,7 @@ async function actionQuitGroup(userId, data) {
   await db.collection('winter_member').doc(userId).update({
     data: {
       status: 'quit',
-      kpiType: '', kpiValue: 0, kpiSubmitTime: null,
+      kpiType: '', kpiValue: 0, kpiWeek: 0, kpiSubmitTime: null,
       quitTime: new Date(), updateTime: new Date(),
     },
   });
@@ -436,6 +437,21 @@ async function actionGetMyGroup(userId) {
   const weekIndex = calcWeekIndex(cfg);
   // 试运行期照常考核，只有春节周跳过考核
   const holidayNow = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
+
+  // 本周还能不能改 KPI：本周已打过卡就不许改（周 KPI，每周一解锁）
+  let kpiCanChange = true;
+  if (member.kpiWeek === weekIndex) {
+    const ckc = await db.collection('winter_checkin')
+      .where({ userId, weekIndex }).limit(1).count().catch(() => ({ total: 0 }));
+    kpiCanChange = !(ckc.total > 0);
+  }
+  // 最近 8 周的 KPI 记录，供本人追溯
+  const kr = await db.collection('winter_kpi').where({ userId })
+    .orderBy('weekIndex', 'desc').limit(8).get().catch(() => null);
+  const kpiHistory = ((kr && kr.data) || []).map(x => ({
+    weekIndex: x.weekIndex, type: x.type, value: toNum(x.value), auto: !!x.auto,
+  }));
+
   return ok({
     group,
     members: members.sort((a, b) => {
@@ -446,11 +462,15 @@ async function actionGetMyGroup(userId) {
     me: {
       role: member.role, roleText: ROLE_TEXT[member.role] || '',
       kpiType: member.kpiType || '', kpiValue: member.kpiValue || 0,
+      kpiWeek: member.kpiWeek || 0,
       continuousFailWeeks: member.continuousFailWeeks || 0,
       status: member.status, remark: member.remark || '',
       feeStatus: member.feeStatus || 'unpaid',
-      kpiLocked: !!(member.kpiType && member.kpiValue), // 已填报即锁定，不允许修改
+      // 本周期已打过卡 → 锁定；新的一周自动解锁
+      kpiLocked: !kpiCanChange && member.kpiWeek === weekIndex,
+      kpiCanChange,
     },
+    kpiHistory,
     weekIndex,
     phase: cfg.phase,
     frozen: holidayNow,
@@ -483,27 +503,88 @@ async function actionSetKpiRange(userId, data) {
   return ok({ range });
 }
 
-// 队员：区间内填报 KPI（自动通过，越界拒绝）
+// ===== 周 KPI：每周一解锁重填，考核按当周目标，历史留痕可追溯 =====
+// 取某人「某周」的 KPI 目标；没有周记录时退回成员上的当前值（兼容改版前的老数据）
+async function getWeekKpi(m, weekIndex) {
+  const r = await db.collection('winter_kpi').where({ userId: m.userId, weekIndex }).limit(1).get().catch(() => null);
+  const d = r && r.data && r.data[0];
+  if (d) return { type: d.type || '', value: toNum(d.value), auto: !!d.auto };
+  // 老数据兜底：成员上存着 KPI 但没有周记录
+  if (m.kpiWeek === weekIndex || (!m.kpiWeek && toNum(m.kpiValue) > 0)) {
+    return { type: m.kpiType || '', value: toNum(m.kpiValue), auto: false };
+  }
+  return { type: '', value: 0, auto: false };
+}
+
+// 写入/覆盖某人某周的 KPI，并同步到成员上的「当前生效值」
+async function saveWeekKpi(m, weekIndex, type, value, auto) {
+  const payload = {
+    userId: m.userId, groupId: m.groupId, weekIndex,
+    type, value, auto: !!auto, updateTime: new Date(),
+  };
+  const exist = await db.collection('winter_kpi')
+    .where({ userId: m.userId, weekIndex }).limit(1).get().catch(() => null);
+  if (exist && exist.data && exist.data.length) {
+    await db.collection('winter_kpi').doc(exist.data[0]._id).update({ data: payload }).catch(() => {});
+  } else {
+    await db.collection('winter_kpi').add({ data: Object.assign({ createTime: new Date() }, payload) }).catch(() => {});
+  }
+  await db.collection('winter_member').doc(m.userId).update({
+    data: {
+      kpiType: type, kpiValue: value, kpiWeek: weekIndex,
+      kpiSubmitTime: new Date(), updateTime: new Date(),
+    },
+  }).catch(() => {});
+}
+
+// 本周还没目标时自动继承上一周（最多回溯 4 周），保证用户不用每周必点一次
+async function ensureWeekKpi(m, cfg) {
+  const weekIndex = calcWeekIndex(cfg);
+  if (m.kpiWeek === weekIndex && toNum(m.kpiValue) > 0) {
+    return { weekIndex, type: m.kpiType, value: toNum(m.kpiValue), inherited: false };
+  }
+  for (let w = weekIndex - 1; w >= 0 && w >= weekIndex - 4; w--) {
+    const r = await db.collection('winter_kpi')
+      .where({ userId: m.userId, weekIndex: w }).limit(1).get().catch(() => null);
+    const d = r && r.data && r.data[0];
+    if (d && toNum(d.value) > 0) {
+      await saveWeekKpi(m, weekIndex, d.type, toNum(d.value), true);
+      return { weekIndex, type: d.type, value: toNum(d.value), inherited: true };
+    }
+  }
+  // 改版前的老数据：成员上有值但没有周记录，直接补一条本周记录
+  if (toNum(m.kpiValue) > 0) {
+    await saveWeekKpi(m, weekIndex, m.kpiType, toNum(m.kpiValue), true);
+    return { weekIndex, type: m.kpiType, value: toNum(m.kpiValue), inherited: true };
+  }
+  return null;
+}
+
+// 队员：区间内填报本周 KPI（自动通过，越界拒绝）
 async function actionSubmitKpi(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   if (member.status !== 'approved') return fail('报名未通过，不可填报');
   const range = await getKpiRange(member.groupId);
   if (!range) return fail('教练尚未设定 KPI 区间');
+  const cfg = await getConfig();
+  const weekIndex = calcWeekIndex(cfg);
   const type = String(data.kpiType || range.type);
   if (type !== range.type) return fail(`本组 KPI 类型为${range.type === 'distance' ? '跑量' : '出勤'}，不可更改`);
-  // 已提交过即锁定，不允许修改（如需调整请联系教练/管理组）
-  if (member.kpiType && member.kpiValue) {
-    return fail('本周 KPI 已提交，不可修改；如需调整请联系教练或管理组');
+  // 本周已经打过卡就不允许再改目标（否则可以打完卡再把目标改低）
+  if (member.kpiWeek === weekIndex) {
+    const ckc = await db.collection('winter_checkin')
+      .where({ userId, weekIndex }).limit(1).count().catch(() => ({ total: 0 }));
+    if ((ckc.total || 0) > 0) {
+      return fail('本周已有打卡记录，KPI 不可再改；下周一可重新填报');
+    }
   }
   const value = toNum(data.kpiValue);
   if (value < range.min || value > range.max) {
     return fail(`KPI 需在 ${range.min} ~ ${range.max} 之间`);
   }
-  await db.collection('winter_member').doc(userId).update({
-    data: { kpiType: type, kpiValue: value, kpiSubmitTime: new Date(), updateTime: new Date() },
-  });
-  return ok({ kpiType: type, kpiValue: value });
+  await saveWeekKpi(member, weekIndex, type, value, false);
+  return ok({ kpiType: type, kpiValue: value, weekIndex, locked: true });
 }
 
 // 每日打卡
@@ -513,7 +594,9 @@ async function actionDoCheckin(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   if (member.status !== 'approved' && member.status !== 'quit-suggested') return fail('报名未通过');
-  if (!member.kpiType || !member.kpiValue) return fail('请先填报本周 KPI');
+  // 周 KPI：本周还没目标的自动继承上周目标，没有历史才要求先填
+  const weekKpi = await ensureWeekKpi(member, cfg);
+  if (!weekKpi) return fail('请先填报本周 KPI');
 
   const date = data.date || todayStr();
   const today = todayStr();
@@ -531,8 +614,8 @@ async function actionDoCheckin(userId, data) {
   const duration = toNum(data.duration);
   const note = String(data.note || '').trim();
   if (!imageFileID) return fail('请上传一张跑步记录截图');
-  if (member.kpiType === 'distance' && distance <= 0) return fail('请填写本次跑量（公里）');
-  if (member.kpiType === 'attendance' && duration <= 0) return fail('请填写本次时长（分钟）');
+  if (weekKpi.type === 'distance' && distance <= 0) return fail('请填写本次跑量（公里）');
+  if (weekKpi.type === 'attendance' && duration <= 0) return fail('请填写本次时长（分钟）');
 
   // 单次最低时长校验
   const range = await getKpiRange(member.groupId);
@@ -550,7 +633,7 @@ async function actionDoCheckin(userId, data) {
     userId, groupId: member.groupId, date, weekIndex,
     monday: mondayOf(date),
     imageFileID, distance, duration, note,
-    kpiType: member.kpiType,
+    kpiType: weekKpi.type,
     updateTime: new Date(),
   };
   // 队长 / 教练的打卡无需他人审核，直接通过（他们只负责审队员）
@@ -821,10 +904,12 @@ async function actionWeeklyStats(userId, data) {
     const totalDistance = list.reduce((s, c) => s + toNum(c.distance), 0);
     const totalDuration = list.reduce((s, c) => s + toNum(c.duration), 0);
     const days = new Set(list.map(c => c.date)).size;
-    const target = toNum(m.kpiValue);
+    // 周 KPI：按「当周」目标考核，而不是成员上的当前值
+    const wk = await getWeekKpi(m, weekIndex);
+    const target = wk.value;
     let actual = 0, rate = 0;
     if (target > 0) {
-      actual = m.kpiType === 'attendance' ? days : totalDistance;
+      actual = wk.type === 'attendance' ? days : totalDistance;
       rate = Math.min(1, actual / target);
     }
     // frozen 周完成状态为 null（不考核），避免虚增完成人数
@@ -857,9 +942,10 @@ async function actionWeeklyStats(userId, data) {
       const list = ((cr && cr.data) || []).filter(c => c.status === 'approved');
       const totalDistance = list.reduce((s, c) => s + toNum(c.distance), 0);
       const days = new Set(list.map(c => c.date)).size;
-      const target = toNum(m.kpiValue);
+      const wkr = await getWeekKpi(m, weekIndex);
+      const target = wkr.value;
       let rate = 0;
-      if (target > 0) rate = Math.min(1, (m.kpiType === 'attendance' ? days : totalDistance) / target);
+      if (target > 0) rate = Math.min(1, (wkr.type === 'attendance' ? days : totalDistance) / target);
       sum += rate;
       if (!frozen && rate >= 1) done++; // 春节/试运行周不考核，不计入完成人数
     }
@@ -957,10 +1043,13 @@ async function actionMyProfile(userId) {
   const weekIndex = calcWeekIndex(cfg);
   const fines = await db.collection('winter_fine').where({ userId }).orderBy('weekIndex', 'desc').limit(50).get().catch(() => null);
   const weeklies = await db.collection('winter_weekly').where({ userId }).orderBy('weekIndex', 'desc').limit(50).get().catch(() => null);
+  // 周 KPI 历史（每周填报的目标，可追溯）
+  const kpis = await db.collection('winter_kpi').where({ userId }).orderBy('weekIndex', 'desc').limit(20).get().catch(() => null);
   return ok({
     me: {
       nickName: member.nickName, role: member.role, roleText: ROLE_TEXT[member.role] || '',
       groupId: member.groupId, kpiType: member.kpiType, kpiValue: member.kpiValue,
+      kpiWeek: member.kpiWeek || 0,
       continuousFailWeeks: member.continuousFailWeeks || 0,
       status: member.status, statusText: APPLY_STATUS_TEXT[member.status] || member.status,
       remark: member.remark || '', feeStatus: member.feeStatus || 'unpaid',
@@ -970,6 +1059,9 @@ async function actionMyProfile(userId) {
     weekIndex,
     fines: ((fines && fines.data) || []).map(f => ({ ...f, statusText: FINE_TEXT[f.status] || f.status })),
     weekly: (weeklies && weeklies.data) || [],
+    kpiHistory: ((kpis && kpis.data) || []).map(x => ({
+      weekIndex: x.weekIndex, type: x.type, value: toNum(x.value), auto: !!x.auto,
+    })),
   });
 }
 
@@ -1256,10 +1348,12 @@ async function actionAdminCalcWeek(userId, data) {
     const list = ((cr && cr.data) || []).filter(c => c.status === 'approved');
     const totalDistance = list.reduce((s, c) => s + toNum(c.distance), 0);
     const days = new Set(list.map(c => c.date)).size;
-    const target = toNum(m.kpiValue);
+    // 周 KPI：结算时用该成员「这一周」的目标
+    const wkt = await getWeekKpi(m, weekIndex);
+    const target = wkt.value;
     let actual = 0, rate = 0;
     if (target > 0) {
-      actual = m.kpiType === 'attendance' ? days : totalDistance;
+      actual = wkt.type === 'attendance' ? days : totalDistance;
       rate = Math.min(1, actual / target);
     }
     // 收尾降档周（规则 2/17—2/23，跨第 14、15 周）：自 tailWeek 起自动降档，完成 1 次即达标
@@ -1346,7 +1440,7 @@ async function cleanupTrialData() {
   for (const m of ((ms && ms.data) || [])) {
     await db.collection('winter_member').doc(m._id).update({
       data: {
-        kpiType: '', kpiValue: 0, continuousFailWeeks: 0,
+        kpiType: '', kpiValue: 0, kpiWeek: 0, continuousFailWeeks: 0,
         kpiSubmitTime: null, updateTime: new Date(),
       },
     }).catch(() => {});
