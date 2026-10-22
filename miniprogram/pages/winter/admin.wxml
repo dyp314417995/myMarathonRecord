@@ -168,7 +168,7 @@
   <view class="modal-mask" wx:if="{{showGroup}}">
     <view class="modal-box">
       <text class="modal-title">{{groupForm.id ? '编辑组别' : '新建组别'}}</text>
-      <view class="field"><text class="field-label">组名 *</text><input class="input" value="{{groupForm.name}}" data-f="name" bindinput="onGroupInput" placeholder="如 S 组 / 动起来" /></view>
+      <view class="field"><text class="field-label">组名 *</text><input class="input" value="{{groupForm.name}}" data-f="name" bindinput="onGroupInput" placeholder="如 S 组 / G 组" /></view>
       <view class="field"><text class="field-label">标识</text><input class="input" value="{{groupForm.emblem}}" data-f="emblem" bindinput="onGroupInput" placeholder="如 🏃" /></view>
       <view class="field"><text class="field-label">简介</text><input class="input" value="{{groupForm.desc}}" data-f="desc" bindinput="onGroupInput" placeholder="组别定位说明" /></view>
       <view class="field"><text class="field-label">人数上限（0 为不限）</text><input class="input" type="number" value="{{groupForm.capacity}}" data-f="capacity" bindinput="onGroupInput" /></view>

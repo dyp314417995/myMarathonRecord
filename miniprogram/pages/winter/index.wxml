@@ -29,12 +29,12 @@
       </view>
 
       <view class="card">
-        <text class="card-title">8 个能力组（每组即一队）</text>
+        <text class="card-title">9 个能力组（每组即一队）</text>
         <text class="card-sub">按全马目标档位选组；没有全马成绩，按「半马成绩 × 2 + 10 分钟」估算后对号入座</text>
         <view class="member-row" wx:for="{{groups}}" wx:key="_id">
           <view class="member-info">
             <text class="member-name">{{item.emblem}} {{item.name}}</text>
-            <text class="member-meta">{{item.desc}} · 建议 {{item.targetSize}}</text>
+            <text class="member-meta">{{item.desc}}</text>
             <text class="member-meta" wx:if="{{item.suggest}}">跑量 {{item.suggest.distance.min}}—{{item.suggest.distance.max}}km / 出勤 {{item.suggest.attendance.min}}—{{item.suggest.attendance.max}} 次</text>
           </view>
           <view class="member-right"><text class="tag tag-gray">{{item.memberCount}} 人</text></view>

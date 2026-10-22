@@ -30,12 +30,12 @@
 
   <view class="card">
     <text class="card-title">二、分组 = 组队</text>
-    <text class="rule-line">每组即一队，一人只报名一次，只进一个组，只选一个角色。每组下限 6 人、上限 20 人；少于 6 人合并或调剂，超过 20 人拆二队或加教练。按全马目标档位选组（S 精英 / A 300 / B 310 / C 320 / D 330 / E 345 / F 400 / 动起来），不比绝对跑量、不排名配速。</text>
+    <text class="rule-line">每组即一队，一人只报名一次，只进一个组，只选一个角色。各组容量由管理组在组别里配置，招满即止；少于 6 人合并或调剂，超过容量则拆二队或加教练。按全马目标档位选组（S 精英 / A 300 / B 310 / C 320 / D 330 / E 345 / F 400 / G 430 / H 完赛），不比绝对跑量、不排名配速。</text>
     <text class="rule-line">没有全马成绩的，按「半马成绩 × 2 + 10 分钟」估算：如半马 1:45:00 → 全马约 3:40:00。该水平可报 D 组（330）冲一冲，也可报 E 组（345）稳一点，按你的目标激进程度选。</text>
     <view class="member-row" wx:for="{{groups}}" wx:key="_id">
       <view class="member-info">
         <text class="member-name">{{item.emblem}} {{item.name}}</text>
-        <text class="member-meta">{{item.desc}} · 建议 {{item.targetSize}}</text>
+        <text class="member-meta">{{item.desc}}</text>
         <text class="member-meta" wx:if="{{item.suggest}}">参考区间：跑量 {{item.suggest.distance.min}}—{{item.suggest.distance.max}}km / 出勤 {{item.suggest.attendance.min}}—{{item.suggest.attendance.max}} 次</text>
       </view>
       <view class="member-right"><text class="tag tag-gray">{{item.memberCount}} 人</text></view>
@@ -53,7 +53,7 @@
   <view class="card">
     <text class="card-title">四、KPI 区间与个人填报</text>
     <text class="rule-line">1. 教练设定组 KPI 区间，直接生效；个人只能在区间内填报。</text>
-    <text class="rule-line">2. 能力组默认跑量 KPI，可申请出勤 KPI 降档；动起来组默认出勤 KPI。</text>
+    <text class="rule-line">2. 能力组默认跑量 KPI，可申请出勤 KPI 降档；H 组默认出勤 KPI。</text>
     <text class="rule-line">3. 每人只设 1 个主 KPI，跑量和出勤不双考核。</text>
     <text class="rule-line">4. 区间内提交自动通过；低于下限或高于上限不可提交，线下找教练调区间。</text>
     <text class="rule-line">5. 第一周、春节前一周自动降档；区间每月可调 1 次，周中不改，开营前公示。</text>
