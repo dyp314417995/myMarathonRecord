@@ -1,3 +1,9 @@
 @import './common.wxss';
 .loading { text-align: center; padding: 80rpx; color: #999; }
 .intro-text { font-size: 27rpx; color: #555; line-height: 1.7; }
+
+/* 本周进度：三个数字并排 */
+.stat-row { display: flex; margin-top: 20rpx; }
+.stat-item { flex: 1; text-align: center; }
+.stat-num { display: block; font-size: 46rpx; font-weight: 700; color: #1aad19; line-height: 1.25; }
+.stat-sub { display: block; font-size: 22rpx; color: #999; margin-top: 6rpx; }

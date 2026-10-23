@@ -5,7 +5,7 @@ Page({
   data: {
     loading: true, weekIndex: 0, frozen: false, frozenText: '',
     teamRank: [], personal: [], myStat: null, groupAvgRate: 0, completedCount: 0,
-    tab: 'team',
+    tab: 'personal',   // 个人榜在前（大家更关心自己的完成情况）
   },
 
   async onShow() { await this.load(); },

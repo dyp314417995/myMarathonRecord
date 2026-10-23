@@ -9,26 +9,12 @@
     </view>
 
     <view class="chip-row" style="margin-bottom:24rpx">
-      <text class="chip {{tab === 'team' ? 'on' : ''}}" data-v="team" bindtap="onTab">队伍榜</text>
       <text class="chip {{tab === 'personal' ? 'on' : ''}}" data-v="personal" bindtap="onTab">个人榜</text>
-    </view>
-
-    <!-- 队伍榜 -->
-    <view class="card" wx:if="{{tab === 'team'}}">
-      <text class="card-title">队伍人均完成率</text>
-      <view class="member-row" wx:for="{{teamRank}}" wx:key="groupId">
-        <view class="member-info" style="flex:1">
-          <text class="member-name">{{index + 1}}. {{item.emblem}} {{item.name}}</text>
-          <text class="member-meta">{{item.memberCount}} 人 · 完成 {{item.completedCount}} 人</text>
-          <view class="bar-wrap"><view class="bar-inner" style="width:{{item.avgRate}}%"></view></view>
-        </view>
-        <view class="member-right"><text class="tag {{item.avgRate >= 100 ? 'tag-green' : (item.avgRate >= 60 ? 'tag-orange' : 'tag-red')}}">{{item.avgRate}}%</text></view>
-      </view>
-      <view class="empty" wx:if="{{teamRank.length === 0}}">暂无数据</view>
+      <text class="chip {{tab === 'team' ? 'on' : ''}}" data-v="team" bindtap="onTab">队伍榜</text>
     </view>
 
     <!-- 个人榜 -->
-    <view class="card" wx:else>
+    <view class="card" wx:if="{{tab === 'personal'}}">
       <text class="card-title">本周个人完成率</text>
       <view class="member-row" wx:for="{{personal}}" wx:key="userId">
         <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-i="{{index}}" />
@@ -44,6 +30,20 @@
         </view>
       </view>
       <view class="empty" wx:if="{{personal.length === 0}}">暂无数据</view>
+    </view>
+
+    <!-- 队伍榜 -->
+    <view class="card" wx:else>
+      <text class="card-title">队伍人均完成率</text>
+      <view class="member-row" wx:for="{{teamRank}}" wx:key="groupId">
+        <view class="member-info" style="flex:1">
+          <text class="member-name">{{index + 1}}. {{item.emblem}} {{item.name}}</text>
+          <text class="member-meta">{{item.memberCount}} 人 · 完成 {{item.completedCount}} 人</text>
+          <view class="bar-wrap"><view class="bar-inner" style="width:{{item.avgRate}}%"></view></view>
+        </view>
+        <view class="member-right"><text class="tag {{item.avgRate >= 100 ? 'tag-green' : (item.avgRate >= 60 ? 'tag-orange' : 'tag-red')}}">{{item.avgRate}}%</text></view>
+      </view>
+      <view class="empty" wx:if="{{teamRank.length === 0}}">暂无数据</view>
     </view>
 
     <view class="notice-bar" wx:if="{{myStat}}">

@@ -239,6 +239,33 @@ async function actionBootstrap(userId) {
   const cr = await db.collection('winter_checkin').where({ userId, date: today }).limit(1).get().catch(() => null);
   result.todayCheckin = cr && cr.data && cr.data.length ? cr.data[0] : null;
 
+  // 本周进度（首页直接展示跑量与 KPI 完成情况，不用再点进榜单）
+  if (member.status === 'approved' || member.status === 'quit-suggested') {
+    const wr = await db.collection('winter_checkin').where({ userId, weekIndex }).limit(100).get().catch(() => null);
+    const all = (wr && wr.data) || [];
+    const wl = all.filter(c => c.status === 'approved');
+    const r1 = (v) => Math.round(toNum(v) * 10) / 10;
+    const wDist = wl.reduce((s, c) => s + toNum(c.distance), 0);
+    const wDur = wl.reduce((s, c) => s + toNum(c.duration), 0);
+    const wDays = new Set(wl.map(c => c.date)).size;
+    const wk = await getWeekKpi(member, weekIndex);
+    const actual = wk.type === 'attendance' ? wDays : r1(wDist);
+    const rate = wk.value > 0 ? Math.min(1, actual / wk.value) : 0;
+    result.myWeek = {
+      distance: r1(wDist),           // 本周跑量（公里）
+      duration: Math.round(wDur),    // 本周总时长（分钟）
+      days: wDays,                   // 本周有打卡的天数
+      count: wl.length,              // 已通过条数
+      pending: all.length - wl.length, // 待审核条数
+      kpiType: wk.type || '', target: wk.value, actual,
+      rate: Math.round(rate * 100),
+      // 距目标还差多少（同样只保留一位小数）
+      remain: wk.value > 0 ? Math.round((wk.value - actual) * 10) / 10 : 0,
+      // 春节周不考核 → null；没填 KPI → null
+      completed: frozen || wk.value <= 0 ? null : rate >= 1,
+    };
+  }
+
   if (member.role === 'leader' || member.role === 'coach') {
     await autoApproveOverdue(member.groupId);
     // 待审打卡角标：总数减去本组队长/教练（含自己）的打卡——他们免审，不进待审
@@ -908,6 +935,8 @@ async function actionWeeklyStats(userId, data) {
   const weekIndex = data.weekIndex ? Number(data.weekIndex) : calcWeekIndex(cfg);
   const myMember = await getMyMember(userId);
   const groupId = data.groupId || (myMember && myMember.groupId) || '';
+  // 跑量保留一位小数（打卡距离可能带多位小数，累加后噪声更大）
+  const r1 = (v) => Math.round(toNum(v) * 10) / 10;
   // 试运行周、春节周均「跳过考核」：打卡照常记录，但不计完成率、不计完成人数、不排名
   // 试运行期照常考核，仅春节周跳过考核
   const holidayNow = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
@@ -943,7 +972,9 @@ async function actionWeeklyStats(userId, data) {
       nickName: (u && (u.nickName || u.nickname)) || m.nickName || '未知',
       avatarUrl: (u && u.avatarUrl) || '',
       role: m.role, roleText: ROLE_TEXT[m.role] || '',
-      kpiType: m.kpiType, target, actual, days, totalDistance, totalDuration,
+      // 个人榜展示保留一位小数，避免 12.3456789 这种浮点噪声
+      kpiType: wk.type, target, actual: r1(actual), days,
+      totalDistance: r1(totalDistance), totalDuration: Math.round(totalDuration),
       rate: Math.round(rate * 100),
       completed,
       continuousFailWeeks: m.continuousFailWeeks || 0,

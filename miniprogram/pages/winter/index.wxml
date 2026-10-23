@@ -108,6 +108,34 @@
         <view style="margin-top:20rpx"><button class="btn btn-ghost" bindtap="onGoTeam">进入我的组</button></view>
       </view>
 
+      <!-- 本周进度：一眼看到本周跑了多少、KPI 完成到哪 -->
+      <view class="card" wx:if="{{myWeek}}">
+        <text class="card-title">本周进度{{weekIndex > 0 ? (' · 第 ' + weekIndex + ' 周') : ' · 试运行'}}</text>
+        <view class="stat-row">
+          <view class="stat-item">
+            <text class="stat-num">{{myWeek.distance}}</text>
+            <text class="stat-sub">本周跑量 km</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-num">{{myWeek.days}}</text>
+            <text class="stat-sub">打卡天数</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-num">{{myWeek.target > 0 ? myWeek.rate + '%' : '—'}}</text>
+            <text class="stat-sub">KPI 完成</text>
+          </view>
+        </view>
+        <block wx:if="{{myWeek.target > 0}}">
+          <view class="bar-wrap"><view class="bar-inner" style="width:{{myWeek.rate}}%"></view></view>
+          <text class="card-sub" style="margin-top:12rpx">目标 {{myWeek.target}}{{myWeek.kpiType === 'attendance' ? ' 天' : ' 公里'}} · 已完成 {{myWeek.actual}}{{myWeek.kpiType === 'attendance' ? ' 天' : ' 公里'}}</text>
+          <text class="card-sub" wx:if="{{myWeek.completed === null}}">本周不考核（春节周），打卡照常记录</text>
+          <text class="card-sub" wx:elif="{{myWeek.completed}}">✅ 本周 KPI 已达成</text>
+          <text class="card-sub" wx:else>还差 {{myWeek.remain}}{{myWeek.kpiType === 'attendance' ? ' 天' : ' 公里'}}</text>
+        </block>
+        <text class="card-sub" wx:else>还没填报本周 KPI，先进「我的组」填写，之后打卡才会计入考核</text>
+        <text class="card-sub" wx:if="{{myWeek.pending > 0}}">⏳ {{myWeek.pending}} 条打卡待审核，通过后计入本周进度</text>
+      </view>
+
       <!-- 功能入口 -->
       <view class="card">
         <text class="card-title">训练打卡</text>

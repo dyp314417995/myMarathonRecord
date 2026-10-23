@@ -7,6 +7,7 @@ Page({
     phase: '', phaseText: '', weekIndex: 0, frozen: false, frozenText: '',
     joined: false,
     member: null, group: null, kpiRange: null, todayCheckin: null, pendingCount: 0,
+    myWeek: null,   // 本周进度：跑量 / 打卡天数 / KPI 完成率
     cfg: {}, isAdmin: false,
     myRoleText: '', statusText: '',
     weeklyAvg: '--',
@@ -61,6 +62,7 @@ Page({
       joined: r.joined,
       member: r.member,
       group: r.group,
+      myWeek: r.myWeek || null,
       kpiRange,
       kpiRangeText: kpiRange ? `${kpiRange.type === 'distance' ? '跑量' : '出勤'} ${kpiRange.min} ~ ${kpiRange.max}${kpiRange.type === 'distance' ? ' 公里/周' : ' 天/周'}` : '教练尚未设定',
       todayCheckin: r.todayCheckin,
