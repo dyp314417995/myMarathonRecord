@@ -12,7 +12,7 @@
       <!-- 待审入队申请（仅队长；队员/教练入队由队长审批，不在管理后台） -->
       <view class="card" wx:if="{{canReviewApply && applies.length > 0}}">
         <text class="card-title">待审入队（{{applies.length}} 人）</text>
-        <text class="card-sub">线下确认缴费并标记「已缴费」后才能通过</text>
+        <text class="card-sub">缴费由你线下收款后自行标记，不阻塞审批</text>
         <view class="apply-item" wx:for="{{applies}}" wx:key="userId">
           <view class="member-row" style="border-bottom:none">
             <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />

@@ -8,11 +8,40 @@ Page({
     leader: null, coach: null, mates: [],
     isLeader: false, isBoss: false,
     pendingApplies: [],
+    sloganImage: '',            // 队伍照片（fileID 转成的 https 临时链接）
+    shareImageUrl: '',          // 转发卡片配图
     busy: false,
   },
 
   async onShow() {
     await this.load();
+  },
+
+  // 分享：邀请好友加入本组，带上宣言与队伍照片
+  onShareAppMessage() {
+    const g = this.data.group || {};
+    const title = g.slogan
+      ? `${g.emblem || ''}${g.name}｜${g.slogan} · 一起冬训 100 天`
+      : `邀请你加入 ${g.emblem || ''}${g.name}，一起冬训 100 天`;
+    return {
+      title,
+      path: `/pages/winter/index?gid=${g._id || ''}`,
+      imageUrl: this.data.shareImageUrl || undefined,
+    };
+  },
+
+  onShareTimeline() {
+    const g = this.data.group || {};
+    return {
+      title: g.slogan ? `${g.name}｜${g.slogan}` : `${g.name}｜一起冬训`,
+      query: `gid=${g._id || ''}`,
+      imageUrl: this.data.shareImageUrl || undefined,
+    };
+  },
+
+  async onPreviewSlogan() {
+    const url = this.data.sloganImage;
+    if (url) wx.previewImage({ urls: [url] });
   },
 
   onPullDownRefresh() {
@@ -41,9 +70,15 @@ Page({
       if (ap.ok) pendingApplies = ap.list || [];
     }
 
+    // 队伍照片同样是 cloud://，转成 https 才能渲染；顺带给转发卡片当配图
+    const sloganImage = (r.group && r.group.sloganImage)
+      ? await w.toTempUrl(r.group.sloganImage) : '';
+
     this.setData({
       loading: false,
       group: r.group,
+      sloganImage,
+      shareImageUrl: sloganImage,
       members,
       kpiRange: r.kpiRange,
       me,
@@ -139,7 +174,7 @@ Page({
     const r = await w.api.leaderReviewApply({ userId: uid, pass: true });
     this.setData({ busy: false });
     if (!r.ok) {
-      // 常见原因：未标记缴费
+      // 常见原因：名额已满、本组已有教练
       return wx.showModal({ title: '无法通过', content: r.error || '操作失败', showCancel: false });
     }
     wx.showToast({ title: '已通过', icon: 'success' });

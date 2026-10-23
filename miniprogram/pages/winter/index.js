@@ -13,8 +13,9 @@ Page({
     groups: [], scale: { target: 100, max: 150 },
   },
 
-  onLoad() {
-    // 未报名时也需要介绍数据
+  onLoad(options) {
+    // 从分享邀请进来：gid = 被邀请加入的组
+    this._inviteGroupId = (options && (options.gid || options.groupId)) || '';
   },
 
   async onShow() {
@@ -70,7 +71,30 @@ Page({
       myRoleText,
       statusText: r.member ? (w.STATUS_TEXT[r.member.status] || r.member.status) : '',
     });
-    if (r.joined) this.loadWeekRate();
+    if (r.joined) {
+      this.loadWeekRate();
+    } else if (this._inviteGroupId) {
+      // 好友分享进来的（未报名）：弹邀请卡，带队伍宣言
+      this.showInvite();
+    }
+  },
+
+  // 分享邀请落地：展示邀请文案，引导进报名页（已自动选中该组）
+  async showInvite() {
+    const gid = this._inviteGroupId;
+    this._inviteGroupId = ''; // 只弹一次
+    const g = (this.data.groups || []).find(x => x._id === gid);
+    if (!g) return;
+    const slogan = g.slogan ? `\n“${g.slogan}”` : '';
+    wx.showModal({
+      title: `邀请你加入 ${g.emblem || ''}${g.name}`,
+      content: `好友邀请你加入${g.name}，一起冬训 100 天！${slogan}\n点击「去报名」即可选该组。`,
+      confirmText: '去报名',
+      cancelText: '先看看',
+      success: (res) => {
+        if (res.confirm) wx.navigateTo({ url: `/pages/winter/apply?gid=${gid}` });
+      },
+    });
   },
 
   async loadWeekRate() {

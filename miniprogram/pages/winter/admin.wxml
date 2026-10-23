@@ -171,6 +171,14 @@
       <view class="field"><text class="field-label">组名 *</text><input class="input" value="{{groupForm.name}}" data-f="name" bindinput="onGroupInput" placeholder="如 S 组 / G 组" /></view>
       <view class="field"><text class="field-label">标识</text><input class="input" value="{{groupForm.emblem}}" data-f="emblem" bindinput="onGroupInput" placeholder="如 🏃" /></view>
       <view class="field"><text class="field-label">简介</text><input class="input" value="{{groupForm.desc}}" data-f="desc" bindinput="onGroupInput" placeholder="组别定位说明" /></view>
+      <view class="field"><text class="field-label">队伍宣言（20 字以内）</text><input class="input" maxlength="20" value="{{groupForm.slogan}}" data-f="slogan" bindinput="onGroupInput" placeholder="如：破冬之约，一起跑到春天" /></view>
+      <view class="field">
+        <text class="field-label">队伍照片（分享邀请时用）</text>
+        <image wx:if="{{groupForm.sloganImagePreview}}" class="group-photo" src="{{groupForm.sloganImagePreview}}" mode="aspectFill" bindtap="onPreviewGroupPhoto" />
+        <view wx:else class="group-photo-empty">未上传照片</view>
+        <button class="btn btn-ghost" style="margin-top:16rpx" bindtap="onChooseGroupPhoto">{{groupForm.sloganImagePreview ? '更换照片' : '上传照片'}}</button>
+        <button class="btn btn-gray" style="margin-top:16rpx" wx:if="{{groupForm.sloganImagePreview}}" bindtap="onRemoveGroupPhoto">移除照片</button>
+      </view>
       <view class="field"><text class="field-label">人数上限（0 为不限）</text><input class="input" type="number" value="{{groupForm.capacity}}" data-f="capacity" bindinput="onGroupInput" /></view>
       <view class="field"><text class="field-label">排序</text><input class="input" type="number" value="{{groupForm.sort}}" data-f="sort" bindinput="onGroupInput" /></view>
       <view class="field"><text class="row-label">{{groupForm.open ? '☑' : '☐'}} 开放报名</text><switch checked="{{groupForm.open}}" bindchange="onGroupOpen" color="#1aad19" /></view>

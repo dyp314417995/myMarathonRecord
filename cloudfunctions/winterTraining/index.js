@@ -293,6 +293,7 @@ async function actionGetIntro() {
     groups: groups.map(g => ({
       _id: g._id, name: g.name, desc: g.desc || '', emblem: g.emblem || '',
       capacity: g.capacity || 0, open: g.open !== false,
+      slogan: g.slogan || '', sloganImage: g.sloganImage || '',
       targetSize: g.targetSize || '', suggest: g.suggest || null,
       memberCount: counts[g._id] || 0,
       leaders: (staffMap[g._id] && staffMap[g._id].leader) || [],
@@ -344,17 +345,20 @@ async function actionSubmitApply(userId, data) {
 
   // 审批规则（2026-10 调整）：
   // · 队长：由管理组（超管）审批任命
-  // · 教练 / 队员：由本组队长审批，且需队长线下确认缴费后才会通过
-  // · 没有队长的组，不允许队员 / 教练申请加入
+  // · 教练 / 队员：由本组队长审批
+  // · 没有队长的组也开放加入，此时由管理组审批，避免申请无人处理
+  // 缴费不作为通过的前置条件：由队长线下收款后自行维护状态
   // 一律不自动通过，全部走 pending
   let applyReviewer = 'leader';
+  let groupHasLeader = true;
   if (role === 'leader') {
     applyReviewer = 'admin';
   } else {
     const leaderCnt = await db.collection('winter_member')
       .where({ groupId, role: 'leader', status: 'approved' }).count().catch(() => ({ total: 0 }));
     if (!(leaderCnt.total > 0)) {
-      return fail('该组暂无队长，暂不可加入（待管理组任命队长后开放）');
+      groupHasLeader = false;
+      applyReviewer = 'admin'; // 无队长则由管理组代审
     }
   }
 
@@ -388,14 +392,14 @@ async function actionSubmitApply(userId, data) {
       type: 'apply', action: 'resubmit', operatorId: userId, targetUserId: userId,
       detail: `重新报名 ${ROLE_TEXT[role]} → ${g.data.name}（原状态 ${exist.status}）`,
     });
-    return ok({ status: 'pending', needReview: true, reviewer: applyReviewer, reapplied: true });
+    return ok({ status: 'pending', needReview: true, reviewer: applyReviewer, noLeader: !groupHasLeader, reapplied: true });
   }
   await db.collection('winter_member').add({ data: record });
   await saveLog({
     type: 'apply', action: 'submit', operatorId: userId, targetUserId: userId,
     detail: `${ROLE_TEXT[role]} → ${g.data.name}，待${applyReviewer === 'admin' ? '管理组' : '队长'}审批`,
   });
-  return ok({ status: 'pending', needReview: true, reviewer: applyReviewer });
+  return ok({ status: 'pending', needReview: true, reviewer: applyReviewer, noLeader: !groupHasLeader });
 }
 
 // 主动退组：退出后可重新报名加入其他组
@@ -429,7 +433,12 @@ async function actionGetMyGroup(userId) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   const g = await db.collection('winter_group').doc(member.groupId).get().catch(() => null);
-  const group = g && g.data ? { _id: g.data._id, name: g.data.name, desc: g.data.desc || '', emblem: g.data.emblem || '', capacity: g.data.capacity || 0, targetSize: g.data.targetSize || '', suggest: g.data.suggest || null } : null;
+  const group = g && g.data ? {
+    _id: g.data._id, name: g.data.name, desc: g.data.desc || '', emblem: g.data.emblem || '',
+    capacity: g.data.capacity || 0, targetSize: g.data.targetSize || '',
+    slogan: g.data.slogan || '', sloganImage: g.data.sloganImage || '',
+    suggest: g.data.suggest || null,
+  } : null;
   const raw = await getMemberListOfGroup(member.groupId);
   const members = await decorateMembers(raw);
   const kpiRange = await getKpiRange(member.groupId);
@@ -752,10 +761,7 @@ async function actionLeaderReviewApply(userId, data) {
     await saveLog({ type: 'apply', action: 'leader-reject', operatorId: userId, targetUserId: targetId, detail: String(data.note || '') });
     return ok({ status: 'rejected' });
   }
-  // 线下缴费后才能审批通过
-  if ((m.feeStatus || 'unpaid') !== 'paid') {
-    return fail('请先确认该成员已完成线下缴费，在成员列表切换为「已缴费」后再通过');
-  }
+  // 缴费不作为通过条件：是否缴费由队长线下收款后自行维护状态
   // 容量复核
   const g = await db.collection('winter_group').doc(m.groupId).get().catch(() => null);
   if (g && g.data && g.data.capacity) {
@@ -1106,6 +1112,7 @@ async function actionAdminOverview(userId) {
     groups.push({
       _id: g._id, name: g.name, desc: g.desc || '', emblem: g.emblem || '',
       capacity: g.capacity || 0, open: g.open !== false, sort: g.sort || 0,
+      slogan: g.slogan || '', sloganImage: g.sloganImage || '',
       memberCount: gm.length,
       leader: leader ? (await getUser(leader.userId) || {}).nickName || leader.nickName || '待任命' : '待任命',
       coach: coach ? (await getUser(coach.userId) || {}).nickName || coach.nickName || '待任命' : '待任命',
@@ -1134,8 +1141,8 @@ async function actionAdminOverview(userId) {
     weekIndex,
     counts: {
       total: members.length,
-      // 管理后台只处理队长任命；队员/教练入队由本组队长在「待审」里审
-      pending: pending.filter(m => m.role === 'leader').length,
+      // 管理后台处理：队长任命 + 无队长组的入队申请；其余由本组队长在「待审」里审
+      pending: pending.filter(m => m.role === 'leader' || m.applyReviewer === 'admin').length,
       approved: approved.length,
       quitSuggested: quitSuggested.length, pendingCheckins: pc.total || 0,
     },
@@ -1152,6 +1159,9 @@ async function actionAdminSaveGroup(userId, data) {
     name,
     desc: String(data.desc || '').trim(),
     emblem: String(data.emblem || '').trim(),
+    // 队伍宣言：20 字以内 + 一张配图（分享邀请卡使用）
+    slogan: String(data.slogan || '').trim().slice(0, 20),
+    sloganImage: String(data.sloganImage || '').trim(),
     capacity: toNum(data.capacity),
     open: data.open !== false,
     sort: toNum(data.sort),
@@ -1178,7 +1188,10 @@ async function actionAdminApplies(userId, data) {
   const r = await db.collection('winter_member').where({ status }).limit(200).get().catch(() => null);
   const list = (r && r.data) || [];
   // 队员/教练的入队申请由本组队长在「待审」页审批；管理组只处理队长任命
-  const scoped = status === 'pending' ? list.filter(m => m.role === 'leader') : list;
+  // 管理组处理：队长任命 + 没有队长的组的入队申请（applyReviewer=admin）
+  const scoped = status === 'pending'
+    ? list.filter(m => m.role === 'leader' || m.applyReviewer === 'admin')
+    : list;
   const out = [];
   for (const m of scoped) {
     const u = await getUser(m.userId);

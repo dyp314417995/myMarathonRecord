@@ -5,15 +5,19 @@
     <view class="hero">
       <text class="hero-title">{{group.emblem}} {{group.name}}</text>
       <text class="hero-sub">{{group.desc}}</text>
+      <image wx:if="{{sloganImage}}" class="hero-photo" src="{{sloganImage}}" mode="aspectFill" bindtap="onPreviewSlogan" />
+      <text class="hero-slogan" wx:if="{{group.slogan}}">“{{group.slogan}}”</text>
       <text class="hero-tip">{{weekText}} · 我的角色：{{me.roleText}}</text>
     </view>
+
+    <button class="btn btn-ghost share-btn" open-type="share">邀请好友加入本组</button>
 
     <view class="frozen-bar notice-bar" wx:if="{{frozen}}">{{frozenText}}</view>
 
     <!-- 队长：待审批入队申请 -->
     <view class="card" wx:if="{{isLeader && pendingApplies.length > 0}}">
       <text class="card-title">待审批入队（{{pendingApplies.length}} 人）</text>
-      <text class="card-sub">线下确认缴费并标记为「已缴费」后，才能点通过</text>
+      <text class="card-sub">缴费由你线下收款后自行标记，不阻塞审批</text>
       <view class="member-row" wx:for="{{pendingApplies}}" wx:key="userId">
         <view class="member-info">
           <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>

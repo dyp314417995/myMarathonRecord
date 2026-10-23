@@ -28,6 +28,7 @@
         wx:for="{{groups}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPickGroup">
         <view class="group-left">
           <text class="group-name">{{item.emblem}} {{item.name}}</text>
+          <text class="group-slogan" wx:if="{{item.slogan}}">“{{item.slogan}}”</text>
           <text class="group-desc">{{item.desc}}</text>
           <text class="group-meta" wx:if="{{item.suggest}}">参考 KPI：跑量 {{item.suggest.distance.min}}—{{item.suggest.distance.max}}km · 出勤 {{item.suggest.attendance.min}}—{{item.suggest.attendance.max}} 次（每次≥{{item.suggest.minDuration}}分钟）</text>
           <text class="group-meta">{{item.capacity ? (item.memberCount + '/' + item.capacity + ' 人') : ('已报名 ' + item.memberCount + ' 人')}} · 队长 {{item.leaders[0] || '待任命'}} · 教练 {{item.coaches[0] || '待任命'}}</text>

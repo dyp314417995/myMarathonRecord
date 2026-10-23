@@ -17,12 +17,22 @@ Page({
     roleDesc: ROLES[0].desc,
   },
 
-  async onLoad() {
+  async onLoad(options) {
     const userInfo = wx.getStorageSync('userInfo') || {};
     if (userInfo.nickName || userInfo.nickname) {
       this.setData({ nickName: userInfo.nickName || userInfo.nickname });
     }
     await this.loadGroups();
+    // 从分享邀请进来：自动选中被邀请的那个组
+    const gid = options && (options.gid || options.groupId);
+    if (gid) {
+      const g = this.data.groups.find(x => x._id === gid);
+      if (g && g.open !== false) {
+        this.applyGroup(g);
+        const hasLeader = !!(g.leaders && g.leaders.length);
+        if (!hasLeader) this.askTakeLeader(g);
+      }
+    }
   },
 
   async loadGroups() {
@@ -36,18 +46,46 @@ Page({
     this.setData({ loading: false, groups });
   },
 
+  // 选中某个组
+  applyGroup(g) {
+    this.setData({ groupId: g._id, groupName: g.name });
+  },
+
+  // 该组没有队长：建议第一个加入的人暂代队长
+  askTakeLeader(g) {
+    wx.showModal({
+      title: '暂无队长',
+      content: '该组还没有队长，你是第一个，暂代队长吧！\n队长经管理组任命后，即可在本组审批入队申请、查看本组打卡。\n（不同意则返回，可换个组看看）',
+      confirmText: '暂代队长',
+      cancelText: '不同意',
+      success: (res) => {
+        if (!res.confirm) {
+          // 不同意则返回：清除已选组，留在选择界面
+          this.setData({ groupId: '', groupName: '' });
+          return;
+        }
+        this.setData({
+          groupId: g._id, groupName: g.name,
+          role: 'leader', roleDesc: ROLES[1].desc,
+        });
+      },
+    });
+  },
+
   onPickGroup(e) {
     const id = e.currentTarget.dataset.id;
     const g = this.data.groups.find(x => x._id === id);
     if (!g || g.open === false) return;
-    // 没有队长的组暂不能加入队员/教练（队长需先由管理组任命）
-    if (!(g.leaders && g.leaders.length) && this.data.role !== 'leader') {
-      wx.showToast({ title: '该组暂无队长，需先申请队长并通过任命', icon: 'none' });
-    }
     if (g.capacity && g.memberCount >= g.capacity && !this.data.acceptAdjust) {
       wx.showToast({ title: '该组已满，可勾选接受调剂', icon: 'none' });
     }
-    this.setData({ groupId: id, groupName: g.name });
+    // 没有队长的组也开放加入，但要先提醒对方是否暂代队长
+    const hasLeader = !!(g.leaders && g.leaders.length);
+    if (!hasLeader && this.data.role !== 'leader') {
+      this.askTakeLeader(g);
+      return;
+    }
+    this.applyGroup(g);
   },
 
   onPickRole(e) {
@@ -83,11 +121,11 @@ Page({
     });
     this.setData({ submitting: false });
     if (!r.ok) return wx.showToast({ title: r.error || '提交失败', icon: 'none' });
-    // 全部走审核：队长由管理组任命；队员/教练由本组队长审批（须线下缴费后通过）
+    // 全部走审核：队长（含无队长组的首位加入者）由管理组任命；其余由本组队长审批
     const reviewer = r.reviewer === 'admin' ? '管理组审核任命' : '本组队长审核';
-    const tip = r.reviewer === 'admin'
+    const tip = d.role === 'leader'
       ? `你的队长申请已提交，等待${reviewer}`
-      : `你的入队申请已提交，等待${reviewer}；队长确认线下缴费后即可通过`;
+      : `你的入队申请已提交，等待${reviewer}`;
     wx.showModal({
       title: '提交成功',
       content: tip,

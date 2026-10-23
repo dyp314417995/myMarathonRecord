@@ -15,7 +15,7 @@ Page({
     applies: [], members: [], allGroups: [], checkins: [], finance: null,
     phases: PHASES,
     // 弹窗
-    showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', capacity: '', sort: '', open: true },
+    showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true },
     showTransfer: false, transferForm: { userId: '', newGroupId: '', reason: '', clearFail: true, effectiveDate: '' },
     showRemark: false, remarkForm: { userId: '', remark: '' },
     busy: false,
@@ -74,14 +74,20 @@ Page({
 
   // ===== 组别 =====
   onNewGroup() {
-    this.setData({ showGroup: true, groupForm: { id: '', name: '', desc: '', emblem: '', capacity: '', sort: '', open: true } });
+    this.setData({ showGroup: true, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true } });
   },
-  onEditGroup(e) {
+  async onEditGroup(e) {
     const g = this.data.groups.find(x => x._id === e.currentTarget.dataset.id);
     if (!g) return;
+    // cloud:// 不能直渲，转成 https 临时链接用于预览
+    const preview = g.sloganImage ? await w.toTempUrl(g.sloganImage) : '';
     this.setData({
       showGroup: true,
-      groupForm: { id: g._id, name: g.name, desc: g.desc, emblem: g.emblem, capacity: String(g.capacity || ''), sort: String(g.sort || ''), open: g.open },
+      groupForm: {
+        id: g._id, name: g.name, desc: g.desc, emblem: g.emblem,
+        slogan: g.slogan || '', sloganImage: g.sloganImage || '', sloganImagePreview: preview,
+        capacity: String(g.capacity || ''), sort: String(g.sort || ''), open: g.open,
+      },
     });
   },
   onCloseGroup() { this.setData({ showGroup: false }); },
@@ -90,12 +96,41 @@ Page({
     this.setData({ ['groupForm.' + f]: e.detail.value });
   },
   onGroupOpen(e) { this.setData({ 'groupForm.open': e.detail.value }); },
+
+  // 队伍照片：上传到云存储，拿到 fileID 后再换 https 链接预览
+  async onChooseGroupPhoto() {
+    wx.chooseMedia({
+      count: 1, mediaType: ['image'], sourceType: ['album', 'camera'],
+      success: async (res) => {
+        const f = res.tempFiles && res.tempFiles[0];
+        if (!f) return;
+        wx.showLoading({ title: '上传中' });
+        try {
+          const fileID = await w.uploadCheckinImage(f.tempFilePath);
+          const preview = await w.toTempUrl(fileID);
+          this.setData({ 'groupForm.sloganImage': fileID, 'groupForm.sloganImagePreview': preview });
+        } catch (err) {
+          wx.showToast({ title: '上传失败，请重试', icon: 'none' });
+        }
+        wx.hideLoading();
+      },
+    });
+  },
+  onRemoveGroupPhoto() {
+    this.setData({ 'groupForm.sloganImage': '', 'groupForm.sloganImagePreview': '' });
+  },
+  onPreviewGroupPhoto() {
+    const url = this.data.groupForm.sloganImagePreview;
+    if (url) wx.previewImage({ urls: [url] });
+  },
+
   async onSaveGroup() {
     const f = this.data.groupForm;
     if (!String(f.name || '').trim()) return wx.showToast({ title: '请填写组名', icon: 'none' });
     this.setData({ busy: true });
     const r = await w.api.adminSaveGroup({
       id: f.id, name: f.name, desc: f.desc, emblem: f.emblem,
+      slogan: f.slogan || '', sloganImage: f.sloganImage || '',
       capacity: Number(f.capacity) || 0, sort: Number(f.sort) || 0, open: f.open,
     });
     this.setData({ busy: false });

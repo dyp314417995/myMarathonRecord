@@ -41,6 +41,7 @@ page { background: #f5f6f7; }
 .group-item.disabled { opacity: 0.5; }
 .group-left { flex: 1; }
 .group-name { font-size: 30rpx; font-weight: 600; color: #222; }
+.group-slogan { font-size: 24rpx; color: #1aad19; margin-top: 4rpx; display: block; }
 .group-desc { font-size: 24rpx; color: #888; margin-top: 6rpx; display: block; }
 .group-meta { font-size: 22rpx; color: #aaa; margin-top: 8rpx; display: block; }
 .group-right { text-align: right; margin-left: 16rpx; }
