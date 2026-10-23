@@ -13,6 +13,8 @@ Page({
     loading: true, tab: 'overview',
     overview: null, cfg: null, counts: {}, groups: [], weekIndex: 0,
     applies: [], members: [], allGroups: [], checkins: [], finance: null,
+    // 成员分组查看：memberFilter 为空表示「全部」，此时按组分段展示
+    memberFilter: '', memberSections: [], filterChips: [], memberTotal: 0,
     phases: PHASES,
     // 弹窗
     showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true },
@@ -53,6 +55,15 @@ Page({
     const i = Number(e.currentTarget.dataset.i);
     if (k === 'applies' && this.data.applies[i]) this.setData({ [`applies[${i}].avatarUrl`]: '' });
     else if (k === 'members' && this.data.members[i]) this.setData({ [`members[${i}].avatarUrl`]: '' });
+    else if (k === 'memberSections') {
+      // 分组视图里是副本，通过 _idx 回写原始 members 后重建
+      const si = Number(e.currentTarget.dataset.si);
+      const sec = this.data.memberSections[si];
+      const m = sec && sec.members[i];
+      if (m && m._idx !== undefined) {
+        this.setData({ [`members[${m._idx}].avatarUrl`]: '' }, () => this.buildMemberSections());
+      }
+    }
   },
 
   async loadApplies() {
@@ -61,7 +72,51 @@ Page({
   },
   async loadMembers() {
     const r = await w.api.adminMembers({});
-    if (r.ok) this.setData({ members: await w.resolveAvatars(r.list || []), allGroups: r.groups });
+    if (!r.ok) return;
+    const members = await w.resolveAvatars(r.list || []);
+    this.setData({ members, allGroups: r.groups || [] }, () => this.buildMemberSections());
+  },
+
+  // 按组归类：全部视图按组分段（空组隐藏），选中某组时只看该组
+  buildMemberSections() {
+    const members = this.data.members || [];
+    const gs = this.data.allGroups || [];
+    const filter = this.data.memberFilter || '';
+    const bucket = {};
+    gs.forEach(g => { bucket[g._id] = []; });
+    const orphan = [];
+    members.forEach((m, i) => {
+      // 副本里带 _idx，头像加载失败时能回写原始 members
+      const item = Object.assign({ _idx: i }, m);
+      const box = m.groupId && bucket[m.groupId];
+      (box || orphan).push(item);
+    });
+
+    const sections = [];
+    gs.forEach(g => {
+      if (filter && filter !== g._id) return;
+      const arr = bucket[g._id];
+      if (!arr.length && filter !== g._id) return;
+      sections.push({ gid: g._id, gname: g.name, count: arr.length, members: arr });
+    });
+    if (!filter && orphan.length) {
+      sections.push({ gid: '__orphan', gname: '未分组 / 已退出', count: orphan.length, members: orphan });
+    }
+
+    const chips = [{ gid: '', name: '全部', count: members.length }];
+    gs.forEach(g => chips.push({ gid: g._id, name: g.name, count: (bucket[g._id] || []).length }));
+
+    this.setData({
+      memberSections: sections,
+      filterChips: chips,
+      memberTotal: filter ? (sections[0] ? sections[0].count : 0) : members.length,
+    });
+  },
+
+  onMemberFilter(e) {
+    const gid = e.currentTarget.dataset.gid || '';
+    if (gid === this.data.memberFilter) return;
+    this.setData({ memberFilter: gid }, () => this.buildMemberSections());
   },
   async loadCheckins() {
     const r = await w.api.adminCheckins({ status: 'pending' });

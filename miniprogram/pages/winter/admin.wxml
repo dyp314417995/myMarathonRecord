@@ -91,28 +91,42 @@
 
       <!-- 成员管理 -->
       <block wx:if="{{tab === 'members'}}">
-        <view class="card" wx:for="{{members}}" wx:key="_id">
-          <view class="member-row">
-            <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="members" data-i="{{index}}" />
-            <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
-            <view class="member-info">
-              <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
-              <text class="member-meta">{{item.groupName}} · {{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
-              <text class="member-meta" wx:if="{{item.continuousFailWeeks > 0}}">⚠️ 连续未完成 {{item.continuousFailWeeks}} 周</text>
-              <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
+        <!-- 分组筛选：全部 / 各组（带人数），点组名只看该组 -->
+        <scroll-view class="filter-row" scroll-x="true">
+          <text class="chip {{memberFilter === item.gid ? 'on' : ''}}"
+            wx:for="{{filterChips}}" wx:key="gid" data-gid="{{item.gid}}" bindtap="onMemberFilter">{{item.name}} {{item.count}}</text>
+        </scroll-view>
+
+        <block wx:for="{{memberSections}}" wx:key="gid" wx:for-item="sec" wx:for-index="si">
+          <view class="section-head">
+            <text class="section-name">{{sec.gname}}</text>
+            <text class="section-count">{{sec.count}} 人</text>
+          </view>
+          <view class="card" wx:for="{{sec.members}}" wx:key="_id" wx:for-item="item" wx:for-index="index">
+            <view class="member-row">
+              <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="memberSections" data-i="{{index}}" data-si="{{si}}" />
+              <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
+              <view class="member-info">
+                <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
+                <text class="member-meta" wx:if="{{memberFilter === ''}}">{{item.groupName}} · {{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
+                <text class="member-meta" wx:else>{{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
+                <text class="member-meta" wx:if="{{item.continuousFailWeeks > 0}}">⚠️ 连续未完成 {{item.continuousFailWeeks}} 周</text>
+                <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
+              </view>
+              <view class="member-right">
+                <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : '待缴费'}}</text>
+              </view>
             </view>
-            <view class="member-right">
-              <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : '待缴费'}}</text>
+            <view class="chip-row" style="margin-top:16rpx">
+              <text class="chip" data-id="{{item._id}}" bindtap="onOpenTransfer">调组</text>
+              <text class="chip" data-id="{{item._id}}" bindtap="onOpenRemark">伤病备注</text>
+              <text class="chip" wx:if="{{item.status === 'quit-suggested'}}" data-id="{{item._id}}" data-confirm="{{true}}" bindtap="onConfirmQuit">确认退出</text>
+              <text class="chip" wx:if="{{item.status === 'quit'}}" data-id="{{item._id}}" data-confirm="{{false}}" bindtap="onConfirmQuit">恢复成员</text>
             </view>
           </view>
-          <view class="chip-row" style="margin-top:16rpx">
-            <text class="chip" data-id="{{item._id}}" bindtap="onOpenTransfer">调组</text>
-            <text class="chip" data-id="{{item._id}}" bindtap="onOpenRemark">伤病备注</text>
-            <text class="chip" wx:if="{{item.status === 'quit-suggested'}}" data-id="{{item._id}}" data-confirm="{{true}}" bindtap="onConfirmQuit">确认退出</text>
-            <text class="chip" wx:if="{{item.status === 'quit'}}" data-id="{{item._id}}" data-confirm="{{false}}" bindtap="onConfirmQuit">恢复成员</text>
-          </view>
-        </view>
-        <view class="empty" wx:if="{{members.length === 0}}">暂无成员</view>
+          <view class="empty" wx:if="{{sec.count === 0}}" style="padding:24rpx">该组暂无成员</view>
+        </block>
+        <view class="empty" wx:if="{{memberSections.length === 0}}">暂无成员</view>
       </block>
 
       <!-- 抽查打卡 -->
