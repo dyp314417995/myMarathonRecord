@@ -15,9 +15,11 @@ Page({
     applies: [], members: [], allGroups: [], checkins: [], finance: null,
     // 成员分组查看：memberFilter 为空表示「全部」，此时按组分段展示
     memberFilter: '', memberSections: [], filterChips: [], memberTotal: 0,
+    // 组别里的队长/教练指派（成员主记录只有一条，兼任靠 winter_staff）
+    groupStaff: [], groupCandidates: [], staffPickIndex: 0, staffPickRole: 'leader',
     phases: PHASES,
     // 弹窗
-    showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true },
+    showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true, autoApprove: false },
     showTransfer: false, transferForm: { userId: '', newGroupId: '', reason: '', clearFail: true, effectiveDate: '' },
     showRemark: false, remarkForm: { userId: '', remark: '' },
     busy: false,
@@ -145,6 +147,41 @@ Page({
         autoApprove: !!g.autoApprove,
       },
     });
+    await this.loadGroupStaff(g._id);
+  },
+
+  // ===== 组别里的队长/教练指派（支持跨组兼任） =====
+  async loadGroupStaff(groupId) {
+    const r = await w.api.adminGroupStaff({ groupId });
+    if (!r.ok) return;
+    this.setData({
+      groupStaff: r.staff || [], groupCandidates: r.candidates || [],
+      staffPickIndex: 0, staffPickRole: 'leader',
+    });
+  },
+  onStaffPickRole(e) { this.setData({ staffPickRole: e.currentTarget.dataset.role }); },
+  onStaffPick(e) { this.setData({ staffPickIndex: Number(e.detail.value) || 0 }); },
+  async onAssignStaff() {
+    const role = this.data.staffPickRole;
+    const c = this.data.groupCandidates[this.data.staffPickIndex];
+    if (!c) return wx.showToast({ title: '请选择成员', icon: 'none' });
+    wx.showLoading({ title: '处理中' });
+    const r = await w.api.adminSetStaff({ groupId: this.data.groupForm.id, userId: c.userId, role });
+    wx.hideLoading();
+    if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+    wx.showToast({ title: '已指派', icon: 'success' });
+    await this.loadGroupStaff(this.data.groupForm.id);
+    this.load();
+  },
+  async onRemoveStaff(e) {
+    const { uid, role } = e.currentTarget.dataset;
+    wx.showLoading({ title: '处理中' });
+    const r = await w.api.adminSetStaff({ groupId: this.data.groupForm.id, userId: uid, role, remove: true });
+    wx.hideLoading();
+    if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+    wx.showToast({ title: '已撤销', icon: 'success' });
+    await this.loadGroupStaff(this.data.groupForm.id);
+    this.load();
   },
   onCloseGroup() { this.setData({ showGroup: false }); },
   onGroupInput(e) {

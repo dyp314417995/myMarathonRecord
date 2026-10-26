@@ -36,6 +36,8 @@ const api = {
   // 管理组后台
   adminOverview: () => call('adminOverview'),
   adminSaveGroup: (data) => call('adminSaveGroup', data),
+  adminGroupStaff: (data) => call('adminGroupStaff', data),
+  adminSetStaff: (data) => call('adminSetStaff', data),
   adminApplies: (data) => call('adminApplies', data),
   adminReviewApply: (data) => call('adminReviewApply', data),
   adminMembers: (data) => call('adminMembers', data),

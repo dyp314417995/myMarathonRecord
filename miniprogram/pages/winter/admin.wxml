@@ -197,6 +197,31 @@
       <view class="field"><text class="field-label">排序</text><input class="input" type="number" value="{{groupForm.sort}}" data-f="sort" bindinput="onGroupInput" /></view>
       <view class="field"><text class="row-label">{{groupForm.open ? '☑' : '☐'}} 开放报名</text><switch checked="{{groupForm.open}}" bindchange="onGroupOpen" color="#1aad19" /></view>
       <view class="field"><text class="row-label">{{groupForm.autoApprove ? '☑' : '☐'}} 打卡免审核（本组打卡自动通过，如 S 组）</text><switch checked="{{groupForm.autoApprove}}" bindchange="onGroupAutoApprove" color="#1aad19" /></view>
+
+      <!-- 队长 / 教练指派：候选人取全部在训成员，可跨组兼任 -->
+      <view class="field" wx:if="{{groupForm.id}}">
+        <text class="field-label">队长 / 教练</text>
+        <view class="member-row" wx:for="{{groupStaff}}" wx:key="userId">
+          <view class="member-info">
+            <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'leader' ? 'tag-green' : 'tag-blue'}}">{{item.roleText}}</text></text>
+            <text class="member-meta">{{item.sameGroup ? '本组成员担任' : ('来自 ' + item.ownGroupName + '，兼任')}}</text>
+          </view>
+          <view class="member-right">
+            <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-role="{{item.role}}" bindtap="onRemoveStaff">撤销</text>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{groupStaff.length === 0}}" style="padding:16rpx">尚未指派队长 / 教练</view>
+        <view class="chip-row" style="margin-top:16rpx">
+          <text class="chip {{staffPickRole === 'leader' ? 'on' : ''}}" data-role="leader" bindtap="onStaffPickRole">指派队长</text>
+          <text class="chip {{staffPickRole === 'coach' ? 'on' : ''}}" data-role="coach" bindtap="onStaffPickRole">指派教练</text>
+        </view>
+        <picker mode="selector" range="{{groupCandidates}}" range-key="nickName" value="{{staffPickIndex}}" bindchange="onStaffPick">
+          <view class="input" wx:if="{{groupCandidates.length}}">{{groupCandidates[staffPickIndex].nickName}} · {{groupCandidates[staffPickIndex].ownGroupName}}</view>
+          <view class="input" wx:else>暂无成员可选</view>
+        </picker>
+        <button class="btn btn-ghost" style="margin-top:16rpx" loading="{{busy}}" bindtap="onAssignStaff">确认指派{{staffPickRole === 'leader' ? '队长' : '教练'}}</button>
+        <text class="card-sub">成员来自全部在训名单，可指派到别的组；一个人可以同时担任多个组的队长或教练。</text>
+      </view>
       <view class="modal-btns">
         <button class="btn btn-gray" bindtap="onCloseGroup">取消</button>
         <button class="btn" loading="{{busy}}" bindtap="onSaveGroup">保存</button>

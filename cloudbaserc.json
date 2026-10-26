@@ -52,7 +52,7 @@
       "memorySize": 256
     },
     {
-      "name": "diag-migrate",
+      "name": "diag-staff",
       "timeout": 60,
       "runtime": "Nodejs16.13",
       "handler": "index.main",

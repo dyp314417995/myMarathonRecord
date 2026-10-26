@@ -45,7 +45,8 @@ function fail(msg, extra) { return { ok: false, error: msg, ...(extra || {}) }; 
 
 async function ensureCollections() {
   const names = ['winter_config', 'winter_group', 'winter_member', 'winter_kpi_range',
-    'winter_checkin', 'winter_weekly', 'winter_kpi', 'winter_schedule', 'winter_fine', 'winter_log'];
+    'winter_checkin', 'winter_weekly', 'winter_kpi', 'winter_schedule', 'winter_fine', 'winter_log',
+    'winter_staff'];
   for (const n of names) {
     try { await db.createCollection(n); } catch (e) { /* 已存在 */ }
   }
@@ -169,6 +170,64 @@ async function getMemberListOfGroup(groupId) {
   return (r && r.data) || [];
 }
 
+// ===== 职务：成员主记录 + 兼任指派 =====
+// winter_member 一人只有一条记录（主键就是 userId），天然只能属于一个组；
+// 身兼数职靠 winter_staff 额外指派：{ userId, groupId, role }，一个人可同时担任多组的队长/教练。
+
+// 某人在某组的职务（主记录优先，其次查兼任指派）
+async function roleInGroup(userId, groupId) {
+  if (!userId || !groupId) return '';
+  const m = await getMyMember(userId);
+  if (m && m.groupId === groupId && ['approved', 'quit-suggested'].includes(m.status)) return m.role;
+  const r = await db.collection('winter_staff').where({ userId, groupId }).limit(1).get().catch(() => null);
+  const d = r && r.data && r.data[0];
+  return d ? d.role : '';
+}
+
+// 某人担任这些职务的所有组别（含其主组）
+async function staffGroupIdsOf(userId, roles) {
+  const out = [];
+  if (!userId || !roles || !roles.length) return out;
+  const m = await getMyMember(userId);
+  if (m && m.groupId && roles.includes(m.role) && ['approved', 'quit-suggested'].includes(m.status)) {
+    out.push(m.groupId);
+  }
+  const r = await db.collection('winter_staff')
+    .where({ userId, role: _.in(roles) }).limit(50).get().catch(() => null);
+  for (const d of ((r && r.data) || [])) {
+    if (d.groupId && out.indexOf(d.groupId) < 0) out.push(d.groupId);
+  }
+  return out;
+}
+
+// 一组 userId → 昵称列表（优先用已查好的成员池，避免重复查库）
+async function namesOf(ids, memberPool) {
+  const arr = [];
+  for (const uid of (ids || [])) {
+    const inPool = (memberPool || []).find(m => m.userId === uid);
+    if (inPool) { arr.push(inPool.nickName || '未知'); continue; }
+    const u = await getUser(uid);
+    const m = await getMyMember(uid);
+    arr.push((u && (u.nickName || u.nickname)) || (m && m.nickName) || '未知');
+  }
+  return arr;
+}
+
+// 某组担任这些职务的所有人 userId（本组成员 + 兼任指派，去重）
+async function groupStaffUserIds(groupId, roles) {
+  const ids = [];
+  if (!groupId || !roles || !roles.length) return ids;
+  for (const m of await getMemberListOfGroup(groupId)) {
+    if (m.userId && roles.includes(m.role) && ids.indexOf(m.userId) < 0) ids.push(m.userId);
+  }
+  const r = await db.collection('winter_staff')
+    .where({ groupId, role: _.in(roles) }).limit(50).get().catch(() => null);
+  for (const d of ((r && r.data) || [])) {
+    if (d.userId && ids.indexOf(d.userId) < 0) ids.push(d.userId);
+  }
+  return ids;
+}
+
 // 组装成员展示信息（昵称/头像）
 async function decorateMembers(list) {
   const ids = [...new Set(list.map(m => m.userId).filter(Boolean))];
@@ -269,24 +328,27 @@ async function actionBootstrap(userId) {
     };
   }
 
-  if (member.role === 'leader' || member.role === 'coach') {
-    await autoApproveOverdue(member.groupId);
-    // 待审打卡角标：总数减去本组队长/教练（含自己）的打卡——他们免审，不进待审
-    const staffRes = await db.collection('winter_member').where({
-      groupId: member.groupId, role: _.in(['leader', 'coach']), status: 'approved',
-    }).limit(20).get().catch(() => null);
-    const staffIds = ((staffRes && staffRes.data) || []).map(x => x.userId).filter(Boolean);
-    const prAll = await db.collection('winter_checkin').where({
-      groupId: member.groupId, status: 'pending',
-    }).count().catch(() => ({ total: 0 }));
-    let staffPending = 0;
-    if (staffIds.length) {
-      const prStaff = await db.collection('winter_checkin').where({
-        groupId: member.groupId, status: 'pending', userId: _.in(staffIds),
+  // 在多个组兼任队长/教练时，角标统计所有任职组
+  const staffGroups = await staffGroupIdsOf(userId, ['leader', 'coach']);
+  if (staffGroups.length && member.status === 'approved') {
+    let pendingCount = 0;
+    for (const gid of staffGroups) {
+      await autoApproveOverdue(gid);
+      // 免审的队长/教练本人不计入待审
+      const st = await groupStaffUserIds(gid, ['leader', 'coach']);
+      const prAll = await db.collection('winter_checkin').where({
+        groupId: gid, status: 'pending',
       }).count().catch(() => ({ total: 0 }));
-      staffPending = prStaff.total || 0;
+      let staffPending = 0;
+      if (st.length) {
+        const prStaff = await db.collection('winter_checkin').where({
+          groupId: gid, status: 'pending', userId: _.in(st),
+        }).count().catch(() => ({ total: 0 }));
+        staffPending = prStaff.total || 0;
+      }
+      pendingCount += Math.max(0, (prAll.total || 0) - staffPending);
     }
-    result.pendingCount = Math.max(0, (prAll.total || 0) - staffPending);
+    result.pendingCount = pendingCount;
   }
   return ok(result);
 }
@@ -310,6 +372,16 @@ async function actionGetIntro() {
     const u = await getUser(m.userId);
     const name = (u && (u.nickName || u.nickname)) || m.nickName || '待任命';
     staffMap[m.groupId][m.role === 'leader' ? 'leader' : 'coach'].push(name);
+  }
+  // 兼任指派：同一人可以在多个组担任队长/教练
+  const extraRes = await db.collection('winter_staff').limit(200).get().catch(() => null);
+  for (const d of ((extraRes && extraRes.data) || [])) {
+    if (!staffMap[d.groupId]) staffMap[d.groupId] = { leader: [], coach: [] };
+    const u = await getUser(d.userId);
+    const mm = await getMyMember(d.userId);
+    const name = (u && (u.nickName || u.nickname)) || (mm && mm.nickName) || '待任命';
+    const arr = staffMap[d.groupId][d.role === 'leader' ? 'leader' : 'coach'];
+    if (arr.indexOf(name) < 0) arr.push(name);
   }
   return ok({
     cfg: {
@@ -470,7 +542,19 @@ async function actionGetMyGroup(userId) {
     suggest: g.data.suggest || null,
   } : null;
   const raw = await getMemberListOfGroup(member.groupId);
-  const members = await decorateMembers(raw);
+  // 兼任本组队长/教练的人，成员主记录在他自己的组里，这里补进名单一起展示
+  const extraIds = await groupStaffUserIds(member.groupId, ['leader', 'coach']);
+  const inGroup = new Set(raw.map(m => m.userId));
+  const extraRaw = [];
+  for (const uid of extraIds) {
+    if (inGroup.has(uid)) continue;
+    const m = await getMyMember(uid);
+    if (!m || !['approved', 'quit-suggested'].includes(m.status)) continue;
+    extraRaw.push(Object.assign({}, m, { role: (await roleInGroup(uid, member.groupId)) || m.role }));
+  }
+  const members = await decorateMembers(raw.concat(extraRaw));
+  // 本人可能是在本组兼任队长/教练，权限按本组职务算
+  const myRoleHere = (await roleInGroup(userId, member.groupId)) || member.role;
   const kpiRange = await getKpiRange(member.groupId);
   const cfg = await getConfig();
   const weekIndex = calcWeekIndex(cfg);
@@ -499,7 +583,7 @@ async function actionGetMyGroup(userId) {
     }),
     kpiRange,
     me: {
-      role: member.role, roleText: ROLE_TEXT[member.role] || '',
+      role: myRoleHere, roleText: ROLE_TEXT[myRoleHere] || '',
       kpiType: member.kpiType || '', kpiValue: member.kpiValue || 0,
       kpiWeek: member.kpiWeek || 0,
       continuousFailWeeks: member.continuousFailWeeks || 0,
@@ -762,13 +846,19 @@ async function actionGroupCheckins(userId, data) {
 async function actionLeaderApplies(userId) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
-  if (member.role !== 'leader') return fail('仅队长可审核入队申请');
   if (member.status !== 'approved') return fail('你尚未通过任命');
+  // 同时在多个组担任队长时（兼任指派），把所有任职组的申请一并拉出来
+  const gids = await staffGroupIdsOf(userId, ['leader']);
+  if (!gids.length) return fail('仅队长可审核入队申请');
+  const gRes = await db.collection('winter_group').limit(50).get().catch(() => null);
+  const gName = {};
+  for (const g of ((gRes && gRes.data) || [])) gName[g._id] = g.name;
   const r = await db.collection('winter_member')
-    .where({ groupId: member.groupId, status: 'pending', role: _.in(['member', 'coach']) })
+    .where({ groupId: _.in(gids), status: 'pending', role: _.in(['member', 'coach']) })
     .limit(100).get().catch(() => null);
   const list = ((r && r.data) || []).map(m => ({
     _id: m._id, userId: m.userId, nickName: m.nickName,
+    groupId: m.groupId, groupName: gName[m.groupId] || '',
     role: m.role, roleText: ROLE_TEXT[m.role] || '',
     recentResult: m.recentResult || '', target: m.target || '',
     reason: m.reason || '', feeStatus: m.feeStatus || 'unpaid',
@@ -781,14 +871,16 @@ async function actionLeaderApplies(userId) {
 async function actionLeaderReviewApply(userId, data) {
   const me = await getMyMember(userId);
   if (!me) return fail('尚未报名');
-  if (me.role !== 'leader' || me.status !== 'approved') return fail('仅本组队长可审批');
+  if (me.status !== 'approved') return fail('你尚未通过任命');
+  const myGroups = await staffGroupIdsOf(userId, ['leader']);
+  if (!myGroups.length) return fail('仅队长可审批');
   const targetId = String(data.userId || data.id || '');
   const pass = data.pass === true || String(data.pass) === 'true';
   if (!targetId) return fail('缺少成员');
   const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
   if (!t || !t.data) return fail('报名记录不存在');
   const m = t.data;
-  if (m.groupId !== me.groupId) return fail('只能审批本组申请');
+  if (myGroups.indexOf(m.groupId) < 0) return fail('只能审批你担任队长的组');
   if (m.status !== 'pending') return fail('该申请已处理');
 
   if (!pass) {
@@ -830,8 +922,10 @@ async function actionSetFeeStatus(userId, data) {
   const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
   if (!t || !t.data) return fail('成员不存在');
   if (!isAdmin) {
-    if (!me || me.role !== 'leader' || me.status !== 'approved') return fail('仅队长可修改缴费状态');
-    if (t.data.groupId !== me.groupId) return fail('只能修改本组成员');
+    if (!me || me.status !== 'approved') return fail('仅队长可修改缴费状态');
+    const myGroups = await staffGroupIdsOf(userId, ['leader']);
+    if (!myGroups.length) return fail('仅队长可修改缴费状态');
+    if (myGroups.indexOf(t.data.groupId) < 0) return fail('只能修改你担任队长的组');
   }
   await db.collection('winter_member').doc(targetId).update({
     data: { feeStatus, feeTime: feeStatus === 'paid' ? new Date() : null, updateTime: new Date() },
@@ -885,19 +979,24 @@ async function actionTransferRole(userId, data) {
 async function actionPendingReview(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
-  if (!['leader', 'coach'].includes(member.role)) return fail('仅队长/教练可审核');
-  await autoApproveOverdue(member.groupId);
+  if (member.status !== 'approved') return fail('尚未通过任命');
+  // 在多个组兼任队长/教练时，所有任职组的待审打卡都要能看到
+  const gids = await staffGroupIdsOf(userId, ['leader', 'coach']);
+  if (!gids.length) return fail('仅队长/教练可审核');
+  for (const gid of gids) await autoApproveOverdue(gid);
 
-  // 本组队长/教练（他们的打卡不需要任何人审核）
-  const staffRes = await db.collection('winter_member').where({
-    groupId: member.groupId, role: _.in(['leader', 'coach']), status: 'approved',
-  }).limit(20).get().catch(() => null);
-  const staffIds = ((staffRes && staffRes.data) || []).map(x => x.userId).filter(Boolean);
+  // 这些组的队长/教练（他们的打卡不需要任何人审核）
+  const staffIds = [];
+  for (const gid of gids) {
+    for (const id of await groupStaffUserIds(gid, ['leader', 'coach'])) {
+      if (staffIds.indexOf(id) < 0) staffIds.push(id);
+    }
+  }
 
   // 历史数据补正：免审改版前提交的队长/教练打卡仍是 pending，直接置为自动通过
   if (staffIds.length) {
     const fixRes = await db.collection('winter_checkin').where({
-      groupId: member.groupId, status: 'pending', userId: _.in(staffIds),
+      groupId: _.in(gids), status: 'pending', userId: _.in(staffIds),
     }).limit(200).get().catch(() => null);
     for (const c of ((fixRes && fixRes.data) || [])) {
       await db.collection('winter_checkin').doc(c._id).update({
@@ -911,9 +1010,9 @@ async function actionPendingReview(userId, data) {
 
   const staffSet = new Set(staffIds);
   const r = await db.collection('winter_checkin').where({
-    groupId: member.groupId, status: 'pending',
+    groupId: _.in(gids), status: 'pending',
   }).orderBy('date', 'desc').limit(100).get().catch(() => null);
-  // 只留队员的打卡：排除自己与本组队长/教练
+  // 只留队员的打卡：排除自己与这些组的队长/教练
   const list = ((r && r.data) || []).filter(c => c.userId !== userId && !staffSet.has(c.userId));
   const decorated = [];
   for (const c of list) {
@@ -932,7 +1031,9 @@ async function actionReviewCheckin(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   const isAdmin = await isSuperAdmin(userId);
-  if (!['leader', 'coach'].includes(member.role) && !isAdmin) return fail('无审核权限');
+  // 权限按「本组职务」算：支持在多个组兼任队长/教练
+  const myGroups = await staffGroupIdsOf(userId, ['leader', 'coach']);
+  if (!myGroups.length && !isAdmin) return fail('无审核权限');
   const id = String(data.id || '');
   const pass = data.pass === true || String(data.pass) === 'true';
   const note = String(data.note || '').trim();
@@ -942,11 +1043,15 @@ async function actionReviewCheckin(userId, data) {
   if (!cRes || !cRes.data) return fail('打卡记录不存在');
   const c = cRes.data;
   if (c.userId === userId) return fail('不能审核自己的打卡');
-  if (!isAdmin && (!member.groupId || c.groupId !== member.groupId)) return fail('只能审核本组打卡');
+  if (!isAdmin && myGroups.indexOf(c.groupId) < 0) return fail('只能审核你任职的组的打卡');
   // 互审：队长只能审队员+教练，教练只能审队员+队长；管理组不受限
-  if (!isAdmin && ['leader', 'coach'].includes(member.role)) {
-    const target = await getMyMember(c.userId);
-    if (target && target.role === member.role) return fail('队长/教练需互审，不可审同角色');
+  if (!isAdmin) {
+    const myRoleHere = await roleInGroup(userId, c.groupId);
+    if (['leader', 'coach'].includes(myRoleHere)) {
+      const target = await getMyMember(c.userId);
+      const targetRole = await roleInGroup(c.userId, c.groupId);
+      if ((targetRole || (target && target.role)) === myRoleHere) return fail('队长/教练需互审，不可审同角色');
+    }
   }
   await db.collection('winter_checkin').doc(id).update({
     data: {
@@ -1167,17 +1272,20 @@ async function actionAdminOverview(userId) {
   const groups = [];
   for (const g of ((gRes && gRes.data) || [])) {
     const gm = members.filter(m => m.groupId === g._id && ['approved', 'quit-suggested'].includes(m.status));
-    const leader = gm.find(m => m.role === 'leader');
-    const coach = gm.find(m => m.role === 'coach');
+    // 含兼任指派的人（成员主记录可能在别的组）
+    const leaderIds = await groupStaffUserIds(g._id, ['leader']);
+    const coachIds = await groupStaffUserIds(g._id, ['coach']);
+    const leaderNames = await namesOf(leaderIds, members);
+    const coachNames = await namesOf(coachIds, members);
     const range = await getKpiRange(g._id);
     groups.push({
       _id: g._id, name: g.name, desc: g.desc || '', emblem: g.emblem || '',
       capacity: g.capacity || 0, open: g.open !== false, sort: g.sort || 0,
       slogan: g.slogan || '', sloganImage: g.sloganImage || '',
       memberCount: gm.length,
-      leader: leader ? (await getUser(leader.userId) || {}).nickName || leader.nickName || '待任命' : '待任命',
-      coach: coach ? (await getUser(coach.userId) || {}).nickName || coach.nickName || '待任命' : '待任命',
-      ready: !!leader && !!coach,
+      leader: leaderNames.length ? leaderNames.join('、') : '待任命',
+      coach: coachNames.length ? coachNames.join('、') : '待任命',
+      ready: leaderIds.length > 0 && coachIds.length > 0,
       kpiRange: range ? `${range.type === 'distance' ? '跑量' : '出勤'} ${range.min}~${range.max}` : '未设定',
     });
   }
@@ -1242,6 +1350,103 @@ async function actionAdminSaveGroup(userId, data) {
   const r = await db.collection('winter_group').add({ data: payload });
   await saveLog({ type: 'group', action: 'create', operatorId: userId, groupId: r._id, detail: name });
   return ok({ id: r._id });
+}
+
+// 后台：某组的队长/教练名单 + 可指派候选人
+// 候选人取全部在训成员，因此可以跨组指派，支持一个人兼任多组队长/教练
+async function actionAdminGroupStaff(userId, data) {
+  await requireAdmin(userId);
+  const groupId = String(data.groupId || '');
+  if (!groupId) return fail('缺少组别');
+
+  const gRes = await db.collection('winter_group').limit(50).get().catch(() => null);
+  const gName = {};
+  for (const g of ((gRes && gRes.data) || [])) gName[g._id] = g.name;
+
+  const out = [];
+  for (const role of ['leader', 'coach']) {
+    const ids = await groupStaffUserIds(groupId, [role]);
+    for (const uid of ids) out.push(await staffBrief(uid, groupId, role, gName, true));
+  }
+
+  // 候选人：在训成员（含其他组的，用于兼任）
+  const mr = await db.collection('winter_member')
+    .where({ status: _.in(['approved', 'quit-suggested']) }).limit(500).get().catch(() => null);
+  const candidates = [];
+  for (const m of ((mr && mr.data) || [])) {
+    if (!m.userId) continue;
+    const u = await getUser(m.userId);
+    candidates.push({
+      userId: m.userId,
+      nickName: (u && (u.nickName || u.nickname)) || m.nickName || '未知',
+      ownGroupName: gName[m.groupId] || '',
+      ownRole: m.role, ownRoleText: ROLE_TEXT[m.role] || '',
+      role: await roleInGroup(m.userId, groupId),   // 已在本组担任的职务
+    });
+  }
+  return ok({ groupId, groupName: gName[groupId] || '', staff: out, candidates });
+}
+
+async function staffBrief(uid, groupId, role, gName, withLog) {
+  const u = await getUser(uid);
+  const m = await getMyMember(uid);
+  return {
+    userId: uid, role, roleText: ROLE_TEXT[role] || '',
+    nickName: (u && (u.nickName || u.nickname)) || (m && m.nickName) || '未知',
+    ownGroupName: gName[(m && m.groupId) || ''] || '',
+    sameGroup: !!m && m.groupId === groupId,   // true=本组成员升任；false=跨组兼任
+  };
+}
+
+// 后台：指派 / 撤销某人在某组的队长或教练职务
+async function actionAdminSetStaff(userId, data) {
+  await requireAdmin(userId);
+  const groupId = String(data.groupId || '');
+  const targetId = String(data.userId || '');
+  const role = String(data.role || '');
+  const remove = data.remove === true;
+  if (!groupId || !targetId || !['leader', 'coach'].includes(role)) return fail('参数不完整');
+
+  const t = await getMyMember(targetId);
+  if (!t) return fail('该成员记录不存在');
+  const exist = await db.collection('winter_staff')
+    .where({ userId: targetId, groupId }).limit(5).get().catch(() => null);
+  const cur = (exist && exist.data) || [];
+
+  if (remove) {
+    for (const d of cur) await db.collection('winter_staff').doc(d._id).remove().catch(() => {});
+    // 主记录就在本组且正是这个职务：同步降为队员，避免主记录与指派不一致
+    if (t.groupId === groupId && t.role === role) {
+      await db.collection('winter_member').doc(targetId)
+        .update({ data: { role: 'member', updateTime: new Date() } }).catch(() => {});
+    }
+    await saveLog({ type: 'staff', action: 'remove', operatorId: userId, targetUserId: targetId, groupId, detail: role });
+    return ok({ removed: true });
+  }
+
+  // 教练唯一：同一组已有教练（主记录或指派）时先清掉旧的
+  if (role === 'coach') {
+    const old = await groupStaffUserIds(groupId, ['coach']);
+    for (const uid of old) {
+      if (uid === targetId) continue;
+      const r = await db.collection('winter_staff').where({ userId: uid, groupId }).limit(5).get().catch(() => null);
+      for (const d of ((r && r.data) || [])) await db.collection('winter_staff').doc(d._id).remove().catch(() => {});
+      const om = await getMyMember(uid);
+      if (om && om.groupId === groupId && om.role === 'coach') {
+        await db.collection('winter_member').doc(uid).update({ data: { role: 'member', updateTime: new Date() } }).catch(() => {});
+      }
+    }
+  }
+  if (cur.length) {
+    await db.collection('winter_staff').doc(cur[0]._id)
+      .update({ data: { role, updateTime: new Date() } }).catch(() => {});
+  } else {
+    await db.collection('winter_staff').add({
+      data: { userId: targetId, groupId, role, createTime: new Date(), updateTime: new Date() },
+    }).catch(() => {});
+  }
+  await saveLog({ type: 'staff', action: 'set', operatorId: userId, targetUserId: targetId, groupId, detail: role });
+  return ok({ ok: true, role });
 }
 
 // 报名审核列表
@@ -1671,6 +1876,8 @@ exports.main = async (event = {}) => {
       // ---- 管理组后台 ----
       case 'adminOverview': return await actionAdminOverview(userId);
       case 'adminSaveGroup': return await actionAdminSaveGroup(userId, data);
+      case 'adminGroupStaff': return await actionAdminGroupStaff(userId, data);
+      case 'adminSetStaff': return await actionAdminSetStaff(userId, data);
       case 'adminApplies': return await actionAdminApplies(userId, data);
       case 'adminReviewApply': return await actionAdminReviewApply(userId, data);
       case 'adminMembers': return await actionAdminMembers(userId, data);
