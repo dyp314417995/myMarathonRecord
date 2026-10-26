@@ -50,6 +50,13 @@
       "runtime": "Nodejs16.13",
       "handler": "index.main",
       "memorySize": 256
+    },
+    {
+      "name": "diag-migrate",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
     }
   ]
 }

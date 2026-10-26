@@ -114,7 +114,7 @@
                 <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
               </view>
               <view class="member-right">
-                <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : '待缴费'}}</text>
+                <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '待缴费')}}</text>
               </view>
             </view>
             <view class="chip-row" style="margin-top:16rpx">
@@ -196,6 +196,7 @@
       <view class="field"><text class="field-label">人数上限（0 为不限）</text><input class="input" type="number" value="{{groupForm.capacity}}" data-f="capacity" bindinput="onGroupInput" /></view>
       <view class="field"><text class="field-label">排序</text><input class="input" type="number" value="{{groupForm.sort}}" data-f="sort" bindinput="onGroupInput" /></view>
       <view class="field"><text class="row-label">{{groupForm.open ? '☑' : '☐'}} 开放报名</text><switch checked="{{groupForm.open}}" bindchange="onGroupOpen" color="#1aad19" /></view>
+      <view class="field"><text class="row-label">{{groupForm.autoApprove ? '☑' : '☐'}} 打卡免审核（本组打卡自动通过，如 S 组）</text><switch checked="{{groupForm.autoApprove}}" bindchange="onGroupAutoApprove" color="#1aad19" /></view>
       <view class="modal-btns">
         <button class="btn btn-gray" bindtap="onCloseGroup">取消</button>
         <button class="btn" loading="{{busy}}" bindtap="onSaveGroup">保存</button>

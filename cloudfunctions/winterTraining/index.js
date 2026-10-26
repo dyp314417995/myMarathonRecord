@@ -12,6 +12,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const CONFIG_ID = 'config';
 
 const ROLE_TEXT = { member: '队员', leader: '队长', coach: '教练' };
+// 缴费状态三态：paid 已缴费 / unpaid 未缴费 / free 免费（无需缴费）
+const FEE_STATUS_SET = ['paid', 'unpaid', 'free'];
 const APPLY_STATUS_TEXT = { pending: '待审核', approved: '已通过', rejected: '已驳回', 'quit-suggested': '建议退出', quit: '已退出' };
 const FINE_TEXT = { due: '应发', paid: '已发', unpaid: '未发' };
 
@@ -104,12 +106,13 @@ async function isSuperAdmin(userId) {
   return !!(u && u.role === 'super_admin');
 }
 
-// 当前周次下标（1 起算），未到开营周返回 0（前端据此显示「试运行」，不显示负数周）
+// 周次：以开营周一为第 1 周，按自然周对齐。
+// 开营前为 0 或负数（试运行周）——保留真实偏移，这样每个周一都会自然 +1，
+// KPI 按周解锁、打卡按周归组才不会把相邻两周混在一起。
 function calcWeekIndex(cfg) {
   if (!cfg.startMonday) return 0;
   const curMonday = mondayOf(todayStr());
-  const idx = Math.floor(diffDays(curMonday, cfg.startMonday) / 7) + 1;
-  return idx < 1 ? 0 : idx;
+  return Math.floor(diffDays(curMonday, cfg.startMonday) / 7) + 1;
 }
 function isHolidayWeek(cfg, weekIndex) {
   return (cfg.holidayWeeks || []).indexOf(weekIndex) >= 0;
@@ -646,6 +649,11 @@ async function actionDoCheckin(userId, data) {
   if (!member) return fail('尚未报名');
   if (member.status !== 'approved' && member.status !== 'quit-suggested') return fail('报名未通过');
   const range = await getKpiRange(member.groupId);
+  // 本组是否开启打卡免审核（例如 S 组，后台组别里可配）
+  const grpDoc = member.groupId
+    ? await db.collection('winter_group').doc(member.groupId).get().catch(() => null)
+    : null;
+  const groupAutoApprove = !!(grpDoc && grpDoc.data && grpDoc.data.autoApprove);
   // 周 KPI：本周还没目标的自动继承上周目标，没有历史才要求先填
   const weekKpi = await ensureWeekKpi(member, cfg, range);
   if (!weekKpi) return fail('请先填报本周 KPI');
@@ -676,9 +684,10 @@ async function actionDoCheckin(userId, data) {
 
   const exist = await db.collection('winter_checkin').where({ userId, date }).limit(1).get().catch(() => null);
   const weekIndexRaw = Math.floor(diffDays(mondayOf(date), cfg.startMonday) / 7) + 1;
-  // 开营前（11/1—11/15 试运行）允许打卡练手，记为第 0 周，不参与考核与周统计
+  // 开营前（11/1—11/15 试运行）允许打卡练手；此时 weekIndex 为 0 或负数，
+  // 与 calcWeekIndex 保持同一口径，周一自动换周，不会和上周混在一起。
   if (weekIndexRaw < 1 && cfg.phase !== 'trial') return fail('不在冬训周期内');
-  const weekIndex = weekIndexRaw < 1 ? 0 : weekIndexRaw;
+  const weekIndex = weekIndexRaw;
 
   const payload = {
     userId, groupId: member.groupId, date, weekIndex,
@@ -688,11 +697,12 @@ async function actionDoCheckin(userId, data) {
     updateTime: new Date(),
   };
   // 队长 / 教练的打卡无需他人审核，直接通过（他们只负责审队员）
+  // 另外：后台给某个组开了「打卡免审核」时（如 S 组），全组成员都自动通过
   const selfPass = member.role === 'leader' || member.role === 'coach';
-  if (selfPass) {
+  if (selfPass || groupAutoApprove) {
     payload.status = 'approved';
     payload.reviewerId = 'system';
-    payload.reviewNote = '队长/教练打卡自动通过';
+    payload.reviewNote = selfPass ? '队长/教练打卡自动通过' : '本组打卡免审核，自动通过';
     payload.reviewTime = new Date();
     payload.autoApproved = true;
   }
@@ -813,7 +823,9 @@ async function actionSetFeeStatus(userId, data) {
   const isAdmin = await isSuperAdmin(userId);
   if (!me && !isAdmin) return fail('无权操作');
   const targetId = String(data.userId || '');
-  const feeStatus = String(data.feeStatus || '') === 'paid' ? 'paid' : 'unpaid';
+  // 三态：paid 已缴费 / unpaid 未缴费 / free 免费（无需交费）
+  const asked = String(data.feeStatus || '');
+  const feeStatus = FEE_STATUS_SET.includes(asked) ? asked : 'unpaid';
   if (!targetId) return fail('缺少成员');
   const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
   if (!t || !t.data) return fail('成员不存在');
@@ -826,6 +838,24 @@ async function actionSetFeeStatus(userId, data) {
   });
   await saveLog({ type: 'fee', action: feeStatus, operatorId: userId, targetUserId: targetId });
   return ok({ feeStatus });
+}
+
+// 队长/教练：编辑本组的宣言与照片
+// 管理后台只有超管能进，队长平时进不去；队伍氛围相关的东西还是交给队长自己维护
+async function actionLeaderSaveGroup(userId, data) {
+  const me = await getMyMember(userId);
+  if (!me) return fail('尚未报名');
+  if (!['leader', 'coach'].includes(me.role)) return fail('仅队长/教练可编辑队伍信息');
+  if (me.status !== 'approved') return fail('报名未通过');
+  if (!me.groupId) return fail('尚未分组');
+  const update = {};
+  if (data.slogan !== undefined) update.slogan = String(data.slogan || '').trim().slice(0, 20);
+  if (data.sloganImage !== undefined) update.sloganImage = String(data.sloganImage || '').trim();
+  if (!Object.keys(update).length) return fail('没有要保存的内容');
+  update.updateTime = new Date();
+  await db.collection('winter_group').doc(me.groupId).update({ data: update });
+  await saveLog({ type: 'group', action: 'leader-save', operatorId: userId, groupId: me.groupId, detail: update.slogan || '' });
+  return ok(update);
 }
 
 // 角色转让：队长/教练把角色交给本组队员，无需审批
@@ -1193,6 +1223,8 @@ async function actionAdminSaveGroup(userId, data) {
     // 队伍宣言：20 字以内 + 一张配图（分享邀请卡使用）
     slogan: String(data.slogan || '').trim().slice(0, 20),
     sloganImage: String(data.sloganImage || '').trim(),
+    // 打卡免审核：开启后本组成员打卡无需审批，直接通过（如 S 组）
+    autoApprove: data.autoApprove === true,
     capacity: toNum(data.capacity),
     open: data.open !== false,
     sort: toNum(data.sort),
@@ -1555,15 +1587,19 @@ async function actionAdminFinance(userId, data) {
   const cfg = await getConfig();
   const members = await db.collection('winter_member').where({ status: _.in(['approved', 'quit-suggested']) }).limit(500).get().catch(() => null);
   const list = (members && members.data) || [];
-  const paid = list.filter(m => m.feeStatus === 'paid');
-  const feeTotal = list.length * (toNum(cfg.fee.entry) + toNum(cfg.fee.coach) + toNum(cfg.fee.pool));
-  const poolTotal = list.length * toNum(cfg.fee.pool);
+  // 免费（free）的人不产生费用，不计入应收与奖池合计
+  const paying = list.filter(m => m.feeStatus !== 'free');
+  const paid = paying.filter(m => m.feeStatus === 'paid');
+  const perFee = toNum(cfg.fee.entry) + toNum(cfg.fee.coach) + toNum(cfg.fee.pool);
+  const feeTotal = paying.length * perFee;
+  const poolTotal = paying.length * toNum(cfg.fee.pool);
   const fines = await db.collection('winter_fine').limit(500).get().catch(() => null);
   const fineList = (fines && fines.data) || [];
   const fineDue = fineList.filter(f => f.status === 'due').reduce((s, f) => s + toNum(f.amount), 0);
   const finePaid = fineList.filter(f => f.status === 'paid').reduce((s, f) => s + toNum(f.amount), 0);
   return ok({
     fee: cfg.fee, memberCount: list.length, paidCount: paid.length,
+    freeCount: list.length - paying.length,
     feeTotal, poolTotal,
     fineDue, finePaid, fineList: fineList.map(f => ({ ...f, statusText: FINE_TEXT[f.status] || f.status })),
   });
@@ -1622,6 +1658,7 @@ exports.main = async (event = {}) => {
     case 'leaderApplies': return await actionLeaderApplies(userId);
     case 'leaderReviewApply': return await actionLeaderReviewApply(userId, data);
     case 'setFeeStatus': return await actionSetFeeStatus(userId, data);
+    case 'leaderSaveGroup': return await actionLeaderSaveGroup(userId, data);
     case 'transferRole': return await actionTransferRole(userId, data);
       case 'pendingReview': return await actionPendingReview(userId, data);
       case 'reviewCheckin': return await actionReviewCheckin(userId, data);

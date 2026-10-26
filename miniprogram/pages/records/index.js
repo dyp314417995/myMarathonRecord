@@ -69,7 +69,8 @@ Page({
     const cacheKey = 'records_' + userId;
     try {
       const { data } = await cache.load(cacheKey, async () => {
-        const res = await db.collection('race_records').where({ userId }).orderBy('date', 'desc').get();
+        // 按比赛时间正序：越早的比赛排越靠上（不看录入先后）
+        const res = await db.collection('race_records').where({ userId }).orderBy('date', 'asc').get();
         const records = res.data.map(r => ({ ...r, imgUrls: [] }));
         // 转换图片
         const allCloudIds = records.reduce((arr, r) => arr.concat(r.images || []), []);

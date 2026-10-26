@@ -8,6 +8,7 @@
       <image wx:if="{{sloganImage}}" class="hero-photo" src="{{sloganImage}}" mode="aspectFill" bindtap="onPreviewSlogan" />
       <text class="hero-slogan" wx:if="{{group.slogan}}">“{{group.slogan}}”</text>
       <text class="hero-tip">{{weekText}} · 我的角色：{{me.roleText}}</text>
+      <text class="hero-edit" wx:if="{{isBoss}}" bindtap="onEditGroupInfo">✏️ 编辑宣言 / 照片</text>
     </view>
 
     <button class="btn btn-ghost share-btn" open-type="share">邀请好友加入本组</button>
@@ -25,11 +26,11 @@
           <text class="member-meta" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
           <text class="member-meta">
             缴费：
-            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}">{{item.feeStatus === 'paid' ? '已缴费' : '未缴费'}}</text>
+            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
           </text>
         </view>
         <view class="member-right">
-          <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改为未缴' : '标记已缴'}}</text>
+          <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
           <view class="mini-btn-row">
             <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onLeaderReview">驳回</text>
             <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onLeaderReview">通过</text>
@@ -80,11 +81,11 @@
         <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
         <view class="member-info">
           <text class="member-name">{{item.nickName}}
-            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}">{{item.feeStatus === 'paid' ? '已缴费' : '未缴费'}}</text>
+            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
           </text>
           <text class="member-meta">KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{item.remark ? ' · ' + item.remark : ''}}</text>
           <view class="mini-btn-row" wx:if="{{isLeader || isBoss}}">
-            <text wx:if="{{isLeader}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改为未缴' : '标记已缴'}}</text>
+            <text wx:if="{{isLeader}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
             <text wx:if="{{isBoss}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-nick="{{item.nickName}}" bindtap="onTransferRole">转让{{me.roleText}}</text>
           </view>
         </view>
@@ -103,4 +104,29 @@
       <text class="quit-tip">退出后可重新报名加入其他组；打卡记录保留，KPI 按新组重新填报</text>
     </view>
   </block>
+
+  <!-- 队长/教练：编辑本组宣言与照片 -->
+  <view class="modal-mask" wx:if="{{showGroupEdit}}">
+    <view class="modal-box">
+      <text class="modal-title">编辑队伍宣言 / 照片</text>
+      <view class="field">
+        <text class="field-label">宣言口号（20 字以内）</text>
+        <input class="input" value="{{groupEdit.slogan}}" data-f="slogan" bindinput="onGroupEditInput" maxlength="20" placeholder="写一句给全队打气的话" />
+      </view>
+      <view class="field">
+        <text class="field-label">队伍照片</text>
+        <image wx:if="{{groupEdit.sloganImagePreview}}" class="group-photo" src="{{groupEdit.sloganImagePreview}}" mode="aspectFill" bindtap="onPreviewGroupPhoto" />
+        <view wx:else class="group-photo-empty" bindtap="onChooseGroupPhoto">点击上传一张照片</view>
+        <view class="chip-row" style="margin-top:16rpx">
+          <text class="chip" bindtap="onChooseGroupPhoto">更换照片</text>
+          <text class="chip" wx:if="{{groupEdit.sloganImage}}" bindtap="onRemoveGroupPhoto">移除照片</text>
+        </view>
+      </view>
+      <text class="card-sub">宣言和照片会显示在队伍主页，也会作为邀请卡的标题与配图。</text>
+      <view class="modal-btns">
+        <button class="btn btn-gray" bindtap="onCloseGroupEdit">取消</button>
+        <button class="btn" loading="{{busy}}" bindtap="onSaveGroupInfo">保存</button>
+      </view>
+    </view>
+  </view>
 </view>

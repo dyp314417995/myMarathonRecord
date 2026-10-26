@@ -38,7 +38,7 @@
     <!-- 我的本周 KPI：教练 / 队长 / 队员一视同仁，按周填报、按周考核 -->
     <view class="card" wx:if="{{kpiRange}}">
       <text class="card-title">{{isCoach ? '我的本周 KPI（教练也要打卡）' : '我的本周 KPI'}}</text>
-      <text class="card-sub">第 {{weekIndex}} 周 · 本组区间 {{kpiRange.min}} ~ {{kpiRange.max}} {{kpiRange.type === 'distance' ? '公里/周' : '天/周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
+      <text class="card-sub">{{weekIndex > 0 ? ('第 ' + weekIndex + ' 周') : '试运行期'}} · 本组区间 {{kpiRange.min}} ~ {{kpiRange.max}} {{kpiRange.type === 'distance' ? '公里/周' : '天/周'}}{{kpiRange.minDuration ? (' · 单次≥' + kpiRange.minDuration + '分钟') : ''}}</text>
       <!-- 本周已打过卡：目标锁定，下周一解锁 -->
       <view class="locked-box" wx:if="{{kpiLocked}}">
         <text class="locked-value">本周目标：{{myKpiValue}} {{unit}}</text>

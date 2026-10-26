@@ -21,11 +21,11 @@
               <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>
               <text class="member-meta">近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
             </view>
-            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : 'tag-orange'}}">{{item.feeStatus === 'paid' ? '已缴费' : '未缴费'}}</text>
+            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
           </view>
           <text class="card-sub" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
           <view class="mini-btn-row">
-            <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改为未缴' : '标记已缴'}}</text>
+            <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
             <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onApplyReview">驳回</text>
             <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onApplyReview">通过</text>
           </view>

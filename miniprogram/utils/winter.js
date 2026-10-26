@@ -24,6 +24,8 @@ const api = {
   leaderApplies: () => call('leaderApplies'),
   leaderReviewApply: (data) => call('leaderReviewApply', data),
   setFeeStatus: (data) => call('setFeeStatus', data),
+  // 队长/教练：编辑本组宣言与照片
+  leaderSaveGroup: (data) => call('leaderSaveGroup', data),
   transferRole: (data) => call('transferRole', data),
   weeklyStats: (data) => call('weeklyStats', data),
   publishSchedule: (data) => call('publishSchedule', data),

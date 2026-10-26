@@ -109,12 +109,13 @@ Page({
     if (this.data.applyBusyId) return;
     const uid = e.currentTarget.dataset.uid;
     const fee = e.currentTarget.dataset.fee;
-    const next = fee === 'paid' ? 'unpaid' : 'paid';
+    const next = fee === 'paid' ? 'free' : (fee === 'free' ? 'unpaid' : 'paid');
     this.setData({ applyBusyId: uid });
     const r = await w.api.setFeeStatus({ userId: uid, feeStatus: next });
     this.setData({ applyBusyId: '' });
     if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
-    wx.showToast({ title: next === 'paid' ? '已标记：已缴费' : '已标记：未缴费', icon: 'none' });
+    const txt = next === 'paid' ? '已缴费' : (next === 'free' ? '免费（无需缴费）' : '未缴费');
+    wx.showToast({ title: '已标记：' + txt, icon: 'none' });
     this.load();
   },
 

@@ -10,6 +10,8 @@ Page({
     pendingApplies: [],
     sloganImage: '',            // 队伍照片（fileID 转成的 https 临时链接）
     shareImageUrl: '',          // 转发卡片配图
+    showGroupEdit: false,       // 队长/教练编辑宣言与照片
+    groupEdit: { slogan: '', sloganImage: '', sloganImagePreview: '' },
     busy: false,
   },
 
@@ -141,12 +143,70 @@ Page({
     if (this.data.busy) return;
     const uid = e.currentTarget.dataset.uid;
     const fee = e.currentTarget.dataset.fee;
-    const next = fee === 'paid' ? 'unpaid' : 'paid';
+    // 三态循环：未缴费 → 已缴费 → 免费 → 未缴费
+    const next = fee === 'paid' ? 'free' : (fee === 'free' ? 'unpaid' : 'paid');
     this.setData({ busy: true });
     const r = await w.api.setFeeStatus({ userId: uid, feeStatus: next });
     this.setData({ busy: false });
     if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
-    wx.showToast({ title: next === 'paid' ? '已标记：已缴费' : '已标记：未缴费', icon: 'none' });
+    const txt = next === 'paid' ? '已缴费' : (next === 'free' ? '免费（无需缴费）' : '未缴费');
+    wx.showToast({ title: '已标记：' + txt, icon: 'none' });
+    this.load();
+  },
+
+  // ===== 队长/教练：编辑本组宣言与照片 =====
+  // 管理后台只有超管能进，队长平时进不去，所以放在这里维护
+  onEditGroupInfo() {
+    const g = this.data.group || {};
+    this.setData({
+      showGroupEdit: true,
+      groupEdit: {
+        slogan: g.slogan || '',
+        sloganImage: g.sloganImage || '',
+        sloganImagePreview: this.data.sloganImage || '',
+      },
+    });
+  },
+  onCloseGroupEdit() { this.setData({ showGroupEdit: false }); },
+  onGroupEditInput(e) {
+    this.setData({ ['groupEdit.' + e.currentTarget.dataset.f]: e.detail.value });
+  },
+  async onChooseGroupPhoto() {
+    let res;
+    try {
+      res = await wx.chooseMedia({ count: 1, mediaType: ['image'], sizeType: ['compressed'] });
+    } catch (e) { return; }
+    const file = res.tempFiles && res.tempFiles[0];
+    if (!file) return;
+    wx.showLoading({ title: '上传中' });
+    try {
+      const up = await wx.cloud.uploadFile({
+        cloudPath: `winter_group/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`,
+        filePath: file.tempFilePath,
+      });
+      const preview = await w.toTempUrl(up.fileID);
+      this.setData({ 'groupEdit.sloganImage': up.fileID, 'groupEdit.sloganImagePreview': preview });
+    } catch (e) {
+      wx.showToast({ title: '上传失败，请重试', icon: 'none' });
+    }
+    wx.hideLoading();
+  },
+  onRemoveGroupPhoto() {
+    this.setData({ 'groupEdit.sloganImage': '', 'groupEdit.sloganImagePreview': '' });
+  },
+  onPreviewGroupPhoto() {
+    const url = this.data.groupEdit.sloganImagePreview;
+    if (url) wx.previewImage({ urls: [url] });
+  },
+  async onSaveGroupInfo() {
+    if (this.data.busy) return;
+    const f = this.data.groupEdit;
+    this.setData({ busy: true });
+    const r = await w.api.leaderSaveGroup({ slogan: f.slogan, sloganImage: f.sloganImage });
+    this.setData({ busy: false });
+    if (!r.ok) return wx.showToast({ title: r.error || '保存失败', icon: 'none' });
+    wx.showToast({ title: '队伍信息已更新', icon: 'success' });
+    this.setData({ showGroupEdit: false });
     this.load();
   },
 

@@ -129,7 +129,7 @@ Page({
 
   // ===== 组别 =====
   onNewGroup() {
-    this.setData({ showGroup: true, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true } });
+    this.setData({ showGroup: true, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true, autoApprove: false } });
   },
   async onEditGroup(e) {
     const g = this.data.groups.find(x => x._id === e.currentTarget.dataset.id);
@@ -142,6 +142,7 @@ Page({
         id: g._id, name: g.name, desc: g.desc, emblem: g.emblem,
         slogan: g.slogan || '', sloganImage: g.sloganImage || '', sloganImagePreview: preview,
         capacity: String(g.capacity || ''), sort: String(g.sort || ''), open: g.open,
+        autoApprove: !!g.autoApprove,
       },
     });
   },
@@ -151,6 +152,7 @@ Page({
     this.setData({ ['groupForm.' + f]: e.detail.value });
   },
   onGroupOpen(e) { this.setData({ 'groupForm.open': e.detail.value }); },
+  onGroupAutoApprove(e) { this.setData({ 'groupForm.autoApprove': e.detail.value }); },
 
   // 队伍照片：上传到云存储，拿到 fileID 后再换 https 链接预览
   async onChooseGroupPhoto() {
@@ -187,6 +189,7 @@ Page({
       id: f.id, name: f.name, desc: f.desc, emblem: f.emblem,
       slogan: f.slogan || '', sloganImage: f.sloganImage || '',
       capacity: Number(f.capacity) || 0, sort: Number(f.sort) || 0, open: f.open,
+      autoApprove: !!f.autoApprove,
     });
     this.setData({ busy: false });
     if (!r.ok) return wx.showToast({ title: r.error || '保存失败', icon: 'none' });
@@ -262,10 +265,13 @@ Page({
   async onToggleFee(e) {
     const id = e.currentTarget.dataset.id;
     const m = this.data.members.find(x => x._id === id);
-    const next = m && m.feeStatus === 'paid' ? 'unpaid' : 'paid';
+    // 三态循环：未缴费 → 已缴费 → 免费 → 未缴费
+    const fee = (m && m.feeStatus) || 'unpaid';
+    const next = fee === 'paid' ? 'free' : (fee === 'free' ? 'unpaid' : 'paid');
     const r = await w.api.adminUpdateFinance({ userId: id, feeStatus: next });
     if (!r.ok) return wx.showToast({ title: r.error || '更新失败', icon: 'none' });
-    wx.showToast({ title: next === 'paid' ? '已标记缴费' : '已标记未缴费', icon: 'success' });
+    const txt = next === 'paid' ? '已缴费' : (next === 'free' ? '免费（无需缴费）' : '未缴费');
+    wx.showToast({ title: '已标记：' + txt, icon: 'success' });
     this.loadMembers(); this.loadFinance();
   },
 
