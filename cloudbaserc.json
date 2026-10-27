@@ -65,6 +65,13 @@
           "config": "0 0 20 * * * *"
         }
       ]
+    },
+    {
+      "name": "diag-free",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
     }
   ]
 }

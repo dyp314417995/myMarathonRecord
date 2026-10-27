@@ -197,6 +197,7 @@
       <view class="field"><text class="field-label">排序</text><input class="input" type="number" value="{{groupForm.sort}}" data-f="sort" bindinput="onGroupInput" /></view>
       <view class="field"><text class="row-label">{{groupForm.open ? '☑' : '☐'}} 开放报名</text><switch checked="{{groupForm.open}}" bindchange="onGroupOpen" color="#1aad19" /></view>
       <view class="field"><text class="row-label">{{groupForm.autoApprove ? '☑' : '☐'}} 打卡免审核（本组打卡自动通过，如 S 组）</text><switch checked="{{groupForm.autoApprove}}" bindchange="onGroupAutoApprove" color="#1aad19" /></view>
+      <view class="field"><text class="row-label">{{groupForm.autoFree ? '☑' : '☐'}} 加入即免费（新成员自动标记免费，如 S 组）</text><switch checked="{{groupForm.autoFree}}" bindchange="onGroupAutoFree" color="#1aad19" /></view>
 
       <!-- 队长 / 教练指派：候选人取全部在训成员，可跨组兼任 -->
       <view class="field" wx:if="{{groupForm.id}}">

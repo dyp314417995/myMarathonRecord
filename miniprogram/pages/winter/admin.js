@@ -19,7 +19,7 @@ Page({
     groupStaff: [], groupCandidates: [], staffPickIndex: 0, staffPickRole: 'leader',
     phases: PHASES,
     // 弹窗
-    showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true, autoApprove: false },
+    showGroup: false, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true, autoApprove: false, autoFree: false },
     showTransfer: false, transferForm: { userId: '', newGroupId: '', reason: '', clearFail: true, effectiveDate: '' },
     showRemark: false, remarkForm: { userId: '', remark: '' },
     busy: false,
@@ -145,6 +145,7 @@ Page({
         slogan: g.slogan || '', sloganImage: g.sloganImage || '', sloganImagePreview: preview,
         capacity: String(g.capacity || ''), sort: String(g.sort || ''), open: g.open,
         autoApprove: !!g.autoApprove,
+        autoFree: !!g.autoFree,
       },
     });
     await this.loadGroupStaff(g._id);
@@ -190,6 +191,7 @@ Page({
   },
   onGroupOpen(e) { this.setData({ 'groupForm.open': e.detail.value }); },
   onGroupAutoApprove(e) { this.setData({ 'groupForm.autoApprove': e.detail.value }); },
+  onGroupAutoFree(e) { this.setData({ 'groupForm.autoFree': e.detail.value }); },
 
   // 队伍照片：上传到云存储，拿到 fileID 后再换 https 链接预览
   async onChooseGroupPhoto() {
@@ -227,6 +229,7 @@ Page({
       slogan: f.slogan || '', sloganImage: f.sloganImage || '',
       capacity: Number(f.capacity) || 0, sort: Number(f.sort) || 0, open: f.open,
       autoApprove: !!f.autoApprove,
+      autoFree: !!f.autoFree,
     });
     this.setData({ busy: false });
     if (!r.ok) return wx.showToast({ title: r.error || '保存失败', icon: 'none' });

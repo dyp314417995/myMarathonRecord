@@ -200,6 +200,16 @@ async function staffGroupIdsOf(userId, roles) {
   return out;
 }
 
+// 加入某组时按组别配置决定缴费状态
+// 例如 S 组自带训练计划和习惯，属于特殊福利组：加入即标记「免费」，不计入收费统计。
+// 只对开了 autoFree 的组生效；未开启的组保持原有缴费状态不动（不会把已缴费的人改回去）
+async function applyGroupFreeFee(updateData, groupId) {
+  if (!groupId) return updateData;
+  const g = await db.collection('winter_group').doc(groupId).get().catch(() => null);
+  if (g && g.data && g.data.autoFree) updateData.feeStatus = 'free';
+  return updateData;
+}
+
 // 一组 userId → 昵称列表（优先用已查好的成员池，避免重复查库）
 async function namesOf(ids, memberPool) {
   const arr = [];
@@ -902,9 +912,10 @@ async function actionLeaderReviewApply(userId, data) {
     const dup = await db.collection('winter_member').where({ groupId: m.groupId, role: 'coach', status: 'approved' }).count().catch(() => ({ total: 0 }));
     if ((dup.total || 0) > 0) return fail('本组已有教练');
   }
-  await db.collection('winter_member').doc(targetId).update({
-    data: { status: 'approved', rejectReason: '', approveTime: new Date(), updateTime: new Date() },
-  });
+  // 加入即免费：目标组开了 autoFree（如 S 组）时直接标记
+  const approveData = await applyGroupFreeFee(
+    { status: 'approved', rejectReason: '', approveTime: new Date(), updateTime: new Date() }, m.groupId);
+  await db.collection('winter_member').doc(targetId).update({ data: approveData });
   await saveLog({ type: 'apply', action: 'leader-approve', operatorId: userId, targetUserId: targetId, detail: ROLE_TEXT[m.role] });
   return ok({ status: 'approved' });
 }
@@ -1333,6 +1344,8 @@ async function actionAdminSaveGroup(userId, data) {
     sloganImage: String(data.sloganImage || '').trim(),
     // 打卡免审核：开启后本组成员打卡无需审批，直接通过（如 S 组）
     autoApprove: data.autoApprove === true,
+    // 加入即免费：开启后新成员加入本组自动标记「免费」（如 S 组自带训练计划，属特殊福利组）
+    autoFree: data.autoFree === true,
     capacity: toNum(data.capacity),
     open: data.open !== false,
     sort: toNum(data.sort),
@@ -1506,7 +1519,8 @@ async function actionAdminReviewApply(userId, data) {
     const dup = await db.collection('winter_member').where({ groupId: finalGroupId, role: m.role, status: 'approved' }).count().catch(() => ({ total: 0 }));
     if ((dup.total || 0) > 0) return fail(`目标组别已有${ROLE_TEXT[m.role]}`);
   }
-  const updateData = { status: 'approved', groupId: finalGroupId, rejectReason: '', updateTime: new Date() };
+  const updateData = await applyGroupFreeFee(
+    { status: 'approved', groupId: finalGroupId, rejectReason: '', updateTime: new Date() }, finalGroupId);
   if (groupId && groupId !== m.groupId) updateData.adjusted = true;
   await db.collection('winter_member').doc(targetId).update({ data: updateData });
   await saveLog({
@@ -1568,10 +1582,10 @@ async function actionAdminTransfer(userId, data) {
     if ((cnt.total || 0) >= g.data.capacity) return fail('目标组别人数已满');
   }
   // 换组后区间不同，清掉原 KPI：必须在新组按新区间重新填报
-  const updateData = {
+  const updateData = await applyGroupFreeFee({
     groupId: newGroupId, updateTime: new Date(),
     kpiType: '', kpiValue: 0, kpiWeek: 0, kpiSubmitTime: null,
-  };
+  }, newGroupId);
   if (clearFail) updateData.continuousFailWeeks = 0;
   await db.collection('winter_member').doc(targetId).update({ data: updateData });
   // 备注写入（伤病/调整原因）
