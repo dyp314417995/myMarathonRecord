@@ -1378,43 +1378,62 @@ async function actionAdminGroupStaff(userId, data) {
   const groupId = String(data.groupId || '');
   if (!groupId) return fail('缺少组别');
 
+  // 慢的历史包袱：之前对每个候选人各查一次 users + winter_member（几十个人 × 2 次串行
+  // 数据库往返，两三秒起步）。现在全部改成批量：组名表、成员池、本组职务、
+  // 跨组指派、users 昵称，一共 5 次左右的查询就出全部数据。
+
   const gRes = await db.collection('winter_group').limit(50).get().catch(() => null);
   const gName = {};
   for (const g of ((gRes && gRes.data) || [])) gName[g._id] = g.name;
 
-  const out = [];
-  for (const role of ['leader', 'coach']) {
-    const ids = await groupStaffUserIds(groupId, [role]);
-    for (const uid of ids) out.push(await staffBrief(uid, groupId, role, gName, true));
-  }
-
-  // 候选人：在训成员（含其他组的，用于兼任）
+  // 在训成员一次取全量（本来就是几十人的量级）
   const mr = await db.collection('winter_member')
     .where({ status: _.in(['approved', 'quit-suggested']) }).limit(500).get().catch(() => null);
-  const candidates = [];
-  for (const m of ((mr && mr.data) || [])) {
-    if (!m.userId) continue;
-    const u = await getUser(m.userId);
-    candidates.push({
-      userId: m.userId,
-      nickName: (u && (u.nickName || u.nickname)) || m.nickName || '未知',
-      ownGroupName: gName[m.groupId] || '',
-      ownRole: m.role, ownRoleText: ROLE_TEXT[m.role] || '',
-      role: await roleInGroup(m.userId, groupId),   // 已在本组担任的职务
-    });
-  }
-  return ok({ groupId, groupName: gName[groupId] || '', staff: out, candidates });
-}
+  const members = ((mr && mr.data) || []).filter(m => m.userId);
+  const memberByUid = {};
+  for (const m of members) memberByUid[m.userId] = m;
 
-async function staffBrief(uid, groupId, role, gName, withLog) {
-  const u = await getUser(uid);
-  const m = await getMyMember(uid);
-  return {
-    userId: uid, role, roleText: ROLE_TEXT[role] || '',
-    nickName: (u && (u.nickName || u.nickname)) || (m && m.nickName) || '未知',
-    ownGroupName: gName[(m && m.groupId) || ''] || '',
-    sameGroup: !!m && m.groupId === groupId,   // true=本组成员升任；false=跨组兼任
-  };
+  // 本组职务：主记录与 winter_staff 各查一次，拼成 uid -> role 映射
+  const roleInThisGroup = {};
+  const mainRes = await db.collection('winter_member')
+    .where({ groupId, role: _.in(['leader', 'coach']), status: _.in(['approved', 'quit-suggested']) })
+    .limit(50).get().catch(() => null);
+  for (const m of ((mainRes && mainRes.data) || [])) if (m.userId) roleInThisGroup[m.userId] = m.role;
+  const assignRes = await db.collection('winter_staff').where({ groupId }).limit(100).get().catch(() => null);
+  for (const s of ((assignRes && assignRes.data) || [])) {
+    if (s.userId && !roleInThisGroup[s.userId]) roleInThisGroup[s.userId] = s.role;
+  }
+
+  // 昵称：users 主键就是 userId，一次 in 查询批量取
+  const uids = [...new Set(members.map(m => m.userId))];
+  const nickMap = {};
+  for (let i = 0; i < uids.length; i += 100) {
+    const uRes = await db.collection('users')
+      .where({ _id: _.in(uids.slice(i, i + 100)) }).limit(100).get().catch(() => null);
+    for (const u of ((uRes && uRes.data) || [])) nickMap[u._id] = u.nickName || u.nickname || '';
+  }
+
+  const staff = Object.keys(roleInThisGroup).map(uid => {
+    const role = roleInThisGroup[uid];
+    const m = memberByUid[uid];
+    return {
+      userId: uid, role, roleText: ROLE_TEXT[role] || '',
+      nickName: nickMap[uid] || (m && m.nickName) || '未知',
+      ownGroupName: gName[(m && m.groupId) || ''] || '',
+      sameGroup: !!m && m.groupId === groupId,   // true=本组成员升任；false=跨组兼任
+    };
+  });
+  staff.sort((a, b) => (a.role === 'leader' ? 0 : 1) - (b.role === 'leader' ? 0 : 1));
+
+  const candidates = members.map(m => ({
+    userId: m.userId,
+    nickName: nickMap[m.userId] || m.nickName || '未知',
+    ownGroupName: gName[m.groupId] || '',
+    ownRole: m.role, ownRoleText: ROLE_TEXT[m.role] || '',
+    role: roleInThisGroup[m.userId] || '',   // 已在本组担任的职务
+  }));
+
+  return ok({ groupId, groupName: gName[groupId] || '', staff, candidates });
 }
 
 // 后台：指派 / 撤销某人在某组的队长或教练职务

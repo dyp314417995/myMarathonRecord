@@ -157,18 +157,26 @@ Page({
   async onEditGroup(e) {
     const g = this.data.groups.find(x => x._id === e.currentTarget.dataset.id);
     if (!g) return;
-    // cloud:// 不能直渲，转成 https 临时链接用于预览
-    const preview = g.sloganImage ? await w.toTempUrl(g.sloganImage) : '';
+    // 先开弹窗、秒回：照片的 https 预览链接和指派名单都是异步换的，
+    // 先置空再补，避免弹窗里短暂显示「上一个组」的旧数据，也避免点击后有段没反应的空窗
     this.setData({
       showGroup: true,
+      groupStaff: [], groupCandidates: [],
       groupForm: {
         id: g._id, name: g.name, desc: g.desc, emblem: g.emblem,
-        slogan: g.slogan || '', sloganImage: g.sloganImage || '', sloganImagePreview: preview,
+        slogan: g.slogan || '', sloganImage: g.sloganImage || '', sloganImagePreview: '',
         capacity: String(g.capacity || ''), sort: String(g.sort || ''), open: g.open,
         autoApprove: !!g.autoApprove,
         autoFree: !!g.autoFree,
       },
     });
+    if (g.sloganImage) {
+      const preview = await w.toTempUrl(g.sloganImage).catch(() => '');
+      // 等链接的功夫用户可能已经切到别的组：id 对得上才回写
+      if (this.data.showGroup && this.data.groupForm.id === g._id) {
+        this.setData({ 'groupForm.sloganImagePreview': preview });
+      }
+    }
     await this.loadGroupStaff(g._id);
   },
 
@@ -254,6 +262,19 @@ Page({
     });
     this.setData({ busy: false });
     if (!r.ok) return wx.showToast({ title: r.error || '保存失败', icon: 'none' });
+    // 立刻把新值写回本地列表：load() 是异步的，回来之前马上再点「编辑」
+    // 会拿到保存前的旧快照，看起来就像「显示的还是上次编辑的内容」
+    const groups = this.data.groups;
+    const gi = groups.findIndex(x => x._id === f.id);
+    if (gi >= 0) {
+      groups[gi] = Object.assign({}, groups[gi], {
+        name: f.name, desc: f.desc, emblem: f.emblem,
+        slogan: f.slogan || '', sloganImage: f.sloganImage || '',
+        capacity: Number(f.capacity) || 0, sort: Number(f.sort) || 0, open: f.open,
+        autoApprove: !!f.autoApprove, autoFree: !!f.autoFree,
+      });
+      this.setData({ groups });
+    }
     wx.showToast({ title: '已保存', icon: 'success' });
     this.setData({ showGroup: false });
     this.load();
