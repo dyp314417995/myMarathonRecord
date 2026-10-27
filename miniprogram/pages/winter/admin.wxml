@@ -62,7 +62,10 @@
               <text class="member-name">{{item.emblem}} {{item.name}}</text>
               <text class="member-meta">{{item.desc}} · 上限 {{item.capacity || '不限'}} · {{item.open ? '开放报名' : '暂停报名'}}</text>
             </view>
-            <view class="member-right"><text class="tag tag-blue" data-id="{{item._id}}" bindtap="onEditGroup">编辑</text></view>
+            <view class="member-right">
+              <text class="tag tag-blue" data-id="{{item._id}}" bindtap="onEditGroup">编辑</text>
+              <text class="tag tag-red" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onDeleteGroup" style="margin-left:12rpx">删除</text>
+            </view>
           </view>
           <text class="card-sub" style="margin-top:12rpx">队长 {{item.leader}} / 教练 {{item.coach}} / KPI {{item.kpiRange}}</text>
         </view>
@@ -240,10 +243,18 @@
           <text class="chip {{transferForm.newGroupId === item._id ? 'on' : ''}}" wx:for="{{allGroups}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPickTransferGroup">{{item.name}}</text>
         </view>
       </view>
+      <view class="field">
+        <text class="field-label">目标角色 *</text>
+        <view class="chip-row">
+          <text class="chip {{transferForm.newRole === 'member' ? 'on' : ''}}" data-role="member" bindtap="onPickTransferRole">队员</text>
+          <text class="chip {{transferForm.newRole === 'leader' ? 'on' : ''}}" data-role="leader" bindtap="onPickTransferRole">队长</text>
+          <text class="chip {{transferForm.newRole === 'coach' ? 'on' : ''}}" data-role="coach" bindtap="onPickTransferRole">教练</text>
+        </view>
+      </view>
       <view class="field"><text class="field-label">调整原因 *</text><textarea class="textarea" value="{{transferForm.reason}}" data-f="reason" bindinput="onTransferInput" placeholder="如：伤病降档 / 训练强度不匹配"></textarea></view>
       <view class="field"><text class="field-label">生效日期</text><input class="input" value="{{transferForm.effectiveDate}}" data-f="effectiveDate" bindinput="onTransferInput" placeholder="YYYY-MM-DD" /></view>
       <view class="field"><text class="row-label">{{transferForm.clearFail ? '☑' : '☐'}} 清零连续未完成周数（规则默认不清零，仅伤病代管等特殊情形勾选）</text><switch checked="{{transferForm.clearFail}}" bindchange="onTransferClear" color="#1aad19" /></view>
-      <text class="card-sub">注：仅队员可调组；队长/教练变更请先由成员管理与报名审核处理</text>
+      <text class="card-sub">注：调到新组默认当队员；要同时在别的组任职，请在「组别」里用职务指派</text>
       <view class="modal-btns">
         <button class="btn btn-gray" bindtap="onCloseTransfer">取消</button>
         <button class="btn" loading="{{busy}}" bindtap="onSaveTransfer">确认调组</button>

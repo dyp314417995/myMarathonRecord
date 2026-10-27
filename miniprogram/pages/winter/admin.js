@@ -133,6 +133,27 @@ Page({
   onNewGroup() {
     this.setData({ showGroup: true, groupForm: { id: '', name: '', desc: '', emblem: '', slogan: '', sloganImage: '', sloganImagePreview: '', capacity: '', sort: '', open: true, autoApprove: false } });
   },
+  // 删除组别：先确认后果（会把组内成员移出为未分组），确认后才真正删
+  async onDeleteGroup(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name || '该组别';
+    const res = await wx.showModal({
+      title: `删除${name}`,
+      content: '删除后该组不再出现在列表里。组里若还有成员，会被移出为「未分组」，需要重新报名或由你调组。确定删除吗？',
+      confirmText: '确认删除', confirmColor: '#e64340',
+    }).catch(() => ({ confirm: false }));
+    if (!res.confirm) return;
+
+    this.setData({ busy: true });
+    const r = await w.api.adminDeleteGroup({ groupId: id, confirm: true });
+    this.setData({ busy: false });
+    if (!r.ok) return wx.showToast({ title: r.error || '删除失败', icon: 'none' });
+    // 兜底：万一服务端判断还需确认（组里有人而 confirm 没生效），不删并重提示
+    if (r.needConfirm) return wx.showToast({ title: `该组还有 ${r.count} 人，未删除`, icon: 'none' });
+    wx.showToast({ title: r.movedOut ? `已删除，${r.movedOut} 人转为未分组` : '已删除', icon: 'success' });
+    await this.load();
+  },
+
   async onEditGroup(e) {
     const g = this.data.groups.find(x => x._id === e.currentTarget.dataset.id);
     if (!g) return;
@@ -260,7 +281,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     this.setData({
       showTransfer: true,
-      transferForm: { userId: id, newGroupId: '', reason: '', clearFail: false, effectiveDate: '' }, // 规则：转组连续未完成不清零
+      transferForm: { userId: id, newGroupId: '', reason: '', clearFail: false, effectiveDate: '', newRole: 'member' }, // 规则：转组连续未完成不清零
     });
   },
   onCloseTransfer() { this.setData({ showTransfer: false }); },
@@ -270,6 +291,7 @@ Page({
   },
   onTransferClear(e) { this.setData({ 'transferForm.clearFail': e.detail.value }); },
   onPickTransferGroup(e) { this.setData({ 'transferForm.newGroupId': e.currentTarget.dataset.id }); },
+  onPickTransferRole(e) { this.setData({ 'transferForm.newRole': e.currentTarget.dataset.role }); },
   async onSaveTransfer() {
     const f = this.data.transferForm;
     if (!f.newGroupId) return wx.showToast({ title: '请选择目标组别', icon: 'none' });
@@ -277,6 +299,7 @@ Page({
     this.setData({ busy: true });
     const r = await w.api.adminTransfer({
       userId: f.userId, newGroupId: f.newGroupId, reason: f.reason,
+      newRole: f.newRole || 'member',
       clearFail: f.clearFail, effectiveDate: f.effectiveDate,
     });
     this.setData({ busy: false });

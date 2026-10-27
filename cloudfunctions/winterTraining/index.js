@@ -594,6 +594,8 @@ async function actionGetMyGroup(userId) {
     kpiRange,
     me: {
       role: myRoleHere, roleText: ROLE_TEXT[myRoleHere] || '',
+      // 超管在队伍页也开放编辑素材的入口（后台入口太深，超管本身就有改组信息的权限）
+      isAdmin: await isSuperAdmin(userId),
       kpiType: member.kpiType || '', kpiValue: member.kpiValue || 0,
       kpiWeek: member.kpiWeek || 0,
       continuousFailWeeks: member.continuousFailWeeks || 0,
@@ -949,10 +951,14 @@ async function actionSetFeeStatus(userId, data) {
 // 管理后台只有超管能进，队长平时进不去；队伍氛围相关的东西还是交给队长自己维护
 async function actionLeaderSaveGroup(userId, data) {
   const me = await getMyMember(userId);
-  if (!me) return fail('尚未报名');
-  if (!['leader', 'coach'].includes(me.role)) return fail('仅队长/教练可编辑队伍信息');
-  if (me.status !== 'approved') return fail('报名未通过');
-  if (!me.groupId) return fail('尚未分组');
+  const boss = await isSuperAdmin(userId);
+  // 超管例外：后台本来就能改组别信息，只是入口深，这里给个快捷通道
+  if (!boss) {
+    if (!me) return fail('尚未报名');
+    if (!['leader', 'coach'].includes(me.role)) return fail('仅队长/教练可编辑队伍信息');
+    if (me.status !== 'approved') return fail('报名未通过');
+  }
+  if (!me || !me.groupId) return fail('尚未分组');
   const update = {};
   if (data.slogan !== undefined) update.slogan = String(data.slogan || '').trim().slice(0, 20);
   if (data.sloganImage !== undefined) update.sloganImage = String(data.sloganImage || '').trim();
@@ -1570,20 +1576,28 @@ async function actionAdminTransfer(userId, data) {
   // 规则：转组不重复交费，连续未完成周数默认【不清零】；
   // 仅当管理组明确传 clearFail=true（如确认伤病代管等特殊情形）才清零
   const clearFail = data.clearFail === true || String(data.clearFail) === 'true';
+  // 目标角色：调过去当队员还是队长/教练（默认队员）
+  const newRole = ['leader', 'coach', 'member'].indexOf(data.newRole) >= 0 ? data.newRole : 'member';
   if (!targetId || !newGroupId) return fail('缺少成员或目标组别');
   if (!reason) return fail('请填写调整原因');
   const m = await getMyMember(targetId);
   if (!m) return fail('成员不存在');
-  if (m.role !== 'member') return fail('仅队员可调整组别（队长/教练变更请先调整角色）');
   const g = await db.collection('winter_group').doc(newGroupId).get().catch(() => null);
   if (!g || !g.data) return fail('目标组别不存在');
   if (g.data.capacity) {
     const cnt = await db.collection('winter_member').where({ groupId: newGroupId, status: 'approved' }).count().catch(() => ({ total: 0 }));
     if ((cnt.total || 0) >= g.data.capacity) return fail('目标组别人数已满');
   }
+  // 队长/教练在一个组里只能有一个（排除本人）：跨组兼任走「组别职务指派」，不走调组
+  if (newRole !== 'member') {
+    const dup = await db.collection('winter_member').where({
+      groupId: newGroupId, role: newRole, status: 'approved', userId: _.neq(targetId),
+    }).count().catch(() => ({ total: 0 }));
+    if ((dup.total || 0) > 0) return fail(`目标组别已有${ROLE_TEXT[newRole]}`);
+  }
   // 换组后区间不同，清掉原 KPI：必须在新组按新区间重新填报
   const updateData = await applyGroupFreeFee({
-    groupId: newGroupId, updateTime: new Date(),
+    groupId: newGroupId, role: newRole, updateTime: new Date(),
     kpiType: '', kpiValue: 0, kpiWeek: 0, kpiSubmitTime: null,
   }, newGroupId);
   if (clearFail) updateData.continuousFailWeeks = 0;
@@ -1594,13 +1608,62 @@ async function actionAdminTransfer(userId, data) {
       data: { remark: reason, remarkTime: new Date() },
     }).catch(() => {});
   }
+  // 主记录已挪到新组：原来在旧组的兼任指派一并撤掉，避免换组后还握着旧组权限
+  const old = await db.collection('winter_staff').where({ userId: targetId, groupId: _.neq(newGroupId) }).limit(100).get().catch(() => null);
+  for (const s of ((old && old.data) || [])) {
+    await db.collection('winter_staff').doc(s._id).remove().catch(() => {});
+  }
   await saveLog({
     type: 'transfer', action: 'move', operatorId: userId, targetUserId: targetId,
     fromGroupId: m.groupId, toGroupId: newGroupId,
-    clearFail, remark: reason,
+    fromRole: m.role, newRole, clearFail, remark: reason,
     effectiveDate: String(data.effectiveDate || todayStr()),
   });
-  return ok({ groupId: newGroupId });
+  return ok({ groupId: newGroupId, role: newRole });
+}
+
+// 删除组别（超管）
+// 空组直接删；组里还有人时先返回人数让前端二次确认，确认后才解散，并把成员置为「未分组」
+// 打卡记录只做留档不删，业务报表仍查得到历史数据
+async function actionAdminDeleteGroup(userId, data) {
+  await requireAdmin(userId);
+  const groupId = String(data.groupId || '').trim();
+  if (!groupId) return fail('缺少组别');
+  const g = await db.collection('winter_group').doc(groupId).get().catch(() => null);
+  if (!g || !g.data) return fail('组别不存在');
+
+  const mRes = await db.collection('winter_member').where({ groupId }).limit(500).get().catch(() => null);
+  const members = (mRes && mRes.data) || [];
+  // 已退出/已拒绝的不算在内：他们本来就脱离了这个组
+  const active = members.filter(m => !['quit', 'rejected'].includes(m.status));
+
+  const confirm = data.confirm === true || String(data.confirm) === 'true';
+  if (active.length && !confirm) {
+    const staff = active.filter(m => ['leader', 'coach'].includes(m.role)).map(m => ROLE_TEXT[m.role]);
+    return ok({ needConfirm: true, name: g.data.name, count: active.length, staff });
+  }
+
+  for (const m of active) {
+    await db.collection('winter_member').doc(m._id).update({
+      data: {
+        groupId: '', role: 'member',
+        // 组都没了，KPI 自然作废；缴费状态保留（已收的钱不因为删组被抹掉）
+        kpiType: '', kpiValue: 0, kpiWeek: 0, kpiSubmitTime: null,
+        updateTime: new Date(),
+      },
+    }).catch(() => {});
+  }
+  // 撤掉挂在这个组上的跨组职务指派，否则人走了权限还在
+  const st = await db.collection('winter_staff').where({ groupId }).limit(200).get().catch(() => null);
+  for (const s of ((st && st.data) || [])) {
+    await db.collection('winter_staff').doc(s._id).remove().catch(() => {});
+  }
+  await db.collection('winter_group').doc(groupId).remove().catch(() => {});
+  await saveLog({
+    type: 'group', action: 'delete', operatorId: userId, fromGroupId: groupId,
+    detail: `删除组别「${g.data.name}」${active.length ? `，${active.length} 名成员转为未分组` : ''}`,
+  });
+  return ok({ deleted: true, movedOut: active.length });
 }
 
 // 伤病 / 备注（不调组，仅备注）
@@ -1892,6 +1955,7 @@ exports.main = async (event = {}) => {
       case 'adminSaveGroup': return await actionAdminSaveGroup(userId, data);
       case 'adminGroupStaff': return await actionAdminGroupStaff(userId, data);
       case 'adminSetStaff': return await actionAdminSetStaff(userId, data);
+    case 'adminDeleteGroup': return await actionAdminDeleteGroup(userId, data);
       case 'adminApplies': return await actionAdminApplies(userId, data);
       case 'adminReviewApply': return await actionAdminReviewApply(userId, data);
       case 'adminMembers': return await actionAdminMembers(userId, data);

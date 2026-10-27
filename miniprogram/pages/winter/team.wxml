@@ -8,7 +8,7 @@
       <image wx:if="{{sloganImage}}" class="hero-photo" src="{{sloganImage}}" mode="aspectFill" bindtap="onPreviewSlogan" />
       <text class="hero-slogan" wx:if="{{group.slogan}}">“{{group.slogan}}”</text>
       <text class="hero-tip">{{weekText}} · 我的角色：{{me.roleText}}</text>
-      <text class="hero-edit" wx:if="{{isBoss}}" bindtap="onEditGroupInfo">✏️ 编辑宣言 / 照片</text>
+      <text class="hero-edit" wx:if="{{isBoss || me.isAdmin}}" bindtap="onEditGroupInfo">✏️ 编辑宣言 / 照片</text>
     </view>
 
     <button class="btn btn-ghost share-btn" open-type="share">邀请好友加入本组</button>

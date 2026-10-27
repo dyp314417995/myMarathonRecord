@@ -79,8 +79,9 @@ page { background: #f5f6f7; }
 .notice-bar { background: #fff8e6; border: 2rpx solid #f5e0b0; border-radius: 12rpx; padding: 20rpx; font-size: 25rpx; color: #9a7428; margin-bottom: 24rpx; }
 .frozen-bar { background: #e8f1fd; border: 2rpx solid #b8d4f5; color: #2c6cb5; }
 
-.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
-.modal-box { width: 620rpx; background: #fff; border-radius: 20rpx; padding: 36rpx; }
+.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 40rpx 0; }
+/* 弹窗内容超出一屏时要能自己滚：否则底部的「保存」按钮会被顶到屏幕外点不到 */
+.modal-box { width: 620rpx; background: #fff; border-radius: 20rpx; padding: 36rpx; max-height: 84vh; overflow-y: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; }
 .modal-title { font-size: 32rpx; font-weight: 600; text-align: center; margin-bottom: 24rpx; display: block; }
 .modal-btns { display: flex; margin-top: 32rpx; }
 .modal-btns .btn { flex: 1; margin: 0 12rpx; }
