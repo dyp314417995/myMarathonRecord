@@ -24,7 +24,7 @@
       <!-- 选中具体项目时 tab 已经说明是哪一个，这里不再重复标题 -->
       <view class="group-title" wx:if="{{!activeType}}">{{item.label}} · {{item.count}} 场</view>
 
-      <view class="cert-card card" wx:for="{{item.list}}" wx:for-item="r" wx:key="_id">
+      <view class="cert-card card {{r._id === item.pbId ? 'has-pb' : ''}}" wx:for="{{item.list}}" wx:for-item="r" wx:key="_id">
         <!-- 该项目最快的那一场，右上角打奖杯角标 -->
         <view class="pb-corner" wx:if="{{r._id === item.pbId}}">🏆 PB</view>
 

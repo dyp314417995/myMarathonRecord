@@ -21,8 +21,9 @@
 .stat-num { font-size: 44rpx; font-weight: 600; color: #222; display: block; }
 .stat-label { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }
 
-/* PB 角标：打在卡片右上角 */
-.pb-corner { position: absolute; top: 0; right: 0; background: linear-gradient(135deg, #ffb74d, #f57c00); color: #fff; font-size: 22rpx; font-weight: 600; padding: 8rpx 18rpx; border-radius: 0 16rpx 0 16rpx; }
+/* PB 角标：打在卡片右上角，带 PB 的卡片顶部多留出高度，避免压住比赛日期 */
+.pb-corner { position: absolute; top: 0; right: 0; background: linear-gradient(135deg, #ffb74d, #f57c00); color: #fff; font-size: 20rpx; font-weight: 600; line-height: 1; padding: 10rpx 16rpx; border-radius: 0 16rpx 0 16rpx; }
+.cert-card.has-pb { padding-top: 48rpx; }
 
 .cert-hint { font-size: 24rpx; color: #bbb; margin-left: 8rpx; }
 /* 能点的提示：做成绿色带下划线，别让人以为是死的灰字 */
