@@ -82,10 +82,16 @@ Page({
     return this.data.activeType ? `&type=${this.data.activeType}` : '';
   },
 
+  // 标题里的场次要用当前正在看的这个项目的，不能一直用总场次
   shareTitle(who) {
     const g = GROUPS.find(x => x.key === this.data.activeType);
-    if (g) return `${who}的${g.label}荣耀时刻：${this.data.total} 场完赛`;
-    return this.data.total ? `${who}的荣耀时刻：${this.data.total} 场完赛` : `${who}的荣耀时刻`;
+    const count = g
+      ? ((this.data.groups[0] && this.data.groups[0].count) || 0)
+      : this.data.total;
+    if (!count) return `${who}的荣耀时刻`;
+    // 「10 公里」在标题里去掉空格，读起来顺一点
+    const label = g ? g.label.replace(/\s/g, '') : '';
+    return `${who}的${label}荣耀时刻：${count} 场完赛`;
   },
 
   firstImage() {
