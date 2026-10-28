@@ -16,6 +16,15 @@ const GROUPS = [
   { key: 'custom', label: '其他' },
 ];
 
+// 成绩转秒数，用来挑 PB。格式可能是 3:21:38，也可能是 10 公里的 50:30（没有小时段）
+function toSec(t) {
+  const p = String(t || '').split(':').map(Number);
+  if (p.some(isNaN)) return Infinity;
+  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+  if (p.length === 2) return p[0] * 60 + p[1];
+  return p[0];
+}
+
 Page({
   data: {
     loading: true,
@@ -28,6 +37,7 @@ Page({
     defaultType: '',   // 本地设置的默认展示项
     tabs: [],          // [{ key, label, count }]
     total: 0,
+    curPb: '',         // 当前选中项目的个人最好成绩
 
     showDefaultModal: false,
   },
@@ -114,9 +124,18 @@ Page({
       const honored = (res.data || []).filter(r => r.status === 'finished' && (r.certImages || []).length > 0);
       const list = await this.fillImages(honored);
 
+      // 每个项目算出自己的 PB（成绩最快的一场），用来突出展示
       const allGroups = GROUPS.map(g => {
         const l = list.filter(r => (r.raceType || 'custom') === g.key);
-        return { key: g.key, label: g.label, count: l.length, list: l };
+        const withResult = l.filter(r => r.result);
+        let pbText = '';
+        let pbId = '';
+        if (withResult.length) {
+          const best = withResult.reduce((a, b) => (toSec(b.result) < toSec(a.result) ? b : a), withResult[0]);
+          pbText = best.result;
+          pbId = best._id;
+        }
+        return { key: g.key, label: g.label, count: l.length, list: l, pbText, pbId };
       }).filter(g => g.count > 0);
 
       let ownerName = '';
@@ -174,7 +193,8 @@ Page({
       this.setData({ activeType: '' });
     }
     const groups = active ? this.data.allGroups.filter(g => g.key === active) : this.data.allGroups;
-    this.setData({ groups });
+    // 只看一个项目时，把它的 PB 单独提出来强调
+    this.setData({ groups, curPb: (active && groups[0]) ? groups[0].pbText : '' });
   },
 
   // ===== 默认展示项设置 =====

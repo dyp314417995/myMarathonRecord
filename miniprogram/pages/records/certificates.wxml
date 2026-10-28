@@ -12,6 +12,15 @@
       <text class="tab-gear" wx:if="{{mine}}" bindtap="onShowDefault" hover-class="none">⚙️</text>
     </view>
 
+    <!-- 只看一个项目时，把该项目的 PB 单独拎出来强调 -->
+    <view class="pb-line" wx:if="{{activeType && curPb}}">
+      <text class="pb-icon">🏆</text>
+      <view class="pb-main">
+        <text class="pb-label">个人最好成绩</text>
+        <text class="pb-value">{{curPb}}</text>
+      </view>
+    </view>
+
     <!-- 添加入口：统一去跑马记录里操作 -->
     <view class="add-line" wx:if="{{mine}}" bindtap="onGoRecords">
       <text class="add-plus">＋</text>
@@ -22,9 +31,13 @@
     <!-- 按项目分区：全马 / 半马 / 10 公里 / 其他，每组内比赛时间倒序 -->
     <view class="group" wx:for="{{groups}}" wx:key="key">
       <!-- 选中具体项目时 tab 已经说明是哪一个，这里不再重复标题 -->
-      <view class="group-title" wx:if="{{!activeType}}">{{item.label}} · {{item.count}} 场</view>
+      <view class="group-title" wx:if="{{!activeType}}">
+        <text>{{item.label}} · {{item.count}} 场</text>
+        <text class="pb-badge" wx:if="{{item.pbText}}">🏆 PB {{item.pbText}}</text>
+      </view>
 
-      <view class="cert-card card" wx:for="{{item.list}}" wx:for-item="r" wx:key="_id">
+      <!-- PB 那一场单独描金边 -->
+      <view class="cert-card card {{r._id === item.pbId ? 'is-pb' : ''}}" wx:for="{{item.list}}" wx:for-item="r" wx:key="_id">
         <view class="cert-head">
           <text class="cert-name">{{r.city}}</text>
           <text class="cert-date">{{r.date || '日期未填'}}</text>
