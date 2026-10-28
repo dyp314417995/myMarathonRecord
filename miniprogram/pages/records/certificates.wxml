@@ -56,21 +56,20 @@
     </view>
   </block>
 
-  <!-- 默认展示项设置（内容要放在遮罩里面，否则会被遮罩盖住、点了像没反应） -->
-  <view class="modal-mask" wx:if="{{showDefaultModal}}" bindtap="onHideDefault">
-    <view class="modal-box" catchtap="noop">
-      <text class="modal-title">默认展示</text>
-      <text class="card-sub">选一个项目，下次进来和分享出去都默认展示它（重点跑哪个就设哪个）</text>
-      <view class="chip-row">
-        <text class="chip {{defaultType === '' ? 'on' : ''}}" data-t="" bindtap="onSetDefault">全部</text>
-        <text class="chip {{defaultType === 'full' ? 'on' : ''}}" data-t="full" bindtap="onSetDefault">全马</text>
-        <text class="chip {{defaultType === 'half' ? 'on' : ''}}" data-t="half" bindtap="onSetDefault">半马</text>
-        <text class="chip {{defaultType === '10k' ? 'on' : ''}}" data-t="10k" bindtap="onSetDefault">10 公里</text>
-        <text class="chip {{defaultType === 'custom' ? 'on' : ''}}" data-t="custom" bindtap="onSetDefault">其他</text>
-      </view>
-      <view class="modal-btns">
-        <button class="btn btn-gray" bindtap="onHideDefault">关闭</button>
-      </view>
+  <!-- 默认展示项设置（写法与跑马记录页一致：遮罩和弹窗平级，弹窗自带定位与更高层级） -->
+  <view class="modal-mask" wx:if="{{showDefaultModal}}" bindtap="onHideDefault"></view>
+  <view class="modal-box" wx:if="{{showDefaultModal}}">
+    <text class="modal-title">默认展示</text>
+    <text class="card-sub">选一个项目，下次进来和分享出去都默认展示它（重点跑哪个就设哪个）</text>
+    <view class="chip-row">
+      <text class="chip {{defaultType === '' ? 'on' : ''}}" data-t="" bindtap="onSetDefault">全部</text>
+      <text class="chip {{defaultType === 'full' ? 'on' : ''}}" data-t="full" bindtap="onSetDefault">全马</text>
+      <text class="chip {{defaultType === 'half' ? 'on' : ''}}" data-t="half" bindtap="onSetDefault">半马</text>
+      <text class="chip {{defaultType === '10k' ? 'on' : ''}}" data-t="10k" bindtap="onSetDefault">10 公里</text>
+      <text class="chip {{defaultType === 'custom' ? 'on' : ''}}" data-t="custom" bindtap="onSetDefault">其他</text>
+    </view>
+    <view class="modal-btns">
+      <button class="btn btn-gray" bindtap="onHideDefault">关闭</button>
     </view>
   </view>
 </view>
