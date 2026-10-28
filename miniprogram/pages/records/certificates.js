@@ -37,7 +37,6 @@ Page({
     defaultType: '',   // 本地设置的默认展示项
     tabs: [],          // [{ key, label, count }]
     total: 0,
-    curPb: '',         // 当前选中项目的个人最好成绩
 
     showDefaultModal: false,
   },
@@ -193,8 +192,7 @@ Page({
       this.setData({ activeType: '' });
     }
     const groups = active ? this.data.allGroups.filter(g => g.key === active) : this.data.allGroups;
-    // 只看一个项目时，把它的 PB 单独提出来强调
-    this.setData({ groups, curPb: (active && groups[0]) ? groups[0].pbText : '' });
+    this.setData({ groups });
   },
 
   // ===== 默认展示项设置 =====

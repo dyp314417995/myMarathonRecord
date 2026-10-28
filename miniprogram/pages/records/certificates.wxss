@@ -21,18 +21,8 @@
 .stat-num { font-size: 44rpx; font-weight: 600; color: #222; display: block; }
 .stat-label { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }
 
-/* PB 突出展示：只看一个项目时，PB 单独一行放在最上面 */
-.pb-line { display: flex; align-items: center; background: linear-gradient(135deg, #fff6e5, #ffefd6); border-radius: 16rpx; padding: 28rpx 28rpx; margin-bottom: 20rpx; }
-.pb-icon { font-size: 44rpx; margin-right: 20rpx; }
-.pb-main { display: flex; flex-direction: column; }
-.pb-label { font-size: 24rpx; color: #a06a00; }
-.pb-value { font-size: 48rpx; font-weight: 700; color: #f57c00; line-height: 1.2; margin-top: 4rpx; }
-
-/* 分组标题右侧的 PB 徽章 */
-.pb-badge { font-size: 24rpx; color: #f57c00; background: #fff6e5; padding: 6rpx 18rpx; border-radius: 999rpx; font-weight: 600; flex-shrink: 0; }
-
-/* PB 那一场的卡片描金边 */
-.cert-card.is-pb { border: 2rpx solid #f5a623; }
+/* PB 角标：打在卡片右上角 */
+.pb-corner { position: absolute; top: 0; right: 0; background: linear-gradient(135deg, #ffb74d, #f57c00); color: #fff; font-size: 22rpx; font-weight: 600; padding: 8rpx 18rpx; border-radius: 0 16rpx 0 16rpx; }
 
 .cert-hint { font-size: 24rpx; color: #bbb; margin-left: 8rpx; }
 /* 能点的提示：做成绿色带下划线，别让人以为是死的灰字 */
@@ -42,6 +32,7 @@
 .group { margin-bottom: 4rpx; }
 .group-title { font-size: 30rpx; font-weight: 600; color: #333; padding: 20rpx 8rpx 8rpx; display: flex; align-items: center; justify-content: space-between; }
 
+.cert-card { position: relative; } /* PB 角标要相对卡片定位 */
 .cert-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16rpx; }
 .cert-name { font-size: 32rpx; font-weight: 600; color: #222; flex: 1; }
 .cert-date { font-size: 24rpx; color: #999; margin-left: 16rpx; }
