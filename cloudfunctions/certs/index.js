@@ -38,13 +38,21 @@ function fmtDate(d) {
 async function list(event, uid) {
   const userId = event.userId || uid;
   if (!userId) return { ok: false, msg: '未登录' };
+  // 按比赛日期倒序：越新的比赛越靠上（跟跑马记录列表一致）
   const r = await db.collection(COLL).where({ userId })
-    .orderBy('createTime', 'desc').limit(100).get().catch(() => null);
+    .orderBy('date', 'desc').limit(100).get().catch(() => null);
   const list = ((r && r.data) || []).map(c => ({
     ...c,
     date: c.date || '',
     images: Array.isArray(c.images) ? c.images : (c.image ? [c.image] : []),
   }));
+  // 没填日期的排在最后，按录入时间倒序，别混在有日期的中间
+  list.sort((a, b) => {
+    if (a.date && b.date) return String(b.date).localeCompare(String(a.date));
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    return String(b.createTime || '').localeCompare(String(a.createTime || ''));
+  });
   // 分享进来时顺带把主人昵称带上
   let ownerName = '';
   const u = await db.collection('users').where({ _id: userId }).limit(1).get().catch(() => null);
