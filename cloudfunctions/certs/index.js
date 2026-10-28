@@ -110,19 +110,47 @@ async function remove(event, uid) {
 }
 
 // 我的赛事（race_markers 里标记的），供添加证书时选择并带出赛事信息
+// 成绩从两条路带出：
+//   ① marker.recordId → race_records（在赛事日历里标记「已完赛」时写的那条，最准）
+//   ② 兜底按赛事名匹配 race_records.city（直接在跑马记录里录的，没走日历标记）
 async function myEvents(event, uid) {
   if (!uid) return { ok: false, msg: '未登录' };
   const mk = await db.collection('race_markers').where({ userId: uid }).limit(200).get().catch(() => null);
-  const ids = [...new Set(((mk && mk.data) || []).map(m => m.eventId).filter(Boolean))].slice(0, 100);
+  const markers = (mk && mk.data) || [];
+  const ids = [...new Set(markers.map(m => m.eventId).filter(Boolean))].slice(0, 100);
   if (!ids.length) return { ok: true, list: [] };
+
+  // ① 按 recordId 精确关联的成绩
+  const recIdByEvent = {};
+  markers.forEach(m => { if (m.recordId) recIdByEvent[m.eventId] = m.recordId; });
+  const rids = [...new Set(Object.values(recIdByEvent))].slice(0, 100);
+  const recById = {};
+  if (rids.length) {
+    const rr = await db.collection('race_records').where({ _id: _.in(rids) }).limit(100).get().catch(() => null);
+    ((rr && rr.data) || []).forEach(r => { recById[r._id] = r; });
+  }
+
+  // ② 本人的全部成绩记录，按赛事名兜底匹配（race_records.city 里存的是赛事名）
+  const recByName = {};
+  const myRec = await db.collection('race_records').where({ userId: uid }).limit(100).get().catch(() => null);
+  ((myRec && myRec.data) || []).forEach(r => { if (r.city) recByName[r.city] = r; });
+
   const ev = await db.collection('race_events').where({ _id: _.in(ids) }).limit(100).get().catch(() => null);
-  const list = ((ev && ev.data) || []).map(e => ({
-    _id: e._id,
-    name: e.name || '',
-    date: fmtDate(e.date),
-    city: [e.province, e.city].filter(Boolean).join(''),
-    raceTypes: Array.isArray(e.raceTypes) ? e.raceTypes : [],
-  })).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  const list = ((ev && ev.data) || []).map(e => {
+    const rec = (recIdByEvent[e._id] && recById[recIdByEvent[e._id]]) || recByName[e.name] || null;
+    return {
+      _id: e._id,
+      name: e.name || '',
+      date: fmtDate(e.date),
+      city: [e.province, e.city].filter(Boolean).join(''),
+      raceTypes: Array.isArray(e.raceTypes) ? e.raceTypes : [],
+      // 成绩与项目：有成绩记录时以记录为准（那是实际跑的项目），没有就留空让人自己填
+      result: rec ? String(rec.result || '') : '',
+      raceType: rec ? String(rec.raceType || '') : '',
+      recordDate: rec ? String(rec.date || '') : '',
+      hasResult: !!(rec && rec.result),
+    };
+  }).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   return { ok: true, list };
 }
 

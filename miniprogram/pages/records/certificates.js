@@ -167,15 +167,18 @@ Page({
     const id = e.currentTarget.dataset.id;
     const ev = this.data.myEvents.find(x => x._id === id);
     if (!ev) return;
-    // 带出能拿到的字段，成绩/名次本来就要自己填
-    this.setData({
+    // 赛事信息 + 成绩一起带出来；没记录过成绩的赛事，成绩留空自己填
+    const patch = {
       showEventPicker: false,
       'form.eventId': ev._id,
       'form.name': ev.name || '',
-      'form.date': ev.date || this.data.form.date,
+      'form.date': ev.recordDate || ev.date || this.data.form.date,
       'form.city': ev.city || '',
-      'form.raceType': (ev.raceTypes && ev.raceTypes[0]) || this.data.form.raceType,
-    });
+      'form.raceType': ev.raceType || (ev.raceTypes && ev.raceTypes[0]) || this.data.form.raceType,
+      'form.result': ev.result || '',
+    };
+    this.setData(patch);
+    if (ev.result) wx.showToast({ title: '已带出成绩 ' + ev.result, icon: 'none' });
   },
 
   // 选了赛事又想自己改名字时，把关联去掉，避免串味

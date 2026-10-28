@@ -121,6 +121,9 @@
           <text class="member-name">{{item.name}}</text>
           <text class="member-meta">{{item.date || '日期待定'}}{{item.city ? ' · ' + item.city : ''}}</text>
         </view>
+        <view class="member-right">
+          <text class="tag {{item.hasResult ? 'tag-green' : 'tag-gray'}}">{{item.hasResult ? item.result : '未录成绩'}}</text>
+        </view>
       </view>
       <view class="modal-btns">
         <button class="btn btn-gray" bindtap="onCloseEventPicker">关闭</button>
