@@ -174,6 +174,7 @@ Page({
   // ===== 默认展示项设置 =====
   onShowDefault() { this.setData({ showDefaultModal: true }); },
   onHideDefault() { this.setData({ showDefaultModal: false }); },
+  noop() {}, // 点弹窗内部不关弹窗
 
   onSetDefault(e) {
     const t = e.currentTarget.dataset.t || '';
