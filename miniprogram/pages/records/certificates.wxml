@@ -46,7 +46,7 @@
         <view class="cert-note" wx:if="{{r.note}}">{{r.note}}</view>
 
         <view class="cert-actions" wx:if="{{mine}}">
-          <text class="cert-hint link" bindtap="onGoRecords">编辑 / 删除请到「跑马记录」›</text>
+          <text class="cert-hint link" data-id="{{r._id}}" bindtap="onGoEdit">编辑 / 删除请到「跑马记录」›</text>
         </view>
       </view>
     </view>

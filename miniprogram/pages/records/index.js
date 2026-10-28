@@ -39,8 +39,9 @@ Page({
     if (['half', 'full', '10k', 'custom'].includes(t)) {
       this.setData({ tab: t, defaultTab: t });
     }
-    // 从荣耀时刻页点「添加」过来时，直接把录入表单打开
+    // 从荣耀时刻页过来时：add=1 打开空白新增，edit=xxx 打开这条的编辑
     this._autoAdd = !!(options && options.add);
+    this._autoEditId = (options && options.edit) || '';
   },
 
   onShow() {
@@ -106,6 +107,12 @@ Page({
       this.setData({ records: data });
       this.updateFiltered();
       this.updateChart();
+      // 带记录 id 过来的：等数据加载完再打开编辑表单，否则会找不到这条记录
+      if (this._autoEditId) {
+        const id = this._autoEditId;
+        this._autoEditId = '';
+        this.openEditById(id);
+      }
     } catch (e) {}
   },
 
@@ -176,10 +183,24 @@ Page({
     });
   },
 
-  // 编辑
+  // 编辑（列表里点进来）
   async onEdit(e) {
     const r = this.data.records.find(x => x._id === e.currentTarget.dataset.id);
-    if (!r) return;
+    if (r) await this.openFormWith(r);
+  },
+
+  // 从荣耀时刻页带着记录 id 跳过来时，自动打开这条的编辑表单
+  async openEditById(id) {
+    const r = this.data.records.find(x => x._id === id);
+    if (!r) {
+      wx.showToast({ title: '这条记录已不存在', icon: 'none' });
+      return;
+    }
+    await this.openFormWith(r);
+  },
+
+  // 用一条记录填充并打开表单
+  async openFormWith(r) {
     // 转换已有图片为临时链接（成绩截图 + 完赛证书一起换）
     const toImgs = (ids) => (ids || []).map(id => ({ cloudID: id, local: '' }));
     const images = toImgs(r.images);
@@ -195,11 +216,14 @@ Page({
     }
     this.setData({
       showForm: true, editingId: r._id,
+      // 列表 tab 跟着切到这条记录所属项目，保存后能直接看到它
+      tab: r.raceType || this.data.tab,
       form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', rank: r.rank || '', note: r.note || '', isPublic: r.isPublic !== false, distanceKm: r.distanceKm || '' },
       formImages: images,
       formCertImages: certImages,
       searchText: r.city || '',
     });
+    this.updateFiltered();
   },
 
   // ===== 完赛证书（最多 3 张） =====

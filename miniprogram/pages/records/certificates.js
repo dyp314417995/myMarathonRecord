@@ -184,9 +184,16 @@ Page({
     wx.showToast({ title: t ? '已设为默认' : '默认显示全部', icon: 'none' });
   },
 
-  // 添加 / 编辑 / 删除都回跑马记录做
+  // 添加：去跑马记录新增一条
   onGoRecords() {
     wx.navigateTo({ url: '/pages/records/index?add=1' });
+  },
+
+  // 编辑：带上这条记录的 id 过去，那边直接打开它的编辑表单
+  onGoEdit(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return this.onGoRecords();
+    wx.navigateTo({ url: `/pages/records/index?edit=${id}` });
   },
 
   onPreviewImage(e) {
