@@ -32,16 +32,22 @@ Page({
     searching: false,
   },
 
-  onLoad() {
+  onLoad(options) {
     shareUtil.enableShareMenu();
     // 读取用户自定义默认 Tab
     const t = wx.getStorageSync('records_default_tab');
     if (['half', 'full', '10k', 'custom'].includes(t)) {
       this.setData({ tab: t, defaultTab: t });
     }
+    // 从荣耀时刻页点「添加」过来时，直接把录入表单打开
+    this._autoAdd = !!(options && options.add);
   },
 
-  onShow() { this.loadRecords(); },
+  onShow() {
+    this.loadRecords();
+    // 从荣耀时刻页点「添加」过来，自动打开录入表单
+    if (this._autoAdd) { this._autoAdd = false; this.onAdd(); }
+  },
 
   // 统计已完赛的全马场次
   countFullMarathons() {
