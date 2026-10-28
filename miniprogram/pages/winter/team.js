@@ -12,6 +12,9 @@ Page({
     shareImageUrl: '',          // 转发卡片配图
     showGroupEdit: false,       // 队长/教练编辑宣言与照片
     groupEdit: { slogan: '', sloganImage: '', sloganImagePreview: '' },
+  showLeave: false,           // 请假申请弹窗
+  leaveForm: { startDate: '', endDate: '', type: 'injury', reason: '' },
+  leaves: [],                 // 我的请假记录
     busy: false,
   },
 
@@ -76,9 +79,14 @@ Page({
     const sloganImage = (r.group && r.group.sloganImage)
       ? await w.toTempUrl(r.group.sloganImage) : '';
 
+    // 我的请假（在请假期内时页面顶部会提示「本周不考核」）
+    const lv = await w.api.myLeaves().catch(() => null);
+    const leaves = (lv && lv.ok ? lv.list : []) || [];
+
     this.setData({
       loading: false,
       group: r.group,
+      leaves,
       sloganImage,
       shareImageUrl: sloganImage,
       members,
@@ -110,6 +118,45 @@ Page({
   onGoKpi() { wx.navigateTo({ url: '/pages/winter/kpi' }); },
   onGoCheckin() { wx.navigateTo({ url: '/pages/winter/checkin' }); },
   onGoRecords() { wx.navigateTo({ url: '/pages/winter/records' }); },
+
+  // ===== 请假：队员申请，队长/教练在审核中心审批，请假期间不考核 =====
+  onOpenLeave() {
+    const d = new Date();
+    const t = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    this.setData({
+      showLeave: true,
+      leaveForm: { startDate: t, endDate: t, type: 'injury', reason: '' },
+    });
+  },
+  onCloseLeave() { this.setData({ showLeave: false }); },
+  onLeaveInput(e) {
+    const f = e.currentTarget.dataset.f;
+    this.setData({ ['leaveForm.' + f]: e.detail.value });
+  },
+  onLeaveStartDate(e) {
+    const s = e.detail.value;
+    // 结束日期早于开始日期时自动跟着顺延，避免提交一个倒着的区间
+    const patch = { 'leaveForm.startDate': s };
+    if (this.data.leaveForm.endDate < s) patch['leaveForm.endDate'] = s;
+    this.setData(patch);
+  },
+  onLeaveEndDate(e) { this.setData({ 'leaveForm.endDate': e.detail.value }); },
+  onLeaveType(e) { this.setData({ 'leaveForm.type': e.currentTarget.dataset.type }); },
+  async onSaveLeave() {
+    const f = this.data.leaveForm;
+    if (!f.startDate || !f.endDate) return wx.showToast({ title: '请选择起止日期', icon: 'none' });
+    if (f.endDate < f.startDate) return wx.showToast({ title: '结束日期不能早于开始', icon: 'none' });
+    if (!String(f.reason || '').trim()) return wx.showToast({ title: '请填写请假原因', icon: 'none' });
+    this.setData({ busy: true });
+    const r = await w.api.applyLeave({
+      startDate: f.startDate, endDate: f.endDate, type: f.type, reason: f.reason,
+    });
+    this.setData({ busy: false });
+    if (!r.ok) return wx.showToast({ title: r.error || '提交失败', icon: 'none' });
+    wx.showToast({ title: '已提交，等待队长审批', icon: 'success' });
+    this.setData({ showLeave: false });
+    this.load();
+  },
 
   // 主动退组：退出后可重新报名加入其他组
   onQuitGroup() {

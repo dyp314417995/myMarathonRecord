@@ -128,7 +128,7 @@
         <block wx:if="{{myWeek.target > 0}}">
           <view class="bar-wrap"><view class="bar-inner" style="width:{{myWeek.rate}}%"></view></view>
           <text class="card-sub" style="margin-top:12rpx">目标 {{myWeek.target}}{{myWeek.kpiType === 'attendance' ? ' 天' : ' 公里'}} · 已完成 {{myWeek.actual}}{{myWeek.kpiType === 'attendance' ? ' 天' : ' 公里'}}</text>
-          <text class="card-sub" wx:if="{{myWeek.completed === null}}">本周不考核（春节周），打卡照常记录</text>
+          <text class="card-sub" wx:if="{{myWeek.completed === null}}">{{myWeek.onLeave ? '🏖 本周请假中，不考核（打卡照常记录）' : '本周不考核（春节周），打卡照常记录'}}</text>
           <text class="card-sub" wx:elif="{{myWeek.completed}}">✅ 本周 KPI 已达成</text>
           <text class="card-sub" wx:else>还差 {{myWeek.remain}}{{myWeek.kpiType === 'attendance' ? ' 天' : ' 公里'}}</text>
         </block>
@@ -149,9 +149,9 @@
           <view class="grid-item" bindtap="onGoSchedule">
             <text class="grid-num">📅</text><text class="grid-label">本周课表</text>
           </view>
-          <view class="grid-item" bindtap="onGoReview" wx:if="{{myRoleText === '队长' || myRoleText === '教练'}}">
+          <view class="grid-item" bindtap="onGoReview">
             <text class="grid-num">✅</text>
-            <text class="grid-label">待审 {{pendingCount}}</text>
+            <text class="grid-label">审核{{pendingCount ? ' ' + pendingCount : ''}}</text>
           </view>
           <view class="grid-item" bindtap="onGoRank">
             <text class="grid-num">🏆</text><text class="grid-label">榜单</text>

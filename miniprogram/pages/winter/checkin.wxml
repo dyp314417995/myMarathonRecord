@@ -13,24 +13,34 @@
             <text class="row-value">{{date}} ›</text>
           </picker>
         </view>
-        <view class="row" wx:if="{{todayRecord}}">
-          <text class="row-label">今日状态</text>
-          <text class="tag {{todayRecord.status === 'approved' ? 'tag-green' : (todayRecord.status === 'rejected' ? 'tag-red' : 'tag-orange')}}">{{statusText}}</text>
+        <view class="row" wx:if="{{todayCount > 0}}">
+          <text class="row-label">今日已打卡</text>
+          <text class="tag tag-blue">{{todayCount}} 次</text>
         </view>
-        <view wx:if="{{todayRecord && todayRecord.status === 'rejected' && todayRecord.reviewNote}}" class="notice-bar" style="margin-top:16rpx">
-          驳回原因：{{todayRecord.reviewNote}}
+        <view class="member-row" wx:for="{{todayList}}" wx:key="_id">
+          <view class="member-info">
+            <text class="member-meta">{{needDistance ? (item.distance + ' 公里') : (item.duration + ' 分钟')}}{{item.note ? ' · ' + item.note : ''}}</text>
+          </view>
+          <view class="member-right">
+            <text class="tag {{item.status === 'approved' ? 'tag-green' : (item.status === 'rejected' ? 'tag-red' : 'tag-orange')}}">{{item.status === 'approved' ? '已通过' : (item.status === 'rejected' ? '已驳回' : '审核中')}}</text>
+          </view>
+        </view>
+        <view wx:for="{{todayList}}" wx:for-item="t" wx:key="_id">
+          <view wx:if="{{t.status === 'rejected' && t.reviewNote}}" class="notice-bar" style="margin-top:16rpx">
+            驳回原因：{{t.reviewNote}}
+          </view>
         </view>
       </view>
 
       <view class="card">
         <text class="card-title">上传跑步记录截图 *</text>
-        <text class="card-sub">需包含日期与跑量/时长信息，每日 1 张</text>
-        <view style="display:flex;align-items:center">
-          <image wx:if="{{tempImage}}" class="img-preview" src="{{tempImage}}" mode="aspectFill" bindtap="onPreview" />
-          <view wx:else class="upload-box" bindtap="onChooseImage">＋ 选择图片</view>
-          <view style="margin-left:20rpx" wx:if="{{tempImage}}" bindtap="onChooseImage">
-            <text class="tag tag-blue">重新选择</text>
+        <text class="card-sub">需包含日期与跑量/时长信息，一次最多 3 张；一天可以打多次卡</text>
+        <view class="photo-row">
+          <view class="photo-cell" wx:for="{{localImages}}" wx:key="*this">
+            <image class="img-preview" src="{{item}}" mode="aspectFill" data-i="{{index}}" bindtap="onPreview" />
+            <text class="photo-del" data-i="{{index}}" bindtap="onRemoveImage">×</text>
           </view>
+          <view wx:if="{{localImages.length + uploadedFileIDs.length < 3}}" class="upload-box" bindtap="onChooseImage">＋ 选图</view>
         </view>
       </view>
 

@@ -12,6 +12,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const CONFIG_ID = 'config';
 
 const ROLE_TEXT = { member: '队员', leader: '队长', coach: '教练' };
+// 单次打卡最多几张图（有人一次跑几段、想多留几张截图）
+const MAX_CHECKIN_IMAGES = 3;
+// 同一天最多打几次（一天可多次，但给个上限挡误提交/刷数据）
+const MAX_CHECKIN_PER_DAY = 10;
 // 缴费状态三态：paid 已缴费 / unpaid 未缴费 / free 免费（无需缴费）
 const FEE_STATUS_SET = ['paid', 'unpaid', 'free'];
 const APPLY_STATUS_TEXT = { pending: '待审核', approved: '已通过', rejected: '已驳回', 'quit-suggested': '建议退出', quit: '已退出' };
@@ -46,7 +50,7 @@ function fail(msg, extra) { return { ok: false, error: msg, ...(extra || {}) }; 
 async function ensureCollections() {
   const names = ['winter_config', 'winter_group', 'winter_member', 'winter_kpi_range',
     'winter_checkin', 'winter_weekly', 'winter_kpi', 'winter_schedule', 'winter_fine', 'winter_log',
-    'winter_staff'];
+    'winter_staff', 'winter_leave'];
   for (const n of names) {
     try { await db.createCollection(n); } catch (e) { /* 已存在 */ }
   }
@@ -117,6 +121,25 @@ function calcWeekIndex(cfg) {
 }
 function isHolidayWeek(cfg, weekIndex) {
   return (cfg.holidayWeeks || []).indexOf(weekIndex) >= 0;
+}
+
+// 第 N 周的周一（weekIndex 与 calcWeekIndex 同口径，<=0 表示开营前的试运行周）
+function mondayOfWeekIndex(cfg, weekIndex) {
+  if (!cfg.startMonday) return mondayOf(todayStr());
+  return addDays(cfg.startMonday, ((Number(weekIndex) || 0) - 1) * 7);
+}
+
+// 该成员在这一周是否处于「已批准的请假」区间内（只要与本周有交集就算）
+// 请假期间不考核：完成率不计、完成人数不计、也不累加连续未完成周数
+async function onApprovedLeave(userId, weekIndex, cfg) {
+  if (!userId) return false;
+  const monday = mondayOfWeekIndex(cfg, weekIndex);
+  const sunday = addDays(monday, 6);
+  const r = await db.collection('winter_leave').where({
+    userId, status: 'approved',
+    startDate: _.lte(sunday), endDate: _.gte(monday),
+  }).limit(20).get().catch(() => null);
+  return ((r && r.data) || []).length > 0;
 }
 
 // 留痕日志（调组/伤病/建组/开关等后台操作）
@@ -323,6 +346,8 @@ async function actionBootstrap(userId) {
     const wk = await getWeekKpi(member, weekIndex);
     const actual = wk.type === 'attendance' ? wDays : r1(wDist);
     const rate = wk.value > 0 ? Math.min(1, actual / wk.value) : 0;
+    // 本周在请假期内 → 不考核（与榜单同一口径：completed 记 null）
+    const onLeave = await onApprovedLeave(userId, weekIndex, cfg);
     result.myWeek = {
       distance: r1(wDist),           // 本周跑量（公里）
       duration: Math.round(wDur),    // 本周总时长（分钟）
@@ -333,8 +358,9 @@ async function actionBootstrap(userId) {
       rate: Math.round(rate * 100),
       // 距目标还差多少（同样只保留一位小数）
       remain: wk.value > 0 ? Math.round((wk.value - actual) * 10) / 10 : 0,
-      // 春节周不考核 → null；没填 KPI → null
-      completed: frozen || wk.value <= 0 ? null : rate >= 1,
+      // 春节周 / 本人请假 → 不考核（null）；没填 KPI 同样记 null
+      completed: frozen || onLeave || wk.value <= 0 ? null : rate >= 1,
+      onLeave,
     };
   }
 
@@ -765,11 +791,15 @@ async function actionDoCheckin(userId, data) {
     return fail('打卡已于周日 24 点截止，周一零点起不可再补上周的卡');
   }
 
-  const imageFileID = String((data.imageFileID || data.image || '')).trim();
+  // 图片：新版本传数组 imageFileIDs（一次最多 3 张），老版本传单个 imageFileID，两者都兼容
+  const rawIds = [];
+  if (Array.isArray(data.imageFileIDs)) rawIds.push(...data.imageFileIDs);
+  if (data.imageFileID || data.image) rawIds.push(data.imageFileID || data.image);
+  const imageFileIDs = [...new Set(rawIds.map(x => String(x || '').trim()).filter(Boolean))].slice(0, MAX_CHECKIN_IMAGES);
   const distance = toNum(data.distance);
   const duration = toNum(data.duration);
   const note = String(data.note || '').trim();
-  if (!imageFileID) return fail('请上传一张跑步记录截图');
+  if (!imageFileIDs.length) return fail('请上传跑步记录截图');
   if (weekKpi.type === 'distance' && distance <= 0) return fail('请填写本次跑量（公里）');
   if (weekKpi.type === 'attendance' && duration <= 0) return fail('请填写本次时长（分钟）');
 
@@ -778,17 +808,24 @@ async function actionDoCheckin(userId, data) {
     return fail(`单次训练时长不得低于 ${range.minDuration} 分钟`);
   }
 
-  const exist = await db.collection('winter_checkin').where({ userId, date }).limit(1).get().catch(() => null);
   const weekIndexRaw = Math.floor(diffDays(mondayOf(date), cfg.startMonday) / 7) + 1;
   // 开营前（11/1—11/15 试运行）允许打卡练手；此时 weekIndex 为 0 或负数，
   // 与 calcWeekIndex 保持同一口径，周一自动换周，不会和上周混在一起。
   if (weekIndexRaw < 1 && cfg.phase !== 'trial') return fail('不在冬训周期内');
   const weekIndex = weekIndexRaw;
 
+  // 一天可多次，但有上限，防止误提交把数据刷花
+  const sameDay = await db.collection('winter_checkin').where({ userId, date }).count().catch(() => ({ total: 0 }));
+  if ((sameDay.total || 0) >= MAX_CHECKIN_PER_DAY) {
+    return fail(`同一天最多打卡 ${MAX_CHECKIN_PER_DAY} 次`);
+  }
+
   const payload = {
     userId, groupId: member.groupId, date, weekIndex,
     monday: mondayOf(date),
-    imageFileID, distance, duration, note,
+    // 新字段是数组；同时保留单张字段，老代码/老数据读到哪边都有图
+    imageFileIDs, imageFileID: imageFileIDs[0] || '',
+    distance, duration, note,
     kpiType: weekKpi.type,
     updateTime: new Date(),
   };
@@ -801,18 +838,11 @@ async function actionDoCheckin(userId, data) {
     payload.reviewNote = selfPass ? '队长/教练打卡自动通过' : '本组打卡免审核，自动通过';
     payload.reviewTime = new Date();
     payload.autoApproved = true;
+  } else {
+    payload.status = 'pending';
   }
-  if (exist && exist.data && exist.data.length) {
-    if (exist.data[0].status === 'approved' && !selfPass) return fail('该日期打卡已通过审核，不可修改');
-    if (!selfPass) {
-      payload.status = 'pending';
-      payload.reviewerId = '';
-      payload.reviewNote = '';
-    }
-    await db.collection('winter_checkin').doc(exist.data[0]._id).update({ data: payload });
-    return ok({ id: exist.data[0]._id, updated: true, status: payload.status });
-  }
-  if (!selfPass) payload.status = 'pending';
+  // 一天可以打多次卡（有人一天跑两趟）：每次都是一条新记录，
+  // 不做「同日期覆盖」。周汇总里跑量/时长累加、天数按日期去重，口径不受影响。
   payload.createTime = new Date();
   const addRes = await db.collection('winter_checkin').add({ data: payload });
   return ok({ id: addRes._id, status: payload.status });
@@ -991,7 +1021,25 @@ async function actionTransferRole(userId, data) {
   return ok({ role, newRole: 'member' });
 }
 
-// 待审核列表（仅队长/教练可见本组，排除自己）
+// 批量补昵称 / 头像：一次 in 查询搞定，避免逐条 getUser（几十条就是几十次数据库往返）
+async function decorateUsers(list) {
+  const ids = [...new Set(list.map(c => c.userId).filter(Boolean))];
+  const map = {};
+  for (let i = 0; i < ids.length; i += 100) {
+    const r = await db.collection('users')
+      .where({ _id: _.in(ids.slice(i, i + 100)) }).limit(100).get().catch(() => null);
+    for (const u of ((r && r.data) || [])) map[u._id] = u;
+  }
+  return list.map(c => {
+    const u = map[c.userId];
+    return Object.assign({}, c, {
+      nickName: (u && (u.nickName || u.nickname)) || c.nickName || '未知',
+      avatarUrl: (u && u.avatarUrl) || '',
+    });
+  });
+}
+
+// 审核中心：待审打卡（队长/教练）+ 本组已审记录（全员可看，组内打卡记录就挂在「已审」里）
 // 注：队长/教练本人打卡免审，不进待审列表；历史遗留的 pending 记录在这里补正为自动通过
 async function actionPendingReview(userId, data) {
   const member = await getMyMember(userId);
@@ -999,7 +1047,6 @@ async function actionPendingReview(userId, data) {
   if (member.status !== 'approved') return fail('尚未通过任命');
   // 在多个组兼任队长/教练时，所有任职组的待审打卡都要能看到
   const gids = await staffGroupIdsOf(userId, ['leader', 'coach']);
-  if (!gids.length) return fail('仅队长/教练可审核');
   for (const gid of gids) await autoApproveOverdue(gid);
 
   // 这些组的队长/教练（他们的打卡不需要任何人审核）
@@ -1026,31 +1073,132 @@ async function actionPendingReview(userId, data) {
   }
 
   const staffSet = new Set(staffIds);
-  const r = await db.collection('winter_checkin').where({
-    groupId: _.in(gids), status: 'pending',
-  }).orderBy('date', 'desc').limit(100).get().catch(() => null);
-  // 只留队员的打卡：排除自己与这些组的队长/教练
-  const list = ((r && r.data) || []).filter(c => c.userId !== userId && !staffSet.has(c.userId));
-  const decorated = [];
-  for (const c of list) {
-    const u = await getUser(c.userId);
-    decorated.push({
-      ...c,
-      nickName: (u && (u.nickName || u.nickname)) || '未知',
-      avatarUrl: (u && u.avatarUrl) || '',
-    });
+  let list = [];
+  if (gids.length) {
+    const r = await db.collection('winter_checkin').where({
+      groupId: _.in(gids), status: 'pending',
+    }).orderBy('date', 'desc').limit(100).get().catch(() => null);
+    // 只留队员的打卡：排除自己与这些组的队长/教练
+    const raw = ((r && r.data) || []).filter(c => c.userId !== userId && !staffSet.has(c.userId));
+    list = await decorateUsers(raw);
   }
-  return ok({ list: decorated, myRole: member.role });
+
+  // 待审请假（队长/教练）：与打卡待审一起在审核中心处理
+  let leaves = [];
+  if (gids.length) {
+    const lr = await db.collection('winter_leave').where({
+      groupId: _.in(gids), status: 'pending',
+    }).limit(50).get().catch(() => null);
+    leaves = await decorateUsers(((lr && lr.data) || []).filter(l => l.userId !== userId));
+  }
+
+  // 已审记录：组内打卡记录放在这里给全员看（队员原来只能在「我的组」进记录页，
+  // 那个入口已随「去打卡」一起去掉）。兼任多组时看所有任职组，否则看自己所在组。
+  const viewGids = gids.length ? gids : (member.groupId ? [member.groupId] : []);
+  let reviewed = [];
+  if (viewGids.length) {
+    const rv = await db.collection('winter_checkin').where({
+      groupId: _.in(viewGids), status: _.in(['approved', 'rejected']),
+    }).orderBy('date', 'desc').limit(100).get().catch(() => null);
+    reviewed = await decorateUsers((rv && rv.data) || []);
+  }
+
+  return ok({
+    list, reviewed, leaves,
+    myRole: member.role,
+    canReview: gids.length > 0,   // 队员进来看已审，没有审核权限
+  });
+}
+
+// ===== 请假：队员申请 → 队长/教练审批，请假期间不考核 =====
+const LEAVE_TYPE_TEXT = { injury: '伤病', personal: '事假', race: '参赛调整', other: '其他' };
+const MAX_LEAVE_DAYS = 7;   // 单次最长一周
+
+async function actionApplyLeave(userId, data) {
+  const cfg = await getConfig();
+  if (cfg.phase === 'closed') return fail('冬训营未开放');
+  const member = await getMyMember(userId);
+  if (!member) return fail('尚未报名');
+  if (member.status !== 'approved' && member.status !== 'quit-suggested') return fail('报名未通过');
+
+  const start = String(data.startDate || '').trim();
+  const end = String(data.endDate || '').trim();
+  const reason = String(data.reason || '').trim();
+  const type = LEAVE_TYPE_TEXT[data.type] ? data.type : 'other';
+  if (!start || !end) return fail('请选择请假起止日期');
+  if (diffDays(end, start) < 0) return fail('结束日期不能早于开始日期');
+  const days = diffDays(end, start) + 1;
+  if (days > MAX_LEAVE_DAYS) return fail(`单次请假最长 ${MAX_LEAVE_DAYS} 天，如需更长请分次申请`);
+  if (!reason) return fail('请填写请假原因');
+
+  // 同一区间别重复提交（含待审的）
+  const dup = await db.collection('winter_leave').where({
+    userId, startDate: _.lte(end), endDate: _.gte(start),
+    status: _.in(['pending', 'approved']),
+  }).limit(20).get().catch(() => null);
+  if (((dup && dup.data) || []).length) return fail('该区间已有请假记录（含待审）');
+
+  await db.collection('winter_leave').add({
+    data: {
+      userId, groupId: member.groupId,
+      startDate: start, endDate: end, days,
+      type, typeText: LEAVE_TYPE_TEXT[type], reason,
+      status: 'pending',
+      createTime: new Date(), updateTime: new Date(),
+    },
+  });
+  return ok({ days });
+}
+
+// 我的请假（含历史）
+async function actionMyLeaves(userId) {
+  const r = await db.collection('winter_leave').where({ userId })
+    .orderBy('createTime', 'desc').limit(50).get().catch(() => null);
+  return ok({ list: (r && r.data) || [] });
+}
+
+// 队长/教练审批请假
+async function actionReviewLeave(userId, data) {
+  const member = await getMyMember(userId);
+  if (!member) return fail('尚未报名');
+  const gids = await staffGroupIdsOf(userId, ['leader', 'coach']);
+  if (!gids.length) return fail('无审核权限');
+  const id = String(data.id || '').trim();
+  const pass = data.pass === true || String(data.pass) === 'true';
+  const note = String(data.note || '').trim();
+  if (!id) return fail('缺少请假记录');
+  if (!pass && !note) return fail('驳回需填写原因');
+
+  const r = await db.collection('winter_leave').doc(id).get().catch(() => null);
+  if (!r || !r.data) return fail('请假记录不存在');
+  const lv = r.data;
+  if (gids.indexOf(lv.groupId) < 0) return fail('只能审批你任职的组的请假');
+  if (lv.status !== 'pending') return fail('该请假已处理');
+  if (lv.userId === userId) return fail('不能审批自己的请假');
+
+  await db.collection('winter_leave').doc(id).update({
+    data: {
+      status: pass ? 'approved' : 'rejected',
+      reviewerId: userId, reviewNote: note, reviewTime: new Date(),
+      updateTime: new Date(),
+    },
+  });
+  await saveLog({
+    type: 'leave', action: pass ? 'approve' : 'reject',
+    operatorId: userId, targetUserId: lv.userId,
+    detail: `${lv.startDate} ~ ${lv.endDate}（${lv.days} 天）${note ? ' · ' + note : ''}`,
+  });
+  return ok({ status: pass ? 'approved' : 'rejected' });
 }
 
 // 审核打卡（队长/教练互审；单人管理自动通过由 doCheckin 侧处理）
 async function actionReviewCheckin(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
-  const isAdmin = await isSuperAdmin(userId);
-  // 权限按「本组职务」算：支持在多个组兼任队长/教练
+  // 审核权限一律按「本组职务」算（支持在多个组兼任队长/教练）。
+  // 原先管理组有超越本组职务的抽查审核权限，已按需求取消：打卡只由本组队长/教练审
   const myGroups = await staffGroupIdsOf(userId, ['leader', 'coach']);
-  if (!myGroups.length && !isAdmin) return fail('无审核权限');
+  if (!myGroups.length) return fail('无审核权限');
   const id = String(data.id || '');
   const pass = data.pass === true || String(data.pass) === 'true';
   const note = String(data.note || '').trim();
@@ -1060,15 +1208,13 @@ async function actionReviewCheckin(userId, data) {
   if (!cRes || !cRes.data) return fail('打卡记录不存在');
   const c = cRes.data;
   if (c.userId === userId) return fail('不能审核自己的打卡');
-  if (!isAdmin && myGroups.indexOf(c.groupId) < 0) return fail('只能审核你任职的组的打卡');
-  // 互审：队长只能审队员+教练，教练只能审队员+队长；管理组不受限
-  if (!isAdmin) {
-    const myRoleHere = await roleInGroup(userId, c.groupId);
-    if (['leader', 'coach'].includes(myRoleHere)) {
-      const target = await getMyMember(c.userId);
-      const targetRole = await roleInGroup(c.userId, c.groupId);
-      if ((targetRole || (target && target.role)) === myRoleHere) return fail('队长/教练需互审，不可审同角色');
-    }
+  if (myGroups.indexOf(c.groupId) < 0) return fail('只能审核你任职的组的打卡');
+  // 互审：队长只能审队员+教练，教练只能审队员+队长
+  const myRoleHere = await roleInGroup(userId, c.groupId);
+  if (['leader', 'coach'].includes(myRoleHere)) {
+    const target = await getMyMember(c.userId);
+    const targetRole = await roleInGroup(c.userId, c.groupId);
+    if ((targetRole || (target && target.role)) === myRoleHere) return fail('队长/教练需互审，不可审同角色');
   }
   await db.collection('winter_checkin').doc(id).update({
     data: {
@@ -1114,8 +1260,10 @@ async function actionWeeklyStats(userId, data) {
       actual = wk.type === 'attendance' ? days : totalDistance;
       rate = Math.min(1, actual / target);
     }
-    // frozen 周完成状态为 null（不考核），避免虚增完成人数
-    const completed = frozen ? null : (target > 0 && rate >= 1);
+    // 全局冻结（春节周）或本人这周在请假 → 不考核，完成状态为 null，避免虚增完成人数
+    const onLeave = await onApprovedLeave(m.userId, weekIndex, cfg);
+    const noKpi = frozen || onLeave;
+    const completed = noKpi ? null : (target > 0 && rate >= 1);
     if (completed) completedCnt++;
     sumRate += rate;
     const u = await getUser(m.userId);
@@ -1128,7 +1276,7 @@ async function actionWeeklyStats(userId, data) {
       kpiType: wk.type, target, actual: r1(actual), days,
       totalDistance: r1(totalDistance), totalDuration: Math.round(totalDuration),
       rate: Math.round(rate * 100),
-      completed,
+      completed, onLeave,
       continuousFailWeeks: m.continuousFailWeeks || 0,
     });
   }
@@ -1140,7 +1288,7 @@ async function actionWeeklyStats(userId, data) {
   for (const g of ((gRes && gRes.data) || [])) {
     const ms = await getMemberListOfGroup(g._id);
     if (!ms.length) { teamRank.push({ groupId: g._id, name: g.name, emblem: g.emblem || '', avgRate: 0, memberCount: 0, completedCount: 0 }); continue; }
-    let sum = 0, done = 0;
+    let sum = 0, done = 0, leaveCnt = 0;
     for (const m of ms) {
       const cr = await db.collection('winter_checkin').where({ userId: m.userId, weekIndex }).limit(100).get().catch(() => null);
       const list = ((cr && cr.data) || []).filter(c => c.status === 'approved');
@@ -1151,12 +1299,16 @@ async function actionWeeklyStats(userId, data) {
       let rate = 0;
       if (target > 0) rate = Math.min(1, (wkr.type === 'attendance' ? days : totalDistance) / target);
       sum += rate;
-      if (!frozen && rate >= 1) done++; // 春节/试运行周不考核，不计入完成人数
+      // 春节周不考核；本周请假的人也不计入完成人数（不考核）
+      const onLeave = await onApprovedLeave(m.userId, weekIndex, cfg);
+      if (onLeave) leaveCnt++;
+      if (!frozen && !onLeave && rate >= 1) done++;
     }
     teamRank.push({
       groupId: g._id, name: g.name, emblem: g.emblem || '',
       avgRate: Math.round((sum / ms.length) * 100),
       memberCount: ms.length, completedCount: done,
+      leaveCount: leaveCnt,   // 本周请假人数（不考核）
     });
   }
   teamRank.sort((a, b) => b.avgRate - a.avgRate);
@@ -1698,29 +1850,6 @@ async function actionAdminRemark(userId, data) {
   return ok({ remark });
 }
 
-// 抽查：跨组查看打卡（可按状态/组筛选）
-async function functionAdminCheckins(userId, data) {
-  await requireAdmin(userId);
-  const where = {};
-  if (data.groupId) where.groupId = data.groupId;
-  if (data.status) where.status = data.status;
-  if (data.userId) where.userId = data.userId;
-  if (data.weekIndex) where.weekIndex = Number(data.weekIndex);
-  const r = await db.collection('winter_checkin').where(Object.keys(where).length ? where : { status: _.exists(true) })
-    .orderBy('date', 'desc').limit(200).get().catch(() => null);
-  const list = (r && r.data) || [];
-  const out = [];
-  for (const c of list) {
-    const u = await getUser(c.userId);
-    out.push({
-      ...c,
-      nickName: (u && (u.nickName || u.nickname)) || '未知',
-      avatarUrl: (u && u.avatarUrl) || '',
-    });
-  }
-  return ok({ list: out });
-}
-
 // 周结算：写周统计、更新连续未完成、生成罚金
 async function actionAdminCalcWeek(userId, data) {
   await requireAdmin(userId);
@@ -1754,11 +1883,13 @@ async function actionAdminCalcWeek(userId, data) {
     }
     // 收尾降档周（规则 2/17—2/23，跨第 14、15 周）：自 tailWeek 起自动降档，完成 1 次即达标
     const oncePass = tailOnce && days >= 1;
-    // 冻结周（试运行/春节）完成状态记为 null = 不考核，不虚增完成周数
-    const completed = frozen ? null : (oncePass || (target > 0 && rate >= 1));
-    // 更新连续未完成（春节/试运行周冻结；警告周只提醒，不累加连续，保证 11/23 计罚从 5 元起）
+    // 冻结周（春节）/ 本人请假 → 完成状态记为 null = 不考核，不虚增完成周数
+    const onLeave = await onApprovedLeave(m.userId, weekIndex, cfg);
+    const noKpi = frozen || onLeave;
+    const completed = noKpi ? null : (oncePass || (target > 0 && rate >= 1));
+    // 更新连续未完成（冻结周与请假周都不累加；警告周只提醒，不累加连续）
     let continuousFailWeeks = m.continuousFailWeeks || 0;
-    if (!frozen) {
+    if (!noKpi) {
       if (!completed && target > 0) {
         if (weekIndex !== warnWeek) continuousFailWeeks += 1;
       } else if (completed) continuousFailWeeks = 0;
@@ -1782,7 +1913,7 @@ async function actionAdminCalcWeek(userId, data) {
       await db.collection('winter_weekly').add({ data: { ...stat, createTime: new Date() } });
     }
     // 小红包提醒：仅未完成 + 非冻结周 + 非警告周（正式第 1 周只提醒不罚）
-    const noFine = frozen || weekIndex === warnWeek;
+    const noFine = noKpi || weekIndex === warnWeek;
     if (!completed && target > 0 && !noFine) {
       const fineExist = await db.collection('winter_fine').where({ userId: m.userId, weekIndex }).limit(1).get().catch(() => null);
       if (!(fineExist && fineExist.data && fineExist.data.length)) {
@@ -1962,6 +2093,9 @@ exports.main = async (event = {}) => {
     case 'leaderSaveGroup': return await actionLeaderSaveGroup(userId, data);
     case 'transferRole': return await actionTransferRole(userId, data);
       case 'pendingReview': return await actionPendingReview(userId, data);
+    case 'applyLeave': return await actionApplyLeave(userId, data);
+    case 'myLeaves': return await actionMyLeaves(userId, data);
+    case 'reviewLeave': return await actionReviewLeave(userId, data);
       case 'reviewCheckin': return await actionReviewCheckin(userId, data);
       case 'weeklyStats': return await actionWeeklyStats(userId, data);
       case 'publishSchedule': return await actionPublishSchedule(userId, data);
@@ -1980,7 +2114,7 @@ exports.main = async (event = {}) => {
       case 'adminMembers': return await actionAdminMembers(userId, data);
       case 'adminTransfer': return await actionAdminTransfer(userId, data);
       case 'adminRemark': return await actionAdminRemark(userId, data);
-      case 'adminCheckins': return await functionAdminCheckins(userId, data);
+  
       case 'adminCalcWeek': return await actionAdminCalcWeek(userId, data);
       case 'adminSetPhase': return await actionAdminSetPhase(userId, data);
       case 'adminFinance': return await actionAdminFinance(userId);

@@ -1,79 +1,144 @@
-<!-- pages/winter/review.wxml - 待审中心：入队申请 + 打卡审核 -->
+<!-- pages/winter/review.wxml - 审核中心：待审（入队申请 + 打卡） / 已审（组内打卡记录） -->
 <view class="winter-page">
   <view class="loading" wx:if="{{loading}}">加载中…</view>
   <block wx:else>
-    <view class="notice-bar" wx:if="{{noPerm}}">{{errMsg || '无审核权限'}}</view>
+    <view class="notice-bar" wx:if="{{noPerm}}">{{errMsg || '加载失败'}}</view>
 
     <block wx:if="{{!noPerm}}">
-      <view class="notice-bar">
+      <!-- 两个 sheet：待审（队长/教练）/ 已审（全员） -->
+      <view class="chip-row" style="margin-bottom:24rpx">
+        <text wx:if="{{canReview}}" class="chip {{tab === 'pending' ? 'on' : ''}}" data-v="pending" bindtap="onTab">待审 {{list.length}}</text>
+        <text class="chip {{tab === 'reviewed' ? 'on' : ''}}" data-v="reviewed" bindtap="onTab">已审 {{reviewed.length}}</text>
+      </view>
+
+      <view wx:if="{{canReview}}" class="notice-bar" style="margin-bottom:20rpx">
         👤 我的角色：{{roleText}} · 队长/教练打卡自动通过，无需审核
       </view>
 
-      <!-- 待审入队申请（仅队长；队员/教练入队由队长审批，不在管理后台） -->
-      <view class="card" wx:if="{{canReviewApply && applies.length > 0}}">
-        <text class="card-title">待审入队（{{applies.length}} 人）</text>
-        <text class="card-sub">缴费由你线下收款后自行标记，不阻塞审批</text>
-        <view class="apply-item" wx:for="{{applies}}" wx:key="userId">
+      <!-- ============ 待审 ============ -->
+      <block wx:if="{{tab === 'pending'}}">
+        <!-- 待审入队申请（仅队长） -->
+        <view class="card" wx:if="{{applies.length > 0}}">
+          <text class="card-title">待审入队（{{applies.length}} 人）</text>
+          <text class="card-sub">缴费由你线下收款后自行标记，不阻塞审批</text>
+          <view class="apply-item" wx:for="{{applies}}" wx:key="userId">
+            <view class="member-row" style="border-bottom:none">
+              <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+              <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
+              <view class="member-info">
+                <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>
+                <text class="member-meta">近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
+              </view>
+              <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
+            </view>
+            <text class="card-sub" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
+            <view class="mini-btn-row">
+              <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
+              <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onApplyReview">驳回</text>
+              <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onApplyReview">通过</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 待审请假（队长/教练） -->
+        <view class="card" wx:if="{{leaves.length > 0}}">
+          <text class="card-title">待审请假（{{leaves.length}}）</text>
+          <text class="card-sub">通过后该周不考核：不计完成率、不计罚金</text>
+          <view class="apply-item" wx:for="{{leaves}}" wx:key="_id">
+            <view class="member-row" style="border-bottom:none">
+              <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+              <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
+              <view class="member-info">
+                <text class="member-name">{{item.nickName}}</text>
+                <text class="member-meta">{{item.startDate}} ~ {{item.endDate}} · {{item.days}} 天 · {{item.typeText || '其他'}}</text>
+              </view>
+            </view>
+            <text class="card-sub" wx:if="{{item.reason}}">原因：{{item.reason}}</text>
+            <view class="mini-btn-row">
+              <text class="mini-btn mini-ghost" data-id="{{item._id}}" bindtap="onRejectLeave">驳回</text>
+              <text class="mini-btn" data-id="{{item._id}}" bindtap="onPassLeave">通过</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 待审打卡：点击卡片展开详情（含打卡图片） -->
+        <view class="card record-card" wx:for="{{list}}" wx:key="_id" data-id="{{item._id}}" data-key="list" bindtap="onToggle">
           <view class="member-row" style="border-bottom:none">
-            <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-key="list" data-i="{{index}}" />
             <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
             <view class="member-info">
-              <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>
-              <text class="member-meta">近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
+              <text class="member-name">{{item.nickName}}</text>
+              <text class="member-meta">{{item.date}} · {{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}</text>
             </view>
-            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
-          </view>
-          <text class="card-sub" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
-          <view class="mini-btn-row">
-            <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
-            <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onApplyReview">驳回</text>
-            <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onApplyReview">通过</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 待审打卡：点击卡片展开详情（含打卡图片） -->
-      <view class="card record-card" wx:for="{{list}}" wx:key="_id" data-id="{{item._id}}" bindtap="onToggle">
-        <view class="member-row" style="border-bottom:none">
-          <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-i="{{index}}" />
-          <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
-          <view class="member-info">
-            <text class="member-name">{{item.nickName}}</text>
-            <text class="member-meta">{{item.date}} · {{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}</text>
-          </view>
-          <view class="member-right">
-            <text class="tag tag-orange">待审核</text>
-            <text class="expand-hint">{{expandedId === item._id ? '收起 ▲' : '详情 ▼'}}</text>
-          </view>
-        </view>
-
-        <view class="record-detail" wx:if="{{expandedId === item._id}}">
-          <image wx:if="{{item.tempImage}}" class="img-preview record-img" src="{{item.tempImage}}" mode="widthFix" data-url="{{item.tempImage}}" catchtap="onPreview" />
-          <text wx:else class="card-sub">（该打卡没有上传图片）</text>
-
-          <view class="detail-rows">
-            <text class="detail-row">📅 日期：{{item.date}}</text>
-            <text class="detail-row">🏃 跑量：{{item.distance > 0 ? (item.distance + ' 公里') : '—'}}</text>
-            <text class="detail-row">⏱ 时长：{{item.duration > 0 ? (item.duration + ' 分钟') : '—'}}</text>
-            <text class="detail-row" wx:if="{{item.note}}">📝 备注：{{item.note}}</text>
+            <view class="member-right">
+              <text class="tag tag-orange">待审核</text>
+              <text class="expand-hint">{{expandedId === item._id ? '收起 ▲' : '详情 ▼'}}</text>
+            </view>
           </view>
 
-          <view class="record-actions" catchtap="noop">
-            <button class="btn btn-ghost" style="flex:1;margin-right:12rpx" loading="{{busyId === item._id}}" bindtap="onAskReject" data-id="{{item._id}}">驳回</button>
-            <button class="btn" style="flex:1" loading="{{busyId === item._id}}" bindtap="onPass" data-id="{{item._id}}">通过</button>
-          </view>
-          <view wx:if="{{reasonId === item._id}}" catchtap="noop" style="margin-top:16rpx">
-            <textarea class="textarea" placeholder="请填写驳回原因" value="{{reason}}" bindinput="onReasonInput"></textarea>
-            <view style="display:flex;margin-top:12rpx">
-              <button class="btn btn-gray" style="flex:1;margin-right:12rpx" bindtap="onCancelReject">取消</button>
-              <button class="btn" style="flex:1" bindtap="onConfirmReject" data-id="{{item._id}}">确认驳回</button>
+          <view class="record-detail" wx:if="{{expandedId === item._id}}">
+            <view class="photo-row" wx:if="{{item.tempImages.length}}">
+              <image wx:for="{{item.tempImages}}" wx:for-item="u" wx:key="*this" class="img-preview" src="{{u}}" mode="aspectFill" data-key="list" data-id="{{item._id}}" data-url="{{u}}" catchtap="onPreview" />
+            </view>
+            <text wx:else class="card-sub">（该打卡没有上传图片）</text>
+
+            <view class="detail-rows">
+              <text class="detail-row">📅 日期：{{item.date}}</text>
+              <text class="detail-row">🏃 跑量：{{item.distance > 0 ? (item.distance + ' 公里') : '—'}}</text>
+              <text class="detail-row">⏱ 时长：{{item.duration > 0 ? (item.duration + ' 分钟') : '—'}}</text>
+              <text class="detail-row" wx:if="{{item.note}}">📝 备注：{{item.note}}</text>
+            </view>
+
+            <view class="record-actions" catchtap="noop">
+              <button class="btn btn-ghost" style="flex:1;margin-right:12rpx" loading="{{busyId === item._id}}" bindtap="onAskReject" data-id="{{item._id}}">驳回</button>
+              <button class="btn" style="flex:1" loading="{{busyId === item._id}}" bindtap="onPass" data-id="{{item._id}}">通过</button>
+            </view>
+            <view wx:if="{{reasonId === item._id}}" catchtap="noop" style="margin-top:16rpx">
+              <textarea class="textarea" placeholder="请填写驳回原因" value="{{reason}}" bindinput="onReasonInput"></textarea>
+              <view style="display:flex;margin-top:12rpx">
+                <button class="btn btn-gray" style="flex:1;margin-right:12rpx" bindtap="onCancelReject">取消</button>
+                <button class="btn" style="flex:1" bindtap="onConfirmReject" data-id="{{item._id}}">确认驳回</button>
+              </view>
             </view>
           </view>
         </view>
-      </view>
 
-      <view class="empty" wx:if="{{list.length === 0 && (!canReviewApply || applies.length === 0)}}">🎉 暂无待审事项</view>
-      <view class="empty" wx:elif="{{list.length === 0}}">🎉 打卡已全部审完</view>
+        <view class="empty" wx:if="{{list.length === 0 && applies.length === 0}}">🎉 暂无待审事项</view>
+      </block>
+
+      <!-- ============ 已审（组内打卡记录） ============ -->
+      <block wx:else>
+        <view class="card record-card" wx:for="{{reviewed}}" wx:key="_id" data-id="{{item._id}}" data-key="reviewed" bindtap="onToggle">
+          <view class="member-row" style="border-bottom:none">
+            <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-key="reviewed" data-i="{{index}}" />
+            <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
+            <view class="member-info">
+              <text class="member-name">{{item.nickName}}</text>
+              <text class="member-meta">{{item.date}} · {{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}</text>
+            </view>
+            <view class="member-right">
+              <text class="tag {{item.status === 'approved' ? 'tag-green' : 'tag-red'}}">{{item.status === 'approved' ? '已通过' : '已驳回'}}</text>
+              <text class="expand-hint">{{expandedId === item._id ? '收起 ▲' : '详情 ▼'}}</text>
+            </view>
+          </view>
+
+          <view class="record-detail" wx:if="{{expandedId === item._id}}">
+            <view class="photo-row" wx:if="{{item.tempImages.length}}">
+              <image wx:for="{{item.tempImages}}" wx:for-item="u" wx:key="*this" class="img-preview" src="{{u}}" mode="aspectFill" data-key="reviewed" data-id="{{item._id}}" data-url="{{u}}" catchtap="onPreview" />
+            </view>
+            <text wx:else class="card-sub">（该打卡没有上传图片）</text>
+            <view class="detail-rows">
+              <text class="detail-row">📅 日期：{{item.date}}</text>
+              <text class="detail-row">🏃 跑量：{{item.distance > 0 ? (item.distance + ' 公里') : '—'}}</text>
+              <text class="detail-row">⏱ 时长：{{item.duration > 0 ? (item.duration + ' 分钟') : '—'}}</text>
+              <text class="detail-row" wx:if="{{item.note}}">📝 备注：{{item.note}}</text>
+              <text class="detail-row" wx:if="{{item.reviewNote}}">🧾 审核：{{item.reviewNote}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="empty" wx:if="{{reviewed.length === 0}}">本周还没有已审的打卡</view>
+      </block>
     </block>
   </block>
 </view>

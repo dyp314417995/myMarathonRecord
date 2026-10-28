@@ -25,7 +25,8 @@
           <view class="bar-wrap"><view class="bar-inner" style="width:{{item.rate}}%"></view></view>
         </view>
         <view class="member-right">
-          <text wx:if="{{item.completed === null}}" class="tag tag-gray">不考核</text>
+          <text wx:if="{{item.onLeave}}" class="tag tag-blue">请假</text>
+        <text wx:if="{{item.completed === null}}" class="tag tag-gray">不考核</text>
           <text wx:else class="tag {{item.completed ? 'tag-green' : 'tag-red'}}">{{item.rate}}%</text>
         </view>
       </view>
@@ -38,7 +39,7 @@
       <view class="member-row" wx:for="{{teamRank}}" wx:key="groupId">
         <view class="member-info" style="flex:1">
           <text class="member-name">{{index + 1}}. {{item.emblem}} {{item.name}}</text>
-          <text class="member-meta">{{item.memberCount}} 人 · 完成 {{item.completedCount}} 人</text>
+          <text class="member-meta">{{item.memberCount}} 人 · 完成 {{item.completedCount}} 人{{item.leaveCount ? ' · 请假 ' + item.leaveCount + ' 人' : ''}}</text>
           <view class="bar-wrap"><view class="bar-inner" style="width:{{item.avgRate}}%"></view></view>
         </view>
         <view class="member-right"><text class="tag {{item.avgRate >= 100 ? 'tag-green' : (item.avgRate >= 60 ? 'tag-orange' : 'tag-red')}}">{{item.avgRate}}%</text></view>

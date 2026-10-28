@@ -10,7 +10,6 @@
         <text class="chip {{tab === 'groups' ? 'on' : ''}}" data-v="groups" bindtap="onTab">组别</text>
         <text class="chip {{tab === 'applies' ? 'on' : ''}}" data-v="applies" bindtap="onTab">报名审核 {{counts.pending ? '(' + counts.pending + ')' : ''}}</text>
         <text class="chip {{tab === 'members' ? 'on' : ''}}" data-v="members" bindtap="onTab">成员</text>
-        <text class="chip {{tab === 'checkins' ? 'on' : ''}}" data-v="checkins" bindtap="onTab">抽查打卡</text>
         <text class="chip {{tab === 'finance' ? 'on' : ''}}" data-v="finance" bindtap="onTab">费用/奖池</text>
       </view>
 
@@ -130,24 +129,6 @@
           <view class="empty" wx:if="{{sec.count === 0}}" style="padding:24rpx">该组暂无成员</view>
         </block>
         <view class="empty" wx:if="{{memberSections.length === 0}}">暂无成员</view>
-      </block>
-
-      <!-- 抽查打卡 -->
-      <block wx:if="{{tab === 'checkins'}}">
-        <view class="card" wx:for="{{checkins}}" wx:key="_id">
-          <view class="member-row">
-            <view class="member-info">
-              <text class="member-name">{{item.nickName}} · {{item.date}}</text>
-              <text class="member-meta">{{item.distance > 0 ? (item.distance + ' 公里') : ''}}{{item.duration > 0 ? (' ' + item.duration + ' 分钟') : ''}}{{item.note ? ' · ' + item.note : ''}}</text>
-            </view>
-            <view class="member-right"><text class="tag tag-orange">第 {{item.weekIndex}} 周</text></view>
-          </view>
-          <view style="display:flex;margin-top:16rpx">
-            <text class="tag tag-red" style="margin-right:16rpx" data-id="{{item._id}}" data-pass="{{false}}" bindtap="onAdminReviewCheckin">驳回</text>
-            <text class="tag tag-green" data-id="{{item._id}}" data-pass="{{true}}" bindtap="onAdminReviewCheckin">通过</text>
-          </view>
-        </view>
-        <view class="empty" wx:if="{{checkins.length === 0}}">暂无待审打卡</view>
       </block>
 
       <!-- 费用与奖池 -->

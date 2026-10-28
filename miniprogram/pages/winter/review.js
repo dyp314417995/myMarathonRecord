@@ -1,17 +1,19 @@
-// pages/winter/review.js - 待审中心：入队申请（队长）+ 打卡审核（队长/教练）
-// 注：队长/教练本人打卡免审，由云端自动通过，不会出现在这里
+// pages/winter/review.js - 审核中心：待审（入队申请 + 打卡）+ 已审（组内打卡记录）
+// 注：队长/教练本人打卡免审，由云端自动通过，不会出现在待审里；队员进来只看「已审」
 const w = require('../../utils/winter');
 
 Page({
   data: {
     loading: true,
-    list: [],               // 待审打卡
+    tab: 'pending',         // pending=待审 / reviewed=已审
+    list: [],               // 待审打卡（仅队长/教练）
+    reviewed: [],           // 本组已审打卡（全员可看）
+    leaves: [],             // 待审请假（仅队长/教练）
     applies: [],            // 待审入队申请（仅队长）
-    myRole: '', roleText: '',
-    expandedId: '',         // 展开查看详情的打卡 id
+    myRole: '', roleText: '', canReview: false,
+    expandedId: '',         // 展开查看详情的记录 id（待审 / 已审共用一套展开态）
     busyId: '', reasonId: '', reason: '',
     applyBusyId: '',
-    canReviewApply: false,
   },
 
   async onShow() {
@@ -30,11 +32,14 @@ Page({
       return;
     }
 
+    const canReview = !!r.canReview;
     const list = await w.resolveAvatars(r.list || []);
-    for (const c of list) {
-      c.avatarInitial = c.avatarInitial || (c.nickName ? String(c.nickName).charAt(0) : '?');
-      c.tempImage = await w.toTempUrl(c.imageFileID);
-    }
+    const reviewed = await w.resolveAvatars(r.reviewed || []);
+    const leaves = await w.resolveAvatars(r.leaves || []);
+    const initial = (c) => { c.avatarInitial = c.avatarInitial || (c.nickName ? String(c.nickName).charAt(0) : '?'); };
+    list.forEach(initial);
+    reviewed.forEach(initial);
+    leaves.forEach(initial);
 
     // 队长：同时拉取本组待审批入队申请（队员/教练的入队由队长审，不在管理后台）
     let applies = [];
@@ -48,34 +53,55 @@ Page({
       }
     }
 
+    // 没审核权限（队员）就直接落在「已审」，别停在空的待审页
+    const tab = canReview ? (this.data.tab || 'pending') : 'reviewed';
     this.setData({
-      loading: false,
-      noPerm: false,
-      list,
-      applies,
-      myRole: r.myRole,
-      roleText: w.ROLE_TEXT[r.myRole] || '',
-      canReviewApply: r.myRole === 'leader',
+      loading: false, noPerm: false,
+      list, reviewed, leaves, applies, tab,
+      myRole: r.myRole, roleText: w.ROLE_TEXT[r.myRole] || '',
+      canReview,
     });
   },
 
+  onTab(e) { this.setData({ tab: e.currentTarget.dataset.v, expandedId: '' }); },
+
   noop() {},
 
-  // ===== 打卡：展开/收起详情 =====
-  onToggle(e) {
-    const id = e.currentTarget.dataset.id;
+  // 图片：列表加载时不转（上百条记录要把云函数打爆），展开这条时才转
+  async loadImages(key, id) {
+    const i = this.data[key].findIndex(x => x._id === id);
+    if (i < 0) return;
+    const c = this.data[key][i];
+    if (c.tempImages) return;
+    const ids = (c.imageFileIDs && c.imageFileIDs.length) ? c.imageFileIDs : (c.imageFileID ? [c.imageFileID] : []);
+    const urls = [];
+    for (const fid of ids) {
+      const u = await w.toTempUrl(fid);
+      if (u) urls.push(u);
+    }
+    this.setData({ [`${key}[${i}].tempImages`]: urls });
+  },
+
+  async onToggle(e) {
+    const { id, key } = e.currentTarget.dataset;
     if (!id) return;
-    this.setData({ expandedId: this.data.expandedId === id ? '' : id });
+    const next = this.data.expandedId === id ? '' : id;
+    this.setData({ expandedId: next });
+    if (next) await this.loadImages(key || 'list', id);
   },
 
   onPreview(e) {
-    const url = e.currentTarget.dataset.url;
-    if (url) wx.previewImage({ urls: [url] });
+    const { key, id, url } = e.currentTarget.dataset;
+    const c = (this.data[key] || []).find(x => x._id === id);
+    const urls = (c && c.tempImages) || [];
+    if (!urls.length) return;
+    wx.previewImage({ urls, current: url || urls[0] });
   },
 
   onAvatarError(e) {
-    const i = Number(e.currentTarget.dataset.i);
-    if (this.data.list[i]) this.setData({ [`list[${i}].avatarUrl`]: '' });
+    const { key, i } = e.currentTarget.dataset;
+    const idx = Number(i);
+    if (this.data[key] && this.data[key][idx]) this.setData({ [`${key}[${idx}].avatarUrl`]: '' });
   },
 
   async doReview(id, pass, note) {
@@ -92,9 +118,35 @@ Page({
 
   onPass(e) { this.doReview(e.currentTarget.dataset.id, true); },
 
-  onAskReject(e) {
-    this.setData({ reasonId: e.currentTarget.dataset.id, reason: '' });
+  // ===== 请假审批 =====
+  async onPassLeave(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ busyId: id });
+    const r = await w.api.reviewLeave({ id, pass: true });
+    this.setData({ busyId: '' });
+    if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+    wx.showToast({ title: '已批准', icon: 'success' });
+    this.load();
   },
+  async onRejectLeave(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '驳回请假',
+      editable: true,
+      placeholderText: '填写驳回原因',
+      success: async (res) => {
+        if (!res.confirm) return;
+        this.setData({ busyId: id });
+        const r = await w.api.reviewLeave({ id, pass: false, note: res.content || '' });
+        this.setData({ busyId: '' });
+        if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+        wx.showToast({ title: '已驳回', icon: 'none' });
+        this.load();
+      },
+    });
+  },
+
+  onAskReject(e) { this.setData({ reasonId: e.currentTarget.dataset.id, reason: '' }); },
   onCancelReject() { this.setData({ reasonId: '', reason: '' }); },
   onReasonInput(e) { this.setData({ reason: e.detail.value }); },
   onConfirmReject(e) {

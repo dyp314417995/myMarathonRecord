@@ -120,10 +120,6 @@ Page({
     if (gid === this.data.memberFilter) return;
     this.setData({ memberFilter: gid }, () => this.buildMemberSections());
   },
-  async loadCheckins() {
-    const r = await w.api.adminCheckins({ status: 'pending' });
-    if (r.ok) this.setData({ checkins: r.list });
-  },
   async loadFinance() {
     const r = await w.api.adminFinance();
     if (r.ok) this.setData({ finance: r });
@@ -372,15 +368,6 @@ Page({
         this.loadMembers();
       },
     });
-  },
-
-  // ===== 抽查审核 =====
-  async onAdminReviewCheckin(e) {
-    const { id, pass } = e.currentTarget.dataset;
-    const r = await w.api.reviewCheckin({ id, pass: pass === true || pass === 'true', note: pass ? '' : '管理组抽查驳回' });
-    if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
-    wx.showToast({ title: pass ? '已通过' : '已驳回', icon: 'success' });
-    this.loadCheckins();
   },
 
   // ===== 罚金状态 =====

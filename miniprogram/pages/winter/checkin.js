@@ -1,14 +1,17 @@
-// pages/winter/checkin.js - 每日打卡（上传图片 + 跑量/时长）
+// pages/winter/checkin.js - 每日打卡（支持一天多次，每次最多 3 张图）
 const w = require('../../utils/winter');
+
+const MAX_IMAGES = 3;
 
 Page({
   data: {
     loading: true, submitting: false,
     date: '', maxDate: '', weekStart: '',
-    imageFileID: '', tempImage: '', _localPath: '',
+    // 本次要提交的图片：本地待上传的临时路径 + 已上传的 fileID（两者加起来算总数）
+    localImages: [], uploadedFileIDs: [],
     distance: '', duration: '', note: '',
     kpiType: 'distance', needDistance: true,
-    todayRecord: null, statusText: '',
+    todayList: [], todayCount: 0,   // 今天已打过的卡（一天可以多次）
     weekDays: [],
   },
 
@@ -27,10 +30,8 @@ Page({
       return;
     }
     const list = (r.ok ? r.list : []) || [];
-    const todayRecord = list.find(x => x.date === today) || null;
-    // 已选但还没上传成功的本地图片要保留：
-    // openMedia 会触发 onHide/onShow，若这里无条件用服务端数据覆盖，刚选好的照片会被清空
-    const pendingLocal = (!this.data.imageFileID && this.data._localPath) ? this.data._localPath : '';
+    // 一天可多次：这里展示当天已有的打卡，表单本身每次都是新的一次，不再回填
+    const todayList = list.filter(x => x.date === today);
     this.setData({
       loading: false,
       date: today,
@@ -38,13 +39,7 @@ Page({
       weekStart: this.mondayOf(today),
       kpiType: my.me.kpiType || 'distance',
       needDistance: (my.me.kpiType || 'distance') === 'distance',
-      todayRecord,
-      statusText: todayRecord ? ({ pending: '审核中', approved: '已通过', rejected: '已驳回' }[todayRecord.status] || '') : '',
-      imageFileID: pendingLocal ? '' : (todayRecord ? todayRecord.imageFileID : ''),
-      tempImage: pendingLocal || (todayRecord && todayRecord.imageFileID ? await w.toTempUrl(todayRecord.imageFileID) : ''),
-      distance: todayRecord && todayRecord.distance ? String(todayRecord.distance) : '',
-      duration: todayRecord && todayRecord.duration ? String(todayRecord.duration) : '',
-      note: todayRecord ? (todayRecord.note || '') : '',
+      todayList, todayCount: todayList.length,
       weekDays: list,
     });
   },
@@ -63,21 +58,35 @@ Page({
 
   onDateChange(e) { this.setData({ date: e.detail.value }); },
 
+  // 一次打卡最多 3 张图；选图时按剩余额度限制
   onChooseImage() {
+    const left = MAX_IMAGES - (this.data.localImages.length + this.data.uploadedFileIDs.length);
+    if (left <= 0) return wx.showToast({ title: `最多 ${MAX_IMAGES} 张`, icon: 'none' });
     wx.chooseMedia({
-      count: 1, mediaType: ['image'], sourceType: ['album', 'camera'],
+      count: left, mediaType: ['image'], sourceType: ['album', 'camera'],
       success: (res) => {
-        const f = res.tempFiles && res.tempFiles[0];
-        if (!f) return;
-        this.setData({ tempImage: f.tempFilePath, _localPath: f.tempFilePath, imageFileID: '' });
+        const files = (res.tempFiles || []).map(f => f.tempFilePath).filter(Boolean);
+        if (!files.length) return;
+        const merged = this.data.localImages.concat(files).slice(0, MAX_IMAGES - this.data.uploadedFileIDs.length);
+        this.setData({ localImages: merged });
       },
     });
   },
 
-  onPreview() {
-    const url = this.data.tempImage;
-    if (!url) return;
-    wx.previewImage({ urls: [url] });
+  onRemoveImage(e) {
+    const i = Number(e.currentTarget.dataset.i);
+    const list = this.data.localImages.slice();
+    if (i >= 0 && i < list.length) {
+      list.splice(i, 1);
+      this.setData({ localImages: list });
+    }
+  },
+
+  onPreview(e) {
+    const i = Number(e.currentTarget.dataset.i) || 0;
+    const urls = this.data.localImages.length ? this.data.localImages : [];
+    if (!urls.length) return;
+    wx.previewImage({ urls, current: urls[i] });
   },
 
   onInput(e) {
@@ -87,28 +96,33 @@ Page({
 
   async onSubmit() {
     const d = this.data;
-    if (!d.tempImage && !d.imageFileID) return wx.showToast({ title: '请上传跑步记录截图', icon: 'none' });
+    const total = d.localImages.length + d.uploadedFileIDs.length;
+    if (!total) return wx.showToast({ title: '请上传跑步记录截图', icon: 'none' });
     if (d.needDistance && !Number(d.distance)) return wx.showToast({ title: '请填写本次跑量', icon: 'none' });
     if (!d.needDistance && !Number(d.duration)) return wx.showToast({ title: '请填写本次时长', icon: 'none' });
 
     this.setData({ submitting: true });
     wx.showLoading({ title: '提交中' });
-    let imageFileID = d.imageFileID;
     try {
-      if (!imageFileID && d._localPath) {
-        imageFileID = await w.uploadCheckinImage(d._localPath);
-        // 回写已上传的 fileID，避免 onShow 再次把这张图当成本地待提交图
-        this.setData({ imageFileID });
+      // 本地图逐个上传，拿到 fileID 再一起提交
+      const ids = d.uploadedFileIDs.slice();
+      for (const p of d.localImages) {
+        const fileID = await w.uploadCheckinImage(p);
+        if (fileID) ids.push(fileID);
       }
       const r = await w.api.checkin({
         date: d.date,
-        imageFileID,
+        imageFileIDs: ids,
         distance: Number(d.distance) || 0,
         duration: Number(d.duration) || 0,
         note: d.note,
       });
       wx.hideLoading();
-      this.setData({ submitting: false });
+      this.setData({
+        submitting: false,
+        localImages: [], uploadedFileIDs: [],
+        distance: '', duration: '', note: '',
+      });
       if (!r.ok) return wx.showToast({ title: r.error || '提交失败', icon: 'none' });
       wx.showToast({ title: '已提交，等待队长/教练审核', icon: 'success' });
       setTimeout(() => this.load(), 800);

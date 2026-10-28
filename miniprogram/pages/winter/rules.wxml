@@ -62,11 +62,11 @@
 
   <view class="card">
     <text class="card-title">五、打卡与审核</text>
-    <text class="rule-line">1. 每天最多 1 条：上传 1 张图 + 填跑量或运动时长 + 备注。</text>
+    <text class="rule-line">1. 一天可打多次卡（比如早晚各一趟）：每次上传最多 3 张图 + 填跑量或运动时长 + 备注。</text>
     <text class="rule-line">2. 本周（周一~周日）内均可提交或补交，周日 24 点截止；周一零点起锁定上周，不再接受补卡。</text>
     <text class="rule-line">3. 图片建议含日期或距离信息；不做图片识别、不做 GPS 校验。</text>
     <text class="rule-line">4. 队长/教练 24 小时内通过或驳回并填原因，队员可改后重提；不能审核自己的打卡，队长教练互审；组内只有 1 名管理角色时自动通过。</text>
-    <text class="rule-line">5. 每周日 24 点截止，周一 18:00 前审完；逾期未审默认通过，管理组抽查。</text>
+    <text class="rule-line">5. 每周日 24 点截止，周一 18:00 前审完；逾期未审默认通过。</text>
   </view>
 
   <view class="card">
