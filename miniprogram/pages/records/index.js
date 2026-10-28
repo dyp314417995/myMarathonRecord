@@ -142,7 +142,11 @@ Page({
 
   // 成绩变化
   updateChart() {
-    const finished = this.data.filteredRecords.filter(r => r.status === 'finished' && r.result);
+    // 按比赛时间倒序：最新的排最上面（不依赖上游数组顺序）
+    const finished = this.data.filteredRecords
+      .filter(r => r.status === 'finished' && r.result)
+      .slice()
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
     if (finished.length < 2) {
       this.setData({ showChart: false, chartData: [] });
       return;
@@ -150,9 +154,9 @@ Page({
     const toSec = (t) => { const p = t.split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
     const pb = finished.reduce((best, r) => toSec(r.result) < toSec(best.result) ? r : best, finished[0]);
     const maxSec = Math.max(...finished.map(r => toSec(r.result)));
+    // filteredRecords 已按比赛时间倒序，这里不要再翻转：最新的排最上面
     const entries = finished
-      .slice(0, 10) // 最多10条
-      .reverse()
+      .slice(0, 10) // 最多10条（即最近的 10 场）
       .map(r => ({
         date: r.date, city: r.city, result: r.result,
         isPB: r._id === pb._id,
