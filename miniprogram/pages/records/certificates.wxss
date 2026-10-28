@@ -11,6 +11,8 @@
 .stat-num { font-size: 44rpx; font-weight: 600; color: #222; display: block; }
 .stat-label { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }
 
+.cert-hint { font-size: 24rpx; color: #bbb; margin-left: 8rpx; }
+
 /* 项目分区 */
 .group { margin-bottom: 4rpx; }
 .group-title { font-size: 30rpx; font-weight: 600; color: #333; padding: 20rpx 8rpx 8rpx; }

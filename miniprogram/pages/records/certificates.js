@@ -319,26 +319,6 @@ Page({
     }
   },
 
-  // ===== 删除（删的是整条跑马记录，要提醒清楚） =====
-  onDelete(e) {
-    const id = e.currentTarget.dataset.id;
-    wx.showModal({
-      title: '删除这条成绩',
-      content: '这是跑马记录里的一条成绩，删掉后成绩和证书都会消失，确定吗？',
-      confirmColor: '#e74c3c',
-      success: async (res) => {
-        if (!res.confirm) return;
-        try {
-          await db.collection('race_records').doc(id).remove();
-          wx.showToast({ title: '已删除', icon: 'success' });
-          this.load(true);
-        } catch (err) {
-          wx.showToast({ title: '删除失败', icon: 'none' });
-        }
-      },
-    });
-  },
-
-  // 跳到跑马记录页补资料
+  // 跳到跑马记录页补资料（删除也在那边做，这里不提供删除，避免误删整条成绩）
   onGoRecords() { wx.navigateTo({ url: '/pages/records/index' }); },
 });

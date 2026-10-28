@@ -42,7 +42,7 @@
 
         <view class="cert-actions" wx:if="{{mine}}">
           <text class="mini-btn mini-ghost" data-id="{{r._id}}" bindtap="onEdit">编辑</text>
-          <text class="mini-btn mini-ghost del" data-id="{{r._id}}" bindtap="onDelete">删除</text>
+          <text class="cert-hint">要删除请到「跑马记录」</text>
         </view>
       </view>
     </view>
