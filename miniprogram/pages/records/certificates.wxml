@@ -35,7 +35,7 @@
                  class="cert-thumb" src="{{u}}" mode="aspectFill"
                  data-id="{{r._id}}" data-url="{{u}}" bindtap="onPreviewImage" />
         </view>
-        <view class="cert-tip">点图片看大图</view>
+        <view class="cert-tip link" wx:if="{{r.showUrls.length}}" data-id="{{r._id}}" bindtap="onPreviewImage">点这里看大图</view>
 
         <view class="cert-meta">
           <text class="meta-item" wx:if="{{r.result}}">⏱ {{r.result}}</text>
@@ -46,7 +46,7 @@
         <view class="cert-note" wx:if="{{r.note}}">{{r.note}}</view>
 
         <view class="cert-actions" wx:if="{{mine}}">
-          <text class="cert-hint">编辑 / 删除请到「跑马记录」</text>
+          <text class="cert-hint link" bindtap="onGoRecords">编辑 / 删除请到「跑马记录」›</text>
         </view>
       </view>
     </view>

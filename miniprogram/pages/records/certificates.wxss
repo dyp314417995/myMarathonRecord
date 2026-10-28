@@ -22,6 +22,8 @@
 .stat-label { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }
 
 .cert-hint { font-size: 24rpx; color: #bbb; margin-left: 8rpx; }
+/* 能点的提示：做成绿色带下划线，别让人以为是死的灰字 */
+.link { color: #1aad19; text-decoration: underline; }
 
 /* 项目分区 */
 .group { margin-bottom: 4rpx; }
