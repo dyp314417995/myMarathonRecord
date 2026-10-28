@@ -1,12 +1,13 @@
 // pages/records/certificates.js - 我的荣耀时刻（纯展示页）
 // 数据就是「跑马记录」里已完赛且传了证书的那些，证书图和名次挂在记录上，不再单独维护一套数据
 // 没传证书的记录不进这里；添加 / 编辑 / 删除一律回「跑马记录」操作，这里不提供
-// 按项目分区：全马 / 半马 / 10 公里 / 其他，每组内按比赛时间倒序；顶部统计可点击切换
+// 顶部 tab：全部 / 全马 / 半马 / 10 公里 / 其他，可设默认展示项（记在本地），分享时带当前选择
 // 支持分享：带 ?userId=xxx 打开可以看别人的荣耀墙（只读）
 const dbUtil = require('../../utils/db');
 const db = dbUtil.db;
 const shareUtil = require('../../utils/share');
 
+const DEFAULT_TAB_KEY = 'honor_default_tab';
 // 分区顺序固定，空的不显示
 const GROUPS = [
   { key: 'full', label: '全马' },
@@ -21,11 +22,14 @@ Page({
     userId: '',        // 空 = 看自己的
     mine: true,        // 别人的只读
     ownerName: '',
-    groups: [],        // 当前显示的分组（受统计条切换影响）
-    allGroups: [],     // 全部分组（不受切换影响，切换时不用重新查库）
-    activeType: '',    // 统计条选中的项目，空 = 全部
+    groups: [],        // 当前显示的分组（受 tab 影响）
+    allGroups: [],     // 全部分组（不受 tab 影响，切换时不用重新查库）
+    activeType: '',    // 当前 tab，空 = 全部
+    defaultType: '',   // 本地设置的默认展示项
+    tabs: [],          // [{ key, label, count }]
     total: 0,
-    stats: [],         // 顶部统计：全马 N 场 / 半马 N 场 ...
+
+    showDefaultModal: false,
   },
 
   async onLoad(options) {
@@ -33,6 +37,14 @@ Page({
     const uid = (options && options.userId) || '';
     const u = wx.getStorageSync('userInfo') || {};
     if (uid && uid !== (u._id || '')) this.setData({ userId: uid, mine: false });
+
+    // 优先级：分享链接里带的 > 本地设置的默认 > 全部
+    const saved = wx.getStorageSync(DEFAULT_TAB_KEY) || '';
+    const keys = GROUPS.map(g => g.key);
+    const fromLink = (options && options.type) || '';
+    const type = keys.includes(fromLink) ? fromLink : (keys.includes(saved) ? saved : '');
+    this.setData({ defaultType: keys.includes(saved) ? saved : '', activeType: type });
+
     await this.load();
   },
 
@@ -44,14 +56,14 @@ Page({
     this.load(true).then(() => wx.stopPullDownRefresh());
   },
 
-  // ===== 分享 =====
+  // ===== 分享：带当前正在看的项目 =====
   onShareAppMessage() {
     const u = wx.getStorageSync('userInfo') || {};
     const who = this.data.mine ? '我' : (this.data.ownerName || 'TA');
     const id = this.data.userId || u._id || '';
     return shareUtil.buildShare({
       title: this.shareTitle(who),
-      path: `/pages/records/certificates?userId=${id}`,
+      path: `/pages/records/certificates?userId=${id}${this.typeQuery()}`,
       imageUrl: this.firstImage() || '',
     });
   },
@@ -62,11 +74,17 @@ Page({
     const id = this.data.userId || u._id || '';
     return shareUtil.buildTimeline({
       title: this.shareTitle(who),
-      query: `userId=${id}`,
+      query: `userId=${id}${this.typeQuery()}`,
     });
   },
 
+  typeQuery() {
+    return this.data.activeType ? `&type=${this.data.activeType}` : '';
+  },
+
   shareTitle(who) {
+    const g = GROUPS.find(x => x.key === this.data.activeType);
+    if (g) return `${who}的${g.label}荣耀时刻：${this.data.total} 场完赛`;
     return this.data.total ? `${who}的荣耀时刻：${this.data.total} 场完赛` : `${who}的荣耀时刻`;
   },
 
@@ -105,7 +123,8 @@ Page({
         loading: false,
         allGroups,
         total: list.length,
-        stats: allGroups.map(g => ({ key: g.key, label: g.label, count: g.count })),
+        tabs: [{ key: '', label: '全部', count: list.length }]
+          .concat(allGroups.map(g => ({ key: g.key, label: g.label, count: g.count }))),
         ownerName,
       });
       this.applyFilter();
@@ -133,17 +152,35 @@ Page({
     return list;
   },
 
-  // 统计条切换：点一下只看这个项目，再点一下回到全部（纯本地过滤，不重新查库）
+  // ===== tab 切换（纯本地过滤，不重新查库） =====
   onPickStat(e) {
     const key = e.currentTarget.dataset.key || '';
-    this.setData({ activeType: this.data.activeType === key ? '' : key });
+    if (this.data.activeType === key) return;
+    this.setData({ activeType: key });
     this.applyFilter();
   },
 
   applyFilter() {
-    const active = this.data.activeType;
+    let active = this.data.activeType;
+    // 选中的项目一场都没有（比如默认设了半马但没半马证书），回到全部
+    if (active && !this.data.allGroups.some(g => g.key === active)) {
+      active = '';
+      this.setData({ activeType: '' });
+    }
     const groups = active ? this.data.allGroups.filter(g => g.key === active) : this.data.allGroups;
     this.setData({ groups });
+  },
+
+  // ===== 默认展示项设置 =====
+  onShowDefault() { this.setData({ showDefaultModal: true }); },
+  onHideDefault() { this.setData({ showDefaultModal: false }); },
+
+  onSetDefault(e) {
+    const t = e.currentTarget.dataset.t || '';
+    wx.setStorageSync(DEFAULT_TAB_KEY, t);
+    this.setData({ defaultType: t, activeType: t, showDefaultModal: false });
+    this.applyFilter();
+    wx.showToast({ title: t ? '已设为默认' : '默认显示全部', icon: 'none' });
   },
 
   // 添加 / 编辑 / 删除都回跑马记录做

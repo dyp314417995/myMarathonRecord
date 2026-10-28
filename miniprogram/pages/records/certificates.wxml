@@ -6,12 +6,10 @@
     <!-- 看别人的荣耀墙时的说明条 -->
     <view class="notice" wx:if="{{!mine}}">🏅 {{ownerName ? ownerName + ' 的' : 'TA 的'}}荣耀时刻 · 共 {{total}} 场完赛</view>
 
-    <!-- 顶部统计：点一下只看这个项目，再点一下回到全部 -->
-    <view class="stat-bar" wx:if="{{stats.length}}">
-      <view class="stat-cell {{activeType === item.key ? 'on' : ''}}" wx:for="{{stats}}" wx:key="key" data-key="{{item.key}}" bindtap="onPickStat">
-        <text class="stat-num">{{item.count}}</text>
-        <text class="stat-label">{{item.label}}</text>
-      </view>
+    <!-- 顶部 tab：全部 / 全马 / 半马 / 10 公里 / 其他，⚙️ 可设默认展示项 -->
+    <view class="tabs" wx:if="{{tabs.length}}">
+      <text class="tab {{activeType === item.key ? 'active' : ''}}" wx:for="{{tabs}}" wx:key="key" data-key="{{item.key}}" bindtap="onPickStat">{{item.label}}<text class="tab-num">{{item.count}}</text></text>
+      <text class="tab-gear" wx:if="{{mine}}" bindtap="onShowDefault" hover-class="none">⚙️</text>
     </view>
 
     <!-- 添加入口：统一去跑马记录里操作 -->
@@ -23,7 +21,8 @@
 
     <!-- 按项目分区：全马 / 半马 / 10 公里 / 其他，每组内比赛时间倒序 -->
     <view class="group" wx:for="{{groups}}" wx:key="key">
-      <view class="group-title">{{item.label}} · {{item.count}} 场</view>
+      <!-- 选中具体项目时 tab 已经说明是哪一个，这里不再重复标题 -->
+      <view class="group-title" wx:if="{{!activeType}}">{{item.label}} · {{item.count}} 场</view>
 
       <view class="cert-card card" wx:for="{{item.list}}" wx:for-item="r" wx:key="_id">
         <view class="cert-head">
@@ -56,4 +55,21 @@
       {{mine ? '还没有荣耀时刻，去跑马记录里给已完赛的比赛上传证书，就会出现在这里' : 'TA 还没有上传证书'}}
     </view>
   </block>
+
+  <!-- 默认展示项设置 -->
+  <view class="modal-mask" wx:if="{{showDefaultModal}}" bindtap="onHideDefault"></view>
+  <view class="modal-box" wx:if="{{showDefaultModal}}">
+    <text class="modal-title">默认展示</text>
+    <text class="card-sub">选一个项目，下次进来和分享出去都默认展示它（重点跑哪个就设哪个）</text>
+    <view class="chip-row">
+      <text class="chip {{defaultType === '' ? 'on' : ''}}" data-t="" bindtap="onSetDefault">全部</text>
+      <text class="chip {{defaultType === 'full' ? 'on' : ''}}" data-t="full" bindtap="onSetDefault">全马</text>
+      <text class="chip {{defaultType === 'half' ? 'on' : ''}}" data-t="half" bindtap="onSetDefault">半马</text>
+      <text class="chip {{defaultType === '10k' ? 'on' : ''}}" data-t="10k" bindtap="onSetDefault">10 公里</text>
+      <text class="chip {{defaultType === 'custom' ? 'on' : ''}}" data-t="custom" bindtap="onSetDefault">其他</text>
+    </view>
+    <view class="modal-btns">
+      <button class="btn btn-gray" bindtap="onHideDefault">关闭</button>
+    </view>
+  </view>
 </view>
