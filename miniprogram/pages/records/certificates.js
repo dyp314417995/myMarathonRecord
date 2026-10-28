@@ -184,16 +184,25 @@ Page({
     wx.showToast({ title: t ? '已设为默认' : '默认显示全部', icon: 'none' });
   },
 
+  // 跳跑马记录页。手机上来回点几次容易把 10 层页面栈撑满，
+  // 栈满时 navigateTo 会静默失败（开发工具里不容易复现），所以先判断层数，
+  // 满了就改成 redirectTo（关掉当前页再跳），并给 navigateTo 加失败兜底
+  goRecords(query) {
+    const url = '/pages/records/index' + query;
+    const byRedirect = () => wx.redirectTo({ url });
+    if (getCurrentPages().length >= 9) return byRedirect();
+    wx.navigateTo({ url, fail: byRedirect });
+  },
+
   // 添加：去跑马记录新增一条
   onGoRecords() {
-    wx.navigateTo({ url: '/pages/records/index?add=1' });
+    this.goRecords('?add=1');
   },
 
   // 编辑：带上这条记录的 id 过去，那边直接打开它的编辑表单
   onGoEdit(e) {
     const id = e.currentTarget.dataset.id;
-    if (!id) return this.onGoRecords();
-    wx.navigateTo({ url: `/pages/records/index?edit=${id}` });
+    this.goRecords(id ? `?edit=${id}` : '?add=1');
   },
 
   onPreviewImage(e) {
