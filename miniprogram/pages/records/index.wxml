@@ -144,6 +144,12 @@
       </view>
     </block>
 
+    <!-- 名次 / 荣誉（仅已完赛） -->
+    <block wx:if="{{form.status === 'finished'}}">
+      <text class="form-label">名次 / 荣誉（选填）</text>
+      <input class="form-input" placeholder="如：年龄组第 8 / 破三" value="{{form.rank}}" data-k="rank" bindinput="onFormInput" />
+    </block>
+
     <!-- 图片 -->
     <text class="form-label">图片（选填）</text>
     <view class="img-row">
@@ -153,6 +159,18 @@
       </view>
       <view class="img-add" wx:if="{{formImages.length < 9}}" bindtap="onImageAdd">+</view>
     </view>
+
+    <!-- 完赛证书（选填，最多 3 张；传了就会出现在「我的荣耀时刻」） -->
+    <block wx:if="{{form.status === 'finished'}}">
+      <text class="form-label">完赛证书（选填）</text>
+      <view class="img-row">
+        <view wx:for="{{formCertImages}}" wx:key="index" class="preview-wrap">
+          <image src="{{item.previewUrl || item.local || item.cloudID}}" mode="aspectFill" class="preview-img" data-idx="{{index}}" data-src="{{item.previewUrl || item.local || item.cloudID}}" bindtap="onCertImagePreview" />
+          <text class="img-remove" data-idx="{{index}}" catchtap="onCertImageDel">✕</text>
+        </view>
+        <view class="img-add" wx:if="{{formCertImages.length < 3}}" bindtap="onCertImageAdd">+</view>
+      </view>
+    </block>
 
     <!-- 感言 -->
     <text class="form-label">参赛感言（选填）</text>

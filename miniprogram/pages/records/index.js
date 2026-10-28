@@ -6,6 +6,8 @@ const raceUtil = require('../../utils/raceEvents');
 const shareUtil = require('../../utils/share');
 
 const RECORDS_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
+// 完赛证书单独存一组图（与成绩截图分开），最多 3 张；有证书的记录会进「我的荣耀时刻」
+const MAX_CERT_IMAGES = 3;
 
 Page({
   data: {
@@ -17,8 +19,9 @@ Page({
     showForm: false,
     editingId: '',
     // 表单数据
-    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', note: '', isPublic: true, distanceKm: '' },
-    formImages: [],
+    form: { raceType: 'full', raceLevel: 'B', status: 'finished', date: '', city: '', result: '', rank: '', note: '', isPublic: true, distanceKm: '' },
+    formImages: [],       // 成绩截图（最多 9 张）
+    formCertImages: [],   // 完赛证书（最多 3 张）
     showTimePicker: false,
     showChart: false,
     chartTips: '',
@@ -71,9 +74,9 @@ Page({
       const { data } = await cache.load(cacheKey, async () => {
         // 按比赛时间正序：越早的比赛排越靠上（不看录入先后）
         const res = await db.collection('race_records').where({ userId }).orderBy('date', 'desc').get();
-        const records = res.data.map(r => ({ ...r, imgUrls: [] }));
-        // 转换图片
-        const allCloudIds = records.reduce((arr, r) => arr.concat(r.images || []), []);
+        const records = res.data.map(r => ({ ...r, imgUrls: [], certUrls: [] }));
+        // 转换图片（成绩截图 + 完赛证书一起换链）
+        const allCloudIds = records.reduce((arr, r) => arr.concat(r.images || [], r.certImages || []), []);
         const urlMap = {};
         for (let i = 0; i < allCloudIds.length; i += 50) {
           try {
@@ -82,7 +85,10 @@ Page({
             (r.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
           } catch {}
         }
-        records.forEach(r => { r.imgUrls = (r.images || []).map(id => urlMap[id] || '').filter(Boolean); });
+        records.forEach(r => {
+          r.imgUrls = (r.images || []).map(id => urlMap[id] || '').filter(Boolean);
+          r.certUrls = (r.certImages || []).map(id => urlMap[id] || '').filter(Boolean);
+        });
         return records;
       }, { ttl: RECORDS_CACHE_TTL, force, versionKey: 'records' });
       // PB 标记成本低，按最新 PB 重算，避免缓存导致 PB 标记不准
@@ -155,8 +161,8 @@ Page({
     const tab = this.data.tab === 'custom' ? 'custom' : this.data.tab;
     this.setData({
       showForm: true, editingId: '',
-      form: { raceType: tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[tab] || (tab === 'custom' ? '0:30:00' : '3:30:00'), note: '', isPublic: true, distanceKm: '' },
-      formImages: [],
+      form: { raceType: tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[tab] || (tab === 'custom' ? '0:30:00' : '3:30:00'), rank: '', note: '', isPublic: true, distanceKm: '' },
+      formImages: [], formCertImages: [],
     });
   },
 
@@ -164,23 +170,44 @@ Page({
   async onEdit(e) {
     const r = this.data.records.find(x => x._id === e.currentTarget.dataset.id);
     if (!r) return;
-    // 转换已有图片为临时链接
-    const images = (r.images || []).map(id => ({ cloudID: id, local: '' }));
-    const cloudIds = r.images || [];
+    // 转换已有图片为临时链接（成绩截图 + 完赛证书一起换）
+    const toImgs = (ids) => (ids || []).map(id => ({ cloudID: id, local: '' }));
+    const images = toImgs(r.images);
+    const certImages = toImgs(r.certImages);
+    const cloudIds = [...(r.images || []), ...(r.certImages || [])];
     if (cloudIds.length) {
       try {
         const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: cloudIds } });
         const urlMap = {};
         (res.result || []).forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
-        images.forEach(img => { if (urlMap[img.cloudID]) img.previewUrl = urlMap[img.cloudID]; });
+        [...images, ...certImages].forEach(img => { if (urlMap[img.cloudID]) img.previewUrl = urlMap[img.cloudID]; });
       } catch {}
     }
     this.setData({
       showForm: true, editingId: r._id,
-      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', note: r.note || '', isPublic: r.isPublic !== false, distanceKm: r.distanceKm || '' },
+      form: { raceType: r.raceType, raceLevel: r.raceLevel, status: r.status, date: r.date, city: r.city, result: r.result || '', rank: r.rank || '', note: r.note || '', isPublic: r.isPublic !== false, distanceKm: r.distanceKm || '' },
       formImages: images,
+      formCertImages: certImages,
       searchText: r.city || '',
     });
+  },
+
+  // ===== 完赛证书（最多 3 张） =====
+  onCertImageAdd() {
+    const left = MAX_CERT_IMAGES - this.data.formCertImages.length;
+    if (left <= 0) return wx.showToast({ title: `最多 ${MAX_CERT_IMAGES} 张`, icon: 'none' });
+    wx.chooseMedia({ count: left, mediaType: ['image'], success: (res) => {
+      const imgs = [...this.data.formCertImages, ...res.tempFiles.map(f => ({ local: f.tempFilePath, cloudID: '' }))];
+      this.setData({ formCertImages: imgs });
+    }});
+  },
+  onCertImageDel(e) {
+    const imgs = this.data.formCertImages.filter((_, i) => i !== e.currentTarget.dataset.idx);
+    this.setData({ formCertImages: imgs });
+  },
+  onCertImagePreview(e) {
+    const urls = this.data.formCertImages.map(f => f.previewUrl || f.local || f.cloudID).filter(Boolean);
+    if (urls.length) wx.previewImage({ urls, current: e.currentTarget.dataset.src });
   },
 
   // 删除
@@ -304,14 +331,27 @@ Page({
       note: f.note.trim(), isPublic: f.isPublic, images,
       distanceKm: f.raceType === 'custom' ? String(f.distanceKm || '').trim() : '',
     };
+    // 证书图单独上传（与成绩截图分开存）
+    const certImages = [];
+    for (const img of this.data.formCertImages) {
+      if (img.local) {
+        const up = await wx.cloud.uploadFile({ cloudPath: 'certs/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.png', filePath: img.local });
+        certImages.push(up.fileID);
+      } else if (img.cloudID) {
+        certImages.push(img.cloudID);
+      }
+    }
+    data.certImages = certImages;
+    data.rank = String(f.rank || '').trim();
     const newImgUrls = this.data.formImages.map(img => img.previewUrl || img.local || '').filter(Boolean);
+    const newCertUrls = this.data.formCertImages.map(img => img.previewUrl || img.local || '').filter(Boolean);
     if (this.data.editingId) {
       await db.collection('race_records').doc(this.data.editingId).update({ data });
       // 直接更新本地缓存，避免云数据库 read-after-write 不一致
       const records = this.data.records.slice();
       const idx = records.findIndex(r => r._id === this.data.editingId);
       if (idx > -1) {
-        records[idx] = { ...records[idx], ...data, images: data.images, imgUrls: newImgUrls };
+        records[idx] = { ...records[idx], ...data, images: data.images, imgUrls: newImgUrls, certUrls: newCertUrls };
         this.setData({ records, showForm: false });
         this.updateFiltered();
         this.updateChart();
@@ -320,7 +360,7 @@ Page({
       const u = wx.getStorageSync('userInfo');
       const addRes = await db.collection('race_records').add({ data: { ...data, userId: u._id, createTime: new Date() } });
       // 新记录加到本地缓存
-      const newRecord = { _id: addRes._id, ...data, userId: u._id, createTime: new Date(), imgUrls: newImgUrls };
+      const newRecord = { _id: addRes._id, ...data, userId: u._id, createTime: new Date(), imgUrls: newImgUrls, certUrls: newCertUrls };
       const records = [newRecord, ...this.data.records];
       this.setData({ records, showForm: false });
       this.updateFiltered();
