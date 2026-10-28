@@ -252,6 +252,9 @@ Page({
   onWinter() {
     wx.navigateTo({ url: '/pages/winter/index' });
   },
+  onCertificates() {
+    wx.navigateTo({ url: '/pages/records/certificates' });
+  },
   onManageRaces() {
     wx.navigateTo({ url: '/pages/admin/races/races' });
   },

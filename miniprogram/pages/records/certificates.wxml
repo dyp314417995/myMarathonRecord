@@ -1,0 +1,130 @@
+<!-- pages/records/certificates.wxml - 我的证书（荣耀时刻） -->
+<view class="page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+
+  <block wx:else>
+    <!-- 看别人的证书时的说明条 -->
+    <view class="notice" wx:if="{{!mine}}">🏅 {{ownerName ? ownerName + ' 的' : 'TA 的'}}证书墙 · 共 {{list.length}} 张</view>
+
+    <!-- 证书列表 -->
+    <view class="cert-card card" wx:for="{{list}}" wx:key="_id">
+      <view class="cert-head">
+        <text class="cert-name">{{item.name}}</text>
+        <text class="cert-date">{{item.date || '日期未填'}}</text>
+      </view>
+
+      <view class="cert-imgs" wx:if="{{item.imgUrls.length}}">
+        <image wx:for="{{item.imgUrls}}" wx:for-item="u" wx:key="*this"
+               class="cert-thumb" src="{{u}}" mode="aspectFill"
+               data-id="{{item._id}}" data-url="{{u}}" bindtap="onPreviewImage" />
+      </view>
+      <view class="cert-tip" wx:if="{{item.imgUrls.length}}">点图片看大图</view>
+      <view wx:else class="cert-noimg">（无证书图片）</view>
+
+      <view class="cert-meta">
+        <text class="meta-item" wx:if="{{item.raceTypeText}}">🏁 {{item.raceTypeText}}</text>
+        <text class="meta-item" wx:if="{{item.city}}">📍 {{item.city}}</text>
+        <text class="meta-item" wx:if="{{item.result}}">⏱ {{item.result}}</text>
+        <text class="meta-item" wx:if="{{item.rank}}">🏆 {{item.rank}}</text>
+      </view>
+      <view class="cert-note" wx:if="{{item.note}}">{{item.note}}</view>
+
+      <view class="cert-actions" wx:if="{{mine}}">
+        <text class="mini-btn mini-ghost" data-id="{{item._id}}" bindtap="onEdit">编辑</text>
+        <text class="mini-btn mini-ghost del" data-id="{{item._id}}" bindtap="onDelete">删除</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{list.length === 0}}">
+      {{mine ? '还没有证书，点下面把你的荣耀时刻存进来' : 'TA 还没有上传证书'}}
+    </view>
+
+    <button class="btn add-btn" wx:if="{{mine}}" bindtap="onAdd">＋ 添加证书</button>
+  </block>
+
+  <!-- 添加 / 编辑证书 -->
+  <view class="modal-mask" wx:if="{{showForm}}" bindtap="onCloseForm">
+    <view class="modal-box" catchtap="noop">
+      <text class="modal-title">{{editingId ? '编辑证书' : '添加证书'}}</text>
+
+      <view class="field">
+        <text class="field-label">赛事名称 *</text>
+        <view class="name-row">
+          <input class="input" style="flex:1" value="{{form.name}}" data-f="name" bindinput="onInput"
+                 bindfocus="onManualName" placeholder="如：2026 北京马拉松" />
+          <text class="tag tag-blue" bindtap="onOpenEventPicker">从我的赛事选</text>
+        </view>
+        <text class="card-sub" wx:if="{{form.eventId}}">已关联我的赛事，成绩/名次仍需自己填</text>
+      </view>
+
+      <view class="field">
+        <text class="field-label">证书图片 *（最多 3 张）</text>
+        <view class="photo-row">
+          <view class="photo-cell" wx:for="{{formImages}}" wx:key="index">
+            <image class="img-preview" src="{{item.previewUrl}}" mode="aspectFill" data-i="{{index}}" bindtap="onPreviewFormImage" />
+            <text class="photo-del" data-i="{{index}}" catchtap="onRemoveImage">×</text>
+          </view>
+          <view wx:if="{{formImages.length < 3}}" class="upload-box" bindtap="onChooseImage">＋ 选图</view>
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="field-label">完赛日期</text>
+        <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
+          <text class="row-value">{{form.date}} ›</text>
+        </picker>
+      </view>
+
+      <view class="field">
+        <text class="field-label">项目</text>
+        <view class="chip-row">
+          <text class="chip {{form.raceType === 'full' ? 'on' : ''}}" data-type="full" bindtap="onPickType">全程</text>
+          <text class="chip {{form.raceType === 'half' ? 'on' : ''}}" data-type="half" bindtap="onPickType">半程</text>
+          <text class="chip {{form.raceType === '10k' ? 'on' : ''}}" data-type="10k" bindtap="onPickType">10 公里</text>
+          <text class="chip {{form.raceType === 'custom' ? 'on' : ''}}" data-type="custom" bindtap="onPickType">其他</text>
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="field-label">地点</text>
+        <input class="input" value="{{form.city}}" data-f="city" bindinput="onInput" placeholder="如：北京" />
+      </view>
+      <view class="field">
+        <text class="field-label">完赛成绩</text>
+        <input class="input" value="{{form.result}}" data-f="result" bindinput="onInput" placeholder="如 3:30:00" />
+      </view>
+      <view class="field">
+        <text class="field-label">名次 / 荣誉</text>
+        <input class="input" value="{{form.rank}}" data-f="rank" bindinput="onInput" placeholder="如 年龄组第 8 / 破三" />
+      </view>
+      <view class="field">
+        <text class="field-label">备注</text>
+        <textarea class="textarea" value="{{form.note}}" data-f="note" bindinput="onInput" placeholder="当时的感受、天气、配速…（选填）"></textarea>
+      </view>
+
+      <view class="modal-btns">
+        <button class="btn btn-gray" bindtap="onCloseForm">取消</button>
+        <button class="btn" loading="{{saving}}" bindtap="onSave">保存</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 我的赛事选择 -->
+  <view class="modal-mask" wx:if="{{showEventPicker}}" bindtap="onCloseEventPicker">
+    <view class="modal-box" catchtap="noop">
+      <text class="modal-title">从我的赛事里选</text>
+      <text class="card-sub">没有想要的赛事？关掉这里，直接在上方填名称就行</text>
+      <view class="loading" wx:if="{{eventsLoading}}">加载中…</view>
+      <view class="empty" wx:elif="{{myEvents.length === 0}}">你还没有关注任何赛事</view>
+      <view class="event-row" wx:for="{{myEvents}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPickEvent">
+        <view class="member-info">
+          <text class="member-name">{{item.name}}</text>
+          <text class="member-meta">{{item.date || '日期待定'}}{{item.city ? ' · ' + item.city : ''}}</text>
+        </view>
+      </view>
+      <view class="modal-btns">
+        <button class="btn btn-gray" bindtap="onCloseEventPicker">关闭</button>
+      </view>
+    </view>
+  </view>
+</view>

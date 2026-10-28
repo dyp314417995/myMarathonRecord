@@ -99,6 +99,16 @@
     </view>
   </view>
 
+  <!-- ========== 我的荣耀（所有已登录用户，与角色无关） ========== -->
+  <view class="section-title">我的荣耀</view>
+  <view class="menu-grid">
+    <view class="menu-item card menu-item-wide" bindtap="onCertificates">
+      <text class="menu-icon">🏆</text>
+      <text class="menu-text">我的证书</text>
+      <text class="menu-desc">记录每一场完赛的荣耀时刻</text>
+    </view>
+  </view>
+
   <!-- ========== 超管 ========== -->
   <block wx:if="{{role === 'super_admin'}}">
     <view class="section-title">管理</view>

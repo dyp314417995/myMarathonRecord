@@ -47,6 +47,9 @@
 .menu-text { font-size: 28rpx; font-weight: 600; color: #333; margin-top: 12rpx; }
 .menu-desc { font-size: 22rpx; color: #999; margin-top: 6rpx; }
 
+/* 单个入口占满一行（如「我的证书」，不跟角色菜单混排） */
+.menu-item-wide { flex: 0 0 calc(100% - 24rpx); }
+
 .menu-item.disabled { opacity: 0.5; }
 
 .signin-status { font-size: 20rpx; color: #ff6b00; margin-top: 6rpx; }

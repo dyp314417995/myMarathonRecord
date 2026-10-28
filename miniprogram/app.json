@@ -41,7 +41,8 @@
     "pages/winter/schedule",
     "pages/winter/profile",
     "pages/winter/rules",
-    "pages/winter/admin"
+    "pages/winter/admin",
+    "pages/records/certificates"
   ],
   "usingComponents": {},
   "window": {
