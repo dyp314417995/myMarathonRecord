@@ -243,11 +243,11 @@
       <text>📭 该赛事还没建群</text>
     </view>
 
-    <!-- 催办进度：满 3 人 100% -->
+    <!-- 催办进度：给管理员看的人数参考，满 3 人 100% -->
     <view class="qr-progress">
       <view class="qr-progress-head">
         <text class="qr-progress-num">{{remindCount}}<text class="qr-progress-total">/{{remindTarget}} 人已催</text></text>
-        <text class="qr-progress-hint {{remindDone ? 'done' : ''}}">{{remindDone ? '已达标，负责人正在处理' : (remindCount > 0 ? ('还差 ' + (remindTarget - remindCount) + ' 人') : '还没人催，做第一个')}}</text>
+        <text class="qr-progress-hint {{remindDone ? 'done' : ''}}">{{remindDone ? '满 3 人，负责人会优先建群' : (remindCount > 0 ? ('还差 ' + (remindTarget - remindCount) + ' 人到 3 人') : '还没人催，做第一个')}}</text>
       </view>
       <view class="qr-bar-wrap">
         <view class="qr-bar {{remindDone ? 'done' : ''}}" style="width:{{remindPercent}}%"></view>
@@ -265,7 +265,7 @@
       <text>{{notifyingOwner ? '催办中…' : (cooldownText ? ('已催过，' + cooldownText) : (myReminded ? '🔔 再催一次' : '🔔 催管理员建群'))}}</text>
     </view>
     <button class="qr-share-btn" open-type="share">💬 拉同场跑友一起催</button>
-    <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒；也可以先把链接发给同场跑友' : '满 3 人即达标；同一个人 10 分钟内限催一次，不同的人可各自催'}}</text>
+    <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒，会优先处理；也可以先把链接发给同场跑友' : '点一下就通知到负责人，不用凑人；攒到 3 人负责人会优先建群，不满 3 人他可以先不建'}}</text>
   </view>
 
   <!-- 已有二维码但过期了：直接提醒管理员更新（不展示进度，每天 10 点也会自动提醒一次） -->

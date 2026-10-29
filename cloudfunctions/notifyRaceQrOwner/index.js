@@ -5,8 +5,8 @@
 //   2. { eventId, reporterId, reason, action:'remind' } -> 催办（按人去重，同一人 10 分钟冷却）
 //   3. { eventIds: [...], action:'listReminds' }       -> 管理端批量查催办统计
 //
-// 进度规则：3 人催办即达标（100%）。同一人重复催只更新 updateTime，不重复计数。
-// 推送规则：新用户催办时推送负责人；同一赛事 10 分钟内最多推送一次，达标时必推（防刷屏）。
+// 进度规则：3 人是给管理员的参考值（满 3 人算 100%，不满管理员可以先不建）。
+// 推送规则：只要有人催就推送负责人，不用等凑够 3 人。同一人 10 分钟内的重复催走冷却，不重复推送。
 const cloud = require('wx-server-sdk');
 cloud.init({ env: 'cloud1-d5gy0iuiba5f9300f' });
 const db = cloud.database();
@@ -336,25 +336,26 @@ exports.main = async (event) => {
     let sentCount = 0;
     let adminCount = 0;
     let pushed = false;
-    if (isNew) {
-      const p = await pushToOwners(eventId, province, raceName, reason, status.count, reporterId);
-      sentCount = p.sentCount;
-      adminCount = p.adminCount;
-      pushed = true;
-      // 记录推送日志（不参与去重，仅用于间隔控制与排查）
-      await db.collection('qr_owner_notify_log').add({
-        data: {
-          eventId, raceName, province, reason,
-          reporterId,
-          createTime: new Date(),
-          status: sentCount > 0 ? 'sent' : 'all_fail',
-          sentCount,
-          errors: p.errors,
-          remindCount: status.count,
-          milestone: status.done,
-        },
-      }).catch(() => {});
-    }
+    // 不用凑够 3 人才通知：只要有人催就发给负责人。
+    // 3 人只是给管理员看的参考，不满 3 人他可以先不建。
+    // 冷却分支在上面已 return，走到这里的都是有效催办。
+    const p = await pushToOwners(eventId, province, raceName, reason, status.count, reporterId);
+    sentCount = p.sentCount;
+    adminCount = p.adminCount;
+    pushed = true;
+    // 记录推送日志（不参与去重，仅用于排查）
+    await db.collection('qr_owner_notify_log').add({
+      data: {
+        eventId, raceName, province, reason,
+        reporterId,
+        createTime: new Date(),
+        status: sentCount > 0 ? 'sent' : 'all_fail',
+        sentCount,
+        errors: p.errors,
+        remindCount: status.count,
+        milestone: status.done,
+      },
+    }).catch(() => {});
 
     return {
       success: true,
