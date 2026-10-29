@@ -105,7 +105,6 @@
     <view class="menu-item card menu-item-wide" bindtap="onCertificates">
       <text class="menu-icon">🏆</text>
       <text class="menu-text">我的荣耀时刻</text>
-      <text class="menu-desc">按全马 / 半马 / 10 公里分区展示已完赛的每一场</text>
     </view>
   </view>
 
