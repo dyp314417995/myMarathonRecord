@@ -522,7 +522,7 @@ Page({
     try {
       const r = await wx.cloud.callFunction({
         name: 'notifyRaceQrOwner',
-        data: { action: 'status', eventId, reporterId },
+        data: { action: 'status', eventId, reporterId, reason: 'missing' },
       });
       const res = (r && r.result) || {};
       if (res.success) this.applyRemindStatus(res);
@@ -625,8 +625,8 @@ Page({
       const isExpired = qrStatus === 'expired';
       const raceName = this.data.event.name;
       if (isExpired) {
-        // 过期是直接提醒管理员换码，不凑人、不算进度
-        wx.showToast({ title: res.repeat ? '又提醒了一次' : '已提醒管理员更新二维码', icon: 'none' });
+        // 过期是直接提醒管理员换码，不凑人、不算进度，所以反馈也不需要报次数
+        wx.showToast({ title: '已提醒管理员更新二维码', icon: 'none' });
       } else if (res.repeat) {
         wx.showToast({ title: `已再次通知负责人，目前 ${res.count} 人`, icon: 'none' });
       } else if (res.done) {

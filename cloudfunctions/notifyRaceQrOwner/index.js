@@ -102,9 +102,12 @@ async function addRemind(data) {
 }
 
 // 读取某赛事的催办名单（按 userId 去重，保留最早一条）
-async function loadRemindList(eventId) {
+// 传 reason 时只取该类型的：催建群(missing) 和 提醒更新二维码(expired) 是两件事，
+// 各记各的，否则「第一次提醒过期」会被算成「又提醒了一次」
+async function loadRemindList(eventId, reason) {
+  const where = reason ? { eventId, reason } : { eventId };
   const r = await db.collection(REMIND_COLL)
-    .where({ eventId })
+    .where(where)
     .orderBy('createTime', 'asc')
     .limit(200).get().catch(() => null);
   const raw = (r && r.data) || [];
@@ -207,8 +210,9 @@ exports.main = async (event) => {
   if (action === 'listReminds') {
     const ids = Array.isArray(eventIds) ? eventIds.slice(0, 50) : [];
     if (!ids.length) return { success: true, map: {} };
+    // 只统计「催建群」的人；提醒更新二维码是另一件事，不凑人、不进这个统计
     const r = await db.collection(REMIND_COLL)
-      .where({ eventId: _.in(ids) })
+      .where({ eventId: _.in(ids), reason: 'missing' })
       .limit(500).get().catch(() => null);
     const rows = (r && r.data) || [];
     const map = {};
@@ -234,7 +238,7 @@ exports.main = async (event) => {
 
   // ---------- 查进度 ----------
   if (action === 'status') {
-    const list = await loadRemindList(eventId);
+    const list = await loadRemindList(eventId, reason || 'missing');
     return { success: true, ...buildStatus(list, reporterId) };
   }
 
@@ -268,12 +272,12 @@ exports.main = async (event) => {
         : 0;
       const isExpired = days >= QR_EXPIRE_DAYS;
       if (!isExpired) {
-        const list = await loadRemindList(eventId);
+        const list = await loadRemindList(eventId, 'missing');
         return { success: true, alreadyCreated: true, message: '管理员已建群', ...buildStatus(list, reporterId) };
       }
-      // 过期了：reason 必须是 expired，继续走下面的催办流程
+      // 过期了：reason 必须是 expired，继续走下面的提醒流程
       if (reason !== 'expired') {
-        const list = await loadRemindList(eventId);
+        const list = await loadRemindList(eventId, 'expired');
         return { success: true, alreadyCreated: true, message: '二维码已过期', ...buildStatus(list, reporterId) };
       }
     }
@@ -288,8 +292,9 @@ exports.main = async (event) => {
     }
 
     const now = new Date();
+    // 按 reason 分开记：催建群一次、提醒过期一次，互不干扰
     const existRes = await db.collection(REMIND_COLL)
-      .where({ eventId, userId: reporterId }).limit(1).get().catch(() => null);
+      .where({ eventId, userId: reporterId, reason }).limit(1).get().catch(() => null);
     const exist = existRes && existRes.data && existRes.data[0];
 
     let isNew = false;
@@ -298,7 +303,7 @@ exports.main = async (event) => {
       const lastAt = new Date(exist.updateTime || exist.createTime).getTime();
       const left = COOLDOWN_MS - (now.getTime() - lastAt);
       if (left > 0) {
-        const list0 = await loadRemindList(eventId);
+        const list0 = await loadRemindList(eventId, reason);
         return {
           success: true, cooldown: true, cooldownLeft: Math.ceil(left / 1000),
           message: `刚刚催过了，${Math.ceil(left / 60)} 分钟后再试`,
@@ -309,7 +314,6 @@ exports.main = async (event) => {
       await db.collection(REMIND_COLL).doc(exist._id).update({
         data: {
           updateTime: now,
-          reason,
           nickName: nickName || exist.nickName || '',
           avatarUrl: avatarUrl || exist.avatarUrl || '',
         },
@@ -322,12 +326,12 @@ exports.main = async (event) => {
       }).catch(() => null);
       if (!addRes) {
         // 并发下同一人可能已写入，兜底按已存在处理
-        const again = await loadRemindList(eventId);
+        const again = await loadRemindList(eventId, reason);
         return { success: true, ...buildStatus(again, reporterId) };
       }
     }
 
-    const list = await loadRemindList(eventId);
+    const list = await loadRemindList(eventId, reason);
     const status = buildStatus(list, reporterId);
 
     // 推送负责人：冷却只作用于「同一个人」，任何新用户催办都立刻推送
