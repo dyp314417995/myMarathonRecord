@@ -1,0 +1,9 @@
+{
+  "name": "raceWish",
+  "version": "1.0.0",
+  "description": "赛事心愿单：用户提交未收录的赛事，通知超管补录",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -23,6 +23,8 @@ const QR_MSG_KEYS = { name: 'thing1', content: 'thing2', tip: 'thing3' };
 const TARGET = 3;
 // 同一人同一赛事的最小催办间隔（冷却只按人算：不同的人各自独立，互不影响）
 const COOLDOWN_MS = 10 * 60 * 1000;
+// 群二维码有效期（天），和前端 calcQrStatus 保持一致：微信个人群码 7 天失效
+const QR_EXPIRE_DAYS = 7;
 
 const REMIND_COLL = 'race_qr_remind';
 
@@ -258,10 +260,22 @@ exports.main = async (event) => {
     if (race.status === 'finished' || new Date(race.date).getTime() < startOfToday.getTime()) {
       return { success: true, skipped: true, message: '赛事已举办完成，无需建群' };
     }
-    // 已经建群（上传了二维码）就不用催了
+    // 已经建群就不用催了 —— 但二维码过期（上传超过 7 天）的除外，
+    // 那种情况要提醒管理员换新码，不能回「已建群」，否则点了没反应
     if (race.qrCode) {
-      const list = await loadRemindList(eventId);
-      return { success: true, alreadyCreated: true, message: '管理员已建群', ...buildStatus(list, reporterId) };
+      const days = race.qrCodeUpdatedAt
+        ? (Date.now() - new Date(race.qrCodeUpdatedAt).getTime()) / 86400000
+        : 0;
+      const isExpired = days >= QR_EXPIRE_DAYS;
+      if (!isExpired) {
+        const list = await loadRemindList(eventId);
+        return { success: true, alreadyCreated: true, message: '管理员已建群', ...buildStatus(list, reporterId) };
+      }
+      // 过期了：reason 必须是 expired，继续走下面的催办流程
+      if (reason !== 'expired') {
+        const list = await loadRemindList(eventId);
+        return { success: true, alreadyCreated: true, message: '二维码已过期', ...buildStatus(list, reporterId) };
+      }
     }
 
     // 取昵称/头像冗余存档，方便管理员直接认人拉群

@@ -85,6 +85,8 @@
     <text wx:if="{{tab === 'all'}}">暂无赛事</text>
     <text wx:elif="{{tab === 'mine'}}">你还没有关注任何赛事</text>
     <text wx:else>你还没有评价任何赛事</text>
+    <!-- 没收录的赛事，让用户直接许愿，超管去补 -->
+    <view class="wish-entry" bindtap="onOpenWish">＋ 没找到想跑的？许个愿，我们去找</view>
   </view>
   <scroll-view scroll-y class="race-list" wx:else>
     <view class="card race-item" wx:for="{{races}}" wx:key="_id" bindtap="onRaceDetail" data-id="{{item._id}}">
@@ -128,6 +130,11 @@
   </scroll-view>
   <view wx:if="{{hasMore}}" class="load-more" bindtap="onLoadMore">
     <text>加载更多</text>
+  </view>
+
+  <!-- 常驻许愿入口：想跑的赛事没被收录时 -->
+  <view class="wish-bar" wx:if="{{tab === 'all'}}" bindtap="onOpenWish">
+    <text>🎯 想跑的赛事没收录？许个愿，我们去找</text>
   </view>
 
   <!-- 关注弹窗 -->
@@ -184,6 +191,21 @@
         <button class="btn-primary" bindtap="onMark">更新状态</button>
         <button class="btn-reject" bindtap="onUnmark">取消关注</button>
       </block>
+    </view>
+  </view>
+
+  <!-- 心愿单：写上想跑的赛事，超管去补录 -->
+  <view class="modal-mask" wx:if="{{showWish}}" catchtap="onCloseWish"></view>
+  <view class="modal-box" wx:if="{{showWish}}">
+    <view class="modal-header">
+      <text>赛事心愿单</text>
+      <text class="modal-close" bindtap="onCloseWish">✕</text>
+    </view>
+    <text class="notify-hint">没找到的赛事写在这里，超管收到后会去补录。写赛事名就行，比如「2026 兰州马拉松」。</text>
+    <textarea class="form-textarea" placeholder="想跑哪个赛事？" value="{{wishText}}" bindinput="onWishInput" maxlength="60" />
+    <view class="modal-actions">
+      <button class="btn-outline" bindtap="onCloseWish">取消</button>
+      <button class="btn-primary" bindtap="onSubmitWish" disabled="{{wishSubmitting}}">{{wishSubmitting ? '提交中…' : '许愿'}}</button>
     </view>
   </view>
 </view>

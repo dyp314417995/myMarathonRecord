@@ -67,6 +67,17 @@
 .result-row .form-input { margin-top: 0 !important; }
 
 
+/* 赛事心愿单 */
+.wish-admin-entry { display: flex; align-items: center; margin-top: 16rpx; padding: 16rpx 20rpx; background: #fff6e5; border-radius: 12rpx; font-size: 26rpx; color: #a06a00; }
+.wish-admin-count { margin-left: auto; font-size: 24rpx; color: #f57c00; font-weight: 600; }
+.wish-admin-count.none { color: #bbb; font-weight: normal; }
+.wish-admin-list { max-height: 60vh; margin-top: 12rpx; }
+.wish-admin-row { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 2rpx solid #f2f2f2; }
+.wish-admin-main { flex: 1; min-width: 0; }
+.wish-admin-text { font-size: 28rpx; color: #222; display: block; }
+.wish-admin-meta { font-size: 22rpx; color: #aaa; display: block; margin-top: 4rpx; }
+.wish-admin-done { flex-shrink: 0; margin-left: 16rpx; padding: 10rpx 24rpx; background: #e6f7ec; color: #1aad19; border-radius: 999rpx; font-size: 24rpx; }
+
 .empty-state { padding: 80rpx 0; text-align: center; font-size: 28rpx; color: #bbb; }
 .btn-area { padding: 24rpx; }
 

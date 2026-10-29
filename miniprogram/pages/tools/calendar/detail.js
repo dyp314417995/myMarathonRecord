@@ -545,11 +545,16 @@ Page({
     });
     const count = res.count || 0;
     const name = (this.data.event && this.data.event.name) || '这赛事';
+    const expired = this.data.qrStatus === 'expired';
     if (count > 0) {
       this.setData({
-        _shareTitle: res.done
-          ? `「${name}」${count} 位跑友都在等建群，进群一起备赛！`
-          : `「${name}」还没建群，${count} 位跑友在催，一起来！`,
+        _shareTitle: expired
+          ? (res.done
+            ? `「${name}」群二维码过期了，${count} 位跑友在等更新！`
+            : `「${name}」群二维码过期了，${count} 位跑友已提醒，一起来！`)
+          : (res.done
+            ? `「${name}」${count} 位跑友都在等建群，进群一起备赛！`
+            : `「${name}」还没建群，${count} 位跑友在催，一起来！`),
       });
     }
   },
@@ -614,17 +619,21 @@ Page({
       if (res.cooldown) {
         return wx.showToast({ title: `刚催过了，${Math.ceil((res.cooldownLeft || 0) / 60)} 分钟后再试`, icon: 'none' });
       }
+      const isExpired = qrStatus === 'expired';
+      const raceName = this.data.event.name;
       if (res.done) {
         wx.showModal({
           title: '🎉 3 人达成！',
-          content: `已有 ${res.count} 位跑友在催「${this.data.event.name}」建群，负责人已收到通知。\n把链接甩给同场跑友，人越多建群越快。`,
+          content: isExpired
+            ? `已有 ${res.count} 位跑友提醒「${raceName}」的群二维码过期，负责人已收到通知，会尽快换新。`
+            : `已有 ${res.count} 位跑友在催「${raceName}」建群，负责人已收到通知。\n把链接甩给同场跑友，人越多建群越快。`,
           confirmText: '知道了',
           showCancel: false,
         });
       } else if (res.repeat) {
-        wx.showToast({ title: `又催了一次，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
+        wx.showToast({ title: `又提醒了一次，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
       } else {
-        wx.showToast({ title: `已催办，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
+        wx.showToast({ title: `已提醒，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
       }
       // 未达标时提示分享（此时页面已出现按钮，用户可直接点）
       if (!res.done && !res.repeat && res.count === 1) {

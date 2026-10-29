@@ -75,6 +75,12 @@
       <view wx:if="{{qrScope === 'all' && (qrIssueMissing > 0 || qrIssueExpired > 0)}}" class="my-province-tip qr-issue-tip">
         <text>📋 待处理：缺 {{qrIssueMissing || 0}} 个、过期 {{qrIssueExpired || 0}} 个群二维码</text>
       </view>
+      <!-- 用户许愿但还没收录的赛事 -->
+      <view class="wish-admin-entry" bindtap="onOpenWishes">
+        <text>🎯 赛事心愿单</text>
+        <text class="wish-admin-count" wx:if="{{wishCount > 0}}">{{wishCount}} 个待处理</text>
+        <text class="wish-admin-count none" wx:else>暂无</text>
+      </view>
     </view>
     <view wx:if="{{raceList.length === 0}}" class="empty-state"><text>暂无赛事</text></view>
     <view class="card race-card" wx:for="{{raceList}}" wx:key="_id" bindtap="onRaceDetailAdmin" data-id="{{item._id}}">
@@ -362,5 +368,25 @@
     </view>
     <image wx:if="{{qrFileID}}" src="{{qrFileID}}" mode="widthFix" class="qr-img" show-menu-by-longpress="{{true}}" />
     <view class="qr-tip" wx:if="{{showQRText}}">扫码可查看赛事详情、关注和评分</view>
+  </view>
+
+  <!-- 用户许愿但还没收录的赛事 -->
+  <view class="modal-mask" wx:if="{{showWishes}}" catchtap="onCloseWishes"></view>
+  <view class="modal-box" wx:if="{{showWishes}}">
+    <view class="modal-header">
+      <text>赛事心愿单</text>
+      <text class="modal-close" bindtap="onCloseWishes">✕</text>
+    </view>
+    <text class="qr-tip">跑友许愿想跑、但还没收录的赛事。收录后点「已处理」消掉。</text>
+    <scroll-view scroll-y class="wish-admin-list">
+      <view class="wish-admin-row" wx:for="{{wishList}}" wx:key="_id">
+        <view class="wish-admin-main">
+          <text class="wish-admin-text">{{item.content}}</text>
+          <text class="wish-admin-meta">{{item.nickName}} · {{item.fmtTime}}</text>
+        </view>
+        <text class="wish-admin-done" data-id="{{item._id}}" catchtap="onResolveWish">已处理</text>
+      </view>
+      <view wx:if="{{wishList.length === 0}}" class="empty-tight"><text>暂无心愿</text></view>
+    </scroll-view>
   </view>
 </view>

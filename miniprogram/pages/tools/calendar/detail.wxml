@@ -237,10 +237,10 @@
     </view>
   </view>
 
-  <!-- 二维码异常：催管理员建群 / 更新二维码（3 人即达标，进度与名单可见） -->
-  <view class="card qr-notice" wx:if="{{!raceFinished && (qrStatus === 'expired' || qrStatus === 'none')}}">
+  <!-- 没上传二维码：通知上传（3 人即达标，进度与名单可见） -->
+  <view class="card qr-notice" wx:if="{{!raceFinished && qrStatus === 'none'}}">
     <view class="section-title">
-      <text>{{qrStatus === 'expired' ? '⚠️ 群二维码已过期' : '📭 该赛事还没建群'}}</text>
+      <text>📭 该赛事还没建群</text>
     </view>
 
     <!-- 催办进度：满 3 人 100% -->
@@ -266,6 +266,35 @@
     </view>
     <button class="qr-share-btn" open-type="share">💬 拉同场跑友一起催</button>
     <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒；也可以先把链接发给同场跑友' : '满 3 人即达标；同一个人 10 分钟内限催一次，不同的人可各自催'}}</text>
+  </view>
+
+  <!-- 已有二维码但过期了：提醒管理员更新（每天 10 点也会自动提醒一次） -->
+  <view class="card qr-notice" wx:elif="{{!raceFinished && qrStatus === 'expired'}}">
+    <view class="section-title">
+      <text>⚠️ 群二维码已过期</text>
+    </view>
+
+    <view class="qr-progress">
+      <view class="qr-progress-head">
+        <text class="qr-progress-num">{{remindCount}}<text class="qr-progress-total">/{{remindTarget}} 人已提醒</text></text>
+        <text class="qr-progress-hint {{remindDone ? 'done' : ''}}">{{remindDone ? '已达标，负责人正在更新' : (remindCount > 0 ? ('还差 ' + (remindTarget - remindCount) + ' 人') : '还没人提醒，做第一个')}}</text>
+      </view>
+      <view class="qr-bar-wrap">
+        <view class="qr-bar {{remindDone ? 'done' : ''}}" style="width:{{remindPercent}}%"></view>
+      </view>
+      <view class="qr-avatars" wx:if="{{remindList.length}}">
+        <view class="qr-avatar" wx:for="{{remindList}}" wx:key="userId">
+          <image wx:if="{{item.avatarUrl}}" class="qr-avatar-img" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="qr-avatar-img qr-avatar-fb">🏃</view>
+          <text class="qr-avatar-name">{{item.isMe ? '我' : item.nickName}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="qr-notice-btn {{notifyingOwner || cooldownLeft > 0 ? 'disabled' : ''}}" catchtap="onNotifyOwner">
+      <text>{{notifyingOwner ? '提醒中…' : (cooldownText ? ('已提醒，' + cooldownText) : (myReminded ? '🔔 再提醒一次' : '🔔 提醒管理员更新'))}}</text>
+    </view>
+    <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒，会尽快换新的二维码' : '满 3 人即达标；除你手动提醒外，系统每天 10 点也会自动提醒一次'}}</text>
   </view>
 
   <!-- 自定义关注操作面板 -->

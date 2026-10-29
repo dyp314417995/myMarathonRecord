@@ -39,6 +39,10 @@ Page({
     page: 0,
     pageSize: 20,
     hasMore: false,
+    // ===== 心愿单（想跑的赛事没收录时，写下来通知超管） =====
+    showWish: false,
+    wishText: '',
+    wishSubmitting: false,
   },
 
   onLoad(options) {
@@ -570,6 +574,50 @@ Page({
   },
 
   onHideForm() { this.setData({ showForm: false }); },
+
+  // ===== 心愿单 =====
+  onOpenWish() {
+    const u = wx.getStorageSync('userInfo') || {};
+    if (!u || !u._id) {
+      wx.showToast({ title: '登录后才能许愿', icon: 'none' });
+      return setTimeout(() => wx.navigateTo({ url: '/pages/login/login' }), 800);
+    }
+    // 搜索框里已经有内容的话，直接带进去，省得再打一遍
+    this.setData({ showWish: true, wishText: this.data.searchKey || '' });
+  },
+  onCloseWish() { this.setData({ showWish: false }); },
+  onWishInput(e) { this.setData({ wishText: e.detail.value }); },
+
+  async onSubmitWish() {
+    const text = String(this.data.wishText || '').trim();
+    if (!text) return wx.showToast({ title: '写一下想跑哪个赛事', icon: 'none' });
+    if (this.data.wishSubmitting) return;
+    const u = wx.getStorageSync('userInfo') || {};
+    if (!u || !u._id) return wx.navigateTo({ url: '/pages/login/login' });
+
+    this.setData({ wishSubmitting: true });
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'raceWish',
+        data: { action: 'add', content: text, userId: u._id },
+      });
+      const res = (r && r.result) || {};
+      this.setData({ wishSubmitting: false });
+      if (!res.success) return wx.showToast({ title: res.error || '提交失败', icon: 'none' });
+      this.setData({ showWish: false, wishText: '' });
+      wx.showModal({
+        title: '许愿成功 🎉',
+        content: res.repeated
+          ? '这个心愿已经提过啦，超管会看到的'
+          : `已经把「${text}」转给超管了，收录后会同步到日历里。`,
+        confirmText: '知道了',
+        showCancel: false,
+      });
+    } catch (err) {
+      this.setData({ wishSubmitting: false });
+      wx.showToast({ title: '提交失败，请重试', icon: 'none' });
+    }
+  },
 
   onStatusSel(e) { this.setData({ selectedStatus: e.currentTarget.dataset.v }); },
   onMarkRaceType(e) { this.setData({ markRaceType: e.currentTarget.dataset.v }); },

@@ -57,6 +57,10 @@ Page({
       { label: '二抽出签', date: '', time: '12:00' },
       { label: '鸣枪开跑', date: '', time: '07:00' },
     ],
+    // 心愿单（用户许愿没收录的赛事）
+    showWishes: false,
+    wishList: [],
+    wishCount: 0,
   },
 
   labels: ['白金标', '金标', '精英标', '普通标'],
@@ -84,6 +88,8 @@ Page({
       const { map, nameMap } = await this.fetchProvinceAdminMap();
       this.setData({ adminProvinces: provinces, provinceAdminMap: map, adminNameMap: nameMap });
       this.loadRaces();
+      // 心愿单数量（跑友许愿但还没收录的赛事）
+      this.loadWishes();
       // 订阅消息点击直达赛事编辑（仅处理一次）
       this.handlePendingEdit();
     }
@@ -234,6 +240,46 @@ Page({
     this.setData({ allRaceList: merged, adminHasMore: res.hasMore });
     this.updateQrIssueTip(merged);
     this.applyAdminFilter();
+  },
+
+  // ===== 赛事心愿单（用户许愿没收录的赛事） =====
+  async loadWishes() {
+    try {
+      const r = await wx.cloud.callFunction({ name: 'raceWish', data: { action: 'list', status: 'pending' } });
+      const res = (r && r.result) || {};
+      const list = (res.list || []).map(it => ({
+        ...it,
+        fmtTime: it.createTime ? this.fmtWishTime(it.createTime) : '',
+      }));
+      this.setData({ wishList: list, wishCount: list.length });
+    } catch (e) {
+      console.warn('loadWishes fail', e);
+    }
+  },
+
+  fmtWishTime(t) {
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+
+  onOpenWishes() {
+    this.setData({ showWishes: true });
+    this.loadWishes();
+  },
+  onCloseWishes() { this.setData({ showWishes: false }); },
+
+  async onResolveWish(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    try {
+      await wx.cloud.callFunction({ name: 'raceWish', data: { action: 'resolve', id } });
+      this.setData({ wishList: this.data.wishList.filter(w => w._id !== id) });
+      this.setData({ wishCount: this.data.wishList.length });
+      wx.showToast({ title: '已标记处理', icon: 'success' });
+    } catch (err) {
+      wx.showToast({ title: '操作失败', icon: 'none' });
+    }
   },
 
   // 批量拉取未建群赛事的催办人数与名单（最多 50 个，够当前页用）
