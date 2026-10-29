@@ -12,7 +12,7 @@ const DEFAULT_TAB_KEY = 'honor_default_tab';
 const GROUPS = [
   { key: 'full', label: '全马' },
   { key: 'half', label: '半马' },
-  { key: '10k', label: '10 公里' },
+  { key: '10k', label: '10K' },
   { key: 'custom', label: '其他' },
 ];
 

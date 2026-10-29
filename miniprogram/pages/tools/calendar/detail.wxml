@@ -225,8 +225,8 @@
     <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">⭐ 关注赛事</view>
   </view>
 
-  <!-- 群二维码展示（管理员已上传时） -->
-  <view class="card qr-show" wx:if="{{qrStatus !== 'none' && qrCodeUrl}}">
+  <!-- 群二维码展示（管理员已上传时）。赛事已经跑完就整个不展示，那时的群码没有意义 -->
+  <view class="card qr-show" wx:if="{{!raceFinished && qrStatus !== 'none' && qrCodeUrl}}">
     <view class="section-title">
       <text>{{qrStatus === 'expired' ? '👥 赛事交流群（二维码已过期）' : '👥 赛事交流群'}}</text>
     </view>
