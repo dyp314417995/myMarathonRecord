@@ -509,10 +509,14 @@ Page({
   },
 
   // 查该赛事的催建群进度（谁催过、还差几人）
+  // 进度只在「还没建群」时展示；二维码过期是直接提醒，不看进度
   async loadRemindStatus() {
     const { eventId, qrStatus, raceFinished } = this.data;
     if (!eventId || raceFinished) return;
-    if (qrStatus !== 'none' && qrStatus !== 'expired') return;
+    if (qrStatus !== 'none') {
+      this.setData({ remindCount: 0, remindTarget: 3, remindPercent: 0, remindList: [], remindDone: false, myReminded: false });
+      return;
+    }
     const userInfo = wx.getStorageSync('userInfo') || {};
     const reporterId = userInfo._id || userInfo.openid || '';
     try {
@@ -546,15 +550,14 @@ Page({
     const count = res.count || 0;
     const name = (this.data.event && this.data.event.name) || '这赛事';
     const expired = this.data.qrStatus === 'expired';
-    if (count > 0) {
+    if (expired) {
+      // 过期不展示进度，分享标题也不带人数
+      this.setData({ _shareTitle: `「${name}」群二维码过期了，有跑友在等管理员更新` });
+    } else if (count > 0) {
       this.setData({
-        _shareTitle: expired
-          ? (res.done
-            ? `「${name}」群二维码过期了，${count} 位跑友在等更新！`
-            : `「${name}」群二维码过期了，${count} 位跑友已提醒，一起来！`)
-          : (res.done
-            ? `「${name}」${count} 位跑友都在等建群，进群一起备赛！`
-            : `「${name}」还没建群，${count} 位跑友在催，一起来！`),
+        _shareTitle: res.done
+          ? `「${name}」${count} 位跑友都在等建群，进群一起备赛！`
+          : `「${name}」还没建群，${count} 位跑友在催，一起来！`,
       });
     }
   },
@@ -621,22 +624,23 @@ Page({
       }
       const isExpired = qrStatus === 'expired';
       const raceName = this.data.event.name;
-      if (res.done) {
+      if (isExpired) {
+        // 过期是直接提醒管理员换码，不凑人、不算进度
+        wx.showToast({ title: res.repeat ? '又提醒了一次' : '已提醒管理员更新二维码', icon: 'none' });
+      } else if (res.done) {
         wx.showModal({
           title: '🎉 3 人达成！',
-          content: isExpired
-            ? `已有 ${res.count} 位跑友提醒「${raceName}」的群二维码过期，负责人已收到通知，会尽快换新。`
-            : `已有 ${res.count} 位跑友在催「${raceName}」建群，负责人已收到通知。\n把链接甩给同场跑友，人越多建群越快。`,
+          content: `已有 ${res.count} 位跑友在催「${raceName}」建群，负责人已收到通知。\n把链接甩给同场跑友，人越多建群越快。`,
           confirmText: '知道了',
           showCancel: false,
         });
       } else if (res.repeat) {
-        wx.showToast({ title: `又提醒了一次，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
+        wx.showToast({ title: `又催了一次，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
       } else {
-        wx.showToast({ title: `已提醒，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
+        wx.showToast({ title: `已催办，还差 ${Math.max(0, res.target - res.count)} 人`, icon: 'none' });
       }
       // 未达标时提示分享（此时页面已出现按钮，用户可直接点）
-      if (!res.done && !res.repeat && res.count === 1) {
+      if (!isExpired && !res.done && !res.repeat && res.count === 1) {
         setTimeout(() => {
           wx.showToast({ title: '你是第一个！拉个同场跑友一起催吧', icon: 'none', duration: 2500 });
         }, 1200);
