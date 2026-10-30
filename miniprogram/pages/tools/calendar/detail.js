@@ -743,9 +743,11 @@ Page({
   },
 
   onOpenHelpForm() {
-    if (!this.data.isMine) return wx.showToast({ title: '先关注这场赛事才能发布互助', icon: 'none' });
+    // 先确认登录态。没登录的时候提示「先关注」是句假话——
+    // 那时根本没去查过关注记录，把人送去登录才是有用的引导。
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
+    if (!this.data.isMine) return wx.showToast({ title: '先关注这场赛事才能发布互助', icon: 'none' });
 
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const today = new Date();

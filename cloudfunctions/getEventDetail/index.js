@@ -4,6 +4,34 @@ cloud.init();
 const db = cloud.database();
 const _ = db.command;
 
+// 用户身份在库里是两种写法并存的：users 表的内部 _id，以及微信 openid。
+// 关注记录 race_markers 是按内部 _id 存的（客户端 markEvent 写的是 userInfo._id），
+// 可传上来的很可能是 openid——只认一种就查不到，
+// 表现出来就是：明明关注过这场赛事，却被判「先关注这场赛事才能发布互助」。
+// getRaceEvents 里早就踩过同一个坑（会把 openid 换算成内部 _id），这里也这么办：
+// 同一个人的两种身份都算上，谁命中算谁。
+async function resolveUserIds(...rawIds) {
+  const ids = [];
+  const push = (v) => { if (v) ids.push(v); };
+  for (const id of rawIds) {
+    push(id);
+    try {
+      if (typeof id === 'string' && id.startsWith('o')) {
+        // openid → 内部 _id
+        const r = await db.collection('users').where({ _openid: id }).limit(1).get();
+        if (r.data && r.data[0] && r.data[0]._id) push(r.data[0]._id);
+      } else if (id) {
+        // 内部 _id → openid
+        const r = await db.collection('users').doc(id).get().catch(() => null);
+        const u = r && r.data;
+        if (u && u._openid) push(u._openid);
+      }
+    } catch (e) { /* 查不到就用原值试，别牵连主流程 */ }
+  }
+  const uniq = Array.from(new Set(ids.filter(Boolean)));
+  return uniq.length > 1 ? _.in(uniq) : uniq[0];
+}
+
 exports.main = async (event) => {
   const { eventId, userId, includeDrafts } = event;
   if (!eventId) return { error: '缺少 eventId' };
@@ -85,9 +113,13 @@ exports.main = async (event) => {
   let myReview = null;
   if (userId) {
     try {
+      // 服务端自己也认一次 openid：客户端传来的可能是 _id、可能是 openid，
+      // 也可能压根对不上号，不能只指望它给什么就信什么。
+      const { OPENID } = cloud.getWXContext();
+      const who = await resolveUserIds(userId, OPENID);
       const [mkRes, rvRes] = await Promise.all([
-        db.collection('race_markers').where({ userId, eventId }).limit(1).get(),
-        db.collection('race_reviews').where({ userId, eventId }).limit(1).get(),
+        db.collection('race_markers').where({ userId: who, eventId }).limit(1).get(),
+        db.collection('race_reviews').where({ userId: who, eventId }).limit(1).get(),
       ]);
       myMarker = mkRes.data[0] || null;
       myReview = rvRes.data[0] || null;

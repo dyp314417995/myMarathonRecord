@@ -112,6 +112,25 @@ async function getOpenid(userId) {
   return (u && (u.openid || u._openid)) || '';
 }
 
+// 关注记录 race_markers 里的 userId 存的是 users 表内部 _id（客户端 markEvent 写的是
+// userInfo._id），而云函数手上默认只有 openid。两边对不上就查不到，
+// 表现就是：明明关注过，互助列表却永远是空的。所以不去赌它，两种身份都算上一起查。
+async function resolveUserIds(rawId) {
+  const ids = rawId ? [rawId] : [];
+  try {
+    if (typeof rawId === 'string' && rawId.startsWith('o')) {
+      const r = await db.collection('users').where({ _openid: rawId }).limit(1).get().catch(() => null);
+      if (r && r.data && r.data[0] && r.data[0]._id) ids.push(r.data[0]._id);
+    } else if (rawId) {
+      const r = await db.collection('users').doc(rawId).get().catch(() => null);
+      const u = r && r.data;
+      if (u && u._openid) ids.push(u._openid);
+    }
+  } catch (e) { /* 查不到就用原值试 */ }
+  const uniq = Array.from(new Set(ids.filter(Boolean)));
+  return uniq.length > 1 ? _.in(uniq) : uniq[0];
+}
+
 // 发订阅消息。失败了不影响主流程——订阅是一次性的，用户没授权就收不到，
 // 所以互助列表里该看到的信息一律照常看得到，通知只是锦上添花。
 async function notify(userId, content, page) {
@@ -220,7 +239,8 @@ exports.main = async (event = {}) => {
       if (!eventId) return { success: false, error: '缺少 eventId' };
 
       // 必须关注了这场赛事才看得到（这是我们不做公共信息流的边界）
-      const mk = await db.collection('race_markers').where({ userId: OPENID, eventId }).limit(1).get().catch(() => null);
+      const who = await resolveUserIds(OPENID);
+      const mk = await db.collection('race_markers').where({ userId: who, eventId }).limit(1).get().catch(() => null);
       if (!(mk && mk.data && mk.data.length)) {
         return { success: true, followed: false, list: [] };
       }
