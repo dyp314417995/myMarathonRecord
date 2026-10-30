@@ -59,7 +59,10 @@ Page({
         return { list: r.list || [], total: r.total || 0 };
       }, { ttl: LIST_CACHE_TTL, force, versionKey: 'users_v2' });
 
-      this.setData({ allUsers: data.list, totalCount: data.total, loading: false });
+      // 全量数据不走 setData：上千条用户序列化后跨线程传输，是后台首屏卡顿的主因。
+      // 视图只渲染切片 users，全量留在逻辑层做搜索/排序用即可。
+      this.data.allUsers = data.list;
+      this.setData({ totalCount: data.total, loading: false });
       this.applyFilter();
     } catch (err) {
       this.setData({ loading: false });

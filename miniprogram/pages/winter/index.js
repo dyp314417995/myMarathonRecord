@@ -1,6 +1,17 @@
 // pages/winter/index.js - 冬训营首页（未报名：介绍+报名；已报名：我的概览）
 const w = require('../../utils/winter');
 
+// 首页数据上一次的快照：进页面先把它顶上屏幕，再后台静默刷新。
+// bootstrap 一次要查十几次库，赶上云函数冷启更是好几秒，不该让用户对着「加载中…」干等。
+const SNAP_KEY = 'winter_home_snapshot';
+
+function readSnapshot() {
+  try { return wx.getStorageSync(SNAP_KEY) || null; } catch { return null; }
+}
+function writeSnapshot(data) {
+  try { wx.setStorageSync(SNAP_KEY, data); } catch {}
+}
+
 Page({
   data: {
     loading: true,
@@ -28,7 +39,11 @@ Page({
   },
 
   async load() {
-    this.setData({ loading: true });
+    // 先把上次的数据顶上去：有快照就直接进入页面，不等网络
+    const snap = readSnapshot();
+    if (snap) this.setData({ ...snap, loading: false });
+    else this.setData({ loading: true });
+
     // bootstrap 提供登录态数据，intro 提供公开的组别列表与规模（未报名用户也要看到）
     const [r, introRes] = await Promise.all([w.api.bootstrap(), w.api.intro()]);
     if (introRes.ok) {
@@ -38,7 +53,8 @@ Page({
       });
     }
     if (!r.ok) {
-      this.setData({ loading: false });
+      // 已经渲染了快照就别打回「加载中…」，保留画面再提示
+      if (!snap) this.setData({ loading: false });
       if (/登录/.test(r.error || '')) {
         wx.showModal({
           title: '需要登录', content: '请先登录后再进入冬训营',
@@ -52,7 +68,7 @@ Page({
     const kpiRange = r.kpiRange;
     let myRoleText = '';
     if (r.member) myRoleText = w.ROLE_TEXT[r.member.role] || '';
-    this.setData({
+    const patch = {
       loading: false,
       phase: r.cfg.phase,
       phaseText: w.PHASE_TEXT[r.cfg.phase] || '',
@@ -72,7 +88,9 @@ Page({
       isAdmin: r.isAdmin,
       myRoleText,
       statusText: r.member ? (w.STATUS_TEXT[r.member.status] || r.member.status) : '',
-    });
+    };
+    this.setData(patch);
+    writeSnapshot({ ...patch, groups: this.data.groups || [], scale: this.data.scale });
     if (r.joined) {
       this.loadWeekRate();
     } else if (this._inviteGroupId) {
@@ -101,7 +119,11 @@ Page({
 
   async loadWeekRate() {
     const r = await w.api.weeklyStats({});
-    if (r.ok) this.setData({ weeklyAvg: `${r.groupAvgRate}%` });
+    if (!r.ok) return;
+    const weeklyAvg = `${r.groupAvgRate}%`;
+    this.setData({ weeklyAvg });
+    const snap = readSnapshot();
+    if (snap) writeSnapshot({ ...snap, weeklyAvg });
   },
 
   statusText(s) {

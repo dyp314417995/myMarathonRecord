@@ -73,6 +73,34 @@ async function getUser(userId) {
   return r && r.data ? r.data : null;
 }
 
+// 批量取用户：{ userId -> user }。列表页（如 intro）原来逐个 getUser，几十次往返在这里合成一次
+async function getUserMap(uids) {
+  const map = {};
+  const ids = Array.from(new Set((uids || []).filter(Boolean)));
+  if (!ids.length) return map;
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    const r = await db.collection('users').where({ _id: _.in(batch) })
+      .field({ nickName: true, nickname: true }).limit(100).get().catch(() => null);
+    for (const u of ((r && r.data) || [])) map[u._id] = u;
+  }
+  return map;
+}
+
+// 批量取成员主记录：winter_member 的主键就是 userId
+async function getMemberMap(uids) {
+  const map = {};
+  const ids = Array.from(new Set((uids || []).filter(Boolean)));
+  if (!ids.length) return map;
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    const r = await db.collection('winter_member').where({ _id: _.in(batch) })
+      .field({ nickName: true, groupId: true }).limit(100).get().catch(() => null);
+    for (const m of ((r && r.data) || [])) map[m._id] = m;
+  }
+  return map;
+}
+
 async function getConfig() {
   let r = await db.collection('winter_config').doc(CONFIG_ID).get().catch(() => null);
   if (r && r.data) return r.data;
@@ -290,9 +318,12 @@ async function decorateMembers(list) {
 
 // 首页聚合：配置 + 我的报名 + 我的组 + KPI 区间 + 今日打卡 + 待审数量
 async function actionBootstrap(userId) {
-  const cfg = await getConfig();
-  const isAdmin = await isSuperAdmin(userId);
-  const member = await getMyMember(userId);
+  // 这三个查询互不相干，原来串行三次数据库往返，这里一次性并发发出
+  const [cfg, isAdmin, member] = await Promise.all([
+    getConfig(),
+    isSuperAdmin(userId),
+    getMyMember(userId),
+  ]);
   const weekIndex = calcWeekIndex(cfg);
   // 试运行期照常考核，仅春节周跳过考核
   const holidayNow2 = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
@@ -325,29 +356,35 @@ async function actionBootstrap(userId) {
     nickName: member.nickName || '', target: member.target || '',
   };
   result.myRole = member.role;
-  if (member.groupId) {
-    const g = await db.collection('winter_group').doc(member.groupId).get().catch(() => null);
-    result.group = g && g.data ? { _id: g.data._id, name: g.data.name, desc: g.data.desc || '', emblem: g.data.emblem || '' } : null;
-    result.kpiRange = await getKpiRange(member.groupId);
+
+  const needWeek = member.status === 'approved' || member.status === 'quit-suggested';
+  // 组信息 / KPI 目标 / 今日打卡 / 本周打卡 / 周 KPI / 请假状态，两两之间都没有依赖，一并并发
+  const [gRes, kpiRange, todayRes, wr, wk, onLeave] = await Promise.all([
+    member.groupId ? db.collection('winter_group').doc(member.groupId).get().catch(() => null) : Promise.resolve(null),
+    member.groupId ? getKpiRange(member.groupId) : Promise.resolve(null),
+    db.collection('winter_checkin').where({ userId, date: todayStr() }).limit(1).get().catch(() => null),
+    needWeek ? db.collection('winter_checkin').where({ userId, weekIndex }).limit(100).get().catch(() => null) : Promise.resolve(null),
+    needWeek ? getWeekKpi(member, weekIndex) : Promise.resolve({ type: '', value: 0 }),
+    needWeek ? onApprovedLeave(userId, weekIndex, cfg) : Promise.resolve(false),
+  ]);
+
+  if (gRes && gRes.data) {
+    result.group = { _id: gRes.data._id, name: gRes.data.name, desc: gRes.data.desc || '', emblem: gRes.data.emblem || '' };
   }
-  const today = todayStr();
-  const cr = await db.collection('winter_checkin').where({ userId, date: today }).limit(1).get().catch(() => null);
-  result.todayCheckin = cr && cr.data && cr.data.length ? cr.data[0] : null;
+  if (kpiRange) result.kpiRange = kpiRange;
+  result.todayCheckin = todayRes && todayRes.data && todayRes.data.length ? todayRes.data[0] : null;
 
   // 本周进度（首页直接展示跑量与 KPI 完成情况，不用再点进榜单）
-  if (member.status === 'approved' || member.status === 'quit-suggested') {
-    const wr = await db.collection('winter_checkin').where({ userId, weekIndex }).limit(100).get().catch(() => null);
+  if (needWeek) {
     const all = (wr && wr.data) || [];
     const wl = all.filter(c => c.status === 'approved');
     const r1 = (v) => Math.round(toNum(v) * 10) / 10;
     const wDist = wl.reduce((s, c) => s + toNum(c.distance), 0);
     const wDur = wl.reduce((s, c) => s + toNum(c.duration), 0);
     const wDays = new Set(wl.map(c => c.date)).size;
-    const wk = await getWeekKpi(member, weekIndex);
     const actual = wk.type === 'attendance' ? wDays : r1(wDist);
     const rate = wk.value > 0 ? Math.min(1, actual / wk.value) : 0;
     // 本周在请假期内 → 不考核（与榜单同一口径：completed 记 null）
-    const onLeave = await onApprovedLeave(userId, weekIndex, cfg);
     result.myWeek = {
       distance: r1(wDist),           // 本周跑量（公里）
       duration: Math.round(wDur),    // 本周总时长（分钟）
@@ -364,57 +401,76 @@ async function actionBootstrap(userId) {
     };
   }
 
-  // 在多个组兼任队长/教练时，角标统计所有任职组
+  // 在多个组兼任队长/教练时，角标统计所有任职组；各组之间无依赖，一起算
   const staffGroups = await staffGroupIdsOf(userId, ['leader', 'coach']);
   if (staffGroups.length && member.status === 'approved') {
-    let pendingCount = 0;
-    for (const gid of staffGroups) {
-      await autoApproveOverdue(gid);
-      // 免审的队长/教练本人不计入待审
-      const st = await groupStaffUserIds(gid, ['leader', 'coach']);
-      const prAll = await db.collection('winter_checkin').where({
-        groupId: gid, status: 'pending',
-      }).count().catch(() => ({ total: 0 }));
-      let staffPending = 0;
-      if (st.length) {
-        const prStaff = await db.collection('winter_checkin').where({
-          groupId: gid, status: 'pending', userId: _.in(st),
-        }).count().catch(() => ({ total: 0 }));
-        staffPending = prStaff.total || 0;
-      }
-      pendingCount += Math.max(0, (prAll.total || 0) - staffPending);
-    }
-    result.pendingCount = pendingCount;
+    const nums = await Promise.all(staffGroups.map(gid => pendingCountOfGroup(gid)));
+    result.pendingCount = nums.reduce((s, v) => s + v, 0);
   }
   return ok(result);
 }
 
+// 单个组的待审数量。组内的两次 count 也互不依赖，同样并发发出
+async function pendingCountOfGroup(gid) {
+  await autoApproveOverdue(gid);
+  // 免审的队长/教练本人不计入待审
+  const st = await groupStaffUserIds(gid, ['leader', 'coach']);
+  const [prAll, prStaff] = await Promise.all([
+    db.collection('winter_checkin').where({ groupId: gid, status: 'pending' }).count().catch(() => ({ total: 0 })),
+    st.length
+      ? db.collection('winter_checkin').where({ groupId: gid, status: 'pending', userId: _.in(st) }).count().catch(() => ({ total: 0 }))
+      : Promise.resolve({ total: 0 }),
+  ]);
+  return Math.max(0, (prAll.total || 0) - (prStaff.total || 0));
+}
+
 // 介绍页数据（组别列表 + 规则）
 async function actionGetIntro() {
-  const cfg = await getConfig();
-  const gRes = await db.collection('winter_group').orderBy('sort', 'asc').limit(50).get().catch(() => null);
+  // 配置与组别列表互不依赖，一起取
+  const [cfg, gRes] = await Promise.all([
+    getConfig(),
+    db.collection('winter_group').orderBy('sort', 'asc').limit(50).get().catch(() => null),
+  ]);
   const groups = (gRes && gRes.data) || [];
-  // 各组人数
+  const groupIds = groups.map(g => g._id);
+
+  // 这三批数据同样互不依赖：在组成员（用来算各组人数）、负责人、兼任指派
+  const [memRes, staffRes, extraRes] = await Promise.all([
+    groupIds.length
+      // 一次查出所有在组成员所属的组，本地计数（原来是每组一次 count 的 N+1）
+      ? db.collection('winter_member').where({ status: 'approved', groupId: _.in(groupIds) })
+        .field({ groupId: true }).limit(1000).get().catch(() => null)
+      : Promise.resolve(null),
+    db.collection('winter_member').where({ status: 'approved', role: _.in(['leader', 'coach']) }).limit(200).get().catch(() => null),
+    db.collection('winter_staff').limit(200).get().catch(() => null),
+  ]);
+
   const counts = {};
-  for (const g of groups) {
-    const c = await db.collection('winter_member').where({ groupId: g._id, status: 'approved' }).count().catch(() => ({ total: 0 }));
-    counts[g._id] = c.total || 0;
+  for (const m of ((memRes && memRes.data) || [])) {
+    counts[m.groupId] = (counts[m.groupId] || 0) + 1;
   }
+
+  const staffList = (staffRes && staffRes.data) || [];
+  const extras = (extraRes && extraRes.data) || [];
+  // 要展示名字的人一次性查齐，不要在循环里逐个 getUser / getMyMember
+  const [userMap, memberMap] = await Promise.all([
+    getUserMap(staffList.map(m => m.userId).concat(extras.map(d => d.userId))),
+    getMemberMap(extras.map(d => d.userId)),
+  ]);
+
   // 各组负责人
-  const staffRes = await db.collection('winter_member').where({ status: 'approved', role: _.in(['leader', 'coach']) }).limit(200).get().catch(() => null);
   const staffMap = {};
-  for (const m of ((staffRes && staffRes.data) || [])) {
+  for (const m of staffList) {
     if (!staffMap[m.groupId]) staffMap[m.groupId] = { leader: [], coach: [] };
-    const u = await getUser(m.userId);
+    const u = userMap[m.userId];
     const name = (u && (u.nickName || u.nickname)) || m.nickName || '待任命';
     staffMap[m.groupId][m.role === 'leader' ? 'leader' : 'coach'].push(name);
   }
   // 兼任指派：同一人可以在多个组担任队长/教练
-  const extraRes = await db.collection('winter_staff').limit(200).get().catch(() => null);
-  for (const d of ((extraRes && extraRes.data) || [])) {
+  for (const d of extras) {
     if (!staffMap[d.groupId]) staffMap[d.groupId] = { leader: [], coach: [] };
-    const u = await getUser(d.userId);
-    const mm = await getMyMember(d.userId);
+    const u = userMap[d.userId];
+    const mm = memberMap[d.userId];
     const name = (u && (u.nickName || u.nickname)) || (mm && mm.nickName) || '待任命';
     const arr = staffMap[d.groupId][d.role === 'leader' ? 'leader' : 'coach'];
     if (arr.indexOf(name) < 0) arr.push(name);
