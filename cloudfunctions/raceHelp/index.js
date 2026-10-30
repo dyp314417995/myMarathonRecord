@@ -328,8 +328,10 @@ exports.main = async (event = {}) => {
         return { success: false, error: `截止时间最多 ${LIMIT.maxDays} 天后` };
       }
 
-      // 关注门槛
-      const mk = await db.collection('race_markers').where({ userId: OPENID, eventId }).limit(1).get().catch(() => null);
+      // 关注门槛。别拿 OPENID 直接去比：关注记录 race_markers 里存的是 users 内部 _id，
+      // 用 openid 查永远落空，于是每个关注过的跑友都在点提交这一步被判成「未关注」。
+      const who = await resolveUserIds(OPENID);
+      const mk = await db.collection('race_markers').where({ userId: who, eventId }).limit(1).get().catch(() => null);
       if (!(mk && mk.data && mk.data.length)) {
         return { success: false, error: '只有关注了这场赛事的跑友才能发布互助' };
       }
@@ -414,7 +416,9 @@ exports.main = async (event = {}) => {
       if (h.userId === OPENID) return { success: false, error: '不能应征自己发布的互助' };
       if (new Date(h.deadline).getTime() <= Date.now()) return { success: false, error: '这条互助已截止' };
 
-      const mk = await db.collection('race_markers').where({ userId: OPENID, eventId: h.eventId }).limit(1).get().catch(() => null);
+      // 同上：应征也要认这条换算后的身份，不能直接用 OPENID 比对关注记录
+      const whoApply = await resolveUserIds(OPENID);
+      const mk = await db.collection('race_markers').where({ userId: whoApply, eventId: h.eventId }).limit(1).get().catch(() => null);
       if (!(mk && mk.data && mk.data.length)) {
         return { success: false, error: '请先关注这场赛事' };
       }
