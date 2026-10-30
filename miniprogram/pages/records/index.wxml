@@ -2,10 +2,7 @@
 <view class="records-page">
   <!-- Tab -->
   <view class="tabs">
-    <text class="tab {{tab === 'half' ? 'active' : ''}}" data-t="half" bindtap="onTab">半马</text>
-    <text class="tab {{tab === 'full' ? 'active' : ''}}" data-t="full" bindtap="onTab">全马</text>
-    <text class="tab {{tab === '10k' ? 'active' : ''}}" data-t="10k" bindtap="onTab">10K</text>
-    <text class="tab {{tab === 'custom' ? 'active' : ''}}" data-t="custom" bindtap="onTab">其他</text>
+    <text class="tab {{tab === item.key ? 'active' : ''}}" wx:for="{{tabs}}" wx:key="key" data-t="{{item.key}}" bindtap="onTab">{{item.label}}</text>
     <text class="tab-gear" bindtap="onShowDefault" hover-class="none">⚙️</text>
   </view>
 
@@ -58,7 +55,7 @@
 
   <!-- 空状态 -->
   <view class="empty" wx:if="{{filteredRecords.length === 0}}">
-    <text class="empty-text">暂无 {{tab === '10k' ? '10K' : tab === 'half' ? '半马' : tab === 'custom' ? '其他' : '全马'}} 记录</text>
+    <text class="empty-text">{{records.length ? '暂无 ' + tabLabel + ' 记录' : '还没有跑步记录'}}</text>
   </view>
 
   <!-- 添加按钮 -->

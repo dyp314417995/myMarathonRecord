@@ -27,6 +27,9 @@ Page({
     // 成绩选择器的合理范围（跟着项目变，见 syncPickerRange）
     pickerMinSec: 0, pickerMaxSec: 0, pickerRangeTip: '',
     chartTips: '',
+    // 有记录的分类才展示 tab（没有半马就不显示半马）
+    tabs: [],
+    tabLabel: '全马',
     // 赛事搜索
     searchText: '',
     searchResults: [],
@@ -107,6 +110,7 @@ Page({
         r.isPB = r.status === 'finished' && r.result && toSec(r.result) <= toSec(pbFields[r.raceType]) && r.result === pbFields[r.raceType];
       });
       this.setData({ records: data });
+      this.buildTabs(data);
       this.updateFiltered();
       this.updateChart();
       // 带记录 id 过来的：等数据加载完再打开编辑表单，否则会找不到这条记录
@@ -136,6 +140,25 @@ Page({
     this.setData({ defaultTab: t, tab: t, showDefaultModal: false });
     this.updateFiltered();
     this.updateChart();
+  },
+
+  // 没有记录的分类不出现在 tab 上；当前 tab 被删空了就跳到还有记录的那个
+  buildTabs(records) {
+    const DEF = [
+      { key: 'half', label: '半马' },
+      { key: 'full', label: '全马' },
+      { key: '10k', label: '10K' },
+      { key: 'custom', label: '其他' },
+    ];
+    const list = records || [];
+    const tabs = DEF.filter(t => list.some(r => (r.raceType || 'full') === t.key));
+    // 默认 tab 设的分类可能还没记录（设了半马但一场没跑），自动落到第一个有记录的分类
+    const patch = { tabs };
+    if (tabs.length && !tabs.some(t => t.key === this.data.tab)) {
+      patch.tab = tabs[0].key;
+    }
+    patch.tabLabel = (DEF.find(t => t.key === (patch.tab || this.data.tab)) || {}).label || '';
+    this.setData(patch);
   },
 
   updateFiltered() {

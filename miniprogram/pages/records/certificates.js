@@ -147,8 +147,9 @@ Page({
         loading: false,
         allGroups,
         total: list.length,
+        // 没有记录的分类不展示 tab：没跑过半马，就别让人对着一个"半马 0"
         tabs: [{ key: '', label: '全部', count: list.length }]
-          .concat(allGroups.map(g => ({ key: g.key, label: g.label, count: g.count }))),
+          .concat(allGroups.filter(g => g.count > 0).map(g => ({ key: g.key, label: g.label, count: g.count }))),
         ownerName,
       });
       this.applyFilter();
@@ -191,7 +192,9 @@ Page({
       active = '';
       this.setData({ activeType: '' });
     }
-    const groups = active ? this.data.allGroups.filter(g => g.key === active) : this.data.allGroups;
+    const groups = active
+      ? this.data.allGroups.filter(g => g.key === active)
+      : this.data.allGroups.filter(g => g.count > 0);
     this.setData({ groups });
   },
 

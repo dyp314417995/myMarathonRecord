@@ -7,7 +7,7 @@
     <view class="notice" wx:if="{{!mine}}">🏅 {{ownerName ? ownerName + ' 的' : 'TA 的'}}荣耀时刻 · 共 {{total}} 场完赛</view>
 
     <!-- 顶部 tab：全部 / 全马 / 半马 / 10 公里 / 其他，⚙️ 可设默认展示项 -->
-    <view class="tabs" wx:if="{{tabs.length}}">
+    <view class="tabs" wx:if="{{tabs.length > 1}}">
       <text class="tab {{activeType === item.key ? 'active' : ''}}" wx:for="{{tabs}}" wx:key="key" data-key="{{item.key}}" bindtap="onPickStat">{{item.label}}<text class="tab-num">{{item.count}}</text></text>
       <text class="tab-gear" wx:if="{{mine}}" bindtap="onShowDefault" hover-class="none">⚙️</text>
     </view>
