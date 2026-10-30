@@ -81,17 +81,26 @@ Page({
 
   // 按组归类：全部视图按组分段（空组隐藏），选中某组时只看该组
   buildMemberSections() {
-    const members = this.data.members || [];
     const gs = this.data.allGroups || [];
     const filter = this.data.memberFilter || '';
+    // 已退出的人不再展示：这份名单是给在职队员看的
+    const shown = (this.data.members || [])
+      .map((m, i) => Object.assign({ _idx: i }, m))   // 副本带原始下标，头像加载失败时要回写原始数据
+      .filter(m => m.status !== 'quit');
+    // 队长固定排第一，教练第二，其余维持原顺序
+    const ROLE_ORD = { leader: 0, coach: 1, member: 2 };
+    shown.sort((a, b) => {
+      const oa = ROLE_ORD[a.role] == null ? 9 : ROLE_ORD[a.role];
+      const ob = ROLE_ORD[b.role] == null ? 9 : ROLE_ORD[b.role];
+      return oa - ob;
+    });
+
     const bucket = {};
     gs.forEach(g => { bucket[g._id] = []; });
     const orphan = [];
-    members.forEach((m, i) => {
-      // 副本里带 _idx，头像加载失败时能回写原始 members
-      const item = Object.assign({ _idx: i }, m);
+    shown.forEach(m => {
       const box = m.groupId && bucket[m.groupId];
-      (box || orphan).push(item);
+      (box || orphan).push(m);
     });
 
     const sections = [];
@@ -102,16 +111,16 @@ Page({
       sections.push({ gid: g._id, gname: g.name, count: arr.length, members: arr });
     });
     if (!filter && orphan.length) {
-      sections.push({ gid: '__orphan', gname: '未分组 / 已退出', count: orphan.length, members: orphan });
+      sections.push({ gid: '__orphan', gname: '未分组', count: orphan.length, members: orphan });
     }
 
-    const chips = [{ gid: '', name: '全部', count: members.length }];
+    const chips = [{ gid: '', name: '全部', count: shown.length }];
     gs.forEach(g => chips.push({ gid: g._id, name: g.name, count: (bucket[g._id] || []).length }));
 
     this.setData({
       memberSections: sections,
       filterChips: chips,
-      memberTotal: filter ? (sections[0] ? sections[0].count : 0) : members.length,
+      memberTotal: filter ? (sections[0] ? sections[0].count : 0) : shown.length,
     });
   },
 
