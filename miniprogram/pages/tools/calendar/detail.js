@@ -54,10 +54,10 @@ Page({
     helpMaxDate: '',        // date picker 结束
     showHelpForm: false,
     helpSubmitting: false,
-    helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', wechat: '', phone: '', ruleAgreed: false },
+    helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', wechat: '', ruleAgreed: false },
     showHelpDetail: false,
     curHelp: {},
-    applyMessage: '', applyWechat: '', applyPhone: '',
+    applyMessage: '', applyWechat: '',
     applying: false,
     showHelpMine: false,
     helpMineTab: 'mine',    // mine | apply
@@ -716,7 +716,7 @@ Page({
       helpSubmitting: false,
       helpToday: fmt(today),
       helpMaxDate: fmt(new Date(Date.now() + 90 * 86400000)),
-      helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, wechat: '', phone: '', ruleAgreed: false },
+      helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, wechat: '', ruleAgreed: false },
     });
   },
   onCloseHelpForm() { this.setData({ showHelpForm: false }); },
@@ -729,9 +729,13 @@ Page({
     const { eventId, helpForm } = this.data;
     if (!String(helpForm.title).trim()) return wx.showToast({ title: '请填写标题', icon: 'none' });
     if (!helpForm.ruleAgreed) return wx.showToast({ title: '请先阅读并勾选互助规则', icon: 'none' });
-    if (!String(helpForm.wechat).trim() && !String(helpForm.phone).trim()) {
-      return wx.showToast({ title: '至少留一个联系方式', icon: 'none' });
+    if (!String(helpForm.wechat).trim()) {
+      return wx.showToast({ title: '请填写微信号', icon: 'none' });
     }
+    if (!/^[-_a-zA-Z0-9]{5,20}$/.test(String(helpForm.wechat).trim())) {
+      return wx.showToast({ title: '微信号格式不对', icon: 'none' });
+    }
+    if (!helpForm.deadline) return wx.showToast({ title: '请选择截止时间', icon: 'none' });
     this.setData({ helpSubmitting: true });
     wx.showLoading({ title: '发布中' });
     try {
@@ -746,7 +750,7 @@ Page({
           costNote: helpForm.costNote,
           peopleNeeded: helpForm.peopleNeeded,
           deadline: helpForm.deadline,
-          contact: { wechat: helpForm.wechat, phone: helpForm.phone },
+          contact: { wechat: helpForm.wechat },
           ruleAgreed: helpForm.ruleAgreed,
         },
       });
@@ -767,15 +771,18 @@ Page({
   onOpenHelpDetail(e) {
     const item = this.data.helpList.find(h => h._id === e.currentTarget.dataset.id);
     if (!item) return;
-    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '', applyPhone: '' });
+    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '' });
   },
   onCloseHelpDetail() { this.setData({ showHelpDetail: false }); },
   onApplyInput(e) { this.setData({ [e.currentTarget.dataset.k]: e.detail.value }); },
 
   async onSubmitApply() {
-    const { curHelp, applyMessage, applyWechat, applyPhone } = this.data;
-    if (!String(applyWechat).trim() && !String(applyPhone).trim()) {
-      return wx.showToast({ title: '至少留一个联系方式', icon: 'none' });
+    const { curHelp, applyMessage, applyWechat } = this.data;
+    if (!String(applyWechat).trim()) {
+      return wx.showToast({ title: '请填写微信号', icon: 'none' });
+    }
+    if (!/^[-_a-zA-Z0-9]{5,20}$/.test(String(applyWechat).trim())) {
+      return wx.showToast({ title: '微信号格式不对', icon: 'none' });
     }
     this.setData({ applying: true });
     wx.showLoading({ title: '提交中' });
@@ -786,7 +793,7 @@ Page({
           action: 'apply',
           helpId: curHelp._id,
           message: applyMessage,
-          contact: { wechat: applyWechat, phone: applyPhone },
+          contact: { wechat: applyWechat },
         },
       });
       wx.hideLoading();
@@ -864,19 +871,31 @@ Page({
 
   onCancelMyApply(e) {
     const applyId = e.currentTarget.dataset.id;
+    const item = (this.data.myApplies || []).find(x => x.applyId === applyId) || {};
+    const remain = item.cancelRemain || 0;
     wx.showModal({
       title: '取消应征',
-      content: '取消后对方将不再看到你的联系方式，确定？',
+      content: `本场赛事还能撤销 ${remain} 次。取消后对方不再看到你的微信号，用完就不能再应征这场赛事的互助了。确定取消？`,
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
           name: 'raceHelp', data: { action: 'cancelApply', applyId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
-        wx.showToast({ title: '已取消应征', icon: 'success' });
+        const left = res.remain || 0;
+        wx.showToast({
+          title: left > 0 ? `已取消，本场还可撤销 ${left} 次` : '已取消，本场不能再应征了',
+          icon: 'none', duration: 2500,
+        });
         this.loadMyHelps();
       },
     });
+  },
+
+  onCopyContact(e) {
+    const v = e.currentTarget.dataset.v;
+    if (!v) return;
+    wx.setClipboardData({ data: String(v) });
   },
 
   onCancelResult() { this.setData({ showResultModal: false }); },

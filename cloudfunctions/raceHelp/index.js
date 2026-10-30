@@ -30,6 +30,7 @@ const LIMIT = {
   daily: 5,           // 每天最多发 5 条
   applyDaily: 10,     // 每天最多应征 10 次
   maxDays: 90,        // 截止时间最多 90 天后
+  cancelPerEvent: 3,  // 同一场赛事最多撤销 3 次应征
 };
 
 function now() { return new Date(); }
@@ -67,6 +68,20 @@ function startOfToday() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+// 微信号：5~20 位字母/数字/-/_
+// 不强制字母开头——很多跑友的微信号就是手机号，卡死反而没人能填
+function validWechat(v) {
+  return /^[-_a-zA-Z0-9]{5,20}$/.test(String(v || '').trim());
+}
+
+// 同一用户在同一场赛事下已撤销的次数
+async function countCanceled(userId, eventId) {
+  const c = await db.collection(APPLIES)
+    .where({ userId, eventId, status: 'canceled' })
+    .count().catch(() => ({ total: 0 }));
+  return c.total || 0;
 }
 
 // 剥掉联系方式，公开的 help 一律不带
@@ -121,14 +136,14 @@ exports.main = async (event = {}) => {
       const peopleNeeded = Math.max(1, Math.min(9, parseInt(event.peopleNeeded, 10) || 1));
       const deadlineStr = trimStr(event.deadline, 20);   // "2026-11-08"
       const contact = event.contact || {};
-      const wechat = trimStr(contact.wechat, 40);
-      const phone = trimStr(contact.phone, 20);
+      const wechat = trimStr(contact.wechat, 20);
 
       if (!eventId) return { success: false, error: '缺少赛事' };
       if (!TYPES[type]) return { success: false, error: '类型不支持' };
       if (!title) return { success: false, error: '请填写标题' };
       if (event.ruleAgreed !== true) return { success: false, error: '请先阅读并勾选互助规则' };
-      if (!wechat && !phone) return { success: false, error: '至少留一个联系方式' };
+      if (!wechat) return { success: false, error: '请填写微信号' };
+      if (!validWechat(wechat)) return { success: false, error: '微信号格式不对' };
 
       const deadline = new Date(`${deadlineStr} 23:59:59`);
       if (isNaN(deadline.getTime())) return { success: false, error: '截止时间不正确' };
@@ -173,7 +188,7 @@ exports.main = async (event = {}) => {
           eventId, userId: OPENID, nickName, avatarUrl,
           type, title, desc, costNote, peopleNeeded,
           deadline,
-          contact: { wechat, phone },
+          contact: { wechat },
           status: 'open',
           applyCount: 0,
           reportCount: 0,
@@ -190,10 +205,10 @@ exports.main = async (event = {}) => {
       const helpId = trimStr(event.helpId, 40);
       const message = trimStr(event.message, LIMIT.message);
       const contact = event.contact || {};
-      const wechat = trimStr(contact.wechat, 40);
-      const phone = trimStr(contact.phone, 20);
+      const wechat = trimStr(contact.wechat, 20);
       if (!helpId) return { success: false, error: '缺少参数' };
-      if (!wechat && !phone) return { success: false, error: '至少留一个联系方式' };
+      if (!wechat) return { success: false, error: '请填写微信号' };
+      if (!validWechat(wechat)) return { success: false, error: '微信号格式不对' };
       if (hasBlockedWord(message)) return { success: false, error: '留言含有不允许的内容' };
 
       const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
@@ -207,8 +222,15 @@ exports.main = async (event = {}) => {
         return { success: false, error: '请先关注这场赛事' };
       }
 
-      const dup = await db.collection(APPLIES).where({ helpId, userId: OPENID }).limit(1).get().catch(() => null);
+      // 已取消的不算重复，允许重新应征
+      const dup = await db.collection(APPLIES).where({ helpId, userId: OPENID, status: _.neq('canceled') }).limit(1).get().catch(() => null);
       if (dup && dup.data.length) return { success: false, error: '已经应征过了' };
+
+      // 撤销次数用完 → 本场赛事不能再应征（防反复应征套取联系方式）
+      const canceledCount = await countCanceled(OPENID, h.eventId);
+      if (canceledCount >= LIMIT.cancelPerEvent) {
+        return { success: false, error: `本场赛事已撤销 ${LIMIT.cancelPerEvent} 次，不能再应征了` };
+      }
 
       const todayApply = await db.collection(APPLIES)
         .where({ userId: OPENID, createTime: _.gt(startOfToday()) }).get().catch(() => null);
@@ -225,7 +247,7 @@ exports.main = async (event = {}) => {
       await db.collection(APPLIES).add({
         data: {
           helpId, eventId: h.eventId, userId: OPENID, nickName,
-          contact: { wechat, phone },
+          contact: { wechat },
           message,
           status: 'pending',
           createTime: now(),
@@ -253,7 +275,7 @@ exports.main = async (event = {}) => {
         // 只有发布者自己能看应征者的联系方式
         const applicants = (aRes.data || []).map(a => ({
           userId: a.userId, nickName: a.nickName, message: a.message,
-          contact: a.contact || {}, createTime: a.createTime,
+          contact: { wechat: (a.contact || {}).wechat }, createTime: a.createTime,
         }));
         return publicHelp(h, {
           typeLabel: (TYPES[h.type] || {}).label || '其他',
@@ -272,17 +294,27 @@ exports.main = async (event = {}) => {
         .orderBy('createTime', 'desc').limit(50).get().catch(() => ({ data: [] }));
       const applies = aRes.data || [];
 
+      // 按赛事聚合统计已撤销次数（涉及的赛事通常就三五个，避免逐条查询）
+      const eventIds = Array.from(new Set(applies.map(a => a.eventId).filter(Boolean)));
+      const cancelMap = {};
+      await Promise.all(eventIds.map(async (eid) => {
+        cancelMap[eid] = await countCanceled(OPENID, eid);
+      }));
+
       const list = await Promise.all(applies.map(async (a) => {
         const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
         const h = hRes && hRes.data;
         if (!h) return null;
+        const remain = Math.max(0, LIMIT.cancelPerEvent - (cancelMap[a.eventId] || 0));
         return {
           applyId: a._id,
           message: a.message,
-          myContact: a.contact || {},
+          myContact: { wechat: (a.contact || {}).wechat },
           createTime: a.createTime,
           // 双方都已表达诚意，互见联系方式
-          ownerContact: h.contact || {},
+          ownerContact: { wechat: (h.contact || {}).wechat },
+          cancelRemain: remain,
+          canCancel: remain > 0,
           ...publicHelp(h, {
             typeLabel: (TYPES[h.type] || {}).label || '其他',
             typeIcon: (TYPES[h.type] || {}).icon || '🙌',
@@ -334,12 +366,18 @@ exports.main = async (event = {}) => {
       const a = aRes && aRes.data;
       if (!a) return { success: false, error: '不存在' };
       if (a.userId !== OPENID) return { success: false, error: '无权操作' };
-      await db.collection(APPLIES).doc(applyId).update({ data: { status: 'canceled' } });
+
+      const canceledCount = await countCanceled(OPENID, a.eventId);
+      if (canceledCount >= LIMIT.cancelPerEvent) {
+        return { success: false, error: `本场赛事已撤销 ${LIMIT.cancelPerEvent} 次，不能再取消了` };
+      }
+
+      await db.collection(APPLIES).doc(applyId).update({ data: { status: 'canceled', cancelTime: now() } });
       const cnt = await db.collection(APPLIES).where({ helpId: a.helpId, status: _.neq('canceled') }).count().catch(() => ({ total: 0 }));
       await db.collection(HELPS).doc(a.helpId).update({
         data: { applyCount: cnt.total || 0, updateTime: now() },
       }).catch(() => {});
-      return { success: true };
+      return { success: true, remain: Math.max(0, LIMIT.cancelPerEvent - (canceledCount + 1)) };
     }
 
     return { success: false, error: '未知操作' };

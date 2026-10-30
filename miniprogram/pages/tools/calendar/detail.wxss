@@ -282,3 +282,5 @@
 .help-ap-contact { display: block; font-size: 24rpx; color: #1aad19; margin-top: 6rpx; }
 .help-mine-btns { display: flex; justify-content: flex-end; margin-top: 14rpx; }
 .help-mine-btn { font-size: 24rpx; color: #999; border: 2rpx solid #ddd; padding: 8rpx 24rpx; border-radius: 20rpx; }
+.help-mine-locked { font-size: 22rpx; color: #bbb; }
+.help-field-tip { display: block; font-size: 22rpx; color: #aaa; line-height: 1.5; margin-top: 8rpx; }

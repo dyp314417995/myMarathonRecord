@@ -402,9 +402,9 @@
         <view class="form-input help-date {{helpForm.deadline ? '' : 'placeholder'}}">{{helpForm.deadline || '选择日期'}}</view>
       </picker>
 
-      <text class="form-label">我的联系方式（对方应征后才可见）</text>
-      <input class="form-input" placeholder="微信号" maxlength="40" value="{{helpForm.wechat}}" data-k="wechat" bindinput="onHelpFormInput" />
-      <input class="form-input" placeholder="手机号（选填）" maxlength="20" value="{{helpForm.phone}}" data-k="phone" bindinput="onHelpFormInput" />
+      <text class="form-label">我的微信号（对方应征后才可见）</text>
+      <input class="form-input" placeholder="微信号" maxlength="20" value="{{helpForm.wechat}}" data-k="wechat" bindinput="onHelpFormInput" />
+      <text class="help-field-tip">只留微信号，不收手机号——留了手机号谁都能打，微信号随时可以拉黑。</text>
 
       <view class="help-rule">
         <text class="help-rule-title">互助规则（请仔细阅读）</text>
@@ -452,12 +452,11 @@
         </view>
       </block>
       <block wx:else>
-        <text class="help-d-tip">联系方式在双方应征后互相可见。平台不代为转达，也不参与你们的约定。</text>
+        <text class="help-d-tip">联系方式在双方应征后互相可见。同一场赛事最多撤销 3 次应征，撤销满 3 次后本场赛事不能再应征——想好了再点。</text>
         <text class="form-label">留言（选填）</text>
         <input class="form-input" placeholder="如：女生，想一起拼" maxlength="50" value="{{applyMessage}}" data-k="applyMessage" bindinput="onApplyInput" />
-        <text class="form-label">我的联系方式（发布者会看到）</text>
-        <input class="form-input" placeholder="微信号" maxlength="40" value="{{applyWechat}}" data-k="applyWechat" bindinput="onApplyInput" />
-        <input class="form-input" placeholder="手机号（选填）" maxlength="20" value="{{applyPhone}}" data-k="applyPhone" bindinput="onApplyInput" />
+        <text class="form-label">我的微信号（发布者会看到）</text>
+        <input class="form-input" placeholder="微信号" maxlength="20" value="{{applyWechat}}" data-k="applyWechat" bindinput="onApplyInput" />
         <view class="modal-actions">
           <button class="btn-outline" catchtap="onReportHelp">举报</button>
           <button class="btn-primary {{applying ? 'disabled' : ''}}" catchtap="onSubmitApply">{{applying ? '提交中…' : '我来应征'}}</button>
@@ -489,8 +488,7 @@
           <view class="help-applicant" wx:for="{{item.applicants}}" wx:for-item="ap" wx:key="userId">
             <text class="help-ap-name">👤 {{ap.nickName}}</text>
             <text class="help-ap-msg" wx:if="{{ap.message}}">{{ap.message}}</text>
-            <text class="help-ap-contact" wx:if="{{ap.contact.wechat}}">微信 {{ap.contact.wechat}}</text>
-            <text class="help-ap-contact" wx:if="{{ap.contact.phone}}">手机 {{ap.contact.phone}}</text>
+            <text class="help-ap-contact" wx:if="{{ap.contact.wechat}}" data-v="{{ap.contact.wechat}}" catchtap="onCopyContact">微信 {{ap.contact.wechat}}　复制</text>
           </view>
           <view class="help-mine-btns" wx:if="{{item.status === 'open' && !item.expired}}">
             <text class="help-mine-btn" data-id="{{item._id}}" catchtap="onCloseHelpItem">关闭招募</text>
@@ -506,11 +504,13 @@
           <view class="help-mine-row" wx:if="{{item.costNote}}">💰 {{item.costNote}}</view>
           <view class="help-applicant">
             <text class="help-ap-name">👤 {{item.nickName}}（发布者）</text>
-            <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}">微信 {{item.ownerContact.wechat}}</text>
-            <text class="help-ap-contact" wx:if="{{item.ownerContact.phone}}">手机 {{item.ownerContact.phone}}</text>
+            <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}" data-v="{{item.ownerContact.wechat}}" catchtap="onCopyContact">微信 {{item.ownerContact.wechat}}　复制</text>
           </view>
-          <view class="help-mine-btns">
-            <text class="help-mine-btn" data-id="{{item.applyId}}" catchtap="onCancelMyApply">取消应征</text>
+          <view class="help-mine-btns" wx:if="{{item.canCancel}}">
+            <text class="help-mine-btn" data-id="{{item.applyId}}" catchtap="onCancelMyApply">取消应征（还剩 {{item.cancelRemain}} 次）</text>
+          </view>
+          <view class="help-mine-btns" wx:else>
+            <text class="help-mine-locked">本场赛事撤销次数已用完</text>
           </view>
         </view>
       </block>
