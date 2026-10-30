@@ -7,6 +7,41 @@ const cache = require('../../../utils/cache');
 const HELP_TMPL_ID = 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew';
 const HELP_MAX_DAYS = 90;   // 与后端 raceHelp 的 LIMIT.maxDays 保持一致，改一头要连另一头一起改
 
+// 每种互助该写些什么差别很大：拼房要交代酒店位置和到店时间，拼车要交代出发地点和往返安排。
+// 示例文案不对口，等于照着错的模板在写。这里的 key 与 helpTypes、后端 TYPES 保持一致。
+const HELP_PLACEHOLDER = {
+  room: {
+    title: '如：找个女生拼标间',
+    desc: '酒店位置偏好、到店时间、是否介意打鼾等，最多 200 字',
+    costNote: '如：AA，约 200/晚',
+    apply: '如：女生，想赛前一晚一起住',
+  },
+  carpool: {
+    title: '如：赛前领物往返拼车',
+    desc: '出发地点与时间、是否接站、回程怎么安排等，最多 200 字',
+    costNote: '如：AA油费过路费，约 50/人',
+    apply: '如：我这边两个人，可坐副驾',
+  },
+  meal: {
+    title: '如：赛后一起吃碗热面',
+    desc: '想吃哪种口味、几位、大概几点等，最多 200 字',
+    costNote: '如：AA，约 60/人',
+    apply: '如：跑完想吃碗面，不挑口味',
+  },
+  tour: {
+    title: '如：赛后两天周边逛逛',
+    desc: '想去哪些地方、玩几天、预算多少等，最多 200 字',
+    costNote: '如：AA，约 500/人',
+    apply: '如：时间自由，想一起逛两天',
+  },
+  team: {
+    title: '如：破四找个配速搭档',
+    desc: '目标成绩、配速区间、在哪儿集合等，最多 200 字',
+    costNote: '如：报名费平摊，约 100/人',
+    apply: '如：我跑过四小时出头，可以带你',
+  },
+};
+
 Page({
   data: {
     eventId: '',
@@ -61,6 +96,8 @@ Page({
     showHelpForm: false,
     helpSubmitting: false,
     helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', deadlineTime: '23:59', wechat: '', ruleAgreed: false },
+    helpPlaceholder: HELP_PLACEHOLDER.room,     // 当前选中类型对应的示例文案
+    applyPlaceholder: HELP_PLACEHOLDER.room.apply,
     showHelpDetail: false,
     curHelp: {},
     applyMessage: '', applyWechat: '', applyPeopleCount: '1',
@@ -733,7 +770,7 @@ Page({
       // 互助只对关注了这场赛事的人可见，点开的人没关注就只能这样了
       return wx.showToast({ title: '这条互助已结束，或需先关注这场赛事', icon: 'none' });
     }
-    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '' });
+    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '', applyPlaceholder: (HELP_PLACEHOLDER[item.type] || HELP_PLACEHOLDER.room).apply });
   },
 
   // open-type="share" 的按钮点了不会自己说话，先把要分享的那条记下来，
@@ -772,11 +809,20 @@ Page({
       helpSubmitting: false,
       helpToday: fmt(today),
       helpMaxDate: maxDate,
+      helpPlaceholder: HELP_PLACEHOLDER.room,   // 本表单默认拼房，重开时不留上一次的类型
       helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, deadlineTime: '23:59', wechat: '', ruleAgreed: false },
     });
   },
   onCloseHelpForm() { this.setData({ showHelpForm: false }); },
-  onPickHelpType(e) { this.setData({ 'helpForm.type': e.currentTarget.dataset.k }); },
+  onPickHelpType(e) {
+    const type = e.currentTarget.dataset.k;
+    this.setData({
+      'helpForm.type': type,
+      // 换了类型就把示例文案一起换掉：拼房要说酒店，拼车要说出发地点，
+      // 沿用上一个类型的例子，等于让人照着错的模板写。
+      helpPlaceholder: HELP_PLACEHOLDER[type] || HELP_PLACEHOLDER.room,
+    });
+  },
   onHelpFormInput(e) { this.setData({ [`helpForm.${e.currentTarget.dataset.k}`]: e.detail.value }); },
   onHelpDeadline(e) { this.setData({ 'helpForm.deadline': e.detail.value }); },
   onHelpDeadlineTime(e) { this.setData({ 'helpForm.deadlineTime': e.detail.value }); },
@@ -853,7 +899,7 @@ Page({
   onOpenHelpDetail(e) {
     const item = this.data.helpList.find(h => h._id === e.currentTarget.dataset.id);
     if (!item) return;
-    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '' });
+    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '', applyPlaceholder: (HELP_PLACEHOLDER[item.type] || HELP_PLACEHOLDER.room).apply });
   },
   onCloseHelpDetail() { this.setData({ showHelpDetail: false }); },
   onApplyInput(e) { this.setData({ [e.currentTarget.dataset.k]: e.detail.value }); },

@@ -386,13 +386,13 @@
       </view>
 
       <text class="form-label">标题</text>
-      <input class="form-input" placeholder="如：找个女生拼房" maxlength="20" value="{{helpForm.title}}" data-k="title" bindinput="onHelpFormInput" />
+      <input class="form-input" placeholder="{{helpPlaceholder.title}}" maxlength="20" value="{{helpForm.title}}" data-k="title" bindinput="onHelpFormInput" />
 
       <text class="form-label">说明（选填）</text>
-      <textarea class="help-textarea" placeholder="酒店位置、出发时间等，最多 200 字" maxlength="200" value="{{helpForm.desc}}" data-k="desc" bindinput="onHelpFormInput" />
+      <textarea class="help-textarea" placeholder="{{helpPlaceholder.desc}}" maxlength="200" value="{{helpForm.desc}}" data-k="desc" bindinput="onHelpFormInput" />
 
       <text class="form-label">费用说明（选填）</text>
-      <input class="form-input" placeholder="如：AA，预计 200/晚" maxlength="30" value="{{helpForm.costNote}}" data-k="costNote" bindinput="onHelpFormInput" />
+      <input class="form-input" placeholder="{{helpPlaceholder.costNote}}" maxlength="30" value="{{helpForm.costNote}}" data-k="costNote" bindinput="onHelpFormInput" />
 
       <text class="form-label">还差几人</text>
       <input class="form-input" type="number" placeholder="1" value="{{helpForm.peopleNeeded}}" data-k="peopleNeeded" bindinput="onHelpFormInput" />
@@ -467,7 +467,7 @@
         <input class="form-input" type="number" placeholder="1" value="{{applyPeopleCount}}" data-k="applyPeopleCount" bindinput="onApplyInput" />
         <text class="help-field-tip" wx:if="{{curHelp.remainPeople}}">这条还差 {{curHelp.remainPeople}} 人，别超过剩下的名额。</text>
         <text class="form-label">留言（选填）</text>
-        <input class="form-input" placeholder="如：女生，想一起拼" maxlength="50" value="{{applyMessage}}" data-k="applyMessage" bindinput="onApplyInput" />
+        <input class="form-input" placeholder="{{applyPlaceholder}}" maxlength="50" value="{{applyMessage}}" data-k="applyMessage" bindinput="onApplyInput" />
         <text class="form-label">我的微信号（发布者会看到）</text>
         <input class="form-input" placeholder="微信号" maxlength="20" value="{{applyWechat}}" data-k="applyWechat" bindinput="onApplyInput" />
         <view class="modal-actions">
