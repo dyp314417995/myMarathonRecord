@@ -140,6 +140,33 @@ async function notify(userId, content, page) {
   }
 }
 
+// 一条互助就是一个临时的组：发起人 + 所有还没取消的应征者。
+// 谁有动静（有人应征 / 有人取消 / 发起人取消发布），除他本人以外全都要通知到，
+// 不能只通知发起人——同组的搭子也有知情权。
+async function groupMembers(h) {
+  const aRes = await db.collection(APPLIES)
+    .where({ helpId: h._id, status: _.neq('canceled') })
+    .limit(50).get().catch(() => ({ data: [] }));
+  const members = [];
+  const add = (uid) => { if (uid && members.indexOf(uid) < 0) members.push(uid); };
+  add(h.userId);
+  ((aRes && aRes.data) || []).forEach(a => add(a.userId));
+  return members;
+}
+
+// 组内广播：跳过 selfId，自己的动作不用通知自己
+async function broadcast(h, content, selfId) {
+  if (!h) return 0;
+  const members = await groupMembers(h);
+  const page = `/pages/tools/calendar/detail?id=${h.eventId}`;
+  let sent = 0;
+  await Promise.all(members.map(async (uid) => {
+    if (uid === selfId) return;
+    if (await notify(uid, content, page)) sent += 1;
+  }));
+  return sent;
+}
+
 // 同一用户在同一场赛事下已撤销的次数
 async function countCanceled(userId, eventId) {
   const c = await db.collection(APPLIES)
@@ -374,11 +401,11 @@ exports.main = async (event = {}) => {
         },
       }).catch(() => {});
 
-      // 通知发布者。订阅消息是一次性的，发不到也不影响——「我发布的」里照样看得到应征者
+      // 组里广播。订阅消息是一次性的，收不到也不打紧——「我发布的」里照样看得到应征者
       const typeLabel = (TYPES[h.type] || {}).label || '互助';
-      await notify(h.userId, `${typeLabel}「${truncate(h.title, 8)}」有人应征了`, `/pages/tools/calendar/detail?id=${h.eventId}`);
+      await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」有人应征了`, OPENID);
       if (full) {
-        await notify(h.userId, `${typeLabel}「${truncate(h.title, 8)}」已约满`, `/pages/tools/calendar/detail?id=${h.eventId}`);
+        await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」已约满`, OPENID);
       }
 
       return { success: true, full, remain: Math.max(0, remain - peopleCount) };
@@ -478,15 +505,12 @@ exports.main = async (event = {}) => {
       const content = noshow
         ? `${typeLabel}「${truncate(h.title, 8)}」发起人临近截止取消了`
         : `${typeLabel}「${truncate(h.title, 8)}」发起人已取消`;
-      const page = `/pages/tools/calendar/detail?id=${h.eventId}`;
-
-      let notified = 0;
-      await Promise.all(list.map(async (a) => {
-        await db.collection(APPLIES).doc(a._id).update({
-          data: { status: 'canceled', cancelFlag: 'owner-canceled', cancelTime: now() },
-        }).catch(() => {});
-        if (await notify(a.userId, content, page)) notified += 1;
-      }));
+      // 顺序很重要：先把消息送到，再作废应征记录。
+      // 作废之后他们就不算组员了，广播会找不到人。
+      const notified = await broadcast(h, content, OPENID);
+      await Promise.all(list.map(a => db.collection(APPLIES).doc(a._id).update({
+        data: { status: 'canceled', cancelFlag: 'owner-canceled', cancelTime: now() },
+      }).catch(() => {})));
 
       return { success: true, applicantCount: list.length, notified, noshow };
     }
@@ -553,9 +577,9 @@ exports.main = async (event = {}) => {
             updateTime: now(),
           },
         }).catch(() => {});
-        // 让发布者知道人少了
+        // 组里有人退出，发起人和剩下的搭子都要知道
         const typeLabel = (TYPES[h.type] || {}).label || '互助';
-        await notify(h.userId, `${typeLabel}「${truncate(h.title, 8)}」有人取消应征`, `/pages/tools/calendar/detail?id=${h.eventId}`);
+        await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」有人取消应征`, OPENID);
       }
 
       return {
