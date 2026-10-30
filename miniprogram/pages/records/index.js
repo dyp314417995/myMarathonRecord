@@ -4,6 +4,7 @@ const cache = require('../../utils/cache');
 const db = dbUtil.db;
 const raceUtil = require('../../utils/raceEvents');
 const shareUtil = require('../../utils/share');
+const { checkResult, getLimit, toSeconds } = require('../../utils/raceResult');
 
 const RECORDS_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
 // 完赛证书单独存一组图（与成绩截图分开），最多 3 张；有证书的记录会进「我的荣耀时刻」
@@ -23,7 +24,8 @@ Page({
     formImages: [],       // 成绩截图（最多 9 张）
     formCertImages: [],   // 完赛证书（最多 3 张）
     showTimePicker: false,
-    showChart: false,
+    // 成绩选择器的合理范围（跟着项目变，见 syncPickerRange）
+    pickerMinSec: 0, pickerMaxSec: 0, pickerRangeTip: '',
     chartTips: '',
     // 赛事搜索
     searchText: '',
@@ -172,6 +174,16 @@ Page({
     this.setData({ showChart: true, chartData: entries });
   },
 
+  // 把当前项目的成绩范围同步给时间选择器（全马/半马有限制，其它不限制）
+  syncPickerRange(raceType) {
+    const limit = getLimit(raceType);
+    this.setData({
+      pickerMinSec: limit ? limit.minSec : 0,
+      pickerMaxSec: limit ? limit.maxSec : 0,
+      pickerRangeTip: limit ? limit.tip : '',
+    });
+  },
+
   // 添加
   onAdd() {
     const defaults = { '10k': '0:50:30', half: '2:00:00', full: '3:30:00' };
@@ -181,6 +193,7 @@ Page({
       form: { raceType: tab, raceLevel: 'A', status: 'finished', date: '', city: '', result: defaults[tab] || (tab === 'custom' ? '0:30:00' : '3:30:00'), rank: '', note: '', isPublic: true, distanceKm: '' },
       formImages: [], formCertImages: [],
     });
+    this.syncPickerRange(tab);
   },
 
   // 编辑（列表里点进来）
@@ -223,6 +236,7 @@ Page({
       formCertImages: certImages,
       searchText: r.city || '',
     });
+    this.syncPickerRange(r.raceType);
     this.updateFiltered();
   },
 
@@ -261,6 +275,7 @@ Page({
     const patch = { 'form.raceType': v };
     if (v === 'custom' && !this.data.form.result) patch['form.result'] = '0:30:00';
     this.setData(patch);
+    this.syncPickerRange(v);
   },
   onFormLevel(e) { this.setData({ 'form.raceLevel': e.currentTarget.dataset.v }); },
   onFormStatus(e) { this.setData({ 'form.status': e.currentTarget.dataset.v }); },
@@ -347,7 +362,11 @@ Page({
     const f = this.data.form;
 
     if (!f.date) return wx.showToast({ title: '请选日期', icon: 'none' });
-    if (f.status === 'finished' && !f.result) return wx.showToast({ title: '请填写成绩', icon: 'none' });
+    if (f.status === 'finished') {
+      if (!f.result) return wx.showToast({ title: '请填写成绩', icon: 'none' });
+      const chk = checkResult(f.result, f.raceType);
+      if (!chk.ok) return wx.showToast({ title: chk.error, icon: 'none', duration: 2500 });
+    }
     wx.showLoading({ title: '保存中' });
     // 上传新图片
     const images = [];
@@ -420,9 +439,11 @@ Page({
     const field = fields[type];
     if (!field) return false; // 自定义距离(custom)不参与 PB
     const current = u[field];
-    const toSec = (t) => { const p = t.split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
-    const newSec = toSec(result);
-    if (!current || newSec < toSec(current)) {
+    // 用统一的换算：00:00:00 不算成绩，否则它会永远压着 PB 刷新不了
+    const newSec = toSeconds(result);
+    const curSec = toSeconds(current);
+    if (!newSec) return false;
+    if (curSec === null || newSec < curSec) {
       await dbUtil.updateUser(u._id, { [field]: result });
       u[field] = result;
       wx.setStorageSync('userInfo', u);

@@ -2,6 +2,7 @@
 const raceUtil = require('../../../utils/raceEvents');
 const shareUtil = require('../../../utils/share');
 const cache = require('../../../utils/cache');
+const { checkResult, getLimit, toSeconds } = require('../../../utils/raceResult');
 
 Page({
   data: {
@@ -459,6 +460,13 @@ Page({
       raceHIdx: d.h, raceMIdx: d.m, raceSIdx: d.s,
       notifyEnabled: existingMarker ? existingMarker.notifyEnabled || false : false,
     });
+    this.syncResultRange((event.raceTypes || ['full'])[0] || 'full');
+  },
+
+  // 成绩输入框下方的范围提示（跟着所选项目变）
+  syncResultRange(raceType) {
+    const limit = getLimit(raceType);
+    this.setData({ resultRangeTip: limit ? limit.tip : '' });
   },
 
   async onMark() {
@@ -466,6 +474,11 @@ Page({
     if (!userInfo) return wx.navigateTo({ url: '/pages/login/login' });
     const { markingEventId, selectedStatus, markingEvent, notifyEnabled, hours, minutes, seconds, raceHIdx, raceMIdx, raceSIdx } = this.data;
     const raceResult = `${hours[raceHIdx]}:${minutes[raceMIdx]}:${seconds[raceSIdx]}`;
+    // 成绩要在合理范围内才让保存（全马 2~6 小时、半马 1~3 小时）
+    if (selectedStatus === 'finished') {
+      const chk = checkResult(raceResult, this.data.markRaceType);
+      if (!chk.ok) return wx.showToast({ title: chk.error, icon: 'none', duration: 2500 });
+    }
     // 开启通知时申请订阅消息授权
     if (notifyEnabled) {
       try {
@@ -548,9 +561,11 @@ Page({
     const field = fields[type];
     if (!field) return false;
     const current = userInfo[field];
-    const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
-    const newSec = toSec(result);
-    if (!current || newSec < toSec(current)) {
+    // 用统一的换算：00:00:00 不算成绩，否则它会永远压着 PB 刷新不了
+    const newSec = toSeconds(result);
+    const curSec = toSeconds(current);
+    if (!newSec) return false;
+    if (curSec === null || newSec < curSec) {
       await dbUtil.updateUser(userInfo._id, { [field]: result });
       userInfo[field] = result;
       wx.setStorageSync('userInfo', userInfo);
@@ -620,7 +635,11 @@ Page({
   },
 
   onStatusSel(e) { this.setData({ selectedStatus: e.currentTarget.dataset.v }); },
-  onMarkRaceType(e) { this.setData({ markRaceType: e.currentTarget.dataset.v }); },
+  onMarkRaceType(e) {
+    const v = e.currentTarget.dataset.v;
+    this.setData({ markRaceType: v });
+    this.syncResultRange(v);
+  },
 
   onNotifyToggle(e) { this.setData({ notifyEnabled: e.detail.value }); },
 

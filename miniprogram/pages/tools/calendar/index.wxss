@@ -49,9 +49,14 @@
 .mark-btn { font-size: 22rpx; color: #1aad19; padding: 10rpx 20rpx; border: 2rpx solid #1aad19; border-radius: 20rpx; background: #fff; display: inline-flex; align-items: center; justify-content: center; line-height: 1; white-space: nowrap; }
 .notify-icon { font-size: 32rpx; padding: 4rpx; }
 
-.result-row { display: flex; align-items: center; gap: 4rpx; margin-top: 8rpx; }
-.result-pick { flex: 1; text-align: center; padding: 14rpx 8rpx !important; font-size: 28rpx; }
-.result-sep { font-size: 28rpx; color: #666; flex-shrink: 0; }
+.result-row { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
+/* 三个格子做大一点：以前只有 60rpx 高还挤在一起，容易点错相邻的那个 */
+.result-pick-unit { flex: 1; display: flex; flex-direction: column; align-items: center; background: #fff; border: 2rpx solid #1aad19; border-radius: 12rpx; padding: 20rpx 0; }
+.result-pick { font-size: 40rpx; font-weight: 700; color: #222; line-height: 1.2; }
+.result-pick.ph { font-size: 28rpx; font-weight: 400; color: #aaa; }
+.result-pick-label { font-size: 22rpx; color: #1aad19; margin-top: 6rpx; }
+.result-sep { font-size: 32rpx; color: #666; flex-shrink: 0; }
+.result-tip { display: block; font-size: 22rpx; color: #aaa; margin-top: 10rpx; }
 .mark-btn:active { background: #e8f5e9; }
 
 .modal-mask { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:100; }

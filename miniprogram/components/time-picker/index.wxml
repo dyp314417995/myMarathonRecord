@@ -6,6 +6,14 @@
       <text class="picker-title">{{label}}</text>
       <text class="picker-confirm" bindtap="onConfirm">确定</text>
     </view>
+
+    <!-- 当前选中的值，滚轮一动就跟着变，防止看错 -->
+    <view class="picker-preview">
+      <text class="picker-preview-num">{{preview}}</text>
+      <text class="picker-preview-tip" wx:if="{{rangeTip}}">{{rangeTip}}</text>
+      <text class="picker-preview-tip" wx:else>上下滑动选择，看这里确认</text>
+    </view>
+
     <view class="picker-tabs">
       <text class="picker-tab">时</text>
       <text class="picker-tab">分</text>
@@ -15,7 +23,7 @@
       class="picker-view"
       value="{{pickerValue}}"
       bindchange="onChange"
-      indicator-style="height:50px;"
+      indicator-style="height: 88px; background-color: rgba(26,173,25,0.1); border-radius: 12rpx;"
     >
       <picker-view-column>
         <view wx:for="{{hours}}" wx:key="*this" class="picker-item">{{item}}</view>

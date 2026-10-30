@@ -6,14 +6,17 @@ const PAGE_SIZE = 20;
 const LIST_CACHE_KEY = 'members_all_users';
 const LIST_CACHE_TTL = 5 * 60 * 1000; // 5 分钟
 
-// 成绩字符串转秒（支持 H:MM:SS / MM:SS / 纯秒），非法返回 null
+// 成绩字符串转秒（支持 H:MM:SS / MM:SS / 纯秒），非法或 00:00:00 返回 null
+// 00:00:00 是「没填 / 选了默认」的产物，不是真成绩，不能参与排序
 function toSeconds(t) {
   if (!t || typeof t !== 'string') return null;
   const p = t.trim().split(':').map(x => parseInt(x, 10));
   if (p.length === 0 || p.some(x => isNaN(x))) return null;
-  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
-  if (p.length === 2) return p[0] * 60 + p[1];
-  return p[0];
+  let s;
+  if (p.length === 3) s = p[0] * 3600 + p[1] * 60 + p[2];
+  else if (p.length === 2) s = p[0] * 60 + p[1];
+  else s = p[0];
+  return s > 0 ? s : null;
 }
 
 Page({

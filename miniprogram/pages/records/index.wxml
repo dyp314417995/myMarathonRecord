@@ -138,10 +138,13 @@
     <!-- 成绩（仅已完赛） -->
     <block wx:if="{{form.status === 'finished'}}">
       <text class="form-label">完赛成绩</text>
-      <view class="form-input time-trigger" bindtap="onPickTime">
-        <text class="{{form.result ? '' : 'placeholder'}}">{{form.result || '点此选择'}}</text>
-        <text class="city-arrow">▾</text>
+      <view class="time-trigger" bindtap="onPickTime">
+        <view class="time-trigger-val {{form.result ? '' : 'placeholder'}}">{{form.result || '选择成绩'}}</view>
+        <view class="time-trigger-side">
+          <text class="time-trigger-arrow">▾</text>
+        </view>
       </view>
+      <text class="time-trigger-tip" wx:if="{{pickerRangeTip}}">合理范围 {{pickerRangeTip}}</text>
     </block>
 
     <!-- 名次 / 荣誉（仅已完赛） -->
@@ -207,5 +210,8 @@
     </view>
   </view>
 
-  <time-picker value="{{form.result}}" show="{{showTimePicker}}" label="完赛成绩" default-value="{{form.raceType === '10k' ? '0:50:30' : form.raceType === 'half' ? '2:00:00' : '3:30:00'}}" bind:confirm="onTimeChange" bind:cancel="onHideTime"></time-picker>
+  <time-picker value="{{form.result}}" show="{{showTimePicker}}" label="完赛成绩"
+    min-sec="{{pickerMinSec}}" max-sec="{{pickerMaxSec}}" range-tip="{{pickerRangeTip}}"
+    default-value="{{form.raceType === '10k' ? '0:50:30' : form.raceType === 'half' ? '2:00:00' : '3:30:00'}}"
+    bind:confirm="onTimeChange" bind:cancel="onHideTime"></time-picker>
 </view>

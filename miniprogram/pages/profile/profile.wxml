@@ -111,5 +111,7 @@
   <city-picker value="{{userInfo.city}}" show="{{showCityPicker}}" bind:confirm="onCityConfirm" bind:cancel="onCityCancel"></city-picker>
 
   <!-- 时间选择器 -->
-  <time-picker value="{{timeValue}}" show="{{showTimePicker}}" label="{{timeLabel}}" default-value="{{timeDefault}}" bind:confirm="onTimeConfirm" bind:cancel="onTimeCancel"></time-picker>
+  <time-picker value="{{timeValue}}" show="{{showTimePicker}}" label="{{timeLabel}}" default-value="{{timeDefault}}"
+    min-sec="{{timeMinSec}}" max-sec="{{timeMaxSec}}" range-tip="{{timeRangeTip}}"
+    bind:confirm="onTimeConfirm" bind:cancel="onTimeCancel"></time-picker>
 </view>

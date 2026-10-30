@@ -1,5 +1,6 @@
 // pages/profile/profile.js - 个人资料
 const dbUtil = require('../../utils/db');
+const { checkResult, getLimit } = require('../../utils/raceResult');
 
 Page({
   data: {
@@ -15,6 +16,7 @@ Page({
     timeLabel: '',
     timeDefault: '0:00:00',
     timeValue: '',
+    timeMinSec: 0, timeMaxSec: 0, timeRangeTip: '',   // PB 的合理范围，打开选择器时按项目带出
   },
 
   async onLoad() {
@@ -114,7 +116,15 @@ Page({
   onShowTimePicker(e) {
     const { field, label, def } = e.currentTarget.dataset;
     const val = this.data.userInfo[field] || def;
-    this.setData({ showTimePicker: true, timeField: field, timeLabel: label, timeDefault: def, timeValue: val });
+    // PB 也按项目的合理范围限制（全马 2~6 小时、半马 1~3 小时，10K 不限制）
+    const raceType = { pbFull: 'full', pbHalf: 'half', pb10k: '10k' }[field] || '';
+    const limit = getLimit(raceType);
+    this.setData({
+      showTimePicker: true, timeField: field, timeLabel: label, timeDefault: def, timeValue: val,
+      timeMinSec: limit ? limit.minSec : 0,
+      timeMaxSec: limit ? limit.maxSec : 0,
+      timeRangeTip: limit ? limit.tip : '',
+    });
   },
   onTimeConfirm(e) { this.setData({ [`userInfo.${this.data.timeField}`]: e.detail.value, showTimePicker: false }); },
   onTimeCancel() { this.setData({ showTimePicker: false }); },
@@ -123,6 +133,13 @@ Page({
     const { userInfo, selectedGroupIds } = this.data;
     if (!userInfo.nickName || !userInfo.nickName.trim()) return wx.showToast({ title: '昵称不能为空', icon: 'none' });
     if (!userInfo.phoneNumber || !userInfo.phoneNumber.trim()) return wx.showToast({ title: '手机号不能为空', icon: 'none' });
+    // PB 也卡合理范围，顺带把 00:00:00 这种默认产物挡掉
+    for (const [field, raceType] of [['pbFull', 'full'], ['pbHalf', 'half'], ['pb10k', '10k']]) {
+      const v = userInfo[field];
+      if (!v) continue;
+      const chk = checkResult(v, raceType);
+      if (!chk.ok) return wx.showToast({ title: chk.error, icon: 'none', duration: 2500 });
+    }
 
     wx.showLoading({ title: '保存中...' });
     try {

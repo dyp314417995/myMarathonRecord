@@ -167,17 +167,27 @@
       <text class="form-label">完赛成绩</text>
       <view class="result-row">
         <picker mode="selector" range="{{hours}}" value="{{raceHIdx}}" bindchange="onResultPick" data-field="h">
-          <view class="form-input result-pick">{{raceHIdx >= 0 ? hours[raceHIdx] : '时'}}</view>
+          <view class="result-pick-unit">
+            <text class="result-pick {{raceHIdx >= 0 ? '' : 'ph'}}">{{raceHIdx >= 0 ? hours[raceHIdx] : '时'}}</text>
+            <text class="result-pick-label">时</text>
+          </view>
         </picker>
         <text class="result-sep">:</text>
         <picker mode="selector" range="{{minutes}}" value="{{raceMIdx}}" bindchange="onResultPick" data-field="m">
-          <view class="form-input result-pick">{{raceMIdx >= 0 ? minutes[raceMIdx] : '分'}}</view>
+          <view class="result-pick-unit">
+            <text class="result-pick {{raceMIdx >= 0 ? '' : 'ph'}}">{{raceMIdx >= 0 ? minutes[raceMIdx] : '分'}}</text>
+            <text class="result-pick-label">分</text>
+          </view>
         </picker>
         <text class="result-sep">:</text>
         <picker mode="selector" range="{{seconds}}" value="{{raceSIdx}}" bindchange="onResultPick" data-field="s">
-          <view class="form-input result-pick">{{raceSIdx >= 0 ? seconds[raceSIdx] : '秒'}}</view>
+          <view class="result-pick-unit">
+            <text class="result-pick {{raceSIdx >= 0 ? '' : 'ph'}}">{{raceSIdx >= 0 ? seconds[raceSIdx] : '秒'}}</text>
+            <text class="result-pick-label">秒</text>
+          </view>
         </picker>
       </view>
+      <text class="result-tip" wx:if="{{resultRangeTip}}">合理范围 {{resultRangeTip}}</text>
     </block>
     <view class="notify-row">
       <text class="notify-label">🔔 倒计时提醒</text>

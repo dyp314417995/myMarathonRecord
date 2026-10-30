@@ -17,17 +17,30 @@
   display: flex; justify-content: space-between; align-items: center;
   padding: 28rpx 32rpx; border-bottom: 1rpx solid #f0f0f0;
 }
-.picker-cancel { font-size: 28rpx; color: #999; }
-.picker-title { font-size: 30rpx; font-weight: 600; color: #333; }
-.picker-confirm { font-size: 28rpx; color: #1aad19; font-weight: 600; }
+.picker-cancel { font-size: 30rpx; color: #999; padding: 12rpx 8rpx; }
+.picker-title { font-size: 32rpx; font-weight: 600; color: #333; }
+.picker-confirm { font-size: 30rpx; color: #1aad19; font-weight: 600; padding: 12rpx 8rpx; }
+
+/* 当前选中的值放大展示，避免滑动过头选错 */
+.picker-preview {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24rpx 32rpx 8rpx;
+}
+.picker-preview-num {
+  font-size: 64rpx; font-weight: 700; color: #1aad19; line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.picker-preview-tip { font-size: 24rpx; color: #aaa; margin-top: 6rpx; }
 
 .picker-tabs {
-  display: flex; padding: 16rpx 32rpx 0; gap: 60rpx;
+  display: flex; padding: 16rpx 32rpx 4rpx;
 }
-.picker-tab { font-size: 24rpx; color: #bbb; }
+.picker-tab { flex: 1; text-align: center; font-size: 26rpx; color: #bbb; }
 
-.picker-view { width: 100%; height: 420rpx; }
+/* 行高调到 88px，选中区更大更好点 */
+.picker-view { width: 100%; height: 560rpx; }
 .picker-item {
   display: flex; align-items: center; justify-content: center;
-  font-size: 32rpx; color: #333;
+  font-size: 44rpx; color: #333;
+  font-variant-numeric: tabular-nums;
 }
