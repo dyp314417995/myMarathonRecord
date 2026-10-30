@@ -90,6 +90,10 @@ Page({
       this.loadRaces();
       // 心愿单数量（跑友许愿但还没收录的赛事）
       this.loadWishes();
+      if (this._pendingWish) {
+        this._pendingWish = false;
+        this.onOpenWishes();     // 通知直达：直接摊开清单
+      }
       // 订阅消息点击直达赛事编辑（仅处理一次）
       this.handlePendingEdit();
     }
@@ -101,6 +105,8 @@ Page({
     // 订阅消息携带 qrScope：进入页面自动套二维码筛选（汇总通知点击进入用）
     const qs = options && options.qrScope;
     if (qs === 'missing' || qs === 'expired') this.setData({ qrScope: qs });
+    // 心愿单通知点进来：等身份校验通过后直接把心愿单摊开，不用再去找那个小入口
+    this._pendingWish = !!(options && options.wish);
   },
 
   // 取当前用户的负责省份：超管=全国[]；普通管理员=admins 表对应行的 provinces

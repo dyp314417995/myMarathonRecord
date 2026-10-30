@@ -53,9 +53,13 @@ async function notifySuperAdmins(content, nickName) {
   const admins = (res && res.data) || [];
   if (!admins.length) return { adminCount: 0, sentCount: 0, errors: [{ reason: 'no_super_admin' }] };
 
+  // 只发赛事名等于没发：超管不知道是谁许的愿，想问也不知该问谁。
+  // 模板正文只有 20 个字符，昵称先截短 6 个字保住赛事名，剩下的都留给赛事名。
+  const who = truncate(nickName || '跑友', 6);
+  const rest = Math.max(6, 20 - (who.length + 3));   // 扣掉「想跑：」三个字
   const data = {
     date1: { value: ds },
-    thing2: { value: truncate(`心愿单：${content}`, 20) },
+    thing2: { value: `${who}想跑：${truncate(content, rest)}` },
     time3: { value: ds },
   };
 
@@ -69,7 +73,8 @@ async function notifySuperAdmins(content, nickName) {
         data: {
           openid: u.openid,
           templateId: TEMPLATE_ID,
-          page: '/pages/admin/races/races',
+          // 带上 wish=1，管理页进来直接把心愿单摊开，不用再去找那个小入口
+          page: '/pages/admin/races/races?wish=1',
           data,
         },
       });
