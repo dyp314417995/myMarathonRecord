@@ -293,7 +293,7 @@
 
     <!-- 没关注这场赛事：不给看也不给发 -->
     <view class="help-locked" wx:if="{{!isMine}}">
-      <text>拼房 / 拼车 / 约饭是跑友之间的自发互助。关注这场赛事后，才能看到别人发布的互助，也可以自己发布。</text>
+      <text>拼房 / 拼车 / 拼饭 / 旅游 / 组队是跑友之间的自发互助。关注这场赛事后，才能看到别人发布的互助，也可以自己发布。</text>
     </view>
 
     <block wx:else>
@@ -310,7 +310,7 @@
         <text class="help-item-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
         <view class="help-item-foot">
           <text class="help-item-cost" wx:if="{{item.costNote}}">💰 {{item.costNote}}</text>
-          <text class="help-item-people">缺 {{item.peopleNeeded}} 人</text>
+          <text class="help-item-people">还差 {{item.remainPeople || item.peopleNeeded}} 人</text>
           <text class="help-item-left {{item.daysLeft <= 3 ? 'urgent' : ''}}">{{item.daysLeft === 0 ? '今天截止' : '剩 ' + item.daysLeft + ' 天'}}</text>
           <text class="help-item-apply" wx:if="{{item.applyCount}}">{{item.applyCount}} 人应征</text>
         </view>
@@ -398,9 +398,15 @@
       <input class="form-input" type="number" placeholder="1" value="{{helpForm.peopleNeeded}}" data-k="peopleNeeded" bindinput="onHelpFormInput" />
 
       <text class="form-label">截止时间</text>
-      <picker mode="date" start="{{helpToday}}" end="{{helpMaxDate}}" value="{{helpForm.deadline}}" bindchange="onHelpDeadline">
-        <view class="form-input help-date {{helpForm.deadline ? '' : 'placeholder'}}">{{helpForm.deadline || '选择日期'}}</view>
-      </picker>
+      <view class="help-deadline-row">
+        <picker mode="date" start="{{helpToday}}" end="{{helpMaxDate}}" value="{{helpForm.deadline}}" bindchange="onHelpDeadline">
+          <view class="form-input help-date {{helpForm.deadline ? '' : 'placeholder'}}">{{helpForm.deadline || '选择日期'}}</view>
+        </picker>
+        <picker mode="time" value="{{helpForm.deadlineTime}}" bindchange="onHelpDeadlineTime">
+          <view class="form-input help-date">{{helpForm.deadlineTime}}</view>
+        </picker>
+      </view>
+      <text class="help-field-tip">精确到分钟。取消是否算放鸽子，按这个时间判定。</text>
 
       <text class="form-label">我的微信号（对方应征后才可见）</text>
       <input class="form-input" placeholder="微信号" maxlength="20" value="{{helpForm.wechat}}" data-k="wechat" bindinput="onHelpFormInput" />
@@ -412,7 +418,11 @@
 2. 平台不收取任何费用，也不承担线下接触产生的纠纷与责任。
 3. 平台无法核实其他跑友的真实身份，约见请自行判断风险，建议在公共场所。
 4. 不得发布任何涉交易、转卖、代购、名额转让的信息，发现即下架。
-5. 到截止时间自动失效，你也可以随时关闭。</text>
+5. 名额按人数算，招募满员自动完成；有人取消后名额放回，未满自动恢复招募。
+6. 取消规则：提前取消不罚，早说一声大家都来得及。但截止前 24 小时内取消应征，或发起人临时取消发布，都记为放鸽子一次——这时候别人再找搭子已经来不及了。
+7. 放鸽子累计 3 次，7 天内不能再发起互助。
+8. 同一个赛事最多撤销 3 次应征，用完之后本场赛事不能再应征。
+9. 到截止时间自动失效，你也可以随时取消发布。</text>
       </view>
 
       <view class="help-agree" catchtap="onToggleHelpRule">
@@ -438,12 +448,12 @@
       <view class="help-d-title">{{curHelp.typeIcon}} {{curHelp.title}}</view>
       <view class="help-d-meta">
         <text>{{curHelp.typeLabel}}</text>
-        <text>缺 {{curHelp.peopleNeeded}} 人</text>
+        <text>还差 {{curHelp.remainPeople || curHelp.peopleNeeded}} 人</text>
         <text class="{{curHelp.daysLeft <= 3 ? 'urgent' : ''}}">{{curHelp.daysLeft === 0 ? '今天截止' : '剩 ' + curHelp.daysLeft + ' 天'}}</text>
       </view>
       <view class="help-d-row" wx:if="{{curHelp.costNote}}"><text class="help-d-k">费用</text><text>{{curHelp.costNote}}</text></view>
       <view class="help-d-row" wx:if="{{curHelp.desc}}"><text class="help-d-k">说明</text><text>{{curHelp.desc}}</text></view>
-      <view class="help-d-owner">👤 {{curHelp.nickName}}　·　已有 {{curHelp.applyCount || 0}} 人应征</view>
+      <view class="help-d-owner">👤 {{curHelp.nickName}}　·　{{curHelp.applyPeople || 0}} / {{curHelp.peopleNeeded}} 人已到位</view>
 
       <block wx:if="{{curHelp.isMine}}">
         <text class="help-d-tip">这是你发布的互助，可在「我的互助」里查看应征的人或关闭它。</text>
@@ -452,7 +462,10 @@
         </view>
       </block>
       <block wx:else>
-        <text class="help-d-tip">联系方式在双方应征后互相可见。同一场赛事最多撤销 3 次应征，撤销满 3 次后本场赛事不能再应征——想好了再点。</text>
+        <text class="help-d-tip">联系方式在双方应征后互相可见。同一场赛事最多撤销 3 次应征；截止前 24 小时内取消算放鸽子，累计 3 次后 7 天不能发起互助——想好了再点。</text>
+        <text class="form-label">我这边几人</text>
+        <input class="form-input" type="number" placeholder="1" value="{{applyPeopleCount}}" data-k="applyPeopleCount" bindinput="onApplyInput" />
+        <text class="help-field-tip" wx:if="{{curHelp.remainPeople}}">这条还差 {{curHelp.remainPeople}} 人，别超过剩下的名额。</text>
         <text class="form-label">留言（选填）</text>
         <input class="form-input" placeholder="如：女生，想一起拼" maxlength="50" value="{{applyMessage}}" data-k="applyMessage" bindinput="onApplyInput" />
         <text class="form-label">我的微信号（发布者会看到）</text>

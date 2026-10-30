@@ -3,6 +3,9 @@ const raceUtil = require('../../../utils/raceEvents');
 const shareUtil = require('../../../utils/share');
 const cache = require('../../../utils/cache');
 
+// 复用日历「关注赛事」已授权过的通用模板，避免跑友再授一次权
+const HELP_TMPL_ID = 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew';
+
 Page({
   data: {
     eventId: '',
@@ -42,22 +45,24 @@ Page({
     cooldownText: '',       // 冷却文案（分钟/秒）
     notifyingOwner: false,
 
-    // ===== 跑友互助（拼房 / 拼车 / 约饭） =====
+    // ===== 跑友互助（拼房 / 拼车 / 拼饭 / 旅游 / 组队） =====
     helpList: [],
     helpLoading: false,
     helpTypes: [
       { key: 'room', label: '拼房', icon: '🏠' },
       { key: 'carpool', label: '拼车', icon: '🚗' },
-      { key: 'meal', label: '约饭', icon: '🍜' },
+      { key: 'meal', label: '拼饭', icon: '🍜' },
+      { key: 'tour', label: '旅游', icon: '🧳' },
+      { key: 'team', label: '组队', icon: '👥' },
     ],
     helpToday: '',          // date picker 起始
     helpMaxDate: '',        // date picker 结束
     showHelpForm: false,
     helpSubmitting: false,
-    helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', wechat: '', ruleAgreed: false },
+    helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', deadlineTime: '23:59', wechat: '', ruleAgreed: false },
     showHelpDetail: false,
     curHelp: {},
-    applyMessage: '', applyWechat: '',
+    applyMessage: '', applyWechat: '', applyPeopleCount: '1',
     applying: false,
     showHelpMine: false,
     helpMineTab: 'mine',    // mine | apply
@@ -676,7 +681,7 @@ Page({
     }
   },
 
-  // ==================== 跑友互助（拼房 / 拼车 / 约饭） ====================
+  // ==================== 跑友互助（拼房 / 拼车 / 拼饭 / 旅游 / 组队） ====================
 
   // 加载本场赛事的互助列表；没关注这场赛事时云函数会返回空列表
   async loadHelps() {
@@ -716,13 +721,23 @@ Page({
       helpSubmitting: false,
       helpToday: fmt(today),
       helpMaxDate: fmt(new Date(Date.now() + 90 * 86400000)),
-      helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, wechat: '', ruleAgreed: false },
+      helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, deadlineTime: '23:59', wechat: '', ruleAgreed: false },
     });
   },
   onCloseHelpForm() { this.setData({ showHelpForm: false }); },
   onPickHelpType(e) { this.setData({ 'helpForm.type': e.currentTarget.dataset.k }); },
   onHelpFormInput(e) { this.setData({ [`helpForm.${e.currentTarget.dataset.k}`]: e.detail.value }); },
   onHelpDeadline(e) { this.setData({ 'helpForm.deadline': e.detail.value }); },
+  onHelpDeadlineTime(e) { this.setData({ 'helpForm.deadlineTime': e.detail.value }); },
+
+  // 订阅消息是一次性的：不在这里要点额度，别人应征/取消就通知不到。
+  // 用户点了「取消」也一样往下走，不拦流程。
+  askSubscribe() {
+    return new Promise((resolve) => {
+      if (typeof wx.requestSubscribeMessage !== 'function') return resolve();
+      wx.requestSubscribeMessage({ tmplIds: [HELP_TMPL_ID], complete: () => resolve() }).catch(() => resolve());
+    });
+  },
   onToggleHelpRule() { this.setData({ 'helpForm.ruleAgreed': !this.data.helpForm.ruleAgreed }); },
 
   async onSubmitHelp() {
@@ -739,6 +754,8 @@ Page({
     this.setData({ helpSubmitting: true });
     wx.showLoading({ title: '发布中' });
     try {
+      // 先要一次推送额度，有人应征时才通知得到
+      await this.askSubscribe();
       const r = await wx.cloud.callFunction({
         name: 'raceHelp',
         data: {
@@ -749,7 +766,8 @@ Page({
           desc: helpForm.desc,
           costNote: helpForm.costNote,
           peopleNeeded: helpForm.peopleNeeded,
-          deadline: helpForm.deadline,
+          // 日期 + 时刻拼起来，后端按分钟判定是否临近截止
+          deadline: `${helpForm.deadline} ${helpForm.deadlineTime || '23:59'}`,
           contact: { wechat: helpForm.wechat },
           ruleAgreed: helpForm.ruleAgreed,
         },
@@ -777,7 +795,8 @@ Page({
   onApplyInput(e) { this.setData({ [e.currentTarget.dataset.k]: e.detail.value }); },
 
   async onSubmitApply() {
-    const { curHelp, applyMessage, applyWechat } = this.data;
+    const { curHelp, applyMessage, applyWechat, applyPeopleCount } = this.data;
+    const peopleCount = Math.max(1, Math.min(9, parseInt(applyPeopleCount, 10) || 1));
     if (!String(applyWechat).trim()) {
       return wx.showToast({ title: '请填写微信号', icon: 'none' });
     }
@@ -787,12 +806,15 @@ Page({
     this.setData({ applying: true });
     wx.showLoading({ title: '提交中' });
     try {
+      // 发起人取消时要通知得到，也靠这一次授权
+      await this.askSubscribe();
       const r = await wx.cloud.callFunction({
         name: 'raceHelp',
         data: {
           action: 'apply',
           helpId: curHelp._id,
           message: applyMessage,
+          peopleCount,
           contact: { wechat: applyWechat },
         },
       });

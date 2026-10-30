@@ -1,4 +1,4 @@
-// cloudfunctions/raceHelp/index.js - 跑友互助（赛事内拼房/拼车/约饭）
+// cloudfunctions/raceHelp/index.js - 跑友互助（拼房/拼车/拼饭/旅游/组队）
 //
 // 合规要点：
 // 1. 必须关注了该赛事才能发布和应征（不是陌生人随便进）
@@ -13,11 +13,13 @@ const _ = db.command;
 const HELPS = 'race_helps';
 const APPLIES = 'race_help_applies';
 
-// 支持的互助类型
+// 支持的互助类型（固定这 5 种，不多不少）
 const TYPES = {
   room: { label: '拼房', icon: '🏠' },
   carpool: { label: '拼车', icon: '🚗' },
-  meal: { label: '约饭', icon: '🍜' },
+  meal: { label: '拼饭', icon: '🍜' },
+  tour: { label: '旅游', icon: '🧳' },
+  team: { label: '组队', icon: '👥' },
 };
 
 // 限制
@@ -31,7 +33,18 @@ const LIMIT = {
   applyDaily: 10,     // 每天最多应征 10 次
   maxDays: 90,        // 截止时间最多 90 天后
   cancelPerEvent: 3,  // 同一场赛事最多撤销 3 次应征
+  maxPeople: 9,       // 单条互助最多招募人数
+  // 放鸽子：只有临近截止才罚。提前好几天说一声是无所谓的，最后一天撂摊子才是坑人
+  noshowWindowHours: 24,  // 截止前 24 小时内取消应征 = 放鸽子
+  noshowLimit: 3,         // 累计 3 次触发惩罚
+  noshowBanDays: 7,       // 触发后 7 天不能发布互助
 };
+
+// 复用日历「关注赛事」已授权过的通用模板（date1 / thing2 / time3）。
+// 互助不另起模板：跑友多半已经授过这个，换个新 templates 等于没人收得到。
+const TEMPLATE_ID = 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew';
+
+const truncate = (s, n) => String(s == null ? '' : s).slice(0, n);
 
 function now() { return new Date(); }
 
@@ -76,12 +89,80 @@ function validWechat(v) {
   return /^[-_a-zA-Z0-9]{5,20}$/.test(String(v || '').trim());
 }
 
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 截止时间的解析：iOS 认 "2026/11/08 18:30" 不认 "2026-11-08 18:30"，统一换斜杠
+function parseDeadline(s) {
+  if (!s) return null;
+  const raw = String(s).trim().replace('T', ' ');
+  const d = new Date(raw.replace(/-/g, '/'));
+  if (isNaN(d.getTime())) return null;
+  // 只给了日期没给时刻的，按当天 23:59:59 兜底
+  if (!/\d{1,2}:\d{2}/.test(raw)) d.setHours(23, 59, 59, 0);
+  return d;
+}
+
+// 取用户的 openid（users 表里两种存法都见过，兼容着取）
+async function getOpenid(userId) {
+  const r = await db.collection('users').doc(userId).get().catch(() => null);
+  const u = r && r.data;
+  return (u && (u.openid || u._openid)) || '';
+}
+
+// 发订阅消息。失败了不影响主流程——订阅是一次性的，用户没授权就收不到，
+// 所以互助列表里该看到的信息一律照常看得到，通知只是锦上添花。
+async function notify(userId, content, page) {
+  try {
+    if (!userId) return false;
+    const openid = await getOpenid(userId);
+    if (!openid) return false;
+    const now = new Date();
+    const res = await cloud.callFunction({
+      name: 'sendSubscribeMsg',
+      data: {
+        openid,
+        templateId: TEMPLATE_ID,
+        page: page || '/pages/tools/calendar/calendar',
+        data: {
+          date1: { value: todayStr() },
+          thing2: { value: truncate(content, 20) },
+          time3: { value: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` },
+        },
+      },
+    });
+    return !!(res && res.result && res.result.ok);
+  } catch (e) {
+    console.warn('[raceHelp] notify fail:', e && e.message);
+    return false;
+  }
+}
+
 // 同一用户在同一场赛事下已撤销的次数
 async function countCanceled(userId, eventId) {
   const c = await db.collection(APPLIES)
     .where({ userId, eventId, status: 'canceled' })
     .count().catch(() => ({ total: 0 }));
   return c.total || 0;
+}
+
+// 累计放鸽子次数（临近截止才取消的那些）
+async function countNoshow(userId) {
+  const c = await db.collection(APPLIES)
+    .where({ userId, cancelFlag: 'noshow' })
+    .count().catch(() => ({ total: 0 }));
+  return c.total || 0;
+}
+
+// 累计已应征的「人数」（不是条数）：一条可以带好几个人来
+async function sumAppliedPeople(helpId) {
+  const res = await db.collection(APPLIES)
+    .where({ helpId, status: _.neq('canceled') })
+    .limit(100).get().catch(() => ({ data: [] }));
+  return ((res && res.data) || [])
+    .reduce((s, a) => s + Math.max(1, parseInt(a.peopleCount, 10) || 1), 0);
 }
 
 // 剥掉联系方式，公开的 help 一律不带
@@ -122,6 +203,9 @@ exports.main = async (event = {}) => {
         typeLabel: (TYPES[h.type] || {}).label || '其他',
         typeIcon: (TYPES[h.type] || {}).icon || '🙌',
         daysLeft: Math.max(0, Math.ceil((new Date(h.deadline).getTime() - Date.now()) / 86400000)),
+        hoursLeft: Math.max(0, Math.ceil((new Date(h.deadline).getTime() - Date.now()) / 3600000)),
+        applyPeople: parseInt(h.applyPeople, 10) || 0,
+        remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
       }));
       return { success: true, followed: true, list };
     }
@@ -133,8 +217,7 @@ exports.main = async (event = {}) => {
       const title = trimStr(event.title, LIMIT.title);
       const desc = trimStr(event.desc, LIMIT.desc);
       const costNote = trimStr(event.costNote, LIMIT.costNote);
-      const peopleNeeded = Math.max(1, Math.min(9, parseInt(event.peopleNeeded, 10) || 1));
-      const deadlineStr = trimStr(event.deadline, 20);   // "2026-11-08"
+      const peopleNeeded = Math.max(1, Math.min(LIMIT.maxPeople, parseInt(event.peopleNeeded, 10) || 1));
       const contact = event.contact || {};
       const wechat = trimStr(contact.wechat, 20);
 
@@ -145,8 +228,8 @@ exports.main = async (event = {}) => {
       if (!wechat) return { success: false, error: '请填写微信号' };
       if (!validWechat(wechat)) return { success: false, error: '微信号格式不对' };
 
-      const deadline = new Date(`${deadlineStr} 23:59:59`);
-      if (isNaN(deadline.getTime())) return { success: false, error: '截止时间不正确' };
+      const deadline = parseDeadline(event.deadline);   // "2026-11-08 18:30"
+      if (!deadline) return { success: false, error: '截止时间不正确' };
       if (deadline <= now()) return { success: false, error: '截止时间要在今天之后' };
       if (deadline.getTime() - Date.now() > LIMIT.maxDays * 86400000) {
         return { success: false, error: `截止时间最多 ${LIMIT.maxDays} 天后` };
@@ -156,6 +239,19 @@ exports.main = async (event = {}) => {
       const mk = await db.collection('race_markers').where({ userId: OPENID, eventId }).limit(1).get().catch(() => null);
       if (!(mk && mk.data && mk.data.length)) {
         return { success: false, error: '只有关注了这场赛事的跑友才能发布互助' };
+      }
+
+      // 处罚期：临近截止才撂摊子的人，别人是没时间再找搭子的，一段时间内不许再发起
+      const noshow = await countNoshow(OPENID);
+      if (noshow >= LIMIT.noshowLimit) {
+        const lastRes = await db.collection(APPLIES)
+          .where({ userId: OPENID, cancelFlag: 'noshow' })
+          .orderBy('cancelTime', 'desc').limit(1).get().catch(() => null);
+        const lastT = lastRes && lastRes.data && lastRes.data[0]
+          ? new Date(lastRes.data[0].cancelTime).getTime() : 0;
+        if (Date.now() < lastT + LIMIT.noshowBanDays * 86400000) {
+          return { success: false, error: `近日多次临近截止才取消，${LIMIT.noshowBanDays} 天内不能发起互助` };
+        }
       }
 
       const badWord = hasBlockedWord(`${title}${desc}${costNote}`);
@@ -190,7 +286,8 @@ exports.main = async (event = {}) => {
           deadline,
           contact: { wechat },
           status: 'open',
-          applyCount: 0,
+          applyCount: 0,     // 应征的「条数」
+          applyPeople: 0,    // 应征的「人数」，按这个判断是否人满
           reportCount: 0,
           ruleAgreed: true,
           createTime: now(),
@@ -204,6 +301,7 @@ exports.main = async (event = {}) => {
     if (action === 'apply') {
       const helpId = trimStr(event.helpId, 40);
       const message = trimStr(event.message, LIMIT.message);
+      const peopleCount = Math.max(1, Math.min(LIMIT.maxPeople, parseInt(event.peopleCount, 10) || 1));
       const contact = event.contact || {};
       const wechat = trimStr(contact.wechat, 20);
       if (!helpId) return { success: false, error: '缺少参数' };
@@ -242,6 +340,13 @@ exports.main = async (event = {}) => {
       const uRes = await db.collection('users').where({ _openid: OPENID }).limit(1).get().catch(() => null);
       if (uRes && uRes.data && uRes.data[0]) nickName = uRes.data[0].nickName || '跑友';
 
+      // 名额按人数算而不是条数：有人带朋友一起来，也得卡得住
+      const need = Math.max(1, parseInt(h.peopleNeeded, 10) || 1);
+      const applied = await sumAppliedPeople(helpId);
+      const remain = Math.max(0, need - applied);
+      if (remain <= 0) return { success: false, error: '这条互助已经满员了' };
+      if (peopleCount > remain) return { success: false, error: `只剩 ${remain} 个名额了` };
+
       await checkText(message, OPENID);
 
       await db.collection(APPLIES).add({
@@ -249,15 +354,34 @@ exports.main = async (event = {}) => {
           helpId, eventId: h.eventId, userId: OPENID, nickName,
           contact: { wechat },
           message,
+          peopleCount,
           status: 'pending',
           createTime: now(),
         },
       });
-      const cnt = await db.collection(APPLIES).where({ helpId, status: _.neq('canceled') }).count().catch(() => ({ total: 1 }));
+
+      const cntRes = await db.collection(APPLIES).where({ helpId, status: _.neq('canceled') }).get().catch(() => ({ data: [] }));
+      const alive = (cntRes && cntRes.data) || [];
+      const people = alive.reduce((s, a) => s + Math.max(1, parseInt(a.peopleCount, 10) || 1), 0);
+      // 人满自动完成，不用发起人再来点一下
+      const full = people >= need;
       await db.collection(HELPS).doc(helpId).update({
-        data: { applyCount: cnt.total || 0, updateTime: now() },
+        data: {
+          applyCount: alive.length,
+          applyPeople: people,
+          status: full ? 'full' : 'open',
+          updateTime: now(),
+        },
       }).catch(() => {});
-      return { success: true };
+
+      // 通知发布者。订阅消息是一次性的，发不到也不影响——「我发布的」里照样看得到应征者
+      const typeLabel = (TYPES[h.type] || {}).label || '互助';
+      await notify(h.userId, `${typeLabel}「${truncate(h.title, 8)}」有人应征了`, `/pages/tools/calendar/detail?id=${h.eventId}`);
+      if (full) {
+        await notify(h.userId, `${typeLabel}「${truncate(h.title, 8)}」已约满`, `/pages/tools/calendar/detail?id=${h.eventId}`);
+      }
+
+      return { success: true, full, remain: Math.max(0, remain - peopleCount) };
     }
 
     // ===================== 我发布的互助（含应征者联系方式） =====================
@@ -282,6 +406,10 @@ exports.main = async (event = {}) => {
           typeIcon: (TYPES[h.type] || {}).icon || '🙌',
           applicants,
           expired: new Date(h.deadline).getTime() <= Date.now(),
+          applyPeople: parseInt(h.applyPeople, 10) || 0,
+          remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
+          isFull: h.status === 'full',
+          isCanceled: h.status === 'closed',
         });
       }));
       return { success: true, list: helps };
@@ -309,6 +437,7 @@ exports.main = async (event = {}) => {
         return {
           applyId: a._id,
           message: a.message,
+          peopleCount: Math.max(1, parseInt(a.peopleCount, 10) || 1),
           myContact: { wechat: (a.contact || {}).wechat },
           createTime: a.createTime,
           // 双方都已表达诚意，互见联系方式
@@ -330,11 +459,36 @@ exports.main = async (event = {}) => {
       const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
       const h = hRes && hRes.data;
       if (!h) return { success: false, error: '不存在' };
-      if (h.userId !== OPENID) return { success: false, error: '只能关闭自己发布的' };
+      if (h.userId !== OPENID) return { success: false, error: '只能取消自己发布的' };
+      if (h.status === 'closed') return { success: false, error: '已经取消过了' };
+
+      // 发起人临近截止才撤摊，被放的是应征的人，同样算放鸽子
+      const hoursLeft = (new Date(h.deadline).getTime() - Date.now()) / 3600000;
+      const noshow = hoursLeft <= LIMIT.noshowWindowHours;
+
       await db.collection(HELPS).doc(helpId).update({
-        data: { status: 'closed', updateTime: now() },
+        data: { status: 'closed', ownerNoshow: noshow, cancelTime: now(), updateTime: now() },
       });
-      return { success: true };
+
+      // 已经应征的人全部作废，并挨个通知到位
+      const aRes = await db.collection(APPLIES)
+        .where({ helpId, status: _.neq('canceled') }).limit(50).get().catch(() => ({ data: [] }));
+      const list = (aRes && aRes.data) || [];
+      const typeLabel = (TYPES[h.type] || {}).label || '互助';
+      const content = noshow
+        ? `${typeLabel}「${truncate(h.title, 8)}」发起人临近截止取消了`
+        : `${typeLabel}「${truncate(h.title, 8)}」发起人已取消`;
+      const page = `/pages/tools/calendar/detail?id=${h.eventId}`;
+
+      let notified = 0;
+      await Promise.all(list.map(async (a) => {
+        await db.collection(APPLIES).doc(a._id).update({
+          data: { status: 'canceled', cancelFlag: 'owner-canceled', cancelTime: now() },
+        }).catch(() => {});
+        if (await notify(a.userId, content, page)) notified += 1;
+      }));
+
+      return { success: true, applicantCount: list.length, notified, noshow };
     }
 
     // ===================== 举报 =====================
@@ -372,12 +526,44 @@ exports.main = async (event = {}) => {
         return { success: false, error: `本场赛事已撤销 ${LIMIT.cancelPerEvent} 次，不能再取消了` };
       }
 
-      await db.collection(APPLIES).doc(applyId).update({ data: { status: 'canceled', cancelTime: now() } });
-      const cnt = await db.collection(APPLIES).where({ helpId: a.helpId, status: _.neq('canceled') }).count().catch(() => ({ total: 0 }));
-      await db.collection(HELPS).doc(a.helpId).update({
-        data: { applyCount: cnt.total || 0, updateTime: now() },
-      }).catch(() => {});
-      return { success: true, remain: Math.max(0, LIMIT.cancelPerEvent - (canceledCount + 1)) };
+      // 临近截止才取消 = 放鸽子：这时候别人再找搭子已经来不及了。
+      // 提前好几天打声招呼是正常的，不罚。
+      const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
+      const h = hRes && hRes.data;
+      const hoursLeft = h ? (new Date(h.deadline).getTime() - Date.now()) / 3600000 : 999;
+      const noshow = h && hoursLeft <= LIMIT.noshowWindowHours;
+
+      await db.collection(APPLIES).doc(applyId).update({
+        data: { status: 'canceled', cancelFlag: noshow ? 'noshow' : 'normal', cancelTime: now() },
+      });
+
+      // 名额按人数重算：撤销后腾出来的位置要放回去，满员的也得恢复招募
+      const cRes = await db.collection(APPLIES)
+        .where({ helpId: a.helpId, status: _.neq('canceled') }).get().catch(() => ({ data: [] }));
+      const alive = (cRes && cRes.data) || [];
+      const people = alive.reduce((s, x) => s + Math.max(1, parseInt(x.peopleCount, 10) || 1), 0);
+      if (h) {
+        const need = Math.max(1, parseInt(h.peopleNeeded, 10) || 1);
+        const notExpired = new Date(h.deadline).getTime() > Date.now();
+        await db.collection(HELPS).doc(a.helpId).update({
+          data: {
+            applyCount: alive.length,
+            applyPeople: people,
+            status: h.status === 'full' && people < need && notExpired ? 'open' : h.status,
+            updateTime: now(),
+          },
+        }).catch(() => {});
+        // 让发布者知道人少了
+        const typeLabel = (TYPES[h.type] || {}).label || '互助';
+        await notify(h.userId, `${typeLabel}「${truncate(h.title, 8)}」有人取消应征`, `/pages/tools/calendar/detail?id=${h.eventId}`);
+      }
+
+      return {
+        success: true,
+        noshow: !!noshow,
+        remain: Math.max(0, LIMIT.cancelPerEvent - (canceledCount + 1)),
+        noshowCount: await countNoshow(OPENID),
+      };
     }
 
     return { success: false, error: '未知操作' };
