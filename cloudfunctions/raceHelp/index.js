@@ -228,8 +228,9 @@ function publicHelp(h, extra = {}) {
 }
 
 exports.main = async (event = {}) => {
-  const { OPENID } = cloud.getWXContext();
   const action = event.action;
+
+  const { OPENID } = cloud.getWXContext();
   if (!OPENID) return { success: false, error: '请先登录' };
 
   try {
