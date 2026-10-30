@@ -212,3 +212,73 @@
 .lb-jin { background: linear-gradient(135deg, #f5a623, #ffd75e); color: #7a4d00; } /* 金标 */
 .lb-jingying { background: linear-gradient(135deg, #e05a5a, #ff9a76); } /* 精英标 */
 .lb-putong { background: #9aa5b1; } /* 普通标 */
+
+/* ===== 跑友互助 ===== */
+.help-title { display: flex; align-items: center; justify-content: space-between; }
+.help-head-actions { display: flex; align-items: center; gap: 20rpx; }
+.help-mine-link { font-size: 24rpx; color: #888; font-weight: 400; }
+.help-add { font-size: 24rpx; color: #fff; background: #1aad19; padding: 8rpx 22rpx; border-radius: 22rpx; font-weight: 500; }
+.help-add.disabled { opacity: 0.45; }
+.help-locked { font-size: 26rpx; color: #999; line-height: 1.6; padding: 10rpx 0 4rpx; }
+.help-empty { font-size: 26rpx; color: #bbb; text-align: center; padding: 32rpx 0; }
+
+.help-item { border-bottom: 2rpx solid #f2f2f2; padding: 20rpx 0; }
+.help-item:last-of-type { border-bottom: none; }
+.help-item-head { display: flex; align-items: center; gap: 10rpx; }
+.help-item-icon { font-size: 30rpx; }
+.help-item-title { font-size: 28rpx; color: #222; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.help-item-tag { font-size: 20rpx; color: #1aad19; background: rgba(26,173,25,0.1); padding: 4rpx 12rpx; border-radius: 6rpx; flex-shrink: 0; }
+.help-item-desc { display: block; font-size: 25rpx; color: #888; line-height: 1.5; margin-top: 8rpx; }
+.help-item-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 16rpx; margin-top: 10rpx; }
+.help-item-cost, .help-item-people, .help-item-left, .help-item-apply { font-size: 22rpx; color: #999; }
+.help-item-left.urgent { color: #ff4d4f; }
+.help-disclaimer { display: block; font-size: 21rpx; color: #bbb; margin-top: 16rpx; }
+
+/* 互助弹窗 */
+.help-modal { top: 8%; bottom: 8%; display: flex; flex-direction: column; padding: 24rpx 28rpx; }
+.help-body { flex: 1; min-height: 0; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10rpx; }
+.modal-header text:first-child { font-size: 30rpx; font-weight: 600; color: #222; }
+.modal-close { font-size: 32rpx; color: #bbb; padding: 4rpx 8rpx; }
+.modal-actions { display: flex; gap: 20rpx; margin-top: 32rpx; }
+
+.help-types { display: flex; gap: 16rpx; margin-top: 8rpx; }
+.help-type { flex: 1; text-align: center; font-size: 26rpx; padding: 18rpx 0; border: 2rpx solid #e5e5e5; border-radius: 12rpx; color: #666; }
+.help-type.on { border-color: #1aad19; color: #1aad19; background: rgba(26,173,25,0.06); font-weight: 600; }
+.help-textarea { background: #f7f7f7; border-radius: 12rpx; padding: 20rpx; font-size: 28rpx; width: 100%; box-sizing: border-box; height: 140rpx; margin-top: 8rpx; }
+.help-date.placeholder { color: #aaa; }
+
+.help-rule { background: #fbfbfb; border: 2rpx solid #eee; border-radius: 12rpx; padding: 20rpx; margin-top: 28rpx; }
+.help-rule-title { display: block; font-size: 26rpx; font-weight: 600; color: #333; margin-bottom: 10rpx; }
+.help-rule-text { display: block; font-size: 24rpx; color: #888; line-height: 1.7; white-space: pre-wrap; }
+.help-agree { display: flex; align-items: center; gap: 14rpx; margin-top: 20rpx; }
+.help-checkbox { width: 36rpx; height: 36rpx; border: 2rpx solid #ccc; border-radius: 8rpx; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; flex-shrink: 0; }
+.help-checkbox.on { background: #1aad19; border-color: #1aad19; }
+.help-agree-text { font-size: 26rpx; color: #444; }
+
+/* 互助详情 */
+.help-d-title { font-size: 32rpx; font-weight: 700; color: #222; }
+.help-d-meta { display: flex; gap: 16rpx; margin-top: 14rpx; flex-wrap: wrap; }
+.help-d-meta text { font-size: 22rpx; color: #999; background: #f5f5f5; padding: 6rpx 14rpx; border-radius: 6rpx; }
+.help-d-meta text.urgent { color: #ff4d4f; background: rgba(255,77,79,0.08); }
+.help-d-row { display: flex; gap: 16rpx; margin-top: 16rpx; font-size: 26rpx; color: #555; line-height: 1.6; }
+.help-d-k { color: #999; flex-shrink: 0; }
+.help-d-owner { font-size: 24rpx; color: #999; margin-top: 18rpx; }
+.help-d-tip { display: block; font-size: 23rpx; color: #aaa; line-height: 1.7; background: #fafafa; padding: 16rpx; border-radius: 10rpx; margin-top: 20rpx; }
+
+/* 我的互助 */
+.help-tabs { display: flex; gap: 12rpx; border-bottom: 2rpx solid #f0f0f0; margin-bottom: 6rpx; }
+.help-tab { flex: 1; text-align: center; font-size: 27rpx; color: #888; padding: 18rpx 0; }
+.help-tab.on { color: #1aad19; font-weight: 600; border-bottom: 4rpx solid #1aad19; }
+.help-mine-item { border-bottom: 2rpx solid #f2f2f2; padding: 20rpx 0; }
+.help-mine-head { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.help-mine-title { font-size: 28rpx; color: #222; font-weight: 600; flex: 1; }
+.help-mine-status { font-size: 21rpx; color: #999; background: #f5f5f5; padding: 4rpx 12rpx; border-radius: 6rpx; flex-shrink: 0; }
+.help-mine-status.on { color: #1aad19; background: rgba(26,173,25,0.1); }
+.help-mine-row { font-size: 24rpx; color: #999; margin-top: 8rpx; }
+.help-applicant { background: #fafafa; border-radius: 10rpx; padding: 14rpx 16rpx; margin-top: 12rpx; }
+.help-ap-name { display: block; font-size: 25rpx; color: #333; font-weight: 600; }
+.help-ap-msg { display: block; font-size: 24rpx; color: #888; margin-top: 6rpx; }
+.help-ap-contact { display: block; font-size: 24rpx; color: #1aad19; margin-top: 6rpx; }
+.help-mine-btns { display: flex; justify-content: flex-end; margin-top: 14rpx; }
+.help-mine-btn { font-size: 24rpx; color: #999; border: 2rpx solid #ddd; padding: 8rpx 24rpx; border-radius: 20rpx; }

@@ -38,6 +38,13 @@
       "memorySize": 256
     },
     {
+      "name": "raceHelp",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
       "name": "raceWish",
       "timeout": 60,
       "runtime": "Nodejs16.13",

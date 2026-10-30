@@ -281,6 +281,45 @@
     <text class="qr-notice-foot">除你手动提醒外，系统每天 10 点也会自动提醒管理员一次</text>
   </view>
 
+  <!-- ===== 跑友互助：只有关注了这场赛事的跑友才看得到 ===== -->
+  <view class="card help-card" wx:if="{{!raceFinished}}">
+    <view class="section-title help-title">
+      <text>🙌 跑友互助</text>
+      <view class="help-head-actions">
+        <text class="help-mine-link" catchtap="onOpenMyHelp">我的互助</text>
+        <text class="help-add {{isMine ? '' : 'disabled'}}" catchtap="onOpenHelpForm">＋ 发布</text>
+      </view>
+    </view>
+
+    <!-- 没关注这场赛事：不给看也不给发 -->
+    <view class="help-locked" wx:if="{{!isMine}}">
+      <text>拼房 / 拼车 / 约饭是跑友之间的自发互助。关注这场赛事后，才能看到别人发布的互助，也可以自己发布。</text>
+    </view>
+
+    <block wx:else>
+      <view class="help-empty" wx:if="{{!helpLoading && helpList.length === 0}}">
+        <text>还没有跑友发布互助，做第一个吧</text>
+      </view>
+
+      <view class="help-item" wx:for="{{helpList}}" wx:key="_id" data-id="{{item._id}}" catchtap="onOpenHelpDetail">
+        <view class="help-item-head">
+          <text class="help-item-icon">{{item.typeIcon}}</text>
+          <text class="help-item-title">{{item.title}}</text>
+          <text class="help-item-tag">{{item.typeLabel}}</text>
+        </view>
+        <text class="help-item-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
+        <view class="help-item-foot">
+          <text class="help-item-cost" wx:if="{{item.costNote}}">💰 {{item.costNote}}</text>
+          <text class="help-item-people">缺 {{item.peopleNeeded}} 人</text>
+          <text class="help-item-left {{item.daysLeft <= 3 ? 'urgent' : ''}}">{{item.daysLeft === 0 ? '今天截止' : '剩 ' + item.daysLeft + ' 天'}}</text>
+          <text class="help-item-apply" wx:if="{{item.applyCount}}">{{item.applyCount}} 人应征</text>
+        </view>
+      </view>
+
+      <text class="help-disclaimer">信息由跑友自发发布，平台不收费、不审核真实性、不参与协调</text>
+    </block>
+  </view>
+
   <!-- 自定义关注操作面板 -->
   <view class="action-sheet-mask" wx:if="{{showMarkSheet}}" catchtap="onHideMarkSheet"></view>
   <view class="action-sheet" wx:if="{{showMarkSheet}}">
@@ -331,5 +370,150 @@
         <image src="{{item}}" mode="aspectFit" class="poster-full-img" />
       </swiper-item>
     </swiper>
+  </view>
+
+  <!-- ===== 发布互助（规则必读 + 勾选才能发） ===== -->
+  <view class="modal-mask" wx:if="{{showHelpForm}}" catchtap="onCloseHelpForm"></view>
+  <view class="modal-box help-modal" wx:if="{{showHelpForm}}">
+    <view class="modal-header">
+      <text>发布互助</text>
+      <text class="modal-close" catchtap="onCloseHelpForm">✕</text>
+    </view>
+    <scroll-view class="help-body" scroll-y>
+      <text class="form-label">类型</text>
+      <view class="help-types">
+        <text class="help-type {{helpForm.type === item.key ? 'on' : ''}}" wx:for="{{helpTypes}}" wx:key="key" data-k="{{item.key}}" catchtap="onPickHelpType">{{item.icon}} {{item.label}}</text>
+      </view>
+
+      <text class="form-label">标题</text>
+      <input class="form-input" placeholder="如：找个女生拼房" maxlength="20" value="{{helpForm.title}}" data-k="title" bindinput="onHelpFormInput" />
+
+      <text class="form-label">说明（选填）</text>
+      <textarea class="help-textarea" placeholder="酒店位置、出发时间等，最多 200 字" maxlength="200" value="{{helpForm.desc}}" data-k="desc" bindinput="onHelpFormInput" />
+
+      <text class="form-label">费用说明（选填）</text>
+      <input class="form-input" placeholder="如：AA，预计 200/晚" maxlength="30" value="{{helpForm.costNote}}" data-k="costNote" bindinput="onHelpFormInput" />
+
+      <text class="form-label">还差几人</text>
+      <input class="form-input" type="number" placeholder="1" value="{{helpForm.peopleNeeded}}" data-k="peopleNeeded" bindinput="onHelpFormInput" />
+
+      <text class="form-label">截止时间</text>
+      <picker mode="date" start="{{helpToday}}" end="{{helpMaxDate}}" value="{{helpForm.deadline}}" bindchange="onHelpDeadline">
+        <view class="form-input help-date {{helpForm.deadline ? '' : 'placeholder'}}">{{helpForm.deadline || '选择日期'}}</view>
+      </picker>
+
+      <text class="form-label">我的联系方式（对方应征后才可见）</text>
+      <input class="form-input" placeholder="微信号" maxlength="40" value="{{helpForm.wechat}}" data-k="wechat" bindinput="onHelpFormInput" />
+      <input class="form-input" placeholder="手机号（选填）" maxlength="20" value="{{helpForm.phone}}" data-k="phone" bindinput="onHelpFormInput" />
+
+      <view class="help-rule">
+        <text class="help-rule-title">互助规则（请仔细阅读）</text>
+        <text class="help-rule-text">1. 本条信息由你本人发布，平台仅提供展示位置，不参与撮合、不代收款项。
+2. 平台不收取任何费用，也不承担线下接触产生的纠纷与责任。
+3. 平台无法核实其他跑友的真实身份，约见请自行判断风险，建议在公共场所。
+4. 不得发布任何涉交易、转卖、代购、名额转让的信息，发现即下架。
+5. 到截止时间自动失效，你也可以随时关闭。</text>
+      </view>
+
+      <view class="help-agree" catchtap="onToggleHelpRule">
+        <text class="help-checkbox {{helpForm.ruleAgreed ? 'on' : ''}}">{{helpForm.ruleAgreed ? '✓' : ''}}</text>
+        <text class="help-agree-text">我已阅读并同意以上互助规则</text>
+      </view>
+
+      <view class="modal-actions">
+        <button class="btn-outline" catchtap="onCloseHelpForm">取消</button>
+        <button class="btn-primary {{helpSubmitting ? 'disabled' : ''}}" catchtap="onSubmitHelp">{{helpSubmitting ? '发布中…' : '发布'}}</button>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- ===== 互助详情 / 应征 ===== -->
+  <view class="modal-mask" wx:if="{{showHelpDetail}}" catchtap="onCloseHelpDetail"></view>
+  <view class="modal-box help-modal" wx:if="{{showHelpDetail}}">
+    <view class="modal-header">
+      <text>互助详情</text>
+      <text class="modal-close" catchtap="onCloseHelpDetail">✕</text>
+    </view>
+    <scroll-view class="help-body" scroll-y>
+      <view class="help-d-title">{{curHelp.typeIcon}} {{curHelp.title}}</view>
+      <view class="help-d-meta">
+        <text>{{curHelp.typeLabel}}</text>
+        <text>缺 {{curHelp.peopleNeeded}} 人</text>
+        <text class="{{curHelp.daysLeft <= 3 ? 'urgent' : ''}}">{{curHelp.daysLeft === 0 ? '今天截止' : '剩 ' + curHelp.daysLeft + ' 天'}}</text>
+      </view>
+      <view class="help-d-row" wx:if="{{curHelp.costNote}}"><text class="help-d-k">费用</text><text>{{curHelp.costNote}}</text></view>
+      <view class="help-d-row" wx:if="{{curHelp.desc}}"><text class="help-d-k">说明</text><text>{{curHelp.desc}}</text></view>
+      <view class="help-d-owner">👤 {{curHelp.nickName}}　·　已有 {{curHelp.applyCount || 0}} 人应征</view>
+
+      <block wx:if="{{curHelp.isMine}}">
+        <text class="help-d-tip">这是你发布的互助，可在「我的互助」里查看应征的人或关闭它。</text>
+        <view class="modal-actions">
+          <button class="btn-primary" catchtap="onOpenMyHelp">查看应征的人</button>
+        </view>
+      </block>
+      <block wx:else>
+        <text class="help-d-tip">联系方式在双方应征后互相可见。平台不代为转达，也不参与你们的约定。</text>
+        <text class="form-label">留言（选填）</text>
+        <input class="form-input" placeholder="如：女生，想一起拼" maxlength="50" value="{{applyMessage}}" data-k="applyMessage" bindinput="onApplyInput" />
+        <text class="form-label">我的联系方式（发布者会看到）</text>
+        <input class="form-input" placeholder="微信号" maxlength="40" value="{{applyWechat}}" data-k="applyWechat" bindinput="onApplyInput" />
+        <input class="form-input" placeholder="手机号（选填）" maxlength="20" value="{{applyPhone}}" data-k="applyPhone" bindinput="onApplyInput" />
+        <view class="modal-actions">
+          <button class="btn-outline" catchtap="onReportHelp">举报</button>
+          <button class="btn-primary {{applying ? 'disabled' : ''}}" catchtap="onSubmitApply">{{applying ? '提交中…' : '我来应征'}}</button>
+        </view>
+      </block>
+    </scroll-view>
+  </view>
+
+  <!-- ===== 我的互助 ===== -->
+  <view class="modal-mask" wx:if="{{showHelpMine}}" catchtap="onCloseMyHelp"></view>
+  <view class="modal-box help-modal" wx:if="{{showHelpMine}}">
+    <view class="modal-header">
+      <text>我的互助</text>
+      <text class="modal-close" catchtap="onCloseMyHelp">✕</text>
+    </view>
+    <view class="help-tabs">
+      <text class="help-tab {{helpMineTab === 'mine' ? 'on' : ''}}" data-t="mine" catchtap="onSwitchHelpTab">我发布的</text>
+      <text class="help-tab {{helpMineTab === 'apply' ? 'on' : ''}}" data-t="apply" catchtap="onSwitchHelpTab">我应征的</text>
+    </view>
+    <scroll-view class="help-body" scroll-y>
+      <block wx:if="{{helpMineTab === 'mine'}}">
+        <view class="help-empty" wx:if="{{myHelps.length === 0}}"><text>还没有发布过互助</text></view>
+        <view class="help-mine-item" wx:for="{{myHelps}}" wx:key="_id">
+          <view class="help-mine-head">
+            <text class="help-mine-title">{{item.typeIcon}} {{item.title}}</text>
+            <text class="help-mine-status {{item.status === 'open' && !item.expired ? 'on' : ''}}">{{item.expired ? '已截止' : (item.status === 'open' ? '招募中' : '已关闭')}}</text>
+          </view>
+          <view class="help-mine-row" wx:if="{{item.applyCount}}">已有 {{item.applyCount}} 人应征</view>
+          <view class="help-applicant" wx:for="{{item.applicants}}" wx:for-item="ap" wx:key="userId">
+            <text class="help-ap-name">👤 {{ap.nickName}}</text>
+            <text class="help-ap-msg" wx:if="{{ap.message}}">{{ap.message}}</text>
+            <text class="help-ap-contact" wx:if="{{ap.contact.wechat}}">微信 {{ap.contact.wechat}}</text>
+            <text class="help-ap-contact" wx:if="{{ap.contact.phone}}">手机 {{ap.contact.phone}}</text>
+          </view>
+          <view class="help-mine-btns" wx:if="{{item.status === 'open' && !item.expired}}">
+            <text class="help-mine-btn" data-id="{{item._id}}" catchtap="onCloseHelpItem">关闭招募</text>
+          </view>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="help-empty" wx:if="{{myApplies.length === 0}}"><text>还没有应征过互助</text></view>
+        <view class="help-mine-item" wx:for="{{myApplies}}" wx:key="applyId">
+          <view class="help-mine-head">
+            <text class="help-mine-title">{{item.typeIcon}} {{item.title}}</text>
+          </view>
+          <view class="help-mine-row" wx:if="{{item.costNote}}">💰 {{item.costNote}}</view>
+          <view class="help-applicant">
+            <text class="help-ap-name">👤 {{item.nickName}}（发布者）</text>
+            <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}">微信 {{item.ownerContact.wechat}}</text>
+            <text class="help-ap-contact" wx:if="{{item.ownerContact.phone}}">手机 {{item.ownerContact.phone}}</text>
+          </view>
+          <view class="help-mine-btns">
+            <text class="help-mine-btn" data-id="{{item.applyId}}" catchtap="onCancelMyApply">取消应征</text>
+          </view>
+        </view>
+      </block>
+    </scroll-view>
   </view>
 </view>

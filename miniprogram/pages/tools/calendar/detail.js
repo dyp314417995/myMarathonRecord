@@ -41,6 +41,28 @@ Page({
     cooldownLeft: 0,        // 我还要等多少秒才能再催（仅对我生效）
     cooldownText: '',       // 冷却文案（分钟/秒）
     notifyingOwner: false,
+
+    // ===== 跑友互助（拼房 / 拼车 / 约饭） =====
+    helpList: [],
+    helpLoading: false,
+    helpTypes: [
+      { key: 'room', label: '拼房', icon: '🏠' },
+      { key: 'carpool', label: '拼车', icon: '🚗' },
+      { key: 'meal', label: '约饭', icon: '🍜' },
+    ],
+    helpToday: '',          // date picker 起始
+    helpMaxDate: '',        // date picker 结束
+    showHelpForm: false,
+    helpSubmitting: false,
+    helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', wechat: '', phone: '', ruleAgreed: false },
+    showHelpDetail: false,
+    curHelp: {},
+    applyMessage: '', applyWechat: '', applyPhone: '',
+    applying: false,
+    showHelpMine: false,
+    helpMineTab: 'mine',    // mine | apply
+    myHelps: [],
+    myApplies: [],
   },
 
   // 计算赛事二维码状态：none / fresh(<3d) / ok(<7d) / expired(>=7d)
@@ -201,6 +223,7 @@ Page({
         'myReview.myAvg': myReview && myReview.scores ? Math.round((myReview.scores.difficulty + myReview.scores.atmosphere + myReview.scores.supply + myReview.scores.transport) / 0.4) / 10 : 0,
       });
       if (!silent) wx.hideLoading();
+      this.loadHelps();
       // 群二维码：cloud:// 需转 http 临时链接才能渲染（开发者工具不认 cloud:// 会拼成相对 URL 报错）
       // 优先用云函数 getImageUrls（与管理端编辑弹窗同源，已验证稳定），失败再退回客户端 API，
       // 两者都失败时才直接用 cloud://（真机可渲染，开发者工具会报加载错误）
@@ -651,6 +674,209 @@ Page({
       console.error('notifyRaceQrOwner fail', err);
       wx.showToast({ title: '催办失败，请重试', icon: 'none' });
     }
+  },
+
+  // ==================== 跑友互助（拼房 / 拼车 / 约饭） ====================
+
+  // 加载本场赛事的互助列表；没关注这场赛事时云函数会返回空列表
+  async loadHelps() {
+    const { eventId, raceFinished } = this.data;
+    if (!eventId || raceFinished) return;
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return;
+    this.setData({ helpLoading: true });
+    try {
+      const r = await wx.cloud.callFunction({ name: 'raceHelp', data: { action: 'list', eventId } });
+      const res = (r && r.result) || {};
+      if (res.success) this.setData({ helpList: res.list || [] });
+    } catch (e) {
+      console.warn('loadHelps fail', e);
+    }
+    this.setData({ helpLoading: false });
+  },
+
+  onOpenHelpForm() {
+    if (!this.data.isMine) return wx.showToast({ title: '先关注这场赛事才能发布互助', icon: 'none' });
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
+
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const today = new Date();
+    // 默认截止到赛事前一天（赛事日期不明就默认 7 天后）
+    let deadline = '';
+    const raceDate = this.data.event && this.data.event.date ? new Date(this.data.event.date) : null;
+    if (raceDate && !isNaN(raceDate.getTime())) {
+      const prev = new Date(raceDate.getTime() - 86400000);
+      if (prev > today) deadline = fmt(prev);
+    }
+    if (!deadline) deadline = fmt(new Date(Date.now() + 7 * 86400000));
+
+    this.setData({
+      showHelpForm: true,
+      helpSubmitting: false,
+      helpToday: fmt(today),
+      helpMaxDate: fmt(new Date(Date.now() + 90 * 86400000)),
+      helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, wechat: '', phone: '', ruleAgreed: false },
+    });
+  },
+  onCloseHelpForm() { this.setData({ showHelpForm: false }); },
+  onPickHelpType(e) { this.setData({ 'helpForm.type': e.currentTarget.dataset.k }); },
+  onHelpFormInput(e) { this.setData({ [`helpForm.${e.currentTarget.dataset.k}`]: e.detail.value }); },
+  onHelpDeadline(e) { this.setData({ 'helpForm.deadline': e.detail.value }); },
+  onToggleHelpRule() { this.setData({ 'helpForm.ruleAgreed': !this.data.helpForm.ruleAgreed }); },
+
+  async onSubmitHelp() {
+    const { eventId, helpForm } = this.data;
+    if (!String(helpForm.title).trim()) return wx.showToast({ title: '请填写标题', icon: 'none' });
+    if (!helpForm.ruleAgreed) return wx.showToast({ title: '请先阅读并勾选互助规则', icon: 'none' });
+    if (!String(helpForm.wechat).trim() && !String(helpForm.phone).trim()) {
+      return wx.showToast({ title: '至少留一个联系方式', icon: 'none' });
+    }
+    this.setData({ helpSubmitting: true });
+    wx.showLoading({ title: '发布中' });
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'raceHelp',
+        data: {
+          action: 'create',
+          eventId,
+          type: helpForm.type,
+          title: helpForm.title,
+          desc: helpForm.desc,
+          costNote: helpForm.costNote,
+          peopleNeeded: helpForm.peopleNeeded,
+          deadline: helpForm.deadline,
+          contact: { wechat: helpForm.wechat, phone: helpForm.phone },
+          ruleAgreed: helpForm.ruleAgreed,
+        },
+      });
+      wx.hideLoading();
+      this.setData({ helpSubmitting: false });
+      const res = (r && r.result) || {};
+      if (!res.success) return wx.showToast({ title: res.error || '发布失败', icon: 'none' });
+      wx.showToast({ title: '已发布 🎉', icon: 'success' });
+      this.setData({ showHelpForm: false });
+      this.loadHelps();
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({ helpSubmitting: false });
+      wx.showToast({ title: '发布失败，请重试', icon: 'none' });
+    }
+  },
+
+  onOpenHelpDetail(e) {
+    const item = this.data.helpList.find(h => h._id === e.currentTarget.dataset.id);
+    if (!item) return;
+    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '', applyPhone: '' });
+  },
+  onCloseHelpDetail() { this.setData({ showHelpDetail: false }); },
+  onApplyInput(e) { this.setData({ [e.currentTarget.dataset.k]: e.detail.value }); },
+
+  async onSubmitApply() {
+    const { curHelp, applyMessage, applyWechat, applyPhone } = this.data;
+    if (!String(applyWechat).trim() && !String(applyPhone).trim()) {
+      return wx.showToast({ title: '至少留一个联系方式', icon: 'none' });
+    }
+    this.setData({ applying: true });
+    wx.showLoading({ title: '提交中' });
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'raceHelp',
+        data: {
+          action: 'apply',
+          helpId: curHelp._id,
+          message: applyMessage,
+          contact: { wechat: applyWechat, phone: applyPhone },
+        },
+      });
+      wx.hideLoading();
+      this.setData({ applying: false });
+      const res = (r && r.result) || {};
+      if (!res.success) return wx.showToast({ title: res.error || '应征失败', icon: 'none' });
+      wx.showToast({ title: '已应征，双方已互见联系方式', icon: 'success', duration: 2500 });
+      this.setData({ showHelpDetail: false });
+      this.loadHelps();
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({ applying: false });
+      wx.showToast({ title: '应征失败，请重试', icon: 'none' });
+    }
+  },
+
+  onReportHelp() {
+    const { curHelp } = this.data;
+    wx.showModal({
+      title: '举报这条互助',
+      content: '涉嫌交易、广告、虚假信息的互助会被下架。确认举报？',
+      confirmText: '举报',
+      confirmColor: '#ff4d4f',
+      success: async (r) => {
+        if (!r.confirm) return;
+        const res = await wx.cloud.callFunction({
+          name: 'raceHelp', data: { action: 'report', helpId: curHelp._id },
+        }).then(x => (x && x.result) || {}).catch(() => ({}));
+        wx.showToast({ title: res.success ? '已举报，感谢反馈' : (res.error || '举报失败'), icon: 'none' });
+        if (res.success) { this.setData({ showHelpDetail: false }); this.loadHelps(); }
+      },
+    });
+  },
+
+  async onOpenMyHelp() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
+    this.setData({ showHelpMine: true, showHelpDetail: false });
+    await this.loadMyHelps();
+  },
+  onCloseMyHelp() { this.setData({ showHelpMine: false }); },
+  onSwitchHelpTab(e) { this.setData({ helpMineTab: e.currentTarget.dataset.t }); },
+
+  async loadMyHelps() {
+    wx.showLoading({ title: '加载中' });
+    try {
+      const [a, b] = await Promise.all([
+        wx.cloud.callFunction({ name: 'raceHelp', data: { action: 'myHelps' } }).then(x => (x && x.result) || {}).catch(() => ({})),
+        wx.cloud.callFunction({ name: 'raceHelp', data: { action: 'myApplies' } }).then(x => (x && x.result) || {}).catch(() => ({})),
+      ]);
+      this.setData({ myHelps: a.list || [], myApplies: b.list || [] });
+    } catch (e) {
+      console.warn('loadMyHelps fail', e);
+    }
+    wx.hideLoading();
+  },
+
+  onCloseHelpItem(e) {
+    const helpId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '关闭招募',
+      content: '关闭后这条互助不再展示，确定？',
+      success: async (r) => {
+        if (!r.confirm) return;
+        const res = await wx.cloud.callFunction({
+          name: 'raceHelp', data: { action: 'close', helpId },
+        }).then(x => (x && x.result) || {}).catch(() => ({}));
+        if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
+        wx.showToast({ title: '已关闭', icon: 'success' });
+        this.loadMyHelps();
+        this.loadHelps();
+      },
+    });
+  },
+
+  onCancelMyApply(e) {
+    const applyId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '取消应征',
+      content: '取消后对方将不再看到你的联系方式，确定？',
+      success: async (r) => {
+        if (!r.confirm) return;
+        const res = await wx.cloud.callFunction({
+          name: 'raceHelp', data: { action: 'cancelApply', applyId },
+        }).then(x => (x && x.result) || {}).catch(() => ({}));
+        if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
+        wx.showToast({ title: '已取消应征', icon: 'success' });
+        this.loadMyHelps();
+      },
+    });
   },
 
   onCancelResult() { this.setData({ showResultModal: false }); },

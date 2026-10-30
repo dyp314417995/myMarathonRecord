@@ -1,0 +1,9 @@
+{
+  "name": "raceHelp",
+  "version": "1.0.0",
+  "description": "跑友互助（赛事内拼房/拼车/约饭）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
