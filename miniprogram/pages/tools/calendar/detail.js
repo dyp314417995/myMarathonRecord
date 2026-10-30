@@ -784,7 +784,16 @@ Page({
   askSubscribe() {
     return new Promise((resolve) => {
       if (typeof wx.requestSubscribeMessage !== 'function') return resolve();
-      wx.requestSubscribeMessage({ tmplIds: [HELP_TMPL_ID], complete: () => resolve() }).catch(() => resolve());
+      // 带了 complete 回调时，这个 API 返回的是 undefined，不是 Promise——
+      // 早先写成链式 .catch()，等于 undefined.catch()，直接抛 TypeError 把整个发布打断，
+      // 用户只看到一句「发布失败，请重试」，其实连服务端都没走到。
+      // 所以这里老老实实用回调，不去猜它返不返回 Promise。
+      try {
+        wx.requestSubscribeMessage({ tmplIds: [HELP_TMPL_ID], complete: () => resolve() });
+      } catch (e) {
+        console.warn('askSubscribe 异常，放行', e);
+        resolve();   // 拿不到推送额度也放行，不能因为它卡住发布
+      }
     });
   },
   onToggleHelpRule() { this.setData({ 'helpForm.ruleAgreed': !this.data.helpForm.ruleAgreed }); },
@@ -833,6 +842,8 @@ Page({
     } catch (e) {
       wx.hideLoading();
       this.setData({ helpSubmitting: false });
+      // 真出错的时候别再藏着：控制台留个证据，免得又只剩一句「请重试」无从查起
+      console.error('[互助] 发布异常', e);
       wx.showToast({ title: '发布失败，请重试', icon: 'none' });
     }
   },
@@ -879,6 +890,7 @@ Page({
     } catch (e) {
       wx.hideLoading();
       this.setData({ applying: false });
+      console.error('[互助] 应征异常', e);
       wx.showToast({ title: '应征失败，请重试', icon: 'none' });
     }
   },
