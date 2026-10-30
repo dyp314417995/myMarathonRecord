@@ -167,12 +167,14 @@ async function broadcast(h, content, selfId) {
   return sent;
 }
 
-// 同一用户在同一场赛事下已撤销的次数
+// 同一用户在同一场赛事下主动撤销的次数。
+// 发起人取消发布造成的作废（owner-canceled）不能算在他头上——那是别人撤的，
+// 扣他的额度既不讲理，还会让人莫名其妙地失去本场赛事的应征资格。
 async function countCanceled(userId, eventId) {
   const c = await db.collection(APPLIES)
     .where({ userId, eventId, status: 'canceled' })
-    .count().catch(() => ({ total: 0 }));
-  return c.total || 0;
+    .limit(100).get().catch(() => ({ data: [] }));
+  return ((c && c.data) || []).filter(a => a.cancelFlag !== 'owner-canceled').length;
 }
 
 // 累计放鸽子次数（临近截止才取消的那些）
@@ -512,6 +514,7 @@ exports.main = async (event = {}) => {
       if (!h) return { success: false, error: '不存在' };
       if (h.userId !== OPENID) return { success: false, error: '只能取消自己发布的' };
       if (h.status === 'closed') return { success: false, error: '已经取消过了' };
+      if (h.status === 'done') return { success: false, error: '这条已经标记完成了' };
 
       // 发起人临近截止才撤摊，被放的是应征的人，同样算放鸽子
       const hoursLeft = (new Date(h.deadline).getTime() - Date.now()) / 3600000;
@@ -548,6 +551,12 @@ exports.main = async (event = {}) => {
       if (h.userId !== OPENID) return { success: false, error: '只能标记自己发布的' };
       if (h.status === 'done') return { success: false, error: '已经标记过了' };
       if (h.status === 'closed') return { success: false, error: '这条已经取消了' };
+
+      // 已经有人应征、又还没到截止：这时候要删请走「取消发布」。
+      // 否则临近截止点一下「标记完成」就能绕开提醒和惩罚，那条规矩就形同虚设了。
+      if (new Date(h.deadline).getTime() > Date.now() && (parseInt(h.applyPeople, 10) || 0) > 0) {
+        return { success: false, error: '已经有人应征了，要取消请点「取消发布」' };
+      }
 
       // 标记完就收起来，所有人都不再见它。催也不催、罚也不罚——不来标记完全没关系
       await db.collection(HELPS).doc(helpId).update({

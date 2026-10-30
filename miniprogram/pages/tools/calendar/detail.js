@@ -5,6 +5,7 @@ const cache = require('../../../utils/cache');
 
 // 复用日历「关注赛事」已授权过的通用模板，避免跑友再授一次权
 const HELP_TMPL_ID = 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew';
+const HELP_MAX_DAYS = 90;   // 与后端 raceHelp 的 LIMIT.maxDays 保持一致，改一头要连另一头一起改
 
 Page({
   data: {
@@ -748,6 +749,10 @@ Page({
 
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const today = new Date();
+    // picker 上限定在第 89 天而不是跟后端一样的 90：截止时间精确到分钟，
+    // 要是允许选到第 90 天，再配默认的 23:59，一提交就超出「最多 90 天后」——
+    // 那一天看着能选、实际选不了，比干脆不给选更让人摸不着头脑。
+    const maxDate = fmt(new Date(Date.now() + (HELP_MAX_DAYS - 1) * 86400000));
     // 默认截止到赛事前一天（赛事日期不明就默认 7 天后）
     let deadline = '';
     const raceDate = this.data.event && this.data.event.date ? new Date(this.data.event.date) : null;
@@ -756,12 +761,15 @@ Page({
       if (prev > today) deadline = fmt(prev);
     }
     if (!deadline) deadline = fmt(new Date(Date.now() + 7 * 86400000));
+    // 赛事还早的时候，「赛前一天」这个默认值本身就越界了。
+    // 不压回来的话，表单一打开就带着个必然失败的截止时间，用户点一下就撞「最多 90 天后」。
+    if (deadline > maxDate) deadline = maxDate;   // YYYY-MM-DD 可以直接比大小
 
     this.setData({
       showHelpForm: true,
       helpSubmitting: false,
       helpToday: fmt(today),
-      helpMaxDate: fmt(new Date(Date.now() + 90 * 86400000)),
+      helpMaxDate: maxDate,
       helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, deadlineTime: '23:59', wechat: '', ruleAgreed: false },
     });
   },
