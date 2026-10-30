@@ -68,6 +68,8 @@ Page({
     helpMineTab: 'mine',    // mine | apply
     myHelps: [],
     myApplies: [],
+    shareHelpId: '',        // 点了哪一条的分享，onShareAppMessage 用完就清掉
+    pendingHelpId: '',      // 从分享卡片带进来的 helpId，列表加载完直接摊开
   },
 
   // 计算赛事二维码状态：none / fresh(<3d) / ok(<7d) / expired(>=7d)
@@ -109,6 +111,8 @@ Page({
     const eventId = options.scene ? decodeURIComponent(options.scene) : options.id;
     if (!eventId) return;
     this.setData({ eventId });
+    // 互助的分享卡片会带上 helpId，等 loadHelps 拉完列表再定位过去
+    if (options.helpId) this.setData({ pendingHelpId: options.helpId });
     shareUtil.enableShareMenu();
     // onShow 会负责加载数据，避免重复请求
   },
@@ -438,6 +442,21 @@ Page({
   onShareAppMessage() {
     const { event } = this.data;
     const name = event.name || '这赛事';
+
+    // 点的是「分享给跑友」：把这条互助本身推出去，而不是整场赛事
+    const helpId = this.data.shareHelpId;
+    this.setData({ shareHelpId: '' });   // 只用一次，别把之后分享赛事也带偏了
+    const h = helpId && (this.data.myHelps || []).find(x => x._id === helpId);
+    if (h) {
+      const tail = h.expired ? '（已截止）'
+        : (h.isFull ? '（已满员）' : `（还差 ${h.remainPeople || h.peopleNeeded} 人）`);
+      return shareUtil.buildShare({
+        title: `${name}｜${h.typeLabel || '互助'}·${h.title || ''}${tail}`,
+        path: `/pages/tools/calendar/detail?id=${this.data.eventId}&helpId=${h._id}`,
+        imageUrl: event.poster || '',
+      });
+    }
+
     return shareUtil.buildShare({
       title: this.data._shareTitle || `快来看看「${name}」`,
       path: `/pages/tools/calendar/detail?id=${this.data.eventId}`,
@@ -693,11 +712,33 @@ Page({
     try {
       const r = await wx.cloud.callFunction({ name: 'raceHelp', data: { action: 'list', eventId } });
       const res = (r && r.result) || {};
-      if (res.success) this.setData({ helpList: res.list || [] });
+      if (res.success) {
+        this.setData({ helpList: res.list || [] });
+        this.openHelpFromShare();
+      }
     } catch (e) {
       console.warn('loadHelps fail', e);
     }
     this.setData({ helpLoading: false });
+  },
+
+  // 别人从分享卡片点进来：直接把那一条互助摊开，而不是让他自己在列表里找
+  openHelpFromShare() {
+    const helpId = this.data.pendingHelpId;
+    if (!helpId) return;
+    this.setData({ pendingHelpId: '' });
+    const item = (this.data.helpList || []).find(x => x._id === helpId);
+    if (!item) {
+      // 互助只对关注了这场赛事的人可见，点开的人没关注就只能这样了
+      return wx.showToast({ title: '这条互助已结束，或需先关注这场赛事', icon: 'none' });
+    }
+    this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '' });
+  },
+
+  // open-type="share" 的按钮点了不会自己说话，先把要分享的那条记下来，
+  // 系统随后才来问 onShareAppMessage 要标题和路径
+  onShareHelpItem(e) {
+    this.setData({ shareHelpId: e.currentTarget.dataset.id || '' });
   },
 
   onOpenHelpForm() {
@@ -776,9 +817,11 @@ Page({
       this.setData({ helpSubmitting: false });
       const res = (r && r.result) || {};
       if (!res.success) return wx.showToast({ title: res.error || '发布失败', icon: 'none' });
-      wx.showToast({ title: '已发布 🎉', icon: 'success' });
+      wx.showToast({ title: '已发布 🎉', icon: 'success', duration: 2000 });
       this.setData({ showHelpForm: false });
       this.loadHelps();
+      // 顺带把「我的互助」摊开，想立刻分享就不用再找入口了
+      setTimeout(() => this.onOpenMyHelp(), 600);
     } catch (e) {
       wx.hideLoading();
       this.setData({ helpSubmitting: false });
@@ -873,18 +916,26 @@ Page({
     wx.hideLoading();
   },
 
+  // 发起人取消发布：已经应征的人会被作废，并逐个收到通知
   onCloseHelpItem(e) {
     const helpId = e.currentTarget.dataset.id;
+    const item = (this.data.myHelps || []).find(x => x._id === helpId) || {};
+    const people = item.applyPeople || 0;
     wx.showModal({
-      title: '关闭招募',
-      content: '关闭后这条互助不再展示，确定？',
+      title: '取消发布',
+      content: people
+        ? `取消后这条互助不再展示，已应征的 ${people} 位跑友会被作废并收到通知。确定？`
+        : '取消后这条互助不再展示，确定？',
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
           name: 'raceHelp', data: { action: 'close', helpId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
-        wx.showToast({ title: '已关闭', icon: 'success' });
+        wx.showToast({
+          title: res.applicantCount ? `已取消，已通知 ${res.applicantCount} 人` : '已取消',
+          icon: 'success', duration: 2500,
+        });
         this.loadMyHelps();
         this.loadHelps();
       },
@@ -897,7 +948,7 @@ Page({
     const remain = item.cancelRemain || 0;
     wx.showModal({
       title: '取消应征',
-      content: `本场赛事还能撤销 ${remain} 次。取消后对方不再看到你的微信号，用完就不能再应征这场赛事的互助了。确定取消？`,
+      content: `本场赛事还能撤销 ${remain} 次。距截止不足 24 小时会被记为放鸽子，累计 3 次则 7 天内不能发起互助。确定取消？`,
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
@@ -905,10 +956,13 @@ Page({
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
         const left = res.remain || 0;
-        wx.showToast({
-          title: left > 0 ? `已取消，本场还可撤销 ${left} 次` : '已取消，本场不能再应征了',
-          icon: 'none', duration: 2500,
-        });
+        // 算不算放鸽子，要明确告诉当事人，别让他以为只是普通取消
+        const tip = res.noshow
+          ? (res.noshowCount >= 3
+            ? `记为放鸽子 ${res.noshowCount} 次，${7} 天内不能发起互助`
+            : `临近截止，记为放鸽子 ${res.noshowCount} 次`)
+          : (left > 0 ? `已取消，本场还可撤销 ${left} 次` : '已取消，本场不能再应征了');
+        wx.showToast({ title: tip, icon: 'none', duration: 3000 });
         this.loadMyHelps();
       },
     });

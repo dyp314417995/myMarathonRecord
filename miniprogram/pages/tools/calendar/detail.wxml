@@ -495,16 +495,17 @@
         <view class="help-mine-item" wx:for="{{myHelps}}" wx:key="_id">
           <view class="help-mine-head">
             <text class="help-mine-title">{{item.typeIcon}} {{item.title}}</text>
-            <text class="help-mine-status {{item.status === 'open' && !item.expired ? 'on' : ''}}">{{item.expired ? '已截止' : (item.status === 'open' ? '招募中' : '已关闭')}}</text>
+            <text class="help-mine-status {{item.status === 'open' && !item.expired ? 'on' : ''}}">{{item.expired ? '已截止' : (item.isFull ? '已满员' : (item.status === 'open' ? '招募中' : '已取消'))}}</text>
           </view>
-          <view class="help-mine-row" wx:if="{{item.applyCount}}">已有 {{item.applyCount}} 人应征</view>
+          <view class="help-mine-row">已到位 {{item.applyPeople || 0}} / {{item.peopleNeeded}} 人{{item.applyCount ? '（' + item.applyCount + ' 条应征）' : ''}}</view>
           <view class="help-applicant" wx:for="{{item.applicants}}" wx:for-item="ap" wx:key="userId">
             <text class="help-ap-name">👤 {{ap.nickName}}</text>
             <text class="help-ap-msg" wx:if="{{ap.message}}">{{ap.message}}</text>
             <text class="help-ap-contact" wx:if="{{ap.contact.wechat}}" data-v="{{ap.contact.wechat}}" catchtap="onCopyContact">微信 {{ap.contact.wechat}}　复制</text>
           </view>
-          <view class="help-mine-btns" wx:if="{{item.status === 'open' && !item.expired}}">
-            <text class="help-mine-btn" data-id="{{item._id}}" catchtap="onCloseHelpItem">关闭招募</text>
+          <view class="help-mine-btns">
+            <button class="help-mine-btn help-mine-share" open-type="share" data-id="{{item._id}}" bindtap="onShareHelpItem">分享给跑友</button>
+            <text class="help-mine-btn" wx:if="{{item.status === 'open' && !item.expired}}" data-id="{{item._id}}" catchtap="onCloseHelpItem">取消发布</text>
           </view>
         </view>
       </block>

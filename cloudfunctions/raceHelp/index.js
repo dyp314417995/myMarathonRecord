@@ -183,6 +183,14 @@ async function countNoshow(userId) {
   return c.total || 0;
 }
 
+// 发起人自己在临近截止时才取消发布：被放的是所有应征的人，比个人缺席更严重
+async function countOwnerNoshow(userId) {
+  const c = await db.collection(HELPS)
+    .where({ userId, ownerNoshow: true })
+    .count().catch(() => ({ total: 0 }));
+  return c.total || 0;
+}
+
 // 累计已应征的「人数」（不是条数）：一条可以带好几个人来
 async function sumAppliedPeople(helpId) {
   const res = await db.collection(APPLIES)
@@ -268,15 +276,21 @@ exports.main = async (event = {}) => {
         return { success: false, error: '只有关注了这场赛事的跑友才能发布互助' };
       }
 
-      // 处罚期：临近截止才撂摊子的人，别人是没时间再找搭子的，一段时间内不许再发起
-      const noshow = await countNoshow(OPENID);
+      // 处罚期：临近截止才撂摊子的人，别人是没时间再找搭子的，一段时间内不许再发起。
+      // 应征了临时撤、和发起人自己临时取消发布，两种都算数。
+      const noshow = (await countNoshow(OPENID)) + (await countOwnerNoshow(OPENID));
       if (noshow >= LIMIT.noshowLimit) {
-        const lastRes = await db.collection(APPLIES)
+        const lastApply = await db.collection(APPLIES)
           .where({ userId: OPENID, cancelFlag: 'noshow' })
           .orderBy('cancelTime', 'desc').limit(1).get().catch(() => null);
-        const lastT = lastRes && lastRes.data && lastRes.data[0]
-          ? new Date(lastRes.data[0].cancelTime).getTime() : 0;
-        if (Date.now() < lastT + LIMIT.noshowBanDays * 86400000) {
+        const lastOwn = await db.collection(HELPS)
+          .where({ userId: OPENID, ownerNoshow: true })
+          .orderBy('cancelTime', 'desc').limit(1).get().catch(() => null);
+        const t1 = lastApply && lastApply.data && lastApply.data[0]
+          ? new Date(lastApply.data[0].cancelTime).getTime() : 0;
+        const t2 = lastOwn && lastOwn.data && lastOwn.data[0]
+          ? new Date(lastOwn.data[0].cancelTime).getTime() : 0;
+        if (Date.now() < Math.max(t1, t2) + LIMIT.noshowBanDays * 86400000) {
           return { success: false, error: `近日多次临近截止才取消，${LIMIT.noshowBanDays} 天内不能发起互助` };
         }
       }
