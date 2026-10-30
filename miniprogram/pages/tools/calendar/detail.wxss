@@ -284,6 +284,7 @@
 .help-mine-btn { font-size: 24rpx; color: #999; border: 2rpx solid #ddd; padding: 8rpx 24rpx; border-radius: 20rpx; background: #fff; line-height: 1.5; margin: 0; }
 .help-mine-btn::after { border: none; }
 .help-mine-share { margin-left: 16rpx; color: #4c8dff; border-color: #a9cbff; }
+.help-mine-finish { margin-left: 16rpx; color: #1aad19; border-color: #b9e6bf; }
 .help-mine-locked { font-size: 22rpx; color: #bbb; }
 .help-field-tip { display: block; font-size: 22rpx; color: #aaa; line-height: 1.5; margin-top: 8rpx; }
 .help-deadline-row { display: flex; gap: 16rpx; }

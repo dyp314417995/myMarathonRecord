@@ -916,26 +916,56 @@ Page({
     wx.hideLoading();
   },
 
-  // 发起人取消发布：已经应征的人会被作废，并逐个收到通知
+  // 发起人取消发布：有人应征的要提醒到位，临近截止还得把惩罚说在点之前——
+  // 罚不罚这种事，不能等用户按下按钮才告诉他
   onCloseHelpItem(e) {
     const helpId = e.currentTarget.dataset.id;
     const item = (this.data.myHelps || []).find(x => x._id === helpId) || {};
     const people = item.applyPeople || 0;
+    const willNoshow = !!item.willNoshow;   // 后端按 noshowWindowHours 判好的，前端不重复推算
+
+    const penalty = '现在距截止不到一天，取消会算放鸽子一次，累计 3 次则 7 天内不能发起互助。';
+    let content;
+    if (people && willNoshow) content = `已有 ${people} 位跑友应征。${penalty}他们会被作废并收到通知。确定取消？`;
+    else if (people) content = `已有 ${people} 位跑友应征，取消后他们会收到通知。离截止还早，不计惩罚。确定取消？`;
+    else if (willNoshow) content = `${penalty}确定取消？`;
+    else content = '取消后这条互助不再展示。确定？';
+
     wx.showModal({
       title: '取消发布',
-      content: people
-        ? `取消后这条互助不再展示，已应征的 ${people} 位跑友会被作废并收到通知。确定？`
-        : '取消后这条互助不再展示，确定？',
+      content,
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
           name: 'raceHelp', data: { action: 'close', helpId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
+        const n = res.applicantCount || 0;
         wx.showToast({
-          title: res.applicantCount ? `已取消，已通知 ${res.applicantCount} 人` : '已取消',
-          icon: 'success', duration: 2500,
+          title: res.noshow
+            ? `已取消，已通知 ${n} 人，并记放鸽子 1 次`
+            : (n ? `已取消，已通知 ${n} 人` : '已取消'),
+          icon: 'none', duration: 3000,
         });
+        this.loadMyHelps();
+        this.loadHelps();
+      },
+    });
+  },
+
+  // 约成了由发起人来收个尾。不催也不罚，标记完所有人都不再见它
+  onFinishHelpItem(e) {
+    const helpId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '标记完成',
+      content: '标记后会从互助列表移出去（应征的跑友那边也一样），等于给这次约伴画个句号。不确定就别点，放着不标记不会有任何影响。',
+      success: async (r) => {
+        if (!r.confirm) return;
+        const res = await wx.cloud.callFunction({
+          name: 'raceHelp', data: { action: 'finish', helpId },
+        }).then(x => (x && x.result) || {}).catch(() => ({}));
+        if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
+        wx.showToast({ title: '已标记完成 ✅', icon: 'success' });
         this.loadMyHelps();
         this.loadHelps();
       },

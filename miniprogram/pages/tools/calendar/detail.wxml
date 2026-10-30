@@ -505,7 +505,8 @@
           </view>
           <view class="help-mine-btns">
             <button class="help-mine-btn help-mine-share" open-type="share" data-id="{{item._id}}" bindtap="onShareHelpItem">分享给跑友</button>
-            <text class="help-mine-btn" wx:if="{{item.status === 'open' && !item.expired}}" data-id="{{item._id}}" catchtap="onCloseHelpItem">取消发布</text>
+            <text class="help-mine-btn help-mine-finish" wx:if="{{!item.isCanceled}}" data-id="{{item._id}}" catchtap="onFinishHelpItem">标记完成</text>
+            <text class="help-mine-btn" wx:if="{{!item.isCanceled && !item.expired}}" data-id="{{item._id}}" catchtap="onCloseHelpItem">取消发布</text>
           </view>
         </view>
       </block>
@@ -514,8 +515,10 @@
         <view class="help-mine-item" wx:for="{{myApplies}}" wx:key="applyId">
           <view class="help-mine-head">
             <text class="help-mine-title">{{item.typeIcon}} {{item.title}}</text>
+            <text class="help-mine-status {{!item.isCanceled && !item.expired ? 'on' : ''}}">{{item.expired ? '已截止' : (item.isFull ? '已满员' : (item.isCanceled ? '发起人已取消' : '招募中'))}}</text>
           </view>
           <view class="help-mine-row" wx:if="{{item.costNote}}">💰 {{item.costNote}}</view>
+          <view class="help-mine-row">我这边 {{item.peopleCount || 1}} 人　·　已到位 {{item.applyPeople || 0}} / {{item.peopleNeeded}} 人</view>
           <view class="help-applicant">
             <text class="help-ap-name">👤 {{item.nickName}}（发布者）</text>
             <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}" data-v="{{item.ownerContact.wechat}}" catchtap="onCopyContact">微信 {{item.ownerContact.wechat}}　复制</text>

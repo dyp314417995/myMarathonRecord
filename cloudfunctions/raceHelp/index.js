@@ -431,7 +431,8 @@ exports.main = async (event = {}) => {
         .where({ userId: OPENID })
         .orderBy('createTime', 'desc')
         .limit(50).get().catch(() => ({ data: [] }));
-      const list = res.data || [];
+      // 标记完成的（发起人已收尾）不再露面，等于从他眼前删掉了
+      const list = (res.data || []).filter(h => h.status !== 'done');
 
       const helps = await Promise.all(list.map(async (h) => {
         const aRes = await db.collection(APPLIES)
@@ -451,6 +452,8 @@ exports.main = async (event = {}) => {
           remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
           isFull: h.status === 'full',
           isCanceled: h.status === 'closed',
+          // 现在取消会不会算放鸽子：由后端判定，前端拿去写提醒文案，别再自己推算一遍成 24
+          willNoshow: (new Date(h.deadline).getTime() - Date.now()) <= LIMIT.noshowWindowHours * 3600000,
         });
       }));
       return { success: true, list: helps };
@@ -474,6 +477,7 @@ exports.main = async (event = {}) => {
         const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
         const h = hRes && hRes.data;
         if (!h) return null;
+        if (h.status === 'done') return null;   // 发起人标记完成，这条跟着收起来
         const remain = Math.max(0, LIMIT.cancelPerEvent - (cancelMap[a.eventId] || 0));
         return {
           applyId: a._id,
@@ -488,6 +492,12 @@ exports.main = async (event = {}) => {
           ...publicHelp(h, {
             typeLabel: (TYPES[h.type] || {}).label || '其他',
             typeIcon: (TYPES[h.type] || {}).icon || '🙌',
+            // 应征的人也得看得出状态：满员了、被取消了、过期了
+            expired: new Date(h.deadline).getTime() <= Date.now(),
+            applyPeople: parseInt(h.applyPeople, 10) || 0,
+            remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
+            isFull: h.status === 'full',
+            isCanceled: h.status === 'closed',
           }),
         };
       }));
@@ -527,6 +537,23 @@ exports.main = async (event = {}) => {
       }).catch(() => {})));
 
       return { success: true, applicantCount: list.length, notified, noshow };
+    }
+
+    // ===================== 发起人标记完成 =====================
+    if (action === 'finish') {
+      const helpId = trimStr(event.helpId, 40);
+      const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
+      const h = hRes && hRes.data;
+      if (!h) return { success: false, error: '不存在' };
+      if (h.userId !== OPENID) return { success: false, error: '只能标记自己发布的' };
+      if (h.status === 'done') return { success: false, error: '已经标记过了' };
+      if (h.status === 'closed') return { success: false, error: '这条已经取消了' };
+
+      // 标记完就收起来，所有人都不再见它。催也不催、罚也不罚——不来标记完全没关系
+      await db.collection(HELPS).doc(helpId).update({
+        data: { status: 'done', finishTime: now(), updateTime: now() },
+      });
+      return { success: true };
     }
 
     // ===================== 举报 =====================
