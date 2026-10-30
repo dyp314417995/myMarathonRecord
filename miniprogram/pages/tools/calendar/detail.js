@@ -178,6 +178,8 @@ Page({
 
       const isMine = !!myMarker;
       const myStatus = myMarker ? myMarker.status : '';
+      // 「已关注却提示未关注」的现场证据：加载时用什么身份去查、到底查到没有
+      console.log('[互助] 加载关注状态 ' + JSON.stringify({ eventId: this.data.eventId, uid, hasMarker: !!myMarker, status: myStatus }));
 
       // 把赛事鸣枪开跑日期注入时间轴（如果还没在 timeline 中）
       let timeline = event.timeline || [];
@@ -779,12 +781,35 @@ Page({
     this.setData({ shareHelpId: e.currentTarget.dataset.id || '' });
   },
 
-  onOpenHelpForm() {
+  // 让服务端按当前登录身份认一次关注关系。
+  // 前端那份 isMine 只是加载时的快照，换账号或缓存没跟上就会失真，
+  // 单靠它挡人，用户就只看到一句没有解释的提示——所以兜底到服务端，由它说了算。
+  async verifyFollow() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'raceHelp',
+        data: { action: 'checkFollow', eventId: this.data.eventId },
+      });
+      const r = res && res.result;
+      console.error('[互助] 服务端关注自检 ' + JSON.stringify(r && r.debug));
+      return !!(r && r.followed);
+    } catch (e) {
+      console.error('[互助] 关注自检异常', e);
+      return false;
+    }
+  },
+
+  async onOpenHelpForm() {
     // 先确认登录态。没登录的时候提示「先关注」是句假话——
     // 那时根本没去查过关注记录，把人送去登录才是有用的引导。
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
-    if (!this.data.isMine) return wx.showToast({ title: '先关注这场赛事才能发布互助', icon: 'none' });
+    // 加载时的快照说没关注，不急着下结论——交给服务端按当前身份再认一次。
+    // 认过了就放行并补上状态，别让一个失真的快照把人拦在门外。
+    if (!this.data.isMine && !(await this.verifyFollow())) {
+      return wx.showToast({ title: '先关注这场赛事才能发布互助', icon: 'none' });
+    }
+    if (!this.data.isMine) this.setData({ isMine: true });
 
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const today = new Date();

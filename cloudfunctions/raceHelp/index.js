@@ -233,6 +233,41 @@ exports.main = async (event = {}) => {
   if (!OPENID) return { success: false, error: '请先登录' };
 
   try {
+    // ===================== 关注关系自检 =====================
+    // 前端那份 isMine 是加载时的快照，可能不可信（换了账号、缓存没跟上都会失真）。
+    // 这里让服务端按当前登录身份自己认一次，并把现场信息带回去：
+    // 这场赛事到底有没有关注记录、有是挂在谁名下——便于定位「明明关注过却不让发」。
+    if (action === 'checkFollow') {
+      const { eventId } = event;
+      if (!eventId) return { success: false, error: '缺少 eventId' };
+
+      const userRes = await db.collection('users').where({ _openid: OPENID }).limit(1).get().catch(() => null);
+      const internalId = (userRes && userRes.data && userRes.data[0] && userRes.data[0]._id) || '';
+      const who = await resolveUserIds(OPENID);
+
+      const mineRes = await db.collection('race_markers').where({ userId: who, eventId }).limit(1).get().catch(() => null);
+      const anyRes = await db.collection('race_markers').where({ eventId }).limit(20).get().catch(() => null);
+
+      const row = (mineRes && mineRes.data && mineRes.data[0]) || null;
+      const rows = (anyRes && anyRes.data) || [];
+
+      return {
+        success: true,
+        followed: !!row,
+        debug: {
+          eventId,
+          hasOpenid: !!OPENID,
+          hasUserDoc: !!internalId,
+          rowFound: !!row,                                   // 当前登录身份名下有没有记录
+          rowStatus: row ? row.status : null,
+          rowKeyIsOpenid: row ? row.userId === OPENID : null,
+          rowKeyIsUserDocId: row ? row.userId === internalId : null,
+          rowsForEvent: rows.length,                          // 这场赛事的关注记录总数
+          // rowsForEvent > 0 却 rowFound = false，说明记录挂在别的账号名下——换号后最常见
+        },
+      };
+    }
+
     // ===================== 某场赛事下的互助列表 =====================
     if (action === 'list') {
       const { eventId } = event;
