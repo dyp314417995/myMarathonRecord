@@ -1009,24 +1009,18 @@ Page({
     wx.hideLoading();
   },
 
-  // 发起人取消发布：有人应征的要提醒到位，临近截止还得把惩罚说在点之前——
-  // 罚不罚这种事，不能等用户按下按钮才告诉他
+  // 发起人取消发布。不罚不记，但牵连到几位跑友要说在点之前——
+  // 按下按钮才知道会影响别人，那就晚了
   onCloseHelpItem(e) {
     const helpId = e.currentTarget.dataset.id;
     const item = (this.data.myHelps || []).find(x => x._id === helpId) || {};
     const people = item.applyPeople || 0;
-    const willNoshow = !!item.willNoshow;   // 后端按 noshowWindowHours 判好的，前端不重复推算
-
-    const penalty = '现在距截止不到一天，取消会算放鸽子一次，累计 3 次则 7 天内不能发起互助。';
-    let content;
-    if (people && willNoshow) content = `已有 ${people} 位跑友应征。${penalty}他们会被作废并收到通知。确定取消？`;
-    else if (people) content = `已有 ${people} 位跑友应征，取消后他们会收到通知。离截止还早，不计惩罚。确定取消？`;
-    else if (willNoshow) content = `${penalty}确定取消？`;
-    else content = '取消后这条互助不再展示。确定？';
 
     wx.showModal({
       title: '取消发布',
-      content,
+      content: people
+        ? `已有 ${people} 位跑友应征，取消后他们会收到通知。确定取消？`
+        : '取消后这条互助不再展示。确定？',
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
@@ -1035,9 +1029,7 @@ Page({
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
         const n = res.applicantCount || 0;
         wx.showToast({
-          title: res.noshow
-            ? `已取消，已通知 ${n} 人，并记放鸽子 1 次`
-            : (n ? `已取消，已通知 ${n} 人` : '已取消'),
+          title: n ? `已取消，已通知 ${n} 人` : '已取消',
           icon: 'none', duration: 3000,
         });
         this.loadMyHelps();
@@ -1067,25 +1059,16 @@ Page({
 
   onCancelMyApply(e) {
     const applyId = e.currentTarget.dataset.id;
-    const item = (this.data.myApplies || []).find(x => x.applyId === applyId) || {};
-    const remain = item.cancelRemain || 0;
     wx.showModal({
       title: '取消应征',
-      content: `本场赛事还能撤销 ${remain} 次。距截止不足 24 小时会被记为放鸽子，累计 3 次则 7 天内不能发起互助。确定取消？`,
+      content: '取消后名额会放回，发布者会收到通知。确定取消？',
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
           name: 'raceHelp', data: { action: 'cancelApply', applyId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
-        const left = res.remain || 0;
-        // 算不算放鸽子，要明确告诉当事人，别让他以为只是普通取消
-        const tip = res.noshow
-          ? (res.noshowCount >= 3
-            ? `记为放鸽子 ${res.noshowCount} 次，${7} 天内不能发起互助`
-            : `临近截止，记为放鸽子 ${res.noshowCount} 次`)
-          : (left > 0 ? `已取消，本场还可撤销 ${left} 次` : '已取消，本场不能再应征了');
-        wx.showToast({ title: tip, icon: 'none', duration: 3000 });
+        wx.showToast({ title: '已取消应征', icon: 'none' });
         this.loadMyHelps();
       },
     });

@@ -406,7 +406,7 @@
           <view class="form-input help-date">{{helpForm.deadlineTime}}</view>
         </picker>
       </view>
-      <text class="help-field-tip">精确到分钟。取消是否算放鸽子，按这个时间判定。</text>
+      <text class="help-field-tip">精确到分钟，到点自动失效；你也可以随时结束或取消。</text>
 
       <text class="form-label">我的微信号（对方应征后才可见）</text>
       <input class="form-input" placeholder="微信号" maxlength="20" value="{{helpForm.wechat}}" data-k="wechat" bindinput="onHelpFormInput" />
@@ -418,11 +418,8 @@
 2. 平台不收取任何费用，也不承担线下接触产生的纠纷与责任。
 3. 平台无法核实其他跑友的真实身份，约见请自行判断风险，建议在公共场所。
 4. 不得发布任何涉交易、转卖、代购、名额转让的信息，发现即下架。
-5. 名额按人数算，招募满员自动完成；有人取消后名额放回，未满自动恢复招募。
-6. 取消规则：提前取消不罚，早说一声大家都来得及。但截止前 24 小时内取消应征，或发起人临时取消发布，都记为放鸽子一次——这时候别人再找搭子已经来不及了。
-7. 放鸽子累计 3 次，7 天内不能再发起互助。
-8. 同一个赛事最多撤销 3 次应征，用完之后本场赛事不能再应征。
-9. 到截止时间自动失效，你也可以随时取消发布。</text>
+5. 名额按人数算，招满自动完成；有人退出名额放回，未满自动恢复招募。
+6. 到截止时间自动失效，中途随时可以取消或结束，不设次数限制，也不会因此受罚。</text>
       </view>
 
       <view class="help-agree" catchtap="onToggleHelpRule">
@@ -462,7 +459,7 @@
         </view>
       </block>
       <block wx:else>
-        <text class="help-d-tip">联系方式在双方应征后互相可见。同一场赛事最多撤销 3 次应征；截止前 24 小时内取消算放鸽子，累计 3 次后 7 天不能发起互助——想好了再点。</text>
+        <text class="help-d-tip">联系方式在双方应征后互相可见——想好了再点。</text>
         <text class="form-label">我这边几人</text>
         <input class="form-input" type="number" placeholder="1" value="{{applyPeopleCount}}" data-k="applyPeopleCount" bindinput="onApplyInput" />
         <text class="help-field-tip" wx:if="{{curHelp.remainPeople}}">这条还差 {{curHelp.remainPeople}} 人，别超过剩下的名额。</text>
@@ -523,11 +520,8 @@
             <text class="help-ap-name">👤 {{item.nickName}}（发布者）</text>
             <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}" data-v="{{item.ownerContact.wechat}}" catchtap="onCopyContact">微信 {{item.ownerContact.wechat}}　复制</text>
           </view>
-          <view class="help-mine-btns" wx:if="{{item.canCancel}}">
-            <text class="help-mine-btn" data-id="{{item.applyId}}" catchtap="onCancelMyApply">取消应征（还剩 {{item.cancelRemain}} 次）</text>
-          </view>
-          <view class="help-mine-btns" wx:else>
-            <text class="help-mine-locked">本场赛事撤销次数已用完</text>
+          <view class="help-mine-btns">
+            <text class="help-mine-btn" data-id="{{item.applyId}}" catchtap="onCancelMyApply">取消应征</text>
           </view>
         </view>
       </block>

@@ -22,22 +22,15 @@ const TYPES = {
   team: { label: '组队', icon: '👥' },
 };
 
-// 限制
+// 限制。刻意只留输入本身的边界，不限制发起/取消的次数，也不设惩罚：
+// 跑友约伴临时变卦是常事，规矩越多越没人敢发；真有人乱来，靠举报兜底就够了。
 const LIMIT = {
   title: 20,
   desc: 200,
   costNote: 30,
   message: 50,
-  perEvent: 3,        // 每人每场赛事最多同时挂 3 条
-  daily: 5,           // 每天最多发 5 条
-  applyDaily: 10,     // 每天最多应征 10 次
   maxDays: 90,        // 截止时间最多 90 天后
-  cancelPerEvent: 3,  // 同一场赛事最多撤销 3 次应征
   maxPeople: 9,       // 单条互助最多招募人数
-  // 放鸽子：只有临近截止才罚。提前好几天说一声是无所谓的，最后一天撂摊子才是坑人
-  noshowWindowHours: 24,  // 截止前 24 小时内取消应征 = 放鸽子
-  noshowLimit: 3,         // 累计 3 次触发惩罚
-  noshowBanDays: 7,       // 触发后 7 天不能发布互助
 };
 
 // 复用日历「关注赛事」已授权过的通用模板（date1 / thing2 / time3）。
@@ -75,12 +68,6 @@ function hasBlockedWord(text) {
 
 function trimStr(v, max) {
   return String(v == null ? '' : v).trim().slice(0, max);
-}
-
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
 }
 
 // 微信号：5~20 位字母/数字/-/_
@@ -184,32 +171,6 @@ async function broadcast(h, content, selfId) {
     if (await notify(uid, content, page)) sent += 1;
   }));
   return sent;
-}
-
-// 同一用户在同一场赛事下主动撤销的次数。
-// 发起人取消发布造成的作废（owner-canceled）不能算在他头上——那是别人撤的，
-// 扣他的额度既不讲理，还会让人莫名其妙地失去本场赛事的应征资格。
-async function countCanceled(userId, eventId) {
-  const c = await db.collection(APPLIES)
-    .where({ userId, eventId, status: 'canceled' })
-    .limit(100).get().catch(() => ({ data: [] }));
-  return ((c && c.data) || []).filter(a => a.cancelFlag !== 'owner-canceled').length;
-}
-
-// 累计放鸽子次数（临近截止才取消的那些）
-async function countNoshow(userId) {
-  const c = await db.collection(APPLIES)
-    .where({ userId, cancelFlag: 'noshow' })
-    .count().catch(() => ({ total: 0 }));
-  return c.total || 0;
-}
-
-// 发起人自己在临近截止时才取消发布：被放的是所有应征的人，比个人缺席更严重
-async function countOwnerNoshow(userId) {
-  const c = await db.collection(HELPS)
-    .where({ userId, ownerNoshow: true })
-    .count().catch(() => ({ total: 0 }));
-  return c.total || 0;
 }
 
 // 累计已应征的「人数」（不是条数）：一条可以带好几个人来
@@ -336,39 +297,8 @@ exports.main = async (event = {}) => {
         return { success: false, error: '只有关注了这场赛事的跑友才能发布互助' };
       }
 
-      // 处罚期：临近截止才撂摊子的人，别人是没时间再找搭子的，一段时间内不许再发起。
-      // 应征了临时撤、和发起人自己临时取消发布，两种都算数。
-      const noshow = (await countNoshow(OPENID)) + (await countOwnerNoshow(OPENID));
-      if (noshow >= LIMIT.noshowLimit) {
-        const lastApply = await db.collection(APPLIES)
-          .where({ userId: OPENID, cancelFlag: 'noshow' })
-          .orderBy('cancelTime', 'desc').limit(1).get().catch(() => null);
-        const lastOwn = await db.collection(HELPS)
-          .where({ userId: OPENID, ownerNoshow: true })
-          .orderBy('cancelTime', 'desc').limit(1).get().catch(() => null);
-        const t1 = lastApply && lastApply.data && lastApply.data[0]
-          ? new Date(lastApply.data[0].cancelTime).getTime() : 0;
-        const t2 = lastOwn && lastOwn.data && lastOwn.data[0]
-          ? new Date(lastOwn.data[0].cancelTime).getTime() : 0;
-        if (Date.now() < Math.max(t1, t2) + LIMIT.noshowBanDays * 86400000) {
-          return { success: false, error: `近日多次临近截止才取消，${LIMIT.noshowBanDays} 天内不能发起互助` };
-        }
-      }
-
       const badWord = hasBlockedWord(`${title}${desc}${costNote}`);
       if (badWord) return { success: false, error: `内容含有不允许的信息（${badWord}）` };
-
-      // 频率限制
-      const openRes = await db.collection(HELPS)
-        .where({ userId: OPENID, eventId, status: 'open' }).get().catch(() => null);
-      if (openRes && openRes.data.length >= LIMIT.perEvent) {
-        return { success: false, error: `这场赛事最多同时发布 ${LIMIT.perEvent} 条互助` };
-      }
-      const todayRes = await db.collection(HELPS)
-        .where({ userId: OPENID, createTime: _.gt(startOfToday()) }).get().catch(() => null);
-      if (todayRes && todayRes.data.length >= LIMIT.daily) {
-        return { success: false, error: '今天发布次数已达上限，明天再来' };
-      }
 
       await checkText(`${title} ${desc} ${costNote}`, OPENID);
 
@@ -427,17 +357,7 @@ exports.main = async (event = {}) => {
       const dup = await db.collection(APPLIES).where({ helpId, userId: OPENID, status: _.neq('canceled') }).limit(1).get().catch(() => null);
       if (dup && dup.data.length) return { success: false, error: '已经应征过了' };
 
-      // 撤销次数用完 → 本场赛事不能再应征（防反复应征套取联系方式）
-      const canceledCount = await countCanceled(OPENID, h.eventId);
-      if (canceledCount >= LIMIT.cancelPerEvent) {
-        return { success: false, error: `本场赛事已撤销 ${LIMIT.cancelPerEvent} 次，不能再应征了` };
-      }
 
-      const todayApply = await db.collection(APPLIES)
-        .where({ userId: OPENID, createTime: _.gt(startOfToday()) }).get().catch(() => null);
-      if (todayApply && todayApply.data.length >= LIMIT.applyDaily) {
-        return { success: false, error: '今天应征次数已达上限' };
-      }
 
       let nickName = '跑友';
       const uRes = await db.collection('users').where({ _openid: OPENID }).limit(1).get().catch(() => null);
@@ -514,8 +434,6 @@ exports.main = async (event = {}) => {
           remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
           isFull: h.status === 'full',
           isCanceled: h.status === 'closed',
-          // 现在取消会不会算放鸽子：由后端判定，前端拿去写提醒文案，别再自己推算一遍成 24
-          willNoshow: (new Date(h.deadline).getTime() - Date.now()) <= LIMIT.noshowWindowHours * 3600000,
         });
       }));
       return { success: true, list: helps };
@@ -528,19 +446,11 @@ exports.main = async (event = {}) => {
         .orderBy('createTime', 'desc').limit(50).get().catch(() => ({ data: [] }));
       const applies = aRes.data || [];
 
-      // 按赛事聚合统计已撤销次数（涉及的赛事通常就三五个，避免逐条查询）
-      const eventIds = Array.from(new Set(applies.map(a => a.eventId).filter(Boolean)));
-      const cancelMap = {};
-      await Promise.all(eventIds.map(async (eid) => {
-        cancelMap[eid] = await countCanceled(OPENID, eid);
-      }));
-
       const list = await Promise.all(applies.map(async (a) => {
         const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
         const h = hRes && hRes.data;
         if (!h) return null;
         if (h.status === 'done') return null;   // 发起人标记完成，这条跟着收起来
-        const remain = Math.max(0, LIMIT.cancelPerEvent - (cancelMap[a.eventId] || 0));
         return {
           applyId: a._id,
           message: a.message,
@@ -549,8 +459,7 @@ exports.main = async (event = {}) => {
           createTime: a.createTime,
           // 双方都已表达诚意，互见联系方式
           ownerContact: { wechat: (h.contact || {}).wechat },
-          cancelRemain: remain,
-          canCancel: remain > 0,
+          canCancel: true,   // 不再限制撤销次数：临时变卦是常事，随时可以退
           ...publicHelp(h, {
             typeLabel: (TYPES[h.type] || {}).label || '其他',
             typeIcon: (TYPES[h.type] || {}).icon || '🙌',
@@ -576,12 +485,8 @@ exports.main = async (event = {}) => {
       if (h.status === 'closed') return { success: false, error: '已经取消过了' };
       if (h.status === 'done') return { success: false, error: '这条已经标记完成了' };
 
-      // 发起人临近截止才撤摊，被放的是应征的人，同样算放鸽子
-      const hoursLeft = (new Date(h.deadline).getTime() - Date.now()) / 3600000;
-      const noshow = hoursLeft <= LIMIT.noshowWindowHours;
-
       await db.collection(HELPS).doc(helpId).update({
-        data: { status: 'closed', ownerNoshow: noshow, cancelTime: now(), updateTime: now() },
+        data: { status: 'closed', cancelTime: now(), updateTime: now() },
       });
 
       // 已经应征的人全部作废，并挨个通知到位
@@ -589,9 +494,7 @@ exports.main = async (event = {}) => {
         .where({ helpId, status: _.neq('canceled') }).limit(50).get().catch(() => ({ data: [] }));
       const list = (aRes && aRes.data) || [];
       const typeLabel = (TYPES[h.type] || {}).label || '互助';
-      const content = noshow
-        ? `${typeLabel}「${truncate(h.title, 8)}」发起人临近截止取消了`
-        : `${typeLabel}「${truncate(h.title, 8)}」发起人已取消`;
+      const content = `${typeLabel}「${truncate(h.title, 8)}」发起人已取消`;
       // 顺序很重要：先把消息送到，再作废应征记录。
       // 作废之后他们就不算组员了，广播会找不到人。
       const notified = await broadcast(h, content, OPENID);
@@ -599,7 +502,7 @@ exports.main = async (event = {}) => {
         data: { status: 'canceled', cancelFlag: 'owner-canceled', cancelTime: now() },
       }).catch(() => {})));
 
-      return { success: true, applicantCount: list.length, notified, noshow };
+      return { success: true, applicantCount: list.length, notified };
     }
 
     // ===================== 发起人标记完成 =====================
@@ -612,13 +515,8 @@ exports.main = async (event = {}) => {
       if (h.status === 'done') return { success: false, error: '已经标记过了' };
       if (h.status === 'closed') return { success: false, error: '这条已经取消了' };
 
-      // 已经有人应征、又还没到截止：这时候要删请走「取消发布」。
-      // 否则临近截止点一下「标记完成」就能绕开提醒和惩罚，那条规矩就形同虚设了。
-      if (new Date(h.deadline).getTime() > Date.now() && (parseInt(h.applyPeople, 10) || 0) > 0) {
-        return { success: false, error: '已经有人应征了，要取消请点「取消发布」' };
-      }
-
-      // 标记完就收起来，所有人都不再见它。催也不催、罚也不罚——不来标记完全没关系
+      // 发起人随时可以结束：约成了就收起来，不必等到截止，也不管有没有人应征。
+      // 标记完就收起来，所有人都不再见它。不来标记也完全没关系
       await db.collection(HELPS).doc(helpId).update({
         data: { status: 'done', finishTime: now(), updateTime: now() },
       });
@@ -655,20 +553,11 @@ exports.main = async (event = {}) => {
       if (!a) return { success: false, error: '不存在' };
       if (a.userId !== OPENID) return { success: false, error: '无权操作' };
 
-      const canceledCount = await countCanceled(OPENID, a.eventId);
-      if (canceledCount >= LIMIT.cancelPerEvent) {
-        return { success: false, error: `本场赛事已撤销 ${LIMIT.cancelPerEvent} 次，不能再取消了` };
-      }
-
-      // 临近截止才取消 = 放鸽子：这时候别人再找搭子已经来不及了。
-      // 提前好几天打声招呼是正常的，不罚。
       const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
       const h = hRes && hRes.data;
-      const hoursLeft = h ? (new Date(h.deadline).getTime() - Date.now()) / 3600000 : 999;
-      const noshow = h && hoursLeft <= LIMIT.noshowWindowHours;
 
       await db.collection(APPLIES).doc(applyId).update({
-        data: { status: 'canceled', cancelFlag: noshow ? 'noshow' : 'normal', cancelTime: now() },
+        data: { status: 'canceled', cancelTime: now() },
       });
 
       // 名额按人数重算：撤销后腾出来的位置要放回去，满员的也得恢复招募
@@ -692,12 +581,7 @@ exports.main = async (event = {}) => {
         await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」有人取消应征`, OPENID);
       }
 
-      return {
-        success: true,
-        noshow: !!noshow,
-        remain: Math.max(0, LIMIT.cancelPerEvent - (canceledCount + 1)),
-        noshowCount: await countNoshow(OPENID),
-      };
+      return { success: true };
     }
 
     return { success: false, error: '未知操作' };
