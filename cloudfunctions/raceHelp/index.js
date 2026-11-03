@@ -568,8 +568,10 @@ exports.main = async (event = {}) => {
         .limit(50).get().catch(() => ({ data: [] }));
       const ids = Array.from(new Set(((mkRes && mkRes.data) || []).map(m => m.eventId).filter(Boolean)));
       const map = await eventBrief(ids);
-      const list = ids.map((id) => {
-        const e = map[id] || {};
+      // 只保留库里还在的赛事。赛事被删或重建换了 id 之后，老的关注记录会变成孤儿，
+      // 列出来只能显示「待更新」，点了也发不出去（赛事根本不存在）——不如不显示
+      const list = ids.filter(id => map[id]).map((id) => {
+        const e = map[id];
         return { eventId: id, name: e.name || '赛事信息待更新', date: e.date || null, city: e.city || '' };
       });
       // 已经跑完的赛事不再列出来：跑完了还发拼房拼车，没有意义。

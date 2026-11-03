@@ -125,7 +125,9 @@ Page({
       if (!map[key]) {
         map[key] = {
           eventId: key,
-          eventName: it.eventName || '赛事信息待更新',
+          // 赛事被删/重建换了 id 后，历史互助会挂在一个已经不存在的事上，
+          // 这里如实说「已下架」，别写「待更新」——那听起来像我们没加载完
+          eventName: it.eventName || '赛事已下架',
           eventDateText: ymd(it.eventDate),
           items: [],
         };

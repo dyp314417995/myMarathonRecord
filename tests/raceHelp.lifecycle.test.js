@@ -552,10 +552,11 @@ const notifyTo = uid => notifyCalls.filter(n => n.openid === USERS[uid]._openid)
     ok('一场都没关注时返回空（前端据此引导去关注）', none.success === true && none.list.length === 0, none);
     coll('race_markers').set('m_c', { _id: 'm_c', userId: 'u_c', eventId: 'E1' });
 
-    // 赛事被删了也要能列出来，不能让用户看到空白无处可点
+    // 赛事被删后，那条关注记录就是孤儿：选赛事时不能列出来，
+    // 否则用户看到一条「赛事信息待更新」，点进去还发不出去
     coll('race_events').delete('E1');
     const orphan = await call('owner', { action: 'myEvents' });
-    ok('赛事信息缺失时给兜底名', orphan.list.length === 1 && !!orphan.list[0].name, orphan.list[0]);
+    ok('赛事已不存在的关注记录不再列出', orphan.list.length === 0, orphan.list);
     coll('race_events').set('E1', { _id: 'E1', name: '测试马拉松', city: '北京', date: '2026-11-08' });
   }
 
