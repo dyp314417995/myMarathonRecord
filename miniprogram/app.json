@@ -17,6 +17,7 @@
     "pages/tools/calendar/detail",
     "pages/tools/calendar/review",
     "pages/tools/calendar/review-list",
+    "pages/tools/raceHelp/index",
     "pages/privacy/index",
     "pages/records/public",
     "pages/tools/activity/index",

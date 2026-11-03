@@ -1,0 +1,178 @@
+<!-- pages/tools/raceHelp/index.wxml -->
+<view class="page">
+  <view class="hd">
+    <view class="hd-main">
+      <text class="hd-title">跑友互助</text>
+      <text class="hd-desc">拼房、拼车、拼饭，只在关注了同一场赛事的跑友之间</text>
+    </view>
+    <view class="hd-add" bindtap="onStartPublish">＋ 发布</view>
+  </view>
+
+  <view class="tabs">
+    <text class="tab {{tab === 'mine' ? 'on' : ''}}" data-t="mine" bindtap="onTab">我发布的<text class="tab-n">{{tabCount.mine}}</text></text>
+    <text class="tab {{tab === 'apply' ? 'on' : ''}}" data-t="apply" bindtap="onTab">我应征的<text class="tab-n">{{tabCount.apply}}</text></text>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">
+    <text class="empty-d">加载中…</text>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{groups.length === 0}}" class="empty">
+      <text class="empty-t">{{tab === 'mine' ? '还没发布过互助' : '还没应征过互助'}}</text>
+      <text class="empty-d">{{tab === 'mine' ? '住得近、车顺路，拼一下省心也省钱' : '在赛事详情页看到合适的，点「我来应征」'}}</text>
+      <view wx:if="{{tab === 'mine'}}" class="empty-btn" bindtap="onStartPublish">去发布</view>
+    </view>
+
+    <view class="group" wx:for="{{groups}}" wx:key="eventId" wx:for-item="g">
+      <view class="group-hd">
+        <text class="group-name">🏁 {{g.eventName}}</text>
+        <text class="group-date" wx:if="{{g.eventDateText}}">{{g.eventDateText}}</text>
+      </view>
+
+      <!-- ===== 我发布的 ===== -->
+      <block wx:if="{{tab === 'mine'}}">
+        <view class="item" wx:for="{{g.items}}" wx:key="_id" wx:for-item="it"
+              data-event="{{it.eventId}}" data-help="{{it._id}}" bindtap="onOpenDetail">
+          <view class="item-hd">
+            <text class="item-title">{{it.typeIcon}} {{it.title}}</text>
+            <text class="state {{it.state}}">{{it.stateLabel}}</text>
+          </view>
+
+          <view class="item-meta">
+            <text class="meta">👥 {{it.applyPeople || 0}}/{{it.peopleNeeded}} 人</text>
+            <text class="meta" wx:if="{{it.state === 'open'}}">还差 {{it.remainPeople}} 人</text>
+            <text class="meta" wx:if="{{it.state === 'open' && it.daysLeft >= 0}}">剩 {{it.daysLeft}} 天</text>
+          </view>
+
+          <view class="ap-row" wx:if="{{it.applicants.length}}">
+            <text class="ap-label">已应征</text>
+            <text class="ap-chip" wx:for="{{it.applicants}}" wx:key="userId"
+                  data-v="{{item.contact.wechat}}" catchtap="onCopy">{{item.nickName}} {{item.contact.wechat}}</text>
+          </view>
+
+          <view class="btns">
+            <button class="btn btn-share" wx:if="{{it.state === 'open'}}" open-type="share"
+                    data-id="{{it._id}}" catchtap="onShareHelp">分享</button>
+            <text class="btn" wx:if="{{it.state === 'open' || it.state === 'expired'}}"
+                  data-id="{{it._id}}" catchtap="onFinish">完成</text>
+            <text class="btn" wx:if="{{it.state === 'open' || it.state === 'expired'}}"
+                  data-id="{{it._id}}" catchtap="onCancel">取消</text>
+            <text class="btn" wx:if="{{it.state === 'canceled'}}"
+                  data-id="{{it._id}}" catchtap="onEdit">编辑</text>
+            <text class="btn btn-del" wx:if="{{it.state === 'done' || it.state === 'canceled'}}"
+                  data-id="{{it._id}}" catchtap="onDelete">删除</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- ===== 我应征的 ===== -->
+      <block wx:else>
+        <view class="item" wx:for="{{g.items}}" wx:key="applyId" wx:for-item="it"
+              data-event="{{it.eventId}}" data-help="{{it._id}}" bindtap="onOpenDetail">
+          <view class="item-hd">
+            <text class="item-title">{{it.typeIcon}} {{it.title}}</text>
+            <text class="state {{it.state}}">{{it.stateLabel}}</text>
+          </view>
+
+          <view class="item-meta">
+            <text class="meta">我这边 {{it.peopleCount || 1}} 人</text>
+            <text class="meta">👥 {{it.applyPeople || 0}}/{{it.peopleNeeded}} 人</text>
+            <text class="meta" wx:if="{{it.state === 'open'}}">还差 {{it.remainPeople}} 人</text>
+          </view>
+
+          <view class="ap-row" wx:if="{{it.ownerContact.wechat}}">
+            <text class="ap-label">发起人</text>
+            <text class="ap-chip" data-v="{{it.ownerContact.wechat}}" catchtap="onCopy">微信 {{it.ownerContact.wechat}}　复制</text>
+          </view>
+
+          <view class="btns">
+            <text class="btn" wx:if="{{it.canCancel}}" data-id="{{it.applyId}}" catchtap="onCancelApply">{{it.state === 'done' ? '退出' : '取消'}}</text>
+            <text class="btn btn-del" wx:if="{{it.canDelete}}" data-id="{{it.applyId}}" catchtap="onDeleteApply">删除</text>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <view class="foot-tip">互助只在关注了同一场赛事的跑友之间可见，约满或结束后就不再占位置</view>
+  </block>
+</view>
+
+<!-- ========== 选赛事 ========== -->
+<view class="mask" wx:if="{{showPicker}}" catchtap="onClosePicker"></view>
+<view class="sheet" wx:if="{{showPicker}}">
+  <view class="sheet-hd">
+    <text class="sheet-title">发到哪场赛事</text>
+    <text class="sheet-close" catchtap="onClosePicker">✕</text>
+  </view>
+  <scroll-view scroll-y class="ev-body">
+    <view class="ev" wx:for="{{events}}" wx:key="eventId" data-idx="{{index}}" catchtap="onPickEvent">
+      <text class="ev-name">{{item.name}}</text>
+      <text class="ev-meta">{{item.city}}{{item.dateText ? ' · ' + item.dateText : ''}}</text>
+    </view>
+  </scroll-view>
+  <view class="ev-foot" catchtap="onClosePicker">去关注更多赛事</view>
+</view>
+
+<!-- ========== 发布 / 编辑 ========== -->
+<view class="mask" wx:if="{{showForm}}" catchtap="onCloseForm"></view>
+<view class="sheet tall" wx:if="{{showForm}}">
+  <view class="sheet-hd">
+    <text class="sheet-title">{{editingId ? '编辑再发起' : '发布互助'}}</text>
+    <text class="sheet-close" catchtap="onCloseForm">✕</text>
+  </view>
+
+  <view class="ev-bar">🏁 {{curEvent.name}}{{curEvent.dateText ? ' · ' + curEvent.dateText : ''}}</view>
+
+  <scroll-view scroll-y class="form-body">
+    <text class="lbl">类型</text>
+    <view class="types">
+      <text class="type {{form.type === item.key ? 'on' : ''}}" wx:for="{{types}}" wx:key="key"
+            data-k="{{item.key}}" catchtap="onPickType">{{item.icon}} {{item.label}}</text>
+    </view>
+
+    <text class="lbl">标题</text>
+    <input class="inp" maxlength="20" value="{{form.title}}" data-k="title" bindinput="onInput"
+           placeholder="例如：起点附近求拼双床房" />
+
+    <text class="lbl">说明</text>
+    <textarea class="inp area" maxlength="200" value="{{form.desc}}" data-k="desc" bindinput="onInput"
+              placeholder="时间、地点、怎么分摊，说清楚一点" />
+
+    <text class="lbl">费用说明（选填）</text>
+    <input class="inp" maxlength="30" value="{{form.costNote}}" data-k="costNote" bindinput="onInput"
+           placeholder="例如：AA，人均 150" />
+
+    <view class="row2">
+      <view class="col">
+        <text class="lbl">需要几人</text>
+        <input class="inp" type="number" value="{{form.peopleNeeded}}" bindinput="onPeople" />
+      </view>
+      <view class="col">
+        <text class="lbl">微信号</text>
+        <input class="inp" maxlength="20" value="{{form.wechat}}" data-k="wechat" bindinput="onInput"
+               placeholder="方便对方加你" />
+      </view>
+    </view>
+
+    <text class="lbl">截止时间</text>
+    <view class="row2">
+      <picker class="col" mode="date" value="{{form.deadline}}" start="{{today}}" end="{{maxDate}}" bindchange="onDate">
+        <view class="inp picker">{{form.deadline}}</view>
+      </picker>
+      <picker class="col" mode="time" value="{{form.deadlineTime}}" bindchange="onTime">
+        <view class="inp picker">{{form.deadlineTime}}</view>
+      </picker>
+    </view>
+
+    <view class="agree" catchtap="onToggleRule">
+      <text class="cb {{form.ruleAgreed ? 'on' : ''}}">{{form.ruleAgreed ? '✓' : ''}}</text>
+      <text class="agree-t">内容是真实的，不涉及转账、代购、名额转让</text>
+    </view>
+  </scroll-view>
+
+  <view class="form-ft">
+    <button class="btn-outline" catchtap="onCloseForm">取消</button>
+    <button class="btn-primary {{submitting ? 'dis' : ''}}" catchtap="onSubmit">{{submitting ? '处理中…' : (editingId ? '保存' : '发布')}}</button>
+  </view>
+</view>

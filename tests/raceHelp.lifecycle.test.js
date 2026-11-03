@@ -83,12 +83,13 @@ class DocRef {
 }
 
 class Query {
-  constructor(name, cond = {}, orders = [], lim = 0) {
-    this.name = name; this.cond = cond; this.orders = orders; this.lim = lim;
+  constructor(name, cond = {}, orders = [], lim = 0, fields = null) {
+    this.name = name; this.cond = cond; this.orders = orders; this.lim = lim; this.fields = fields;
   }
-  where(cond) { return new Query(this.name, cond, this.orders, this.lim); }
-  orderBy(field, dir) { return new Query(this.name, this.cond, this.orders.concat([[field, dir]]), this.lim); }
-  limit(n) { return new Query(this.name, this.cond, this.orders, n); }
+  where(cond) { return new Query(this.name, cond, this.orders, this.lim, this.fields); }
+  orderBy(field, dir) { return new Query(this.name, this.cond, this.orders.concat([[field, dir]]), this.lim, this.fields); }
+  limit(n) { return new Query(this.name, this.cond, this.orders, n, this.fields); }
+  field(f) { return new Query(this.name, this.cond, this.orders, this.lim, f); }
   doc(id) { return new DocRef(this.name, id); }
 
   _rows() {
@@ -105,7 +106,18 @@ class Query {
     if (this.lim) rows = rows.slice(0, this.lim);
     return rows;
   }
-  async get() { return { data: this._rows().map(clone) }; }
+  async get() {
+    const rows = this._rows();
+    // 简易 field 投影：只取指定字段 + _id，跟云开发行为一致
+    if (!this.fields) return { data: rows.map(clone) };
+    return {
+      data: rows.map((r) => {
+        const o = { _id: r._id };
+        Object.keys(this.fields).forEach((k) => { if (this.fields[k]) o[k] = clone(r[k]); });
+        return o;
+      }),
+    };
+  }
   async count() { return { total: this._rows().length }; }
   async add({ data }) {
     const id = 'id_' + (++seq);
@@ -162,6 +174,8 @@ const USERS = {
 
 function seed() {
   store.clear(); seq = 0; notifyCalls.length = 0;
+  // 赛事本体：互助只存 eventId，聚合页要按赛事分组得靠它补名字和日期
+  coll('race_events').set('E1', { _id: 'E1', name: '测试马拉松', city: '北京', date: '2026-11-08', raceTypes: ['full'] });
   Object.keys(USERS).forEach(k => {
     const u = USERS[k];
     coll('users').set(u._id, clone(u));
@@ -293,6 +307,10 @@ const notifyTo = uid => notifyCalls.filter(n => n.openid === USERS[uid]._openid)
     ok('我的互助含应征者联系方式', mine.list[0].applicants.length === 2 && !!mine.list[0].applicants[0].contact.wechat, mine);
     ok('发起人自己能拿到原微信号（编辑表单回填用）', mine.list[0].myWechat === 'runner_001', mine.list[0].myWechat);
     ok('应征者列表拿不到发起人微信号', mine.list[0].contact === undefined, mine.list[0].contact);
+    ok('我发布的带赛事名/日期', mine.list[0].eventName === '测试马拉松' && !!mine.list[0].eventDate, [mine.list[0].eventName, mine.list[0].eventDate]);
+
+    const bMine = await call('b', { action: 'myApplies' });
+    ok('我应征的也带赛事名', bMine.list[0].eventName === '测试马拉松', bMine.list[0].eventName);
 
     const follow = await call('c', { action: 'checkFollow' });
     ok('关注自检返回 followed', follow.followed === true, follow);
@@ -512,6 +530,24 @@ const notifyTo = uid => notifyCalls.filter(n => n.openid === USERS[uid]._openid)
     await call('c', { action: 'report', helpId: h9 });
     ok('满 3 次举报下架', helpDoc(h9).status === 'banned', helpDoc(h9));
     ok('下架后组外看不到', !(await call('b', { action: 'list' })).list.some(x => x._id === h9));
+  }
+
+  section('N 我关注的赛事（发布前先选一场）');
+  {
+    const mine = await call('owner', { action: 'myEvents' });
+    ok('返回我关注的赛事', mine.success === true && mine.list.length === 1 && mine.list[0].eventId === 'E1', mine);
+    ok('带出赛事名/日期/城市', mine.list[0].name === '测试马拉松' && mine.list[0].city === '北京' && mine.list[0].date === '2026-11-08', mine.list[0]);
+
+    coll('race_markers').delete('m_c');
+    const none = await call('c', { action: 'myEvents' });
+    ok('一场都没关注时返回空（前端据此引导去关注）', none.success === true && none.list.length === 0, none);
+    coll('race_markers').set('m_c', { _id: 'm_c', userId: 'u_c', eventId: 'E1' });
+
+    // 赛事被删了也要能列出来，不能让用户看到空白无处可点
+    coll('race_events').delete('E1');
+    const orphan = await call('owner', { action: 'myEvents' });
+    ok('赛事信息缺失时给兜底名', orphan.list.length === 1 && !!orphan.list[0].name, orphan.list[0]);
+    coll('race_events').set('E1', { _id: 'E1', name: '测试马拉松', city: '北京', date: '2026-11-08' });
   }
 
   // ---------------------------------------------------------------- 汇总

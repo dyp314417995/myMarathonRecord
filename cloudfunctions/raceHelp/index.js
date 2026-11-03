@@ -139,7 +139,7 @@ async function notify(userId, content, page) {
       data: {
         openid,
         templateId: TEMPLATE_ID,
-        page: page || '/pages/tools/calendar/calendar',
+        page: page || '/pages/tools/calendar/index',
         data: {
           date1: { value: todayStr() },
           thing2: { value: truncate(content, 20) },
@@ -194,6 +194,29 @@ async function sumAppliedPeople(helpId) {
 function publicHelp(h, extra = {}) {
   const { contact, ...rest } = h;
   return { ...rest, ...extra };
+}
+
+// 互助里只存了 eventId。小工具的聚合页要按赛事分组，得知道赛事叫什么、哪天跑，
+// 所以一次批量补齐，别让前端拿着 eventId 一场一场去查（那是 N 次请求）。
+async function eventBrief(ids) {
+  const uniq = Array.from(new Set((ids || []).filter(Boolean)));
+  if (!uniq.length) return {};
+  const r = await db.collection('race_events')
+    .where({ _id: _.in(uniq) })
+    .field({ name: 1, date: 1, city: 1 })
+    .limit(100).get().catch(() => ({ data: [] }));
+  const map = {};
+  ((r && r.data) || []).forEach((e) => { map[e._id] = e; });
+  return map;
+}
+
+function eventExtra(map, eventId) {
+  const e = (map && map[eventId]) || {};
+  return {
+    eventName: e.name || '',
+    eventDate: e.date || null,
+    eventCity: e.city || '',
+  };
 }
 
 // 四种对外状态：招募中 / 已截止 / 已完成 / 已取消
@@ -524,16 +547,41 @@ exports.main = async (event = {}) => {
       return { success: true, full, remain: Math.max(0, remain - peopleCount) };
     }
 
+    // ===================== 我关注的赛事（发布时先选一场） =====================
+    // 聚合页不在某场赛事的上下文里，发布前必须先知道「发到哪场」。
+    // 这里只回精简字段，够选就行，别把整场赛事（timeline/poster）都塞过来
+    if (action === 'myEvents') {
+      const who = await resolveUserIds(OPENID);
+      const mkRes = await db.collection('race_markers')
+        .where({ userId: who })
+        .orderBy('createTime', 'desc')
+        .limit(50).get().catch(() => ({ data: [] }));
+      const ids = Array.from(new Set(((mkRes && mkRes.data) || []).map(m => m.eventId).filter(Boolean)));
+      const map = await eventBrief(ids);
+      const list = ids.map((id) => {
+        const e = map[id] || {};
+        return { eventId: id, name: e.name || '赛事信息待更新', date: e.date || null, city: e.city || '' };
+      });
+      // 离得近的排前面，没日期的沉底——发布时多数人找的就是最近那场
+      list.sort((x, y) => {
+        const tx = new Date(x.date || 8.64e15).getTime();
+        const ty = new Date(y.date || 8.64e15).getTime();
+        return tx - ty;
+      });
+      return { success: true, list };
+    }
+
     // ===================== 我发布的互助（含应征者联系方式） =====================
     if (action === 'myHelps') {
       const res = await db.collection(HELPS)
         .where({ userId: OPENID })
         .orderBy('createTime', 'desc')
         .limit(50).get().catch(() => ({ data: [] }));
-      // 删除过的不再露面；其余四种状态都留着，让人看得见这条互助的来龙去脉
-      const list = (res.data || []).filter(h => !h.deleted);
+        // 删除过的不再露面；其余四种状态都留着，让人看得见这条互助的来龙去脉
+        const list = (res.data || []).filter(h => !h.deleted);
+        const evMap = await eventBrief(list.map(h => h.eventId));
 
-      const helps = await Promise.all(list.map(async (h) => {
+        const helps = await Promise.all(list.map(async (h) => {
         const aRes = await db.collection(APPLIES)
           .where({ helpId: h._id, status: _.neq('canceled') })
           .orderBy('createTime', 'desc').limit(30).get().catch(() => ({ data: [] }));
@@ -548,6 +596,7 @@ exports.main = async (event = {}) => {
           isMine: true,
           isMember: true,
           myWechat: (h.contact || {}).wechat || '',
+          ...eventExtra(evMap, h.eventId),
         });
       }));
       return { success: true, list: helps };
@@ -560,6 +609,7 @@ exports.main = async (event = {}) => {
         .orderBy('createTime', 'desc').limit(50).get().catch(() => ({ data: [] }));
       // 自己主动退的不再占位置；发起人取消的那种要留着，得让人知道是被谁取消的
       const applies = (aRes.data || []).filter(a => !a.deleted && (a.status !== 'canceled' || a.cancelFlag === 'owner-canceled'));
+      const evMap = await eventBrief(applies.map(a => a.eventId));
 
       const list = await Promise.all(applies.map(async (a) => {
         const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
@@ -582,7 +632,7 @@ exports.main = async (event = {}) => {
           // 删除只给已经结束的：要么这条被取消了，要么自己已经退出去了。
           // 已完成的不能直接删，否则等于用抹掉记录来掩盖退出，发起人那边人还在
           canDelete: state === 'canceled' || a.status === 'canceled',
-          ...decorateHelp(h, {}),
+          ...decorateHelp(h, eventExtra(evMap, h.eventId)),
         };
       }));
       return { success: true, list: list.filter(Boolean) };

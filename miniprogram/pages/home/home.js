@@ -230,6 +230,11 @@ Page({
     wx.navigateTo({ url: '/pages/tools/ledger/index' });
   },
 
+  // 跑友互助：入口放到小工具，不再藏在每场赛事的详情页里
+  onRaceHelp() {
+    wx.navigateTo({ url: '/pages/tools/raceHelp/index' });
+  },
+
   onSignin() {
     wx.navigateTo({ url: '/pages/signin/index' });
   },

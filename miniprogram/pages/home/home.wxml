@@ -273,6 +273,10 @@
       <text class="menu-icon">💰</text>
       <text class="menu-text">跑步账本</text>
     </view>
+    <view class="menu-item card" bindtap="onRaceHelp">
+      <text class="menu-icon">🤝</text>
+      <text class="menu-text">跑友互助</text>
+    </view>
   </view>
 
   <!-- 版本号 -->
