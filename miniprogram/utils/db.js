@@ -134,23 +134,44 @@ async function getUserCount(condition = {}) {
   return res.total;
 }
 
+// ============ 分页取全 ============
+
+/**
+ * 把一条查询翻页取全。
+ *
+ * 小程序端 db.collection().get() 单次最多 20 条，limit 写 50、200 都会被平台拒绝，
+ * 所以「想一次多拿点」在这里走不通，只能按页往回翻。
+ *
+ * buildQuery 必须**每次返回一个新对象**：云开发的链式 API 是不可变的，
+ * 复用同一个对象反复 skip 会拿到同一批数据。
+ *   fetchAll(() => db.collection('groups').orderBy('sort', 'asc'))
+ *
+ * @param {Function} buildQuery 返回 Query 的函数（已带好 where / orderBy）
+ * @param {{pageSize?: number, max?: number}} opts max 是兜底上限，默认 200
+ * @returns {Promise<{data: Array}>} 与 get() 同结构，调用方可以直接替换
+ */
+async function fetchAll(buildQuery, opts) {
+  // pageSize 上限就是平台的 20，传大了也没有意义
+  const pageSize = Math.min((opts && opts.pageSize) || 20, 20);
+  const max = (opts && opts.max) || 200;
+  const all = [];
+  for (let skip = 0; skip < max; skip += pageSize) {
+    // 最后一页可能不足 20：max 是硬上限，不能因为"一页凑满 20"就多取
+    const size = Math.min(pageSize, max - skip);
+    const res = await buildQuery().skip(skip).limit(size).get();
+    const rows = (res && res.data) || [];
+    all.push(...rows);
+    if (rows.length < size) break;   // 不满一页，说明到底了
+  }
+  return { data: all };
+}
+
 // ============ 群组操作 ============
 
 /** 获取所有群组 */
 async function getGroups() {
-  // 小程序端单次查询最多 20 条，limit 写多大都一样（超过 20 是直接被拒，不是给你 100）。
-  // 群按 sort 升序、新群排在最后，所以只取一次的话，第 21 个群起就永远"加完看不见"。
-  // 这里按 20 条一页往回翻，翻到不满一页为止。
-  const PAGE = 20;
-  const MAX = 200;         // 兜底：群里真到 200 个，就该改成带搜索的分页列表了
-  const all = [];
-  for (let skip = 0; skip < MAX; skip += PAGE) {
-    const res = await db.collection('groups').orderBy('sort', 'asc').skip(skip).limit(PAGE).get();
-    const rows = (res && res.data) || [];
-    all.push(...rows);
-    if (rows.length < PAGE) break;
-  }
-  return { data: all };
+  // 群按 sort 升序、新群排最后，只查一次的话第 21 个群起就"加完看不见"
+  return await fetchAll(() => db.collection('groups').orderBy('sort', 'asc'));
 }
 
 /** 创建群组 */
@@ -208,7 +229,7 @@ async function checkIsSuperAdmin(userId) {
 }
 
 module.exports = {
-  db, _,
+  db, _, fetchAll,
   getCurrentUser, createUser, updateUser, getUserList, getUserCount,
   getGroups, createGroup, updateGroup, deleteGroup,
   getAdminList, createAdmin, updateAdmin, checkIsAdmin, checkIsSuperAdmin,

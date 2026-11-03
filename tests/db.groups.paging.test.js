@@ -99,12 +99,50 @@ function ok(name, cond, extra) {
     ok('没有群时返回空数组', Array.isArray(none.data) && none.data.length === 0, none.data);
   }
 
+  console.log('\n通用分页工具 fetchAll');
+  {
+    // 前面的边界测试把数据改小了，这里恢复成 45 个
+    GROUPS.length = 0;
+    Array.from({ length: 45 }, (_, i) => GROUPS.push({ _id: 'g' + (i + 1), name: '群' + (i + 1), sort: i + 1 }));
+
+    getCalls = 0;
+    let built = 0;
+    const res = await dbUtil.fetchAll(() => { built += 1; return makeQuery('groups').orderBy('sort', 'asc'); });
+    ok('fetchAll 取回全部 45 条', res.data.length === 45, res.data.length);
+    ok('翻了 3 页', getCalls === 3, getCalls);
+    ok('每次 skip 都重新建查询对象（链式 API 是不可变的）', built === 3, built);
+
+    getCalls = 0;
+    const capped = await dbUtil.fetchAll(() => makeQuery('groups').orderBy('sort', 'asc'), { max: 10 });
+    ok('max 能兜住总量（只取前 10 条）', capped.data.length === 10, capped.data.length);
+
+    getCalls = 0;
+    const big = await dbUtil.fetchAll(() => makeQuery('groups').orderBy('sort', 'asc'), { pageSize: 100 });
+    ok('pageSize 传 100 会被压回 20（平台上限），不会报错', big.data.length === 45 && getCalls === 3, [big.data.length, getCalls]);
+
+    GROUPS.length = 0;
+    getCalls = 0;
+    const none = await dbUtil.fetchAll(() => makeQuery('groups'));
+    ok('空集合返回空数组', Array.isArray(none.data) && none.data.length === 0, none.data);
+    ok('空集合只查 1 次', getCalls === 1, getCalls);
+  }
+
   console.log('\n避免再次踩同一个坑');
   {
-    const src = require('fs').readFileSync(__dirname + '/../miniprogram/utils/db.js', 'utf8');
-    const body = src.slice(src.indexOf('async function getGroups'), src.indexOf('async function createGroup'));
-    ok('getGroups 里没有再写 limit 大于 20', !/limit\(\s*(2[1-9]|[3-9]\d|\d{3,})\s*\)/.test(body), body.match(/limit\([^)]*\)/g));
-    ok('用了 skip 做分页', /skip\(/.test(body));
+    const read = p => require('fs').readFileSync(__dirname + '/' + p, 'utf8');
+    const OVER20 = /limit\(\s*(2[1-9]|[3-9]\d|\d{3,})\s*\)/;
+
+    const src = read('../miniprogram/utils/db.js');
+    const body = src.slice(src.indexOf('async function fetchAll'), src.indexOf('// ============ 群组操作'));
+    ok('fetchAll 用 skip 翻页', /skip\(/.test(body));
+    ok('fetchAll 把 pageSize 压在 20 以内', /Math\.min\([\s\S]{0,60}?,\s*20\)/.test(body), body.slice(0, 400));
+    ok('getGroups 改成走 fetchAll', /async function getGroups\(\)[\s\S]{0,240}fetchAll\(/.test(src));
+
+    const certSrc = read('../miniprogram/pages/records/certificates.js');
+    ok('荣耀时刻不再写 limit(200)', !OVER20.test(certSrc) && /dbUtil\.fetchAll\(/.test(certSrc), certSrc.match(/limit\([^)]*\)/g));
+
+    const adminSrc = read('../miniprogram/pages/points/admin.js');
+    ok('待审核用户不再写 limit(50)', !OVER20.test(adminSrc) && /dbUtil\.fetchAll\(/.test(adminSrc), adminSrc.match(/limit\([^)]*\)/g));
   }
 
   console.log('\n结果：' + (fail === 0 ? pass + ' 项全部通过' : pass + ' 通过，' + fail + ' 失败'));

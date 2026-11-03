@@ -65,11 +65,13 @@ Page({
   // 加载注册待审核用户（status=pending 且未选群）
   async loadPendingRegisters() {
     try {
-      const res = await dbUtil.db.collection('users')
-        .where({ status: 'pending' })
-        .orderBy('createTime', 'desc')
-        .limit(50)
-        .get();
+      // 待审核用户可能不止 20 个，单次查询上限就是 20，得翻页取
+      const res = await dbUtil.fetchAll(
+        () => dbUtil.db.collection('users')
+          .where({ status: 'pending' })
+          .orderBy('createTime', 'desc'),
+        { max: 200 },
+      );
       const list = await Promise.all((res.data || []).map(async (u) => {
         let avatar = u.avatarUrl || '';
         if (avatar && avatar.startsWith('cloud://')) {

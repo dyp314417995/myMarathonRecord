@@ -118,7 +118,11 @@ Page({
     if (!userId) { this.setData({ loading: false }); return; }
 
     try {
-      const res = await db.collection('race_records').where({ userId }).orderBy('date', 'desc').limit(200).get();
+      // limit 最多只能写 20（平台限制），写 200 会被直接拒，这里走分页取全
+      const res = await dbUtil.fetchAll(
+        () => db.collection('race_records').where({ userId }).orderBy('date', 'desc'),
+        { max: 200 },
+      );
       // 荣耀墙只放「已完赛且传了证书图」的：没证书的跑马记录不进这里
       const honored = (res.data || []).filter(r => r.status === 'finished' && (r.certImages || []).length > 0);
       const list = await this.fillImages(honored);
