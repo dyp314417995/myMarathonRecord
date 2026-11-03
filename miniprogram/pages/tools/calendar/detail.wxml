@@ -380,7 +380,7 @@
   <view class="modal-mask" wx:if="{{showHelpForm}}" catchtap="onCloseHelpForm"></view>
   <view class="modal-box help-modal" wx:if="{{showHelpForm}}">
     <view class="modal-header">
-      <text>发布互助</text>
+      <text>{{editingHelpId ? '编辑再发起' : '发布互助'}}</text>
       <text class="modal-close" catchtap="onCloseHelpForm">✕</text>
     </view>
     <scroll-view class="help-body" scroll-y>
@@ -433,7 +433,7 @@
 
       <view class="modal-actions">
         <button class="btn-outline" catchtap="onCloseHelpForm">取消</button>
-        <button class="btn-primary {{helpSubmitting ? 'disabled' : ''}}" catchtap="onSubmitHelp">{{helpSubmitting ? '发布中…' : '发布'}}</button>
+        <button class="btn-primary {{helpSubmitting ? 'disabled' : ''}}" catchtap="onSubmitHelp">{{helpSubmitting ? '处理中…' : (editingHelpId ? '保存并重新发起' : '发布')}}</button>
       </view>
     </scroll-view>
   </view>
