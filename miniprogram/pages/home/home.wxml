@@ -39,7 +39,7 @@
 
     <!-- 小工具 -->
     <view class="section-title">小工具</view>
-    <view class="menu-grid col2">
+    <view class="menu-grid">
       <view class="menu-item card" bindtap="onCalendar">
         <text class="menu-icon">📅</text>
         <text class="menu-text">赛事日历</text>
@@ -111,7 +111,7 @@
   <!-- ========== 超管 ========== -->
   <block wx:if="{{role === 'super_admin'}}">
     <view class="section-title">管理</view>
-    <view class="menu-grid col2">
+    <view class="menu-grid">
       <view class="menu-item card" bindtap="onManageAdmins">
         <text class="menu-icon">👤</text>
         <text class="menu-text">管理员配置</text>
@@ -147,7 +147,7 @@
     </view>
 
     <view class="section-title">我的</view>
-    <view class="menu-grid col2">
+    <view class="menu-grid">
       <view class="menu-item card" bindtap="onGroups">
         <text class="menu-icon">📋</text>
         <text class="menu-text">跑群列表</text>
@@ -174,7 +174,7 @@
   <!-- ========== 管理员 ========== -->
   <block wx:elif="{{role === 'admin'}}">
     <view class="section-title">管理</view>
-    <view class="menu-grid col2">
+    <view class="menu-grid">
       <view class="menu-item card" bindtap="onManageUsers">
         <text class="menu-icon">👥</text>
         <text class="menu-text">用户管理</text>
@@ -202,7 +202,7 @@
     </view>
 
     <view class="section-title">我的</view>
-    <view class="menu-grid col2">
+    <view class="menu-grid">
       <view class="menu-item card" bindtap="onGroups">
         <text class="menu-icon">📋</text>
         <text class="menu-text">跑群列表</text>
@@ -229,7 +229,7 @@
   <!-- ========== 普通用户 ========== -->
   <block wx:else>
     <view class="section-title">我的</view>
-    <view class="menu-grid col2">
+    <view class="menu-grid">
       <view class="menu-item card" bindtap="onGroups">
         <text class="menu-icon">📋</text>
         <text class="menu-text">跑群列表</text>
@@ -255,7 +255,7 @@
 
   <!-- ========== 小工具 ========== -->
   <view class="section-title">小工具</view>
-  <view class="menu-grid col2">
+  <view class="menu-grid">
     <view class="menu-item card" bindtap="onCalendar">
       <text class="menu-icon">📅</text>
       <text class="menu-text">赛事日历</text>
