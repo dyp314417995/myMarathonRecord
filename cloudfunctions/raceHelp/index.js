@@ -195,7 +195,9 @@ const STATE_LABEL = { open: '招募中', expired: '已截止', done: '已完成'
 
 function helpState(h) {
   const s = h && h.status;
-  if (s === 'done') return 'done';
+  // 'full' 是旧数据里「招满」的写法，跟 done 同义；
+  // 不认的话它会掉进下面的时间判断，满员的又会冒出来被人接着应征
+  if (s === 'done' || s === 'full') return 'done';
   if (s === 'canceled' || s === 'closed') return 'canceled';
   if (s === 'banned') return 'banned';
   const t = new Date(h && h.deadline).getTime();
@@ -565,9 +567,13 @@ exports.main = async (event = {}) => {
           // 双方都已表达诚意，互见联系方式
           ownerContact: { wechat: (h.contact || {}).wechat },
           applyCanceled: a.status === 'canceled',
-          // 还在招（或刚截止）可以退；已完成/已取消就只能删掉这条记录了
-          canCancel: a.status !== 'canceled' && (state === 'open' || state === 'expired'),
-          canDelete: state === 'done' || state === 'canceled' || a.status === 'canceled',
+          // 谁都能退：招募中、已截止，甚至已经完成的，人都可以说不去了——
+          // 锁住名单只会让他线下默默放鸽子，那才是互助最怕的事。
+          // 只有发起人已经取消的那条没什么可退的
+          canCancel: a.status !== 'canceled' && state !== 'canceled',
+          // 删除只给已经结束的：要么这条被取消了，要么自己已经退出去了。
+          // 已完成的不能直接删，否则等于用抹掉记录来掩盖退出，发起人那边人还在
+          canDelete: state === 'canceled' || a.status === 'canceled',
           ...decorateHelp(h, {}),
         };
       }));
@@ -702,34 +708,38 @@ exports.main = async (event = {}) => {
       const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
       const h = hRes && hRes.data;
       const st = h ? helpState(h) : 'canceled';
-      if (st === 'done') return { success: false, error: '这条互助已经完成，不能再取消应征' };
       if (st === 'canceled') return { success: false, error: '这条互助已被发起人取消' };
 
       await db.collection(APPLIES).doc(applyId).update({
         data: { status: 'canceled', cancelTime: now() },
       });
 
-      // 名额按人数重算：撤销后腾出来的位置要放回去，别人还能补位。
-      // 这里只动人数，不碰 status——已完成是终态，进不来（上面已经挡掉了），
-      // 能退的只有招募中和已截止的，它们本来就还是 open。
+      // 名额按人数重算：退出去的位置要放回去，别人还能补位
       const cRes = await db.collection(APPLIES)
         .where({ helpId: a.helpId, status: _.neq('canceled') }).get().catch(() => ({ data: [] }));
       const alive = (cRes && cRes.data) || [];
       const people = alive.reduce((s, x) => s + Math.max(1, parseInt(x.peopleCount, 10) || 1), 0);
+      let reopened = false;
       if (h) {
-        await db.collection(HELPS).doc(a.helpId).update({
-          data: {
-            applyCount: alive.length,
-            applyPeople: people,
-            updateTime: now(),
-          },
-        }).catch(() => {});
-        // 组里有人退出，发起人和剩下的搭子都要知道
+        const need = Math.max(1, parseInt(h.peopleNeeded, 10) || 1);
+        const upd = { applyCount: alive.length, applyPeople: people, updateTime: now() };
+        // 招满自动完成的那条，人走了这个「满」就不成立了，退回招募中接着招。
+        // 已经过了截止时间的话，读的时候自然算成「已截止」，不用在这儿单独写状态。
+        // 发起人自己确认完成的（doneReason=owner）不推翻他的决定，只更新人数。
+        const wasFull = h.doneReason === 'full' || h.status === 'full';
+        if (st === 'done' && wasFull && people < need) {
+          Object.assign(upd, { status: 'open', doneReason: '', doneTime: null });
+          reopened = true;
+        }
+        await db.collection(HELPS).doc(a.helpId).update({ data: upd }).catch(() => {});
+
+        // 组里有人退出，发起人和剩下的搭子都要知道——包括「人又不够了」这件事
         const typeLabel = (TYPES[h.type] || {}).label || '互助';
-        await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」有人取消应征`, OPENID);
+        const tail = reopened ? `有人退出，现在 ${people}/${need} 人，重新开放招募` : `有人退出，现在 ${people}/${need} 人`;
+        await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」${tail}`, OPENID).catch(() => 0);
       }
 
-      return { success: true };
+      return { success: true, reopened };
     }
 
     return { success: false, error: '未知操作' };

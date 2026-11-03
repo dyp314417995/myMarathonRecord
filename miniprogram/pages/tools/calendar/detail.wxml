@@ -531,7 +531,7 @@
             <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}" data-v="{{item.ownerContact.wechat}}" catchtap="onCopyContact">微信 {{item.ownerContact.wechat}}　复制</text>
           </view>
           <view class="help-mine-btns">
-            <text class="help-mine-btn" wx:if="{{item.canCancel}}" data-id="{{item.applyId}}" catchtap="onCancelMyApply">取消应征</text>
+            <text class="help-mine-btn" wx:if="{{item.canCancel}}" data-id="{{item.applyId}}" catchtap="onCancelMyApply">{{item.state === 'done' ? '我去不了了' : '取消应征'}}</text>
             <text class="help-mine-btn help-mine-del" wx:if="{{item.canDelete}}" data-id="{{item.applyId}}" catchtap="onDeleteMyApply">删除记录</text>
           </view>
         </view>

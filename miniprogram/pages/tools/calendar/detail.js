@@ -1138,16 +1138,26 @@ Page({
 
   onCancelMyApply(e) {
     const applyId = e.currentTarget.dataset.id;
+    const item = (this.data.myApplies || []).find(x => x.applyId === applyId) || {};
+    // 已经定下来的事再说「取消应征」很怪，这时候说的是「我去不了了」
+    const isDone = item.state === 'done';
     wx.showModal({
-      title: '取消应征',
-      content: '取消后名额会放回，发布者会收到通知。确定取消？',
+      title: isDone ? '我去不了了' : '取消应征',
+      content: isDone
+        ? (item.doneReason === 'full'
+          ? '这条互助已经招满，退出后会重新开放招募，发起人和组内跑友都会收到通知。确定退出？'
+          : '发起人和组内跑友都会收到通知。确定退出？')
+        : '取消后名额会放回，发布者会收到通知。确定取消？',
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
           name: 'raceHelp', data: { action: 'cancelApply', applyId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
-        wx.showToast({ title: '已取消应征', icon: 'none' });
+        wx.showToast({
+          title: res.reopened ? '已退出，重新开放招募' : (isDone ? '已退出' : '已取消应征'),
+          icon: 'none', duration: 2500,
+        });
         this.loadMyHelps();
       },
     });
