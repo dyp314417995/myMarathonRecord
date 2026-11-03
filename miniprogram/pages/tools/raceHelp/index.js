@@ -223,9 +223,20 @@ Page({
     this.setData({ ['form.' + k]: e.detail.value });
   },
 
+  // 需要几人：输入过程中只挡非数字，**不夹紧数值**
+  // 以前每按一个键就 Math.max(1, ...) 再 setData：
+  //   想从 2 改成 4 → 删掉 → 空 → 立刻被填回 1 → 再输 4 变成 14 → 又被 clamp 成 9
+  // 数字根本改不动，而且删不干净。收敛放到失焦和提交时做。
   onPeople(e) {
-    const n = Math.max(1, Math.min(9, parseInt(e.detail.value, 10) || 1));
-    this.setData({ 'form.peopleNeeded': n });
+    // type="number" 在部分机型仍能敲出 . 和 -，只留数字，最多 2 位（上限 9 人，够用）
+    const v = String(e.detail.value || '').replace(/[^\d]/g, '').slice(0, 2);
+    this.setData({ 'form.peopleNeeded': v });
+  },
+
+  // 离开输入框时再收敛到 1-9，空的话回到默认 2
+  onPeopleBlur() {
+    const n = parseInt(this.data.form.peopleNeeded, 10);
+    this.setData({ 'form.peopleNeeded': Math.max(1, Math.min(9, n || 2)) });
   },
 
   onDate(e) { this.setData({ 'form.deadline': e.detail.value }); },
@@ -254,7 +265,8 @@ Page({
       title: String(f.title).trim(),
       desc: String(f.desc).trim(),
       costNote: String(f.costNote).trim(),
-      peopleNeeded: f.peopleNeeded,
+      // 输入框里可能留着空串或 0（用户直接提交没失焦的情况），这里兜一次
+      peopleNeeded: Math.max(1, Math.min(9, parseInt(f.peopleNeeded, 10) || 2)),
       deadline,
       contact: { wechat: String(f.wechat).trim() },
       ruleAgreed: true,

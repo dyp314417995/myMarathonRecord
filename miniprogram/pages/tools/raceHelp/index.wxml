@@ -147,8 +147,9 @@
 
     <view class="row2">
       <view class="col">
-        <text class="lbl">需要几人</text>
-        <input class="inp" type="number" value="{{form.peopleNeeded}}" bindinput="onPeople" />
+        <text class="lbl">需要几人（1-9）</text>
+        <input class="inp" type="number" maxlength="2" placeholder="2"
+               value="{{form.peopleNeeded}}" bindinput="onPeople" bindblur="onPeopleBlur" />
       </view>
       <view class="col">
         <text class="lbl">微信号</text>
