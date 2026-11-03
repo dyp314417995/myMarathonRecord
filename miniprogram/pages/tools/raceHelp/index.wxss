@@ -81,8 +81,13 @@
 .type { font-size: 24rpx; color: #666; border: 2rpx solid #e5e8eb; border-radius: 10rpx; padding: 10rpx 20rpx; margin: 0 14rpx 12rpx 0; }
 .type.on { color: #1aad19; border-color: #1aad19; background: rgba(26,173,25,0.06); }
 
-.inp { width: 100%; box-sizing: border-box; font-size: 26rpx; color: #1f1f1f; background: #f7f8fa; border-radius: 10rpx; padding: 16rpx 18rpx; }
-.area { height: 130rpx; line-height: 1.5; }
+/* input 是原生组件，自带一个约 1.4rem 的默认高度。
+   只写 padding 不写 height 时，border-box 会把这 32rpx 的 padding 从默认高度里扣掉，
+   内容区只剩几个像素——文字上下被裁掉一截，看着就是「显示不全」。
+   所以高度、行高都显式给死，padding 只留左右。 */
+.inp { width: 100%; box-sizing: border-box; height: 84rpx; line-height: 84rpx; font-size: 26rpx; color: #1f1f1f; background: #f7f8fa; border-radius: 10rpx; padding: 0 20rpx; }
+/* 多行输入反过来：行高交还给文字自己（1.5 倍），高度给够，上下 padding 保留才有呼吸感 */
+.area { height: 200rpx; line-height: 1.5; padding: 16rpx 20rpx; }
 .picker { color: #1f1f1f; }
 .row2 { display: flex; justify-content: space-between; }
 .col { width: 48%; }
