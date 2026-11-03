@@ -5,7 +5,6 @@
       <text class="hd-title">跑友互助</text>
       <text class="hd-desc">拼房、拼车、拼饭，只在关注了同一场赛事的跑友之间</text>
     </view>
-    <view class="hd-add" bindtap="onStartPublish">＋ 发布</view>
   </view>
 
   <view class="tabs">
@@ -93,6 +92,9 @@
         </view>
       </block>
     </view>
+
+    <!-- 列表有数据时，发布入口放这儿；空列表时用上面那个「去发布」，始终只有一个入口 -->
+    <view class="pub-more" wx:if="{{groups.length}}" bindtap="onStartPublish">＋ 发起互助</view>
 
     <view class="foot-tip">互助只在关注了同一场赛事的跑友之间可见，约满或结束后就不再占位置</view>
   </block>

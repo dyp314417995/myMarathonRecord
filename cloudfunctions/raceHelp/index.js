@@ -219,6 +219,16 @@ function eventExtra(map, eventId) {
   };
 }
 
+// 只取「哪一天」，用于判断赛事是不是已经跑完了。
+// 云函数跑在 UTC 上，直接 toISOString 会让北京时间早上 8 点前的比赛算成前一天，
+// 所以统一加 8 小时再取日期。
+function dayKey(v) {
+  if (!v) return '';
+  const d = (v instanceof Date) ? v : new Date(v);
+  if (isNaN(d.getTime())) return '';
+  return new Date(d.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
 // 四种对外状态：招募中 / 已截止 / 已完成 / 已取消
 // 「已截止」是算出来的、不落库：到点还开着就是已截止，省得靠定时任务去改一堆记录。
 // 兼容历史数据：早先取消写的是 status='closed'，一并认。
@@ -562,13 +572,18 @@ exports.main = async (event = {}) => {
         const e = map[id] || {};
         return { eventId: id, name: e.name || '赛事信息待更新', date: e.date || null, city: e.city || '' };
       });
+      // 已经跑完的赛事不再列出来：跑完了还发拼房拼车，没有意义。
+      // 当天要留着——回程拼车正是比赛日当天的事，所以比较用 >=
+      const today = dayKey(new Date());
+      const usable = list.filter(x => !x.date || dayKey(x.date) >= today);
+
       // 离得近的排前面，没日期的沉底——发布时多数人找的就是最近那场
-      list.sort((x, y) => {
+      usable.sort((x, y) => {
         const tx = new Date(x.date || 8.64e15).getTime();
         const ty = new Date(y.date || 8.64e15).getTime();
         return tx - ty;
       });
-      return { success: true, list };
+      return { success: true, list: usable };
     }
 
     // ===================== 我发布的互助（含应征者联系方式） =====================

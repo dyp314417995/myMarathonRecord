@@ -538,6 +538,15 @@ const notifyTo = uid => notifyCalls.filter(n => n.openid === USERS[uid]._openid)
     ok('返回我关注的赛事', mine.success === true && mine.list.length === 1 && mine.list[0].eventId === 'E1', mine);
     ok('带出赛事名/日期/城市', mine.list[0].name === '测试马拉松' && mine.list[0].city === '北京' && mine.list[0].date === '2026-11-08', mine.list[0]);
 
+    // 已经跑完的赛事不该再出现在发布列表里
+    coll('race_events').set('E0', { _id: 'E0', name: '去年那场', city: '上海', date: '2025-01-01' });
+    coll('race_markers').set('m_owner_e0', { _id: 'm_owner_e0', userId: 'u_owner', eventId: 'E0' });
+    const filtered = await call('owner', { action: 'myEvents' });
+    ok('已完赛的赛事被过滤掉', filtered.list.every(x => x.eventId !== 'E0'), filtered.list);
+    ok('还没跑的赛事仍然在', filtered.list.some(x => x.eventId === 'E1'), filtered.list);
+    coll('race_markers').delete('m_owner_e0');
+    coll('race_events').delete('E0');
+
     coll('race_markers').delete('m_c');
     const none = await call('c', { action: 'myEvents' });
     ok('一场都没关注时返回空（前端据此引导去关注）', none.success === true && none.list.length === 0, none);

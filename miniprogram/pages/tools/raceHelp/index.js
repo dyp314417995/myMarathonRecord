@@ -152,8 +152,16 @@ Page({
   },
 
   async onStartPublish() {
-    let events = this.data.events;
-    if (!this.data.eventsLoaded) events = await this.loadEvents();
+    // 每次都重新拉一次：用户很可能刚被引到赛事列表关注了一场又回来，
+    // 沿用缓存的话，他会看到一个空弹窗，以为关注没生效
+    wx.showLoading({ title: '加载赛事…', mask: true });
+    let events = [];
+    try {
+      events = await this.loadEvents();
+    } catch (e) {
+      events = this.data.events || [];
+    }
+    wx.hideLoading();
 
     // 一场都没关注：与其让他在弹窗里看着空白，不如直接送去关注
     if (!events.length) {
