@@ -2,7 +2,9 @@
 const dbUtil = require('../../utils/db');
 const cache = require('../../utils/cache');
 
-const LIST_KEY = 'groups_public_list';
+// v2：老设备上存在一份旧 key 的缓存，而 versionKey 改名并不会让它失效
+// （两个域的新版本号都从 0 起，比对依然相等）。换 key 名才彻底作废。
+const LIST_KEY = 'groups_public_list_v2';
 const LIST_TTL = 10 * 60 * 1000;   // 群很少变动，10 分钟够用
 
 Page({
@@ -19,9 +21,9 @@ Page({
       const { data } = await cache.load(
         LIST_KEY,
         async () => enrich(await dbUtil.getGroups()),
-        { ttl: LIST_TTL, versionKey: 'groups_v1' },
+        { ttl: LIST_TTL, versionKey: 'groups' },
       );
-      if (data !== this.data.groups) this.setData({ groups: data });
+      this.setData({ groups: data });
     } catch {
       if (!cached || !cached.length) wx.showToast({ title: '加载失败', icon: 'none' });
     }

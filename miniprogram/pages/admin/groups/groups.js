@@ -1,5 +1,6 @@
 // pages/admin/groups/groups.js - 群组管理（编辑/排序/二维码）
 const dbUtil = require('../../../utils/db');
+const cache = require('../../../utils/cache');
 
 Page({
   data: {
@@ -17,6 +18,13 @@ Page({
 
   async onShow() {
     await this.loadGroups();
+  },
+
+  // 群一改动，跑群列表那份 10 分钟缓存就必须作废。
+  // 以前这里只刷新了管理页自己，前台缓存还命中着旧数据，用户看着像"没加上"。
+  refresh() {
+    cache.invalidate('groups');
+    this.loadGroups();
   },
 
   async loadGroups() {
@@ -97,15 +105,17 @@ Page({
         // 编辑模式
         await dbUtil.updateGroup(editId, data);
       } else {
-        // 新增模式
-        data.sort = this.data.groups.length + 1;
+        // 新增模式：用现有最大值 +1，而不是条数 +1。
+        // 删过群之后条数会小于最大 sort，直接拿条数会撞号，新群的位置就飘了
+        const maxSort = this.data.groups.reduce((m, g) => Math.max(m, parseInt(g.sort, 10) || 0), 0);
+        data.sort = maxSort + 1;
         await dbUtil.createGroup(data);
       }
 
       wx.hideLoading();
       wx.showToast({ title: '保存成功', icon: 'success' });
       this.setData({ showModal: false });
-      this.loadGroups();
+      this.refresh();
     } catch (err) {
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
@@ -133,7 +143,7 @@ Page({
         dbUtil.updateGroup(id1, { sort: sort2 }),
         dbUtil.updateGroup(id2, { sort: sort1 }),
       ]);
-      this.loadGroups();
+      this.refresh();
     } catch (err) {
       wx.showToast({ title: '排序失败', icon: 'none' });
     }
@@ -151,7 +161,7 @@ Page({
         try {
           await dbUtil.deleteGroup(id);
           wx.showToast({ title: '已删除', icon: 'success' });
-          this.loadGroups();
+          this.refresh();
         } catch (err) {
           wx.showToast({ title: '删除失败', icon: 'none' });
         }

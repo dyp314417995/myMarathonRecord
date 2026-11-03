@@ -138,7 +138,10 @@ async function getUserCount(condition = {}) {
 
 /** 获取所有群组 */
 async function getGroups() {
-  return await db.collection('groups').orderBy('sort', 'asc').get();
+  // 小程序端 db.collection().get() 默认只回 20 条（云函数才是 100）。
+  // 群按 sort 升序排，新加的群 sort 最大、正好落在最后，群一到 20 个，
+  // 之后加的群就查不出来——页面看着像"没加上"，其实是第 21 条被截了。
+  return await db.collection('groups').orderBy('sort', 'asc').limit(100).get();
 }
 
 /** 创建群组 */
