@@ -295,7 +295,8 @@
 .help-ap-msg { display: block; font-size: 24rpx; color: #888; margin-top: 6rpx; }
 .help-ap-contact { display: block; font-size: 24rpx; color: #1aad19; margin-top: 6rpx; }
 .help-mine-btns { display: flex; justify-content: flex-end; margin-top: 14rpx; }
-.help-mine-btns > * + * { margin-left: 16rpx; }
+/* WXSS 不支持 * 通配符，用相邻兄弟选择器；特异性高于上面的 margin:0，能覆盖 */
+.help-mine-btn + .help-mine-btn { margin-left: 16rpx; }
 .help-mine-del { color: #ff4d4f; border-color: rgba(255,77,79,0.4); }
 .help-mine-btn { font-size: 24rpx; color: #999; border: 2rpx solid #ddd; padding: 8rpx 24rpx; border-radius: 20rpx; background: #fff; line-height: 1.5; margin: 0; }
 .help-mine-btn::after { border: none; }
