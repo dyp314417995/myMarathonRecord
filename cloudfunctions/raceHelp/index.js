@@ -93,7 +93,15 @@ function parseDeadline(s) {
 }
 
 // 取用户的 openid（users 表里两种存法都见过，兼容着取）
+// 关键：互助记录里的 userId 存的就是 OPENID（发布/应征时写的是 OPENID），
+// 拿它去 users.doc() 查必然落空 → 返回空 → notify 直接放弃，
+// 结果就是「有人应征」「有人退出」这些通知悄悄发不出去。openid 直接用，不必再查。
+const OPENID_RE = /^o[\w-]{20,}$/;
+
 async function getOpenid(userId) {
+  if (!userId) return '';
+  const s = String(userId);
+  if (OPENID_RE.test(s)) return s;
   const r = await db.collection('users').doc(userId).get().catch(() => null);
   const u = r && r.data;
   return (u && (u.openid || u._openid)) || '';
