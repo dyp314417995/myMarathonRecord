@@ -433,7 +433,7 @@
 
       <view class="modal-actions">
         <button class="btn-outline" catchtap="onCloseHelpForm">取消</button>
-        <button class="btn-primary {{helpSubmitting ? 'disabled' : ''}}" catchtap="onSubmitHelp">{{helpSubmitting ? '处理中…' : (editingHelpId ? '保存并重新发起' : '发布')}}</button>
+        <button class="btn-primary {{helpSubmitting ? 'disabled' : ''}}" catchtap="onSubmitHelp">{{helpSubmitting ? '处理中…' : (editingHelpId ? '保存' : '发布')}}</button>
       </view>
     </scroll-view>
   </view>
@@ -509,10 +509,10 @@
             <text class="help-ap-contact" wx:if="{{ap.contact.wechat}}" data-v="{{ap.contact.wechat}}" catchtap="onCopyContact">微信 {{ap.contact.wechat}}　复制</text>
           </view>
           <view class="help-mine-btns">
-            <button class="help-mine-btn help-mine-share" wx:if="{{item.state === 'open'}}" open-type="share" data-id="{{item._id}}" bindtap="onShareHelpItem">分享给跑友</button>
+            <button class="help-mine-btn help-mine-share" wx:if="{{item.state === 'open'}}" open-type="share" data-id="{{item._id}}" bindtap="onShareHelpItem">分享</button>
             <text class="help-mine-btn help-mine-finish" wx:if="{{item.state === 'open' || item.state === 'expired'}}" data-id="{{item._id}}" catchtap="onFinishHelpItem">完成</text>
-            <text class="help-mine-btn" wx:if="{{item.state === 'open' || item.state === 'expired'}}" data-id="{{item._id}}" catchtap="onCloseHelpItem">取消发布</text>
-            <text class="help-mine-btn" wx:if="{{item.state === 'canceled'}}" data-id="{{item._id}}" catchtap="onEditHelpItem">编辑再发起</text>
+            <text class="help-mine-btn" wx:if="{{item.state === 'open' || item.state === 'expired'}}" data-id="{{item._id}}" catchtap="onCloseHelpItem">取消</text>
+            <text class="help-mine-btn" wx:if="{{item.state === 'canceled'}}" data-id="{{item._id}}" catchtap="onEditHelpItem">编辑</text>
             <text class="help-mine-btn help-mine-del" wx:if="{{item.state === 'done' || item.state === 'canceled'}}" data-id="{{item._id}}" catchtap="onDeleteHelpItem">删除</text>
           </view>
         </view>
@@ -531,8 +531,8 @@
             <text class="help-ap-contact" wx:if="{{item.ownerContact.wechat}}" data-v="{{item.ownerContact.wechat}}" catchtap="onCopyContact">微信 {{item.ownerContact.wechat}}　复制</text>
           </view>
           <view class="help-mine-btns">
-            <text class="help-mine-btn" wx:if="{{item.canCancel}}" data-id="{{item.applyId}}" catchtap="onCancelMyApply">{{item.state === 'done' ? '我去不了了' : '取消应征'}}</text>
-            <text class="help-mine-btn help-mine-del" wx:if="{{item.canDelete}}" data-id="{{item.applyId}}" catchtap="onDeleteMyApply">删除记录</text>
+            <text class="help-mine-btn" wx:if="{{item.canCancel}}" data-id="{{item.applyId}}" catchtap="onCancelMyApply">{{item.state === 'done' ? '退出' : '取消'}}</text>
+            <text class="help-mine-btn help-mine-del" wx:if="{{item.canDelete}}" data-id="{{item.applyId}}" catchtap="onDeleteMyApply">删除</text>
           </view>
         </view>
       </block>
