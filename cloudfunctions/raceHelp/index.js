@@ -709,20 +709,18 @@ exports.main = async (event = {}) => {
         data: { status: 'canceled', cancelTime: now() },
       });
 
-      // 名额按人数重算：撤销后腾出来的位置要放回去，满员的也得恢复招募
+      // 名额按人数重算：撤销后腾出来的位置要放回去，别人还能补位。
+      // 这里只动人数，不碰 status——已完成是终态，进不来（上面已经挡掉了），
+      // 能退的只有招募中和已截止的，它们本来就还是 open。
       const cRes = await db.collection(APPLIES)
         .where({ helpId: a.helpId, status: _.neq('canceled') }).get().catch(() => ({ data: [] }));
       const alive = (cRes && cRes.data) || [];
       const people = alive.reduce((s, x) => s + Math.max(1, parseInt(x.peopleCount, 10) || 1), 0);
       if (h) {
-        const need = Math.max(1, parseInt(h.peopleNeeded, 10) || 1);
-        const notExpired = new Date(h.deadline).getTime() > Date.now();
         await db.collection(HELPS).doc(a.helpId).update({
           data: {
             applyCount: alive.length,
             applyPeople: people,
-            // 满员自动完成的那条，人退到不够了就得退回招募中，否则名额空着也没人能看到
-            status: st === 'done' && people < need && notExpired ? 'open' : h.status,
             updateTime: now(),
           },
         }).catch(() => {});
