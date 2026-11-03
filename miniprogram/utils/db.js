@@ -138,10 +138,19 @@ async function getUserCount(condition = {}) {
 
 /** 获取所有群组 */
 async function getGroups() {
-  // 小程序端 db.collection().get() 默认只回 20 条（云函数才是 100）。
-  // 群按 sort 升序排，新加的群 sort 最大、正好落在最后，群一到 20 个，
-  // 之后加的群就查不出来——页面看着像"没加上"，其实是第 21 条被截了。
-  return await db.collection('groups').orderBy('sort', 'asc').limit(100).get();
+  // 小程序端单次查询最多 20 条，limit 写多大都一样（超过 20 是直接被拒，不是给你 100）。
+  // 群按 sort 升序、新群排在最后，所以只取一次的话，第 21 个群起就永远"加完看不见"。
+  // 这里按 20 条一页往回翻，翻到不满一页为止。
+  const PAGE = 20;
+  const MAX = 200;         // 兜底：群里真到 200 个，就该改成带搜索的分页列表了
+  const all = [];
+  for (let skip = 0; skip < MAX; skip += PAGE) {
+    const res = await db.collection('groups').orderBy('sort', 'asc').skip(skip).limit(PAGE).get();
+    const rows = (res && res.data) || [];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return { data: all };
 }
 
 /** 创建群组 */
