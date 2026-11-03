@@ -1,4 +1,6 @@
 /* pages/admin/groups/groups.wxss */
+.group-total { display: flex; align-items: center; justify-content: space-between; padding: 18rpx 26rpx 0; font-size: 24rpx; color: #999; }
+.group-total-warn { font-size: 22rpx; color: #fa8c16; }
 .group-list { padding: 0 12rpx; }
 .group-card { padding: 20rpx 24rpx; margin: 12rpx 12rpx; }
 

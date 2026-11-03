@@ -1,5 +1,10 @@
 <!-- pages/admin/groups/groups.wxml - 群组管理 -->
 <view class="groups-page">
+  <view class="group-total" wx:if="{{total}}">
+    <text>共 {{total}} 个群组</text>
+    <text class="group-total-warn" wx:if="{{truncated}}">只显示 {{groups.length}} 个，剩余未显示</text>
+  </view>
+
   <view wx:if="{{groups.length === 0}}" class="empty-state">
     <text>暂无群组，请添加</text>
   </view>

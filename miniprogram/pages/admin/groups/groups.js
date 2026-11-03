@@ -5,6 +5,8 @@ const cache = require('../../../utils/cache');
 Page({
   data: {
     groups: [],
+    total: 0,          // 库里一共几个群，用来对照列表有没有被截断
+    truncated: false,
     showModal: false,
     modalTitle: '',
     editId: '',           // 编辑模式下存 group._id
@@ -28,7 +30,12 @@ Page({
   },
 
   async loadGroups() {
-    const res = await dbUtil.getGroups();
+    // 顺带数一下总数：显示条数少于总数，就说明查询被截断了，
+    // 而不是"没加上"。这条信息比任何提示都直接。
+    const [res, cnt] = await Promise.all([
+      dbUtil.getGroups(),
+      dbUtil.db.collection('groups').count().catch(() => null),
+    ]);
     const enriched = await Promise.all(res.data.map(async (g) => {
       // 修正负数、空值，补默认字段
       if (g.memberCount == null || g.memberCount < 0) {
@@ -45,7 +52,8 @@ Page({
       }
       return g;
     }));
-    this.setData({ groups: enriched });
+    const total = (cnt && typeof cnt.total === 'number') ? cnt.total : enriched.length;
+    this.setData({ groups: enriched, total, truncated: total > enriched.length });
   },
 
   // ========== 添加 ==========
