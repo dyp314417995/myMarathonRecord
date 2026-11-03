@@ -94,6 +94,7 @@ Page({
     helpToday: '',          // date picker 起始
     helpMaxDate: '',        // date picker 结束
     showHelpForm: false,
+    editingHelpId: '',        // 非空表示这次是「编辑再发起」，提交时走 update
     helpSubmitting: false,
     helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline: '', deadlineTime: '23:59', wechat: '', ruleAgreed: false },
     helpPlaceholder: HELP_PLACEHOLDER.room,     // 当前选中类型对应的示例文案
@@ -488,8 +489,9 @@ Page({
     this.setData({ shareHelpId: '' });   // 只用一次，别把之后分享赛事也带偏了
     const h = helpId && (this.data.myHelps || []).find(x => x._id === helpId);
     if (h) {
-      const tail = h.expired ? '（已截止）'
-        : (h.isFull ? '（已满员）' : `（还差 ${h.remainPeople || h.peopleNeeded} 人）`);
+      const tail = h.state && h.state !== 'open'
+        ? `（${h.stateLabel || ''}）`
+        : `（还差 ${h.remainPeople || h.peopleNeeded} 人）`;
       return shareUtil.buildShare({
         title: `${name}｜${h.typeLabel || '互助'}·${h.title || ''}${tail}`,
         path: `/pages/tools/calendar/detail?id=${this.data.eventId}&helpId=${h._id}`,
@@ -799,7 +801,18 @@ Page({
     }
   },
 
-  async onOpenHelpForm() {
+  onOpenHelpForm() { return this.openHelpForm(null); },
+
+  // 编辑再发起：只有已取消 / 已截止的能改，校验在服务端把关
+  onEditHelpItem(e) {
+    const id = e.currentTarget.dataset.id;
+    const item = (this.data.myHelps || []).find(x => x._id === id);
+    if (!item) return;
+    this.openHelpForm(item);
+  },
+
+  // 发布和编辑共用一套表单：传 item 就是编辑，提交时走 update
+  async openHelpForm(item) {
     // 先确认登录态。没登录的时候提示「先关注」是句假话——
     // 那时根本没去查过关注记录，把人送去登录才是有用的引导。
     const userInfo = wx.getStorageSync('userInfo');
@@ -829,16 +842,50 @@ Page({
     // 不压回来的话，表单一打开就带着个必然失败的截止时间，用户点一下就撞「最多 90 天后」。
     if (deadline > maxDate) deadline = maxDate;   // YYYY-MM-DD 可以直接比大小
 
+    if (item) {
+      const d = new Date(item.deadline);
+      const valid = !isNaN(d.getTime());
+      let dl = valid ? fmt(d) : '';
+      // 原来那个截止时间已经过去了，原样带回来必然提交失败，退回默认值让人自己挑
+      if (!dl || dl < fmt(today)) dl = deadline;
+      if (dl > maxDate) dl = maxDate;
+      const type = item.type || 'room';
+      this.setData({
+        showHelpForm: true,
+        helpSubmitting: false,
+        editingHelpId: item._id,
+        helpToday: fmt(today),
+        helpMaxDate: maxDate,
+        helpPlaceholder: HELP_PLACEHOLDER[type] || HELP_PLACEHOLDER.room,
+        helpForm: {
+          type,
+          title: item.title || '',
+          desc: item.desc || '',
+          costNote: item.costNote || '',
+          peopleNeeded: String(item.peopleNeeded || 1),
+          deadline: dl,
+          deadlineTime: valid
+            ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+            : '23:59',
+          wechat: item.myWechat || '',
+          // 改完再挂出去也是一次发布，规则得重新确认一遍
+          ruleAgreed: false,
+        },
+      });
+      return;
+    }
+
     this.setData({
       showHelpForm: true,
       helpSubmitting: false,
+      editingHelpId: '',
       helpToday: fmt(today),
       helpMaxDate: maxDate,
       helpPlaceholder: HELP_PLACEHOLDER.room,   // 本表单默认拼房，重开时不留上一次的类型
       helpForm: { type: 'room', title: '', desc: '', costNote: '', peopleNeeded: '1', deadline, deadlineTime: '23:59', wechat: '', ruleAgreed: false },
     });
   },
-  onCloseHelpForm() { this.setData({ showHelpForm: false }); },
+  onCloseHelpForm() { this.setData({ showHelpForm: false, editingHelpId: '' }); },
   onPickHelpType(e) {
     const type = e.currentTarget.dataset.k;
     this.setData({
@@ -882,22 +929,24 @@ Page({
       return wx.showToast({ title: '微信号格式不对', icon: 'none' });
     }
     if (!helpForm.deadline) return wx.showToast({ title: '请选择截止时间', icon: 'none' });
+    const editingId = this.data.editingHelpId || '';
     this.setData({ helpSubmitting: true });
-    wx.showLoading({ title: '发布中' });
+    wx.showLoading({ title: editingId ? '保存中' : '发布中' });
     try {
       // 先要一次推送额度，有人应征时才通知得到
       await this.askSubscribe();
       const r = await wx.cloud.callFunction({
         name: 'raceHelp',
         data: {
-          action: 'create',
+          action: editingId ? 'update' : 'create',
+          helpId: editingId,
           eventId,
           type: helpForm.type,
           title: helpForm.title,
           desc: helpForm.desc,
           costNote: helpForm.costNote,
           peopleNeeded: helpForm.peopleNeeded,
-          // 日期 + 时刻拼起来，后端按分钟判定是否临近截止
+          // 日期 + 时刻拼起来，后端按分钟判定是否截止
           deadline: `${helpForm.deadline} ${helpForm.deadlineTime || '23:59'}`,
           contact: { wechat: helpForm.wechat },
           ruleAgreed: helpForm.ruleAgreed,
@@ -906,10 +955,11 @@ Page({
       wx.hideLoading();
       this.setData({ helpSubmitting: false });
       const res = (r && r.result) || {};
-      if (!res.success) return wx.showToast({ title: res.error || '发布失败', icon: 'none' });
-      wx.showToast({ title: '已发布 🎉', icon: 'success', duration: 2000 });
-      this.setData({ showHelpForm: false });
+      if (!res.success) return wx.showToast({ title: res.error || (editingId ? '保存失败' : '发布失败'), icon: 'none' });
+      wx.showToast({ title: editingId ? '已重新发起 🎉' : '已发布 🎉', icon: 'success', duration: 2000 });
+      this.setData({ showHelpForm: false, editingHelpId: '' });
       this.loadHelps();
+      this.loadMyHelps();
       // 顺带把「我的互助」摊开，想立刻分享就不用再找入口了
       setTimeout(() => this.onOpenMyHelp(), 600);
     } catch (e) {
@@ -957,7 +1007,11 @@ Page({
       this.setData({ applying: false });
       const res = (r && r.result) || {};
       if (!res.success) return wx.showToast({ title: res.error || '应征失败', icon: 'none' });
-      wx.showToast({ title: '已应征，双方已互见联系方式', icon: 'success', duration: 2500 });
+      // 人满这一刻这条互助就自动变成「已完成」了，得说清楚，不然他会以为还能再叫人
+      wx.showToast({
+        title: res.full ? '已应征，人满自动完成 🎉' : '已应征，双方已互见联系方式',
+        icon: 'success', duration: 2500,
+      });
       this.setData({ showHelpDetail: false });
       this.loadHelps();
     } catch (e) {
@@ -1019,12 +1073,12 @@ Page({
     wx.showModal({
       title: '取消发布',
       content: people
-        ? `已有 ${people} 位跑友应征，取消后他们会收到通知。确定取消？`
-        : '取消后这条互助不再展示。确定？',
+        ? `已有 ${people} 位跑友应征，取消后他们会收到通知，名额一并作废。取消后可以修改内容重新发起。确定取消？`
+        : '取消后这条互助不再展示，之后可以修改内容重新发起。确定取消？',
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
-          name: 'raceHelp', data: { action: 'close', helpId },
+          name: 'raceHelp', data: { action: 'cancel', helpId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
         const n = res.applicantCount || 0;
@@ -1038,19 +1092,44 @@ Page({
     });
   },
 
-  // 约成了由发起人来收个尾。不催也不罚，标记完所有人都不再见它
+  // 收尾：人满会自动完成，也可以由发起人提前定下来
   onFinishHelpItem(e) {
     const helpId = e.currentTarget.dataset.id;
+    const item = (this.data.myHelps || []).find(x => x._id === helpId) || {};
+    const people = item.applyPeople || 0;
+    const need = item.peopleNeeded || 1;
     wx.showModal({
-      title: '标记完成',
-      content: '标记后会从互助列表移出去（应征的跑友那边也一样），等于给这次约伴画个句号。不确定就别点，放着不标记不会有任何影响。',
+      title: '确认完成',
+      content: people >= need
+        ? '人数已经够了，确认后这条互助标记为「已完成」，不再接受应征。'
+        : `目前 ${people} / ${need} 人。人不够也可以提前收尾，确认后标记为「已完成」，不再接受应征。`,
       success: async (r) => {
         if (!r.confirm) return;
         const res = await wx.cloud.callFunction({
           name: 'raceHelp', data: { action: 'finish', helpId },
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
-        wx.showToast({ title: '已标记完成 ✅', icon: 'success' });
+        wx.showToast({ title: '已完成 ✅', icon: 'success' });
+        this.loadMyHelps();
+        this.loadHelps();
+      },
+    });
+  },
+
+  // 删除：已完成 / 已取消的才给删，删掉就不再展示
+  onDeleteHelpItem(e) {
+    const helpId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '删除这条互助',
+      content: '删除后不再展示给任何人，也无法恢复。确定删除？',
+      confirmColor: '#ff4d4f',
+      success: async (r) => {
+        if (!r.confirm) return;
+        const res = await wx.cloud.callFunction({
+          name: 'raceHelp', data: { action: 'delete', helpId },
+        }).then(x => (x && x.result) || {}).catch(() => ({}));
+        if (!res.success) return wx.showToast({ title: res.error || '删除失败', icon: 'none' });
+        wx.showToast({ title: '已删除', icon: 'none' });
         this.loadMyHelps();
         this.loadHelps();
       },
@@ -1069,6 +1148,25 @@ Page({
         }).then(x => (x && x.result) || {}).catch(() => ({}));
         if (!res.success) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
         wx.showToast({ title: '已取消应征', icon: 'none' });
+        this.loadMyHelps();
+      },
+    });
+  },
+
+  // 已结束的从「我应征的」里删掉：只影响自己这一侧，不动发起人的记录
+  onDeleteMyApply(e) {
+    const applyId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '删除这条记录',
+      content: '只从你的列表里移除，不会影响发起人那边。确定删除？',
+      confirmColor: '#ff4d4f',
+      success: async (r) => {
+        if (!r.confirm) return;
+        const res = await wx.cloud.callFunction({
+          name: 'raceHelp', data: { action: 'deleteApply', applyId },
+        }).then(x => (x && x.result) || {}).catch(() => ({}));
+        if (!res.success) return wx.showToast({ title: res.error || '删除失败', icon: 'none' });
+        wx.showToast({ title: '已删除', icon: 'none' });
         this.loadMyHelps();
       },
     });

@@ -188,6 +188,75 @@ function publicHelp(h, extra = {}) {
   return { ...rest, ...extra };
 }
 
+// 四种对外状态：招募中 / 已截止 / 已完成 / 已取消
+// 「已截止」是算出来的、不落库：到点还开着就是已截止，省得靠定时任务去改一堆记录。
+// 兼容历史数据：早先取消写的是 status='closed'，一并认。
+const STATE_LABEL = { open: '招募中', expired: '已截止', done: '已完成', canceled: '已取消', banned: '已下架' };
+
+function helpState(h) {
+  const s = h && h.status;
+  if (s === 'done') return 'done';
+  if (s === 'canceled' || s === 'closed') return 'canceled';
+  if (s === 'banned') return 'banned';
+  const t = new Date(h && h.deadline).getTime();
+  if (!t || t <= Date.now()) return 'expired';
+  return 'open';
+}
+
+// 统一给前端算好的字段，别让各个页面自己推算状态
+function decorateHelp(h, extra = {}) {
+  const state = helpState(h);
+  const need = Math.max(1, parseInt(h.peopleNeeded, 10) || 1);
+  const applied = parseInt(h.applyPeople, 10) || 0;
+  const ms = new Date(h.deadline).getTime() - Date.now();
+  return publicHelp(h, {
+    typeLabel: (TYPES[h.type] || {}).label || '其他',
+    typeIcon: (TYPES[h.type] || {}).icon || '🙌',
+    state,
+    stateLabel: STATE_LABEL[state] || '',
+    expired: state === 'expired',
+    isDone: state === 'done',
+    isCanceled: state === 'canceled',
+    applyPeople: applied,
+    remainPeople: Math.max(0, need - applied),
+    daysLeft: Math.max(0, Math.ceil(ms / 86400000)),
+    hoursLeft: Math.max(0, Math.ceil(ms / 3600000)),
+    ...extra,
+  });
+}
+
+// 发布表单的取字段 + 校验：create 和 update 共用一套，免得两边规矩各写各的
+function parseHelpForm(event) {
+  return {
+    eventId: trimStr(event.eventId, 40),
+    type: trimStr(event.type, 10),
+    title: trimStr(event.title, LIMIT.title),
+    desc: trimStr(event.desc, LIMIT.desc),
+    costNote: trimStr(event.costNote, LIMIT.costNote),
+    peopleNeeded: Math.max(1, Math.min(LIMIT.maxPeople, parseInt(event.peopleNeeded, 10) || 1)),
+    wechat: trimStr((event.contact || {}).wechat, 20),
+    deadline: parseDeadline(event.deadline),
+    ruleAgreed: event.ruleAgreed === true,
+  };
+}
+
+function validateHelpForm(f) {
+  if (!f.eventId) return '缺少赛事';
+  if (!TYPES[f.type]) return '类型不支持';
+  if (!f.title) return '请填写标题';
+  if (!f.ruleAgreed) return '请先阅读并勾选互助规则';
+  if (!f.wechat) return '请填写微信号';
+  if (!validWechat(f.wechat)) return '微信号格式不对';
+  if (!f.deadline) return '截止时间不正确';
+  if (f.deadline <= now()) return '截止时间要在今天之后';
+  if (f.deadline.getTime() - Date.now() > LIMIT.maxDays * 86400000) {
+    return `截止时间最多 ${LIMIT.maxDays} 天后`;
+  }
+  const bad = hasBlockedWord(`${f.title}${f.desc}${f.costNote}`);
+  if (bad) return `内容含有不允许的信息（${bad}）`;
+  return '';
+}
+
 exports.main = async (event = {}) => {
   const action = event.action;
 
@@ -242,65 +311,48 @@ exports.main = async (event = {}) => {
         return { success: true, followed: false, list: [] };
       }
 
+      // 一场赛事一个池子：只取这场，已删除的不再出现
       const res = await db.collection(HELPS)
-        .where({
-          eventId,
-          status: 'open',
-          deadline: _.gt(now()),          // 到点自动失效
-          reportCount: _.lt(3),           // 被举报 3 次自动隐藏
-        })
+        .where({ eventId })
         .orderBy('createTime', 'desc')
-        .limit(50).get();
+        .limit(50).get().catch(() => ({ data: [] }));
+      const rows = (res.data || [])
+        .filter(h => !h.deleted)
+        .filter(h => (parseInt(h.reportCount, 10) || 0) < 3);
 
-      const list = (res.data || []).map(h => publicHelp(h, {
-        isMine: h.userId === OPENID,
-        typeLabel: (TYPES[h.type] || {}).label || '其他',
-        typeIcon: (TYPES[h.type] || {}).icon || '🙌',
-        daysLeft: Math.max(0, Math.ceil((new Date(h.deadline).getTime() - Date.now()) / 86400000)),
-        hoursLeft: Math.max(0, Math.ceil((new Date(h.deadline).getTime() - Date.now()) / 3600000)),
-        applyPeople: parseInt(h.applyPeople, 10) || 0,
-        remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
-      }));
+      // 认「在不在组内」：发起人，或者应征过（后来退出的也算——他得看得到后面被取消/完成）
+      const ids = rows.map(h => h._id);
+      const mineRes = ids.length
+        ? await db.collection(APPLIES).where({ helpId: _.in(ids), userId: OPENID }).limit(100).get().catch(() => null)
+        : null;
+      const joined = new Set(((mineRes && mineRes.data) || []).map(a => a.helpId));
+
+      const list = rows.map((h) => {
+        const member = h.userId === OPENID || joined.has(h._id);
+        const state = helpState(h);
+        // 不在组内的，只看得到「招募中」——截止、完成、取消都是组内的事
+        if (!member && state !== 'open') return null;
+        return decorateHelp(h, { isMine: h.userId === OPENID, isMember: member });
+      }).filter(Boolean);
+
       return { success: true, followed: true, list };
     }
 
     // ===================== 发布互助 =====================
     if (action === 'create') {
-      const eventId = trimStr(event.eventId, 40);
-      const type = trimStr(event.type, 10);
-      const title = trimStr(event.title, LIMIT.title);
-      const desc = trimStr(event.desc, LIMIT.desc);
-      const costNote = trimStr(event.costNote, LIMIT.costNote);
-      const peopleNeeded = Math.max(1, Math.min(LIMIT.maxPeople, parseInt(event.peopleNeeded, 10) || 1));
-      const contact = event.contact || {};
-      const wechat = trimStr(contact.wechat, 20);
-
-      if (!eventId) return { success: false, error: '缺少赛事' };
-      if (!TYPES[type]) return { success: false, error: '类型不支持' };
-      if (!title) return { success: false, error: '请填写标题' };
-      if (event.ruleAgreed !== true) return { success: false, error: '请先阅读并勾选互助规则' };
-      if (!wechat) return { success: false, error: '请填写微信号' };
-      if (!validWechat(wechat)) return { success: false, error: '微信号格式不对' };
-
-      const deadline = parseDeadline(event.deadline);   // "2026-11-08 18:30"
-      if (!deadline) return { success: false, error: '截止时间不正确' };
-      if (deadline <= now()) return { success: false, error: '截止时间要在今天之后' };
-      if (deadline.getTime() - Date.now() > LIMIT.maxDays * 86400000) {
-        return { success: false, error: `截止时间最多 ${LIMIT.maxDays} 天后` };
-      }
+      const f = parseHelpForm(event);
+      const bad = validateHelpForm(f);
+      if (bad) return { success: false, error: bad };
 
       // 关注门槛。别拿 OPENID 直接去比：关注记录 race_markers 里存的是 users 内部 _id，
       // 用 openid 查永远落空，于是每个关注过的跑友都在点提交这一步被判成「未关注」。
       const who = await resolveUserIds(OPENID);
-      const mk = await db.collection('race_markers').where({ userId: who, eventId }).limit(1).get().catch(() => null);
+      const mk = await db.collection('race_markers').where({ userId: who, eventId: f.eventId }).limit(1).get().catch(() => null);
       if (!(mk && mk.data && mk.data.length)) {
         return { success: false, error: '只有关注了这场赛事的跑友才能发布互助' };
       }
 
-      const badWord = hasBlockedWord(`${title}${desc}${costNote}`);
-      if (badWord) return { success: false, error: `内容含有不允许的信息（${badWord}）` };
-
-      await checkText(`${title} ${desc} ${costNote}`, OPENID);
+      await checkText(`${f.title} ${f.desc} ${f.costNote}`, OPENID);
 
       // 取昵称头像快照
       let nickName = '跑友', avatarUrl = '';
@@ -312,10 +364,11 @@ exports.main = async (event = {}) => {
 
       const addRes = await db.collection(HELPS).add({
         data: {
-          eventId, userId: OPENID, nickName, avatarUrl,
-          type, title, desc, costNote, peopleNeeded,
-          deadline,
-          contact: { wechat },
+          eventId: f.eventId, userId: OPENID, nickName, avatarUrl,
+          type: f.type, title: f.title, desc: f.desc, costNote: f.costNote,
+          peopleNeeded: f.peopleNeeded,
+          deadline: f.deadline,
+          contact: { wechat: f.wechat },
           status: 'open',
           applyCount: 0,     // 应征的「条数」
           applyPeople: 0,    // 应征的「人数」，按这个判断是否人满
@@ -326,6 +379,57 @@ exports.main = async (event = {}) => {
         },
       });
       return { success: true, id: addRes._id };
+    }
+
+    // ===================== 编辑并重新发起 =====================
+    // 只对「已取消」「已截止」开放：这两种都已经不能应征了，改完重新挂上去，还是同一条记录。
+    // 已完成的不给改——那是已经约成的事，要重新组队就再发一条。
+    if (action === 'update') {
+      const helpId = trimStr(event.helpId, 40);
+      if (!helpId) return { success: false, error: '缺少参数' };
+      const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
+      const h = hRes && hRes.data;
+      if (!h || h.deleted) return { success: false, error: '这条互助不存在' };
+      if (h.userId !== OPENID) return { success: false, error: '只能编辑自己发布的' };
+
+      const st = helpState(h);
+      if (st !== 'canceled' && st !== 'expired') {
+        return {
+          success: false,
+          error: st === 'done' ? '已完成的不能编辑，需要的话重新发布一条' : '进行中的互助不能编辑，请先取消',
+        };
+      }
+
+      const f = parseHelpForm(event);
+      if (!f.eventId) f.eventId = h.eventId;
+      const bad = validateHelpForm(f);
+      if (bad) return { success: false, error: bad };
+
+      await checkText(`${f.title} ${f.desc} ${f.costNote}`, OPENID);
+
+      // 名额按「还活着」的应征重算：被取消作废的那批不能算进来，
+      // 否则重新发起时人还没来就已经显示满员了
+      const aliveRes = await db.collection(APPLIES)
+        .where({ helpId, status: _.neq('canceled') }).get().catch(() => ({ data: [] }));
+      const alive = (aliveRes && aliveRes.data) || [];
+      const people = alive.reduce((s, a) => s + Math.max(1, parseInt(a.peopleCount, 10) || 1), 0);
+
+      // 重新挂回招募中：清掉上一次的收尾痕迹
+      await db.collection(HELPS).doc(helpId).update({
+        data: {
+          type: f.type, title: f.title, desc: f.desc, costNote: f.costNote,
+          peopleNeeded: f.peopleNeeded,
+          deadline: f.deadline,
+          contact: { wechat: f.wechat },
+          applyCount: alive.length,
+          applyPeople: people,
+          status: 'open',
+          doneReason: '',
+          cancelTime: null,
+          updateTime: now(),
+        },
+      });
+      return { success: true, id: helpId };
     }
 
     // ===================== 应征 =====================
@@ -342,9 +446,17 @@ exports.main = async (event = {}) => {
 
       const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
       const h = hRes && hRes.data;
-      if (!h || h.status !== 'open') return { success: false, error: '这条互助已结束' };
+      if (!h || h.deleted) return { success: false, error: '这条互助不存在' };
       if (h.userId === OPENID) return { success: false, error: '不能应征自己发布的互助' };
-      if (new Date(h.deadline).getTime() <= Date.now()) return { success: false, error: '这条互助已截止' };
+
+      // 只有「招募中」能被应征：已截止 / 已完成 / 已取消 都不行
+      const st = helpState(h);
+      if (st !== 'open') {
+        return {
+          success: false,
+          error: st === 'expired' ? '这条互助已截止' : (st === 'done' ? '这条互助已完成' : '这条互助已取消'),
+        };
+      }
 
       // 同上：应征也要认这条换算后的身份，不能直接用 OPENID 比对关注记录
       const whoApply = await resolveUserIds(OPENID);
@@ -386,16 +498,11 @@ exports.main = async (event = {}) => {
       const cntRes = await db.collection(APPLIES).where({ helpId, status: _.neq('canceled') }).get().catch(() => ({ data: [] }));
       const alive = (cntRes && cntRes.data) || [];
       const people = alive.reduce((s, a) => s + Math.max(1, parseInt(a.peopleCount, 10) || 1), 0);
-      // 人满自动完成，不用发起人再来点一下
+      // 人满自动完成：这是「已完成」的两种来源之一（另一种是发起人提前结束）
       const full = people >= need;
-      await db.collection(HELPS).doc(helpId).update({
-        data: {
-          applyCount: alive.length,
-          applyPeople: people,
-          status: full ? 'full' : 'open',
-          updateTime: now(),
-        },
-      }).catch(() => {});
+      const upd = { applyCount: alive.length, applyPeople: people, updateTime: now() };
+      if (full) Object.assign(upd, { status: 'done', doneReason: 'full', doneTime: now() });
+      await db.collection(HELPS).doc(helpId).update({ data: upd }).catch(() => {});
 
       // 组里广播。订阅消息是一次性的，收不到也不打紧——「我发布的」里照样看得到应征者
       const typeLabel = (TYPES[h.type] || {}).label || '互助';
@@ -413,8 +520,8 @@ exports.main = async (event = {}) => {
         .where({ userId: OPENID })
         .orderBy('createTime', 'desc')
         .limit(50).get().catch(() => ({ data: [] }));
-      // 标记完成的（发起人已收尾）不再露面，等于从他眼前删掉了
-      const list = (res.data || []).filter(h => h.status !== 'done');
+      // 删除过的不再露面；其余四种状态都留着，让人看得见这条互助的来龙去脉
+      const list = (res.data || []).filter(h => !h.deleted);
 
       const helps = await Promise.all(list.map(async (h) => {
         const aRes = await db.collection(APPLIES)
@@ -425,15 +532,12 @@ exports.main = async (event = {}) => {
           userId: a.userId, nickName: a.nickName, message: a.message,
           contact: { wechat: (a.contact || {}).wechat }, createTime: a.createTime,
         }));
-        return publicHelp(h, {
-          typeLabel: (TYPES[h.type] || {}).label || '其他',
-          typeIcon: (TYPES[h.type] || {}).icon || '🙌',
+        // myWechat 只回给发起人自己：编辑表单要回填他原来填的微信号
+        return decorateHelp(h, {
           applicants,
-          expired: new Date(h.deadline).getTime() <= Date.now(),
-          applyPeople: parseInt(h.applyPeople, 10) || 0,
-          remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
-          isFull: h.status === 'full',
-          isCanceled: h.status === 'closed',
+          isMine: true,
+          isMember: true,
+          myWechat: (h.contact || {}).wechat || '',
         });
       }));
       return { success: true, list: helps };
@@ -442,15 +546,16 @@ exports.main = async (event = {}) => {
     // ===================== 我应征的（已应征 → 可见发布者联系方式） =====================
     if (action === 'myApplies') {
       const aRes = await db.collection(APPLIES)
-        .where({ userId: OPENID, status: _.neq('canceled') })
+        .where({ userId: OPENID })
         .orderBy('createTime', 'desc').limit(50).get().catch(() => ({ data: [] }));
-      const applies = aRes.data || [];
+      // 自己主动退的不再占位置；发起人取消的那种要留着，得让人知道是被谁取消的
+      const applies = (aRes.data || []).filter(a => !a.deleted && (a.status !== 'canceled' || a.cancelFlag === 'owner-canceled'));
 
       const list = await Promise.all(applies.map(async (a) => {
         const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
         const h = hRes && hRes.data;
-        if (!h) return null;
-        if (h.status === 'done') return null;   // 发起人标记完成，这条跟着收起来
+        if (!h || h.deleted) return null;
+        const state = helpState(h);
         return {
           applyId: a._id,
           message: a.message,
@@ -459,34 +564,30 @@ exports.main = async (event = {}) => {
           createTime: a.createTime,
           // 双方都已表达诚意，互见联系方式
           ownerContact: { wechat: (h.contact || {}).wechat },
-          canCancel: true,   // 不再限制撤销次数：临时变卦是常事，随时可以退
-          ...publicHelp(h, {
-            typeLabel: (TYPES[h.type] || {}).label || '其他',
-            typeIcon: (TYPES[h.type] || {}).icon || '🙌',
-            // 应征的人也得看得出状态：满员了、被取消了、过期了
-            expired: new Date(h.deadline).getTime() <= Date.now(),
-            applyPeople: parseInt(h.applyPeople, 10) || 0,
-            remainPeople: Math.max(0, (parseInt(h.peopleNeeded, 10) || 1) - (parseInt(h.applyPeople, 10) || 0)),
-            isFull: h.status === 'full',
-            isCanceled: h.status === 'closed',
-          }),
+          applyCanceled: a.status === 'canceled',
+          // 还在招（或刚截止）可以退；已完成/已取消就只能删掉这条记录了
+          canCancel: a.status !== 'canceled' && (state === 'open' || state === 'expired'),
+          canDelete: state === 'done' || state === 'canceled' || a.status === 'canceled',
+          ...decorateHelp(h, {}),
         };
       }));
       return { success: true, list: list.filter(Boolean) };
     }
 
-    // ===================== 关闭自己发布的互助 =====================
-    if (action === 'close') {
+    // ===================== 取消发布（发起人） =====================
+    // 招募中、已截止都能取消；有人应征就必须通知到位，无人应征就静静撤掉
+    if (action === 'cancel' || action === 'close') {
       const helpId = trimStr(event.helpId, 40);
       const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
       const h = hRes && hRes.data;
-      if (!h) return { success: false, error: '不存在' };
+      if (!h || h.deleted) return { success: false, error: '不存在' };
       if (h.userId !== OPENID) return { success: false, error: '只能取消自己发布的' };
-      if (h.status === 'closed') return { success: false, error: '已经取消过了' };
-      if (h.status === 'done') return { success: false, error: '这条已经标记完成了' };
+      const st = helpState(h);
+      if (st === 'canceled') return { success: false, error: '已经取消过了' };
+      if (st === 'done') return { success: false, error: '这条已经完成了，不能再取消' };
 
       await db.collection(HELPS).doc(helpId).update({
-        data: { status: 'closed', cancelTime: now(), updateTime: now() },
+        data: { status: 'canceled', cancelTime: now(), updateTime: now() },
       });
 
       // 已经应征的人全部作废，并挨个通知到位
@@ -497,7 +598,8 @@ exports.main = async (event = {}) => {
       const content = `${typeLabel}「${truncate(h.title, 8)}」发起人已取消`;
       // 顺序很重要：先把消息送到，再作废应征记录。
       // 作废之后他们就不算组员了，广播会找不到人。
-      const notified = await broadcast(h, content, OPENID);
+      // 没人应征就别打扰人了——这种情况本来也不需要通知谁
+      const notified = list.length ? await broadcast(h, content, OPENID) : 0;
       await Promise.all(list.map(a => db.collection(APPLIES).doc(a._id).update({
         data: { status: 'canceled', cancelFlag: 'owner-canceled', cancelTime: now() },
       }).catch(() => {})));
@@ -505,21 +607,64 @@ exports.main = async (event = {}) => {
       return { success: true, applicantCount: list.length, notified };
     }
 
-    // ===================== 发起人标记完成 =====================
+    // ===================== 完成（发起人） =====================
+    // 两个入口：招募中提前收尾、已截止后确认组队成功——人够没够都行，发起人自己判断
     if (action === 'finish') {
       const helpId = trimStr(event.helpId, 40);
       const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
       const h = hRes && hRes.data;
-      if (!h) return { success: false, error: '不存在' };
+      if (!h || h.deleted) return { success: false, error: '不存在' };
       if (h.userId !== OPENID) return { success: false, error: '只能标记自己发布的' };
-      if (h.status === 'done') return { success: false, error: '已经标记过了' };
-      if (h.status === 'closed') return { success: false, error: '这条已经取消了' };
+      const st = helpState(h);
+      if (st === 'done') return { success: false, error: '已经完成了' };
+      if (st === 'canceled') return { success: false, error: '这条已经取消了' };
 
-      // 发起人随时可以结束：约成了就收起来，不必等到截止，也不管有没有人应征。
-      // 标记完就收起来，所有人都不再见它。不来标记也完全没关系
       await db.collection(HELPS).doc(helpId).update({
-        data: { status: 'done', finishTime: now(), updateTime: now() },
+        data: { status: 'done', doneReason: 'owner', doneTime: now(), updateTime: now() },
       });
+
+      // 组里其他人也该知道这事有结果了
+      const typeLabel = (TYPES[h.type] || {}).label || '互助';
+      await broadcast(h, `${typeLabel}「${truncate(h.title, 8)}」发起人已确认完成`, OPENID).catch(() => 0);
+      return { success: true };
+    }
+
+    // ===================== 删除（发起人） =====================
+    // 只对已完成 / 已取消开放：这两种都是终态，删掉只是让它从列表里消失，记录仍留在库里可追溯
+    if (action === 'delete') {
+      const helpId = trimStr(event.helpId, 40);
+      const hRes = await db.collection(HELPS).doc(helpId).get().catch(() => null);
+      const h = hRes && hRes.data;
+      if (!h || h.deleted) return { success: false, error: '不存在' };
+      if (h.userId !== OPENID) return { success: false, error: '只能删除自己发布的' };
+      const st = helpState(h);
+      if (st !== 'done' && st !== 'canceled') {
+        return { success: false, error: '只有已完成或已取消的才能删除' };
+      }
+
+      await db.collection(HELPS).doc(helpId).update({
+        data: { deleted: true, deletedTime: now(), updateTime: now() },
+      });
+      return { success: true };
+    }
+
+    // ===================== 应征者删除（只影响他自己的列表） =====================
+    if (action === 'deleteApply') {
+      const applyId = trimStr(event.applyId, 40);
+      const aRes = await db.collection(APPLIES).doc(applyId).get().catch(() => null);
+      const a = aRes && aRes.data;
+      if (!a) return { success: false, error: '不存在' };
+      if (a.userId !== OPENID) return { success: false, error: '无权操作' };
+
+      const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
+      const h = hRes && hRes.data;
+      const st = h ? helpState(h) : 'done';
+      // 还在招/刚截止的不能删，得先取消应征，免得把进行中的事从眼前抹掉
+      if (a.status !== 'canceled' && st !== 'done' && st !== 'canceled') {
+        return { success: false, error: '还在进行的互助不能删除，可以先取消应征' };
+      }
+
+      await db.collection(APPLIES).doc(applyId).update({ data: { deleted: true } });
       return { success: true };
     }
 
@@ -552,9 +697,13 @@ exports.main = async (event = {}) => {
       const a = aRes && aRes.data;
       if (!a) return { success: false, error: '不存在' };
       if (a.userId !== OPENID) return { success: false, error: '无权操作' };
+      if (a.status === 'canceled') return { success: false, error: '已经取消过了' };
 
       const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
       const h = hRes && hRes.data;
+      const st = h ? helpState(h) : 'canceled';
+      if (st === 'done') return { success: false, error: '这条互助已经完成，不能再取消应征' };
+      if (st === 'canceled') return { success: false, error: '这条互助已被发起人取消' };
 
       await db.collection(APPLIES).doc(applyId).update({
         data: { status: 'canceled', cancelTime: now() },
@@ -572,7 +721,8 @@ exports.main = async (event = {}) => {
           data: {
             applyCount: alive.length,
             applyPeople: people,
-            status: h.status === 'full' && people < need && notExpired ? 'open' : h.status,
+            // 满员自动完成的那条，人退到不够了就得退回招募中，否则名额空着也没人能看到
+            status: st === 'done' && people < need && notExpired ? 'open' : h.status,
             updateTime: now(),
           },
         }).catch(() => {});
