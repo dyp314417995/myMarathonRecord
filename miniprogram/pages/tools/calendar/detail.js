@@ -109,6 +109,7 @@ Page({
     myApplies: [],
     shareHelpId: '',        // 点了哪一条的分享，onShareAppMessage 用完就清掉
     pendingHelpId: '',      // 从分享卡片带进来的 helpId，列表加载完直接摊开
+    helpFollowed: true,     // 云函数说的：我到底关注没关注这场赛事
   },
 
   // 计算赛事二维码状态：none / fresh(<3d) / ok(<7d) / expired(>=7d)
@@ -747,15 +748,30 @@ Page({
   // 加载本场赛事的互助列表；没关注这场赛事时云函数会返回空列表
   async loadHelps() {
     const { eventId, raceFinished } = this.data;
-    if (!eventId || raceFinished) return;
+    if (!eventId) return;
+    // 赛事跑完之后互助卡片整块不渲染，从分享链接进来的人会以为链接坏了
+    if (raceFinished) {
+      if (this.data.pendingHelpId) {
+        this.setData({ pendingHelpId: '' });
+        wx.showToast({ title: '这场赛事已经跑完了，互助已关闭', icon: 'none' });
+      }
+      return;
+    }
     const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo || !userInfo._id) return;
+    if (!userInfo || !userInfo._id) {
+      // 没登录时原本是静默返回，分享进来的人什么提示都没有，像链接坏了
+      if (this.data.pendingHelpId) {
+        this.setData({ pendingHelpId: '' });
+        wx.showToast({ title: '登录后就能看到这条互助', icon: 'none' });
+      }
+      return;
+    }
     this.setData({ helpLoading: true });
     try {
       const r = await wx.cloud.callFunction({ name: 'raceHelp', data: { action: 'list', eventId } });
       const res = (r && r.result) || {};
       if (res.success) {
-        this.setData({ helpList: res.list || [] });
+        this.setData({ helpList: res.list || [], helpFollowed: res.followed !== false });
         this.openHelpFromShare();
       }
     } catch (e) {
@@ -771,8 +787,12 @@ Page({
     this.setData({ pendingHelpId: '' });
     const item = (this.data.helpList || []).find(x => x._id === helpId);
     if (!item) {
-      // 互助只对关注了这场赛事的人可见，点开的人没关注就只能这样了
-      return wx.showToast({ title: '这条互助已结束，或需先关注这场赛事', icon: 'none' });
+      // 两种情况要分开说：没关注，和这条已经结束。原来合成一句「已结束，或需先关注」，
+      // 等于什么都没说——用户不知道该去点关注，还是认命。
+      if (this.data.helpFollowed === false) {
+        return wx.showToast({ title: '关注这场赛事后就能看到这条互助', icon: 'none' });
+      }
+      return wx.showToast({ title: '这条互助已经结束了', icon: 'none' });
     }
     this.setData({ showHelpDetail: true, curHelp: item, applyMessage: '', applyWechat: '', applyPlaceholder: (HELP_PLACEHOLDER[item.type] || HELP_PLACEHOLDER.room).apply });
   },

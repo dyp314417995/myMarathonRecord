@@ -220,6 +220,7 @@
 .help-add { font-size: 24rpx; color: #fff; background: #1aad19; padding: 8rpx 22rpx; border-radius: 22rpx; font-weight: 500; }
 .help-add.disabled { opacity: 0.45; }
 .help-locked { font-size: 26rpx; color: #999; line-height: 1.6; padding: 10rpx 0 4rpx; }
+.help-locked-t { display: block; font-size: 26rpx; font-weight: 600; color: #4a4f55; margin-bottom: 6rpx; }
 .help-empty { font-size: 26rpx; color: #bbb; text-align: center; padding: 32rpx 0; }
 
 .help-item { border-bottom: 2rpx solid #f2f2f2; padding: 20rpx 0; }
