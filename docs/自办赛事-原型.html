@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自办赛事 · 交互原型（静态）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1aad19;
+    --ink: #1f1f1f;
+    --ink-2: #666;
+    --ink-3: #9aa5b1;
+    --line: #f2f3f5;
+    --bg: #f5f6f8;
+    --field: #f7f8fa;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #eef0f3;
+    color: var(--ink);
+    padding: 24px 20px 60px;
+  }
+  header { max-width: 1180px; margin: 0 auto 18px; }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+  header p { font-size: 13px; color: #8a949e; margin-top: 6px; }
+
+  .workbench {
+    max-width: 1180px; margin: 0 auto;
+    display: flex; gap: 22px; align-items: flex-start;
+  }
+
+  /* ---------- 左侧导航 ---------- */
+  .nav { width: 218px; flex-shrink: 0; }
+  .nav-group { margin-bottom: 16px; }
+  .nav-title { font-size: 11px; color: #a5adb6; letter-spacing: 1px; padding: 0 4px 6px; }
+  .nav-item {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    font-size: 12.5px; color: #4a4f55; line-height: 1.4;
+    background: #fff; border: 1px solid #e6e9ee; border-radius: 8px;
+    padding: 9px 10px; margin-bottom: 6px; font-family: inherit;
+    transition: .15s;
+  }
+  .nav-item:hover { border-color: #c9d3dd; }
+  .nav-item.active { background: #eaf7ea; border-color: var(--green); color: #128a12; font-weight: 600; }
+  .nav-item small { display: block; color: #9aa5b1; font-weight: 400; font-size: 11px; margin-top: 2px; }
+
+  /* ---------- 手机 ---------- */
+  .stage { flex-shrink: 0; }
+  .phone {
+    width: 360px; height: 700px; background: #fff; border-radius: 30px;
+    box-shadow: 0 18px 50px rgba(20,30,50,.16), 0 0 0 8px #1d2126, 0 0 0 9px #34393f;
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+  .statusbar {
+    height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; font-size: 10px; color: #1f1f1f; background: #fff;
+  }
+  .screen { display: none; flex: 1; overflow-y: auto; background: var(--bg); position: relative; }
+  .screen.active { display: block; }
+  .screen::-webkit-scrollbar { width: 0; }
+
+  .navbar {
+    position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--line);
+    height: 42px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+  }
+  .navbar .back { position: absolute; left: 14px; font-size: 15px; color: #666; font-weight: 400; }
+  .navbar .badge-self {
+    font-size: 9px; font-weight: 500; color: #128a12; background: #eaf7ea;
+    border: 1px solid #b7e3b7; border-radius: 3px; padding: 1px 4px; margin-left: 6px; vertical-align: 2px;
+  }
+
+  .pad { padding: 10px 12px 26px; }
+  .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .card-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .card-title .more { font-size: 11.5px; color: var(--ink-3); font-weight: 400; }
+
+  .race-name { font-size: 17px; font-weight: 700; line-height: 1.35; }
+  .race-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 6px; line-height: 1.7; }
+  .kv { display: flex; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #fafbfc; }
+  .kv:last-child { border-bottom: none; }
+  .kv .k { width: 74px; color: var(--ink-3); flex-shrink: 0; }
+  .kv .v { color: #3a4046; flex: 1; }
+  .kv .v.warn { color: #d9822b; }
+
+  .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: #f0f2f5; color: #6b7480; margin-right: 5px; }
+  .tag.green { background: #eaf7ea; color: #128a12; }
+  .tag.orange { background: #fff3e6; color: #c46a12; }
+  .tag.blue { background: #eaf2ff; color: #2b6cb0; }
+
+  .btn { display: block; width: 100%; text-align: center; border: none; font-family: inherit; cursor: pointer;
+    font-size: 13.5px; padding: 11px 0; border-radius: 22px; background: var(--green); color: #fff; }
+  .btn.ghost { background: #fff; color: var(--green); border: 1px solid var(--green); }
+  .btn.gray { background: #eceff2; color: #9aa5b1; cursor: not-allowed; }
+  .btn.sm { font-size: 12px; padding: 7px 14px; width: auto; border-radius: 15px; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11.5px; color: #8a949e; margin-bottom: 5px; }
+  .input { width: 100%; background: var(--field); border-radius: 8px; padding: 9px 11px; font-size: 13px; color: var(--ink); }
+  .input.ph { color: #b6bec7; }
+  .two { display: flex; gap: 8px; }
+  .two > * { flex: 1; }
+
+  .check { display: flex; gap: 7px; align-items: flex-start; font-size: 11.5px; color: #8a949e; line-height: 1.5; margin: 10px 0; }
+  .box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #cfd6dd; flex-shrink: 0; margin-top: 1px; text-align: center; font-size: 10px; line-height: 13px; color: #fff; }
+  .box.on { background: var(--green); border-color: var(--green); }
+
+  /* 名单统计条 */
+  .stats { display: flex; background: #fff; border-radius: 12px; padding: 12px 6px; margin-bottom: 10px; }
+  .stat { flex: 1; text-align: center; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: none; }
+  .stat b { display: block; font-size: 17px; font-weight: 700; }
+  .stat span { font-size: 10.5px; color: var(--ink-3); }
+  .stat b.warn { color: #d9822b; }
+
+  .row-signup { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #f7f8fa; }
+  .row-signup:last-child { border-bottom: none; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: #e8eef4; color: #6b7c8f; font-size: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .who { flex: 1; min-width: 0; }
+  .who b { display: block; font-size: 12.5px; font-weight: 500; }
+  .who span { font-size: 10.5px; color: var(--ink-3); }
+  .pill { font-size: 10px; padding: 3px 8px; border-radius: 10px; border: 1px solid #e2e6ea; color: #8a949e; cursor: pointer; user-select: none; white-space: nowrap; }
+  .pill.on { background: #eaf7ea; border-color: var(--green); color: #128a12; }
+  .pill.off { background: #f7f8fa; color: #b6bec7; cursor: default; }
+
+  /* 记录列表 */
+  .record { background: #fff; border-radius: 12px; padding: 13px 14px; margin-bottom: 9px; }
+  .record .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .record .name { font-size: 13.5px; font-weight: 600; }
+  .record .time { font-size: 16px; font-weight: 700; color: #128a12; letter-spacing: .5px; }
+  .record .sub { font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+
+  /* 弹层 */
+  .mask { position: absolute; inset: 0; background: rgba(0,0,0,.42); display: none; z-index: 20; }
+  .mask.show { display: block; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; background: #fff; z-index: 21;
+    border-radius: 16px 16px 0 0; padding: 16px 16px 20px; transform: translateY(100%);
+    transition: transform .22s ease; max-height: 86%; overflow-y: auto;
+  }
+  .sheet.show { transform: translateY(0); }
+  .sheet h3 { font-size: 14.5px; font-weight: 600; margin-bottom: 4px; }
+  .sheet .sub { font-size: 11.5px; color: var(--ink-3); margin-bottom: 14px; line-height: 1.5; }
+  .dialog {
+    position: absolute; left: 30px; right: 30px; top: 50%; transform: translateY(-50%) scale(.94);
+    background: #fff; border-radius: 14px; padding: 18px 16px 0; z-index: 21; text-align: center;
+    opacity: 0; pointer-events: none; transition: .18s;
+  }
+  .dialog.show { opacity: 1; pointer-events: auto; transform: translateY(-50%) scale(1); }
+  .dialog h4 { font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+  .dialog p { font-size: 12px; color: #6b7480; line-height: 1.6; text-align: left; }
+  .dialog .acts { display: flex; border-top: 1px solid var(--line); margin-top: 16px; }
+  .dialog .acts button { flex: 1; border: none; background: none; font-family: inherit; font-size: 13.5px; padding: 12px 0; cursor: pointer; }
+  .dialog .acts .danger { color: #e34d4d; font-weight: 600; }
+  .dialog .acts .plain { color: #6b7480; border-right: 1px solid var(--line); }
+
+  /* 右侧说明 */
+  .notes { flex: 1; min-width: 240px; max-width: 380px; }
+  .note-card { background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #e6e9ee; }
+  .note-card h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 10px; }
+  .note-card ul { list-style: none; }
+  .note-card li { font-size: 12px; color: #5a626b; line-height: 1.7; padding-left: 14px; position: relative; margin-bottom: 6px; }
+  .note-card li::before { content: ""; position: absolute; left: 3px; top: 8px; width: 4px; height: 4px; border-radius: 50%; background: #c9d3dd; }
+  .note-card li b { color: #2b3138; font-weight: 600; }
+  .note-card .foot { font-size: 11px; color: #a5adb6; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #eceff2; line-height: 1.6; }
+  .legend { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+
+  @media (max-width: 980px) {
+    .workbench { flex-wrap: wrap; }
+    .nav { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; }
+    .nav-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
+    .nav-title { width: 100%; padding-bottom: 2px; }
+    .nav-item { width: auto; margin: 0; }
+    .notes { max-width: none; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>自办赛事 · 交互原型</h1>
+  <p>静态原型，用于确认交互与文案；不含真实数据，不接后端。左侧切换页面，页面内按钮可点。</p>
+</header>
+
+<div class="workbench">
+
+  <!-- ================= 导航 ================= -->
+  <nav class="nav">
+    <div class="nav-group">
+      <div class="nav-title">管理端</div>
+      <button class="nav-item" data-screen="s-admin-form">1. 新建自办赛<small>赛事管理表单（折叠分组）</small></button>
+      <button class="nav-item" data-screen="s-admin-list">2. 报名名单<small>勾缴费 / 代报名 / 删除</small></button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">用户端</div>
+      <button class="nav-item active" data-screen="s-detail">3. 赛事详情（未报名）<small>自办徽标 + 报名入口</small></button>
+      <button class="nav-item" data-screen="s-joined">4. 已报名待缴费<small>完赛 / 退赛入口</small></button>
+      <button class="nav-item" data-screen="s-records">5. 我的跑马记录<small>「自办」徽标</small></button>
+    </div>
+  </nav>
+
+  <!-- ================= 手机 ================= -->
+  <div class="stage">
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● ▮</span></div>
+
+      <!-- ---------- 1. 管理端：新建自办赛 ---------- -->
+      <section class="screen" id="s-admin-form">
+        <div class="navbar"><span class="back">‹</span>新建赛事</div>
+        <div class="pad">
+          <div class="card">
+            <div class="field">
+              <label>赛事名称</label>
+              <div class="input">2026 秋季跑团测试赛</div>
+            </div>
+            <div class="two">
+              <div class="field">
+                <label>比赛日期</label>
+                <div class="input">2026-11-15</div>
+              </div>
+              <div class="field">
+                <label>城市</label>
+                <div class="input">北京</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              自办赛事
+              <span class="tag green">已开启</span>
+            </div>
+            <div class="field">
+              <label>人数上限（0 = 不限）</label>
+              <div class="input">30</div>
+            </div>
+            <div class="two">
+              <div class="field">
+                <label>报名截止</label>
+                <div class="input">2026-11-12 20:00</div>
+              </div>
+              <div class="field">
+                <label>报名费说明</label>
+                <div class="input">30 元／人</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>集合信息</label>
+              <div class="input">6:40 奥体中心南门集合，7:30 发枪</div>
+            </div>
+            <div class="field">
+              <label>组别（选填，留空则不分排名）</label>
+              <div class="input">5km / 10km / 半马</div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>免责声明（报名必勾）</label>
+              <div class="input" style="height:56px;line-height:1.5;font-size:11.5px">
+                本活动为跑友自发组织的非正式比赛，无交通管制。参与者应确认自身健康状况适合长距离跑步，自行购买意外险，活动期间发生的人身、财产损失由本人承担。
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="background:#fbfcfd">
+            <div class="kv"><span class="k">收费方式</span><span class="v">线下收款，线上只做「已收款」标记</span></div>
+            <div class="kv"><span class="k">发起权限</span><span class="v">仅管理员</span></div>
+            <div class="kv"><span class="k">成绩</span><span class="v">参赛者本人录入，计入跑马记录</span></div>
+          </div>
+
+          <button class="btn">保存并发布</button>
+        </div>
+      </section>
+
+      <!-- ---------- 2. 管理端：报名名单 ---------- -->
+      <section class="screen" id="s-admin-list">
+        <div class="navbar"><span class="back">‹</span>报名名单</div>
+        <div class="pad">
+          <div class="stats">
+            <div class="stat"><b id="c-reg">12</b><span>已报名 / 30</span></div>
+            <div class="stat"><b id="c-paid">9</b><span>已缴费</span></div>
+            <div class="stat"><b class="warn" id="c-gap">3</b><span>待收款</span></div>
+            <div class="stat"><b>7</b><span>已签到</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              选手名单
+              <span class="more" data-open="d-delete" style="color:#e34d4d;cursor:pointer">删除赛事</span>
+            </div>
+
+            <div class="row-signup">
+              <div class="avatar">王</div>
+              <div class="who"><b>王小明</b><span>10km · 11-05 20:12 报名</span></div>
+              <span class="pill on" data-pay="1">已收款</span>
+            </div>
+            <div class="row-signup">
+              <div class="avatar">李</div>
+              <div class="who"><b>李静</b><span>半马 · 11-05 21:03 报名</span></div>
+              <span class="pill on" data-pay="1">已收款</span>
+            </div>
+            <div class="row-signup">
+              <div class="avatar">赵</div>
+              <div class="who"><b>赵鹏</b><span>10km · 11-06 09:41 报名</span></div>
+              <span class="pill" data-pay="0">待收款</span>
+            </div>
+            <div class="row-signup">
+              <div class="avatar">陈</div>
+              <div class="who"><b>陈曦</b><span>5km · 11-06 12:30 报名</span></div>
+              <span class="pill" data-pay="0">待收款</span>
+            </div>
+            <div class="row-signup">
+              <div class="avatar">孙</div>
+              <div class="who"><b>孙浩</b><span>10km · 已报名后退出</span></div>
+              <span class="pill off">已退赛 · 已缴</span>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn ghost" data-open="d-add">代报名</button>
+            <button class="btn ghost">导出名单</button>
+          </div>
+          <p style="font-size:10.5px;color:#a5adb6;line-height:1.6;margin-top:10px;text-align:center">
+            点「待收款」可直接改为已收款；差额就是催款名单
+          </p>
+        </div>
+
+        <!-- 删除二次确认 -->
+        <div class="mask" data-mask="d-delete"></div>
+        <div class="dialog" id="d-delete">
+          <h4>删除这场赛事？</h4>
+          <p>已有 <b>12 人报名</b>、<b>2 人完赛</b>。<br>
+             删除后报名记录、互助、评价<b>一并清除</b>；<br>
+             完赛记录会<b>保留</b>在选手的跑马记录里。</p>
+          <div class="acts">
+            <button class="plain" data-close="d-delete">取消</button>
+            <button class="danger" data-close="d-delete">确认删除</button>
+          </div>
+        </div>
+
+        <!-- 代报名 -->
+        <div class="mask" data-mask="d-add"></div>
+        <div class="dialog" id="d-add">
+          <h4>代报名</h4>
+          <p style="text-align:center">输入昵称搜索成员，选中后直接置为「已收款」。</p>
+          <div class="input ph" style="margin-top:10px;text-align:left">搜索成员昵称…</div>
+          <div class="acts">
+            <button class="plain" data-close="d-add">取消</button>
+            <button style="color:var(--green);font-weight:600" data-close="d-add">确认添加</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- 3. 用户端：赛事详情（未报名） ---------- -->
+      <section class="screen active" id="s-detail">
+        <div class="navbar"><span class="back">‹</span><span>赛事详情<span class="badge-self">自办</span></span></div>
+        <div class="pad">
+          <div class="card">
+            <div class="race-name">2026 秋季跑团测试赛</div>
+            <div style="margin-top:8px">
+              <span class="tag green">报名中</span>
+              <span class="tag">10km</span>
+              <span class="tag">半马</span>
+            </div>
+            <div class="race-meta">
+              2026-11-15（周日）07:30 发枪<br>
+              北京 · 奥体中心南门集合
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="kv"><span class="k">报名费</span><span class="v">30 元／人，微信转 @张三</span></div>
+            <div class="kv"><span class="k">名额</span><span class="v">已报 12 / 30</span></div>
+            <div class="kv"><span class="k">报名截止</span><span class="v warn">11-12 20:00（还剩 8 天）</span></div>
+            <div class="kv"><span class="k">集合</span><span class="v">6:40 奥体中心南门</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🙌 跑友互助<span class="more">我的互助 ｜ ＋ 发布</span></div>
+            <div style="font-size:12px;color:#8a949e;line-height:1.6">
+              你关注这场赛事后，才能看到跑友们发的拼车、拼房。
+            </div>
+          </div>
+
+          <button class="btn" data-open="sh-signup">我要报名</button>
+          <p style="font-size:10.5px;color:#a5adb6;line-height:1.6;margin-top:10px;text-align:center">
+            仅限本团注册成员报名
+          </p>
+        </div>
+
+        <!-- 报名弹层 -->
+        <div class="mask" data-mask="sh-signup"></div>
+        <div class="sheet" id="sh-signup">
+          <h3>报名 · 2026 秋季跑团测试赛</h3>
+          <div class="sub">费用线下交给 @张三，管理员确认后状态会变成「已确认」</div>
+
+          <div class="field">
+            <label>组别（选填）</label>
+            <div class="two">
+              <div class="input" style="text-align:center">5km</div>
+              <div class="input" style="text-align:center;background:#eaf7ea;color:#128a12;font-weight:600">10km</div>
+              <div class="input" style="text-align:center">半马</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>紧急联系人（选填）</label>
+            <div class="input ph">姓名 + 关系</div>
+          </div>
+          <div class="check">
+            <span class="box" id="agree-box">✓</span>
+            <span>我已阅读并同意<b style="color:#6b7480">免责声明</b>，确认自身健康状况适合长距离跑步</span>
+          </div>
+          <button class="btn" id="btn-confirm-signup">确认报名</button>
+          <p style="font-size:10.5px;color:#a5adb6;margin-top:10px;text-align:center">
+            报名即视为接受「线下缴费、线上标记」的规则
+          </p>
+        </div>
+      </section>
+
+      <!-- ---------- 4. 用户端：已报名待缴费 ---------- -->
+      <section class="screen" id="s-joined">
+        <div class="navbar"><span class="back">‹</span><span>赛事详情<span class="badge-self">自办</span></span></div>
+        <div class="pad">
+          <div class="card" style="border:1px solid #ffe0bd;background:#fffaf4">
+            <div class="card-title" style="margin-bottom:6px">已报名 · 待缴费</div>
+            <div style="font-size:11.5px;color:#a9762e;line-height:1.6">
+              把 30 元转给 @张三 并备注昵称，管理员确认后这里会变成「已确认」。
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="race-name">2026 秋季跑团测试赛</div>
+            <div class="race-meta">2026-11-15 07:30 · 10km · 北京奥体中心</div>
+          </div>
+
+          <div class="card">
+            <div class="kv"><span class="k">我的组别</span><span class="v">10km</span></div>
+            <div class="kv"><span class="k">报名时间</span><span class="v">11-05 20:12</span></div>
+            <div class="kv"><span class="k">缴费状态</span><span class="v warn">待确认</span></div>
+            <div class="kv"><span class="k">签到</span><span class="v">比赛日扫码签到</span></div>
+          </div>
+
+          <div class="btn-row" style="margin-bottom:10px">
+            <button class="btn" data-open="sh-result">我已完赛</button>
+            <button class="btn ghost" data-open="d-quit">退赛</button>
+          </div>
+          <p style="font-size:10.5px;color:#a5adb6;line-height:1.6;text-align:center">
+            退赛后名额释放，已缴费用请线下协商退还
+          </p>
+        </div>
+
+        <!-- 成绩录入弹层 -->
+        <div class="mask" data-mask="sh-result"></div>
+        <div class="sheet" id="sh-result">
+          <h3>录入成绩</h3>
+          <div class="sub">成绩会计入「我的跑马记录」，请如实填写</div>
+          <div class="field">
+            <label>完赛成绩</label>
+            <div class="two">
+              <div class="input" style="text-align:center">0</div>
+              <div class="input" style="text-align:center">48</div>
+              <div class="input" style="text-align:center">32</div>
+            </div>
+          </div>
+          <div class="two">
+            <div class="field"><label>组别名次（选填）</label><div class="input ph">如 第 8 名</div></div>
+            <div class="field"><label>照片（选填）</label><div class="input ph">＋ 上传</div></div>
+          </div>
+          <button class="btn" id="btn-save-result">保存成绩</button>
+          <button class="btn ghost" style="margin-top:8px" data-close="sh-result">跳过，稍后补录</button>
+        </div>
+
+        <!-- 退赛确认 -->
+        <div class="mask" data-mask="d-quit"></div>
+        <div class="dialog" id="d-quit">
+          <h4>确定退赛？</h4>
+          <p>退赛后名额释放，不能恢复报名。<br>已缴的 30 元请与 @张三 线下协商退还。</p>
+          <div class="acts">
+            <button class="plain" data-close="d-quit">再想想</button>
+            <button class="danger" data-close="d-quit">确认退赛</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- 5. 用户端：我的跑马记录 ---------- -->
+      <section class="screen" id="s-records">
+        <div class="navbar">我的跑马记录</div>
+        <div class="pad">
+          <div class="record" style="background:#f7fdf7;border:1px solid #cdeccd">
+            <div class="top">
+              <span class="name">2026 秋季跑团测试赛 <span class="tag green">自办</span></span>
+              <span class="time">0:48:32</span>
+            </div>
+            <div class="sub">10km · 2026-11-15 · 北京 · 组内第 8</div>
+          </div>
+          <div class="record">
+            <div class="top">
+              <span class="name">北京马拉松2026 <span class="tag blue">官方</span></span>
+              <span class="time">3:52:10</span>
+            </div>
+            <div class="sub">全马 · 2026-10-18 · 北京</div>
+          </div>
+          <div class="record">
+            <div class="top">
+              <span class="name">太原马拉松2026 <span class="tag blue">官方</span></span>
+              <span class="time">1:46:05</span>
+            </div>
+            <div class="sub">半马 · 2026-09-27 · 太原</div>
+          </div>
+          <div class="card" style="margin-top:12px;background:#fbfcfd">
+            <div class="kv"><span class="k">最佳成绩</span><span class="v">10km 0:48:32（自办）</span></div>
+            <div class="kv"><span class="k">说明</span><span class="v">自办赛成绩计入统计，标注来源便于区分</span></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ================= 右侧说明 ================= -->
+  <aside class="notes">
+    <div class="note-card">
+      <h3 id="note-title">赛事详情（未报名）</h3>
+      <ul id="note-list">
+        <li>赛事名旁「自办」徽标，和官方赛事区分。</li>
+        <li>报名按钮下方写明<b>仅限本团注册成员</b>。</li>
+        <li>未关注时互助区是锁定文案，不是空白。</li>
+      </ul>
+      <div class="foot">点左侧切换页面；弹层、勾选、删除确认都可以点。</div>
+      <div class="legend">
+        <span class="tag green">报名中</span>
+        <span class="tag orange">待缴费</span>
+        <span class="tag blue">官方</span>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  /* ---------- 页面切换 ---------- */
+  var NOTES = {
+    's-admin-form': {
+      t: '新建自办赛（管理端）',
+      l: [
+        '勾「自办赛事」后才展开下面这一组字段，官方赛事表单不受影响。',
+        '人数上限 0 或空 = 不限；报名截止到点自动置灰。',
+        '报名费只写<b>说明文字</b>，不接支付。',
+        '免责声明是全文，报名时必勾。'
+      ]
+    },
+    's-admin-list': {
+      t: '报名名单（管理端）',
+      l: [
+        '顶部四个数：已报名 / 已缴费 / <b>待收款</b> / 已签到，差额直接当催款名单。',
+        '点「待收款」变「已收款」，实时改统计数字。',
+        '退赛的人留一行灰的，不删——要查是否退费。',
+        '删除赛事：0 人报名直接删；有人报名走这个二次确认。'
+      ]
+    },
+    's-detail': {
+      t: '赛事详情（未报名）',
+      l: [
+        '赛事名旁「自办」徽标，和官方赛事区分。',
+        '报名按钮下方写明<b>仅限本团注册成员</b>。',
+        '未关注时互助区是锁定文案，不是空白。',
+        '报名弹层里组别选填、紧急联系人选填、免责必勾。'
+      ]
+    },
+    's-joined': {
+      t: '已报名 · 待缴费',
+      l: [
+        '报名和缴费是两件事：已报名不等于已缴费，状态分开显示。',
+        '「我已完赛」→ 立刻弹成绩录入，也可以跳过，记录标「成绩待补」。',
+        '退赛走二次确认，写明名额释放、费用线下协商。'
+      ]
+    },
+    's-records': {
+      t: '我的跑马记录',
+      l: [
+        '自办赛记录带<b>「自办」</b>徽标，官方赛带「官方」。',
+        '成绩按决策<b>计入</b>统计，但来源透明，避免口径混淆。',
+        '赛事被删后记录仍在——记录自带赛事名和日期。'
+      ]
+    }
+  };
+
+  var screens = document.querySelectorAll('.screen');
+  var navItems = document.querySelectorAll('.nav-item');
+  var noteTitle = document.getElementById('note-title');
+  var noteList = document.getElementById('note-list');
+
+  function go(id) {
+    for (var i = 0; i < screens.length; i++) {
+      screens[i].classList.toggle('active', screens[i].id === id);
+    }
+    for (var j = 0; j < navItems.length; j++) {
+      navItems[j].classList.toggle('active', navItems[j].dataset.screen === id);
+    }
+    var n = NOTES[id];
+    if (n) {
+      noteTitle.textContent = n.t;
+      noteList.innerHTML = n.l.map(function (x) { return '<li>' + x + '</li>'; }).join('');
+    }
+  }
+
+  for (var i = 0; i < navItems.length; i++) {
+    navItems[i].addEventListener('click', function () { go(this.dataset.screen); });
+  }
+
+  /* ---------- 弹层 / 对话框 ---------- */
+  function open(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var mask = document.querySelector('[data-mask="' + id + '"]');
+    if (mask) mask.classList.add('show');
+    el.classList.add('show');
+  }
+  function close(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var mask = document.querySelector('[data-mask="' + id + '"]');
+    if (mask) mask.classList.remove('show');
+    el.classList.remove('show');
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-open]');
+    if (t) { open(t.dataset.open); return; }
+    var c = e.target.closest('[data-close]');
+    if (c) { close(c.dataset.close); return; }
+    var m = e.target.closest('.mask');
+    if (m) { close(m.dataset.mask); return; }
+  });
+
+  /* ---------- 交互：报名 / 成绩 / 缴费 ---------- */
+  document.getElementById('btn-confirm-signup').addEventListener('click', function () {
+    close('sh-signup');
+    go('s-joined');
+  });
+
+  document.getElementById('btn-save-result').addEventListener('click', function () {
+    close('sh-result');
+    go('s-records');
+  });
+
+  /* 缴费勾选 + 统计联动 */
+  var reg = 12, paid = 9;
+  document.querySelectorAll('[data-pay]').forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      var isPaid = pill.dataset.pay === '1';
+      if (isPaid) {
+        pill.dataset.pay = '0';
+        pill.className = 'pill';
+        pill.textContent = '待收款';
+        paid--;
+      } else {
+        pill.dataset.pay = '1';
+        pill.className = 'pill on';
+        pill.textContent = '已收款';
+        paid++;
+      }
+      document.getElementById('c-reg').textContent = reg;
+      document.getElementById('c-paid').textContent = paid;
+      document.getElementById('c-gap').textContent = reg - paid;
+    });
+  });
+</script>
+</body>
+</html>
