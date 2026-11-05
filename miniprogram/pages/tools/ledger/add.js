@@ -2,6 +2,17 @@
 // 先选类型：支出（默认）/ 收入；收入不分大类小类，内置收入类型（比赛奖金等）
 const ledger = require('../../../utils/ledger');
 
+// 小程序 onLoad 的 query 不会自动解码：日历页「记录开销」跳过来时带的是
+// encodeURIComponent 过的赛事名，不解就当赛事名存进账目，
+// 之后再从「记过账的赛事」筛选列表里原样显示出来（用户看到的「unicode 乱码」）。
+function decodeMaybe(s) {
+  const v = String(s || '');
+  if (!v || v.indexOf('%') === -1) return v;
+  // 已经含中文（非 ASCII）就不动，避免误伤名字里本来就有 % 的情况
+  if (/[^\x00-\x7F]/.test(v)) return v;
+  try { return decodeURIComponent(v); } catch (e) { return v; }
+}
+
 Page({
   data: {
     id: '',
@@ -41,7 +52,8 @@ Page({
       this.loadDetail(options.id);
     } else if (options.eventId || options.eventName) {
       // 从「我的赛事」记录开销：自动选中赛事（比赛开支）
-      this.setData({ bigCategory: 'race', subs: ledger.subsOf('race'), smallCategory: '', eventId: options.eventId || '', eventName: options.eventName || '' });
+      // 跳转方 encodeURIComponent 了，onLoad 不会自动解，这里必须解一次
+      this.setData({ bigCategory: 'race', subs: ledger.subsOf('race'), smallCategory: '', eventId: decodeMaybe(options.eventId || ''), eventName: decodeMaybe(options.eventName || '') });
     }
   },
 
@@ -264,7 +276,8 @@ Page({
       if (!incomeType) { wx.showToast({ title: '请选择收入类型', icon: 'none' }); return; }
       payload.incomeType = incomeType;
       // 收入也支持关联赛事
-      payload.eventName = this.data.eventName;
+      // 兜底：万一有别的入口传了编码串进来，保存前再过一次解码
+      payload.eventName = decodeMaybe(this.data.eventName);
       payload.eventId = this.data.eventId;
     } else {
       let smallCategory = this.data.smallCategory;
@@ -274,7 +287,7 @@ Page({
       if (!smallCategory) { wx.showToast({ title: '请选择小类', icon: 'none' }); return; }
       payload.bigCategory = this.data.bigCategory;
       payload.smallCategory = smallCategory;
-      payload.eventName = this.data.eventName;
+      payload.eventName = decodeMaybe(this.data.eventName);
       payload.eventId = this.data.eventId;
     }
 
