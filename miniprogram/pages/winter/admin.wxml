@@ -110,16 +110,19 @@
               <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
               <view class="member-info">
                 <text class="member-name">{{item.nickName}} <text class="tag {{item.role === 'member' ? 'tag-gray' : (item.role === 'leader' ? 'tag-green' : 'tag-blue')}}">{{item.roleText}}</text></text>
-                <text class="member-meta" wx:if="{{memberFilter === ''}}">{{item.groupName}} · {{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
-                <text class="member-meta" wx:else>{{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
-                <text class="member-meta" wx:if="{{item.continuousFailWeeks > 0}}">⚠️ 连续未完成 {{item.continuousFailWeeks}} 周</text>
-                <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
+                <text class="member-meta" wx:if="{{item.staffOnly}}">{{item.statusText}}（不占名额 · 不考核）</text>
+                <block wx:if="{{!item.staffOnly}}">
+                  <text class="member-meta" wx:if="{{memberFilter === ''}}">{{item.groupName}} · {{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
+                  <text class="member-meta" wx:else>{{item.statusText}} · KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? '天' : '公里'}}</text>
+                  <text class="member-meta" wx:if="{{item.continuousFailWeeks > 0}}">⚠️ 连续未完成 {{item.continuousFailWeeks}} 周</text>
+                  <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
+                </block>
               </view>
-              <view class="member-right">
+              <view class="member-right" wx:if="{{!item.staffOnly}}">
                 <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '待缴费')}}</text>
               </view>
             </view>
-            <view class="chip-row" style="margin-top:16rpx">
+            <view class="chip-row" style="margin-top:16rpx" wx:if="{{!item.staffOnly}}">
               <text class="chip" data-id="{{item._id}}" bindtap="onOpenTransfer">调组</text>
               <text class="chip" data-id="{{item._id}}" bindtap="onOpenRemark">伤病备注</text>
               <text class="chip" wx:if="{{item.status === 'quit-suggested'}}" data-id="{{item._id}}" data-confirm="{{true}}" bindtap="onConfirmQuit">确认退出</text>

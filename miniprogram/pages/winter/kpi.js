@@ -23,17 +23,26 @@ Page({
       this.setData({ loading: false });
       return;
     }
-    const range = r.kpiRange;
-    const isCoach = r.me.role === 'coach';
+    const range = r.kpiRange;   // 主组区间：本人 KPI 填报按主组考核，不随兼任组变
+    // 可管理的组：主记录是教练 → 主组；另有兼任教练的组 → 逐个可选
+    const options = [];
+    if (r.me.role === 'coach') options.push({ gid: '', name: (r.group && r.group.name) || '我的组', kpiRange: range, suggest: (r.group && r.group.suggest) || null });
+    ((r.staffRoles) || []).filter(s => s.role === 'coach').forEach(s => options.push({ gid: s.groupId, name: s.groupName, kpiRange: s.kpiRange || null, suggest: s.suggest || null }));
+    const isCoach = options.length > 0;
+    // 区间编辑器针对所选组；保持当前选择，无效或首次进入则落到第一项
+    const sel = (this.data.coachOptions.find(o => o.gid === this.data.coachGid && options.some(x => x.gid === o.gid))) || options[0] || null;
+    const coachGid = sel ? sel.gid : '';
+    const coachGName = sel ? sel.name : '';
+    const coachRange = sel ? sel.kpiRange : null;
     // 教练未发布过区间时，用该组的能力档位「建议区间」作初始值（规则：开营前公示，教练可调整后发布）
-    const sug = (r.group && r.group.suggest) || null;
-    const seed = range || (sug ? {
+    const sug = sel ? sel.suggest : null;
+    const seed = coachRange || (sug ? {
       type: sug.defaultType || (sug.distance ? 'distance' : 'attendance'),
       min: sug.distance ? sug.distance.min : sug.attendance.min,
       max: sug.distance ? sug.distance.max : sug.attendance.max,
       minDuration: sug.minDuration || 20,
     } : null);
-    const isDraft = !range && !!seed; // 尚未发布，仅为参考初值
+    const isDraft = !coachRange && !!seed; // 尚未发布，仅为参考初值
     const weekIndex = r.weekIndex || 0;
     const hist = r.kpiHistory || [];
     // 本周已填 → 用本周值；新的一周还没填 → 预填上周目标（不填则自动沿用）
@@ -48,6 +57,7 @@ Page({
       isCoach,
       isDraft,
       draftTip: isDraft ? '当前为本组建议参考区间，确认后点击「发布区间」正式生效' : '',
+      coachOptions: options, coachGid, coachGName,
       kpiRange: range,
       kpiType: range ? range.type : '',
       weekIndex,
@@ -55,8 +65,8 @@ Page({
       myKpiValue: isThisWeek ? (r.me.kpiValue || 0) : 0,
       kpiLocked: !!r.me.kpiLocked,   // 本周已打卡才锁定，新的一周自动解锁
       kpiValue: seedValue ? String(seedValue) : '',
-      rangeText: range
-        ? `${range.type === 'distance' ? '跑量' : '出勤'} ${range.min} ~ ${range.max}${range.type === 'distance' ? ' 公里/周' : ' 天/周'}`
+      rangeText: coachRange
+        ? `${coachRange.type === 'distance' ? '跑量' : '出勤'} ${coachRange.min} ~ ${coachRange.max}${coachRange.type === 'distance' ? ' 公里/周' : ' 天/周'}`
         : '教练尚未设定 KPI 区间',
       unit: range && range.type === 'attendance' ? '天/周' : '公里/周',
       'form.type': seed ? seed.type : 'distance',
@@ -88,6 +98,7 @@ Page({
     if (max < min) return wx.showToast({ title: '上限不能小于下限', icon: 'none' });
     this.setData({ submitting: true });
     const r = await w.api.setKpiRange({
+      groupId: this.data.coachGid,
       type: f.type, min, max, minDuration: isNaN(minDuration) ? 0 : minDuration,
     });
     this.setData({ submitting: false });
@@ -97,6 +108,12 @@ Page({
   },
 
   onPickType(e) { this.setData({ 'form.type': e.currentTarget.dataset.v }); },
+
+  onSelectCoachGroup(e) {
+    const gid = e.currentTarget.dataset.gid || '';
+    if (gid === this.data.coachGid) return;
+    this.setData({ loading: true, coachGid: gid }, () => this.load());
+  },
   onFormInput(e) {
     const f = e.currentTarget.dataset.f;
     this.setData({ ['form.' + f]: e.detail.value });

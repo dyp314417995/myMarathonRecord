@@ -667,8 +667,25 @@ async function actionGetMyGroup(userId) {
     weekIndex: x.weekIndex, type: x.type, value: toNum(x.value), auto: !!x.auto,
   }));
 
+  // 兼任职务：主记录之外在别的组挂的队长/教练（课表 / KPI 区间等教练入口要用）
+  // 附带该组的 kpiRange 和 suggest，前端编辑器能直接拿初值，不用再发请求
+  const stf = await db.collection('winter_staff')
+    .where({ userId, role: _.in(['leader', 'coach']) }).limit(20).get().catch(() => null);
+  const staffRoles = [];
+  for (const d of ((stf && stf.data) || [])) {
+    if (!d.groupId || d.groupId === member.groupId) continue;
+    const g = await db.collection('winter_group').doc(d.groupId).get().catch(() => null);
+    const gd = g && g.data ? g.data : null;
+    staffRoles.push({
+      groupId: d.groupId, groupName: gd ? gd.name : '', role: d.role,
+      kpiRange: await getKpiRange(d.groupId),
+      suggest: gd ? (gd.suggest || null) : null,
+    });
+  }
+
   return ok({
     group,
+    staffRoles,
     members: members.sort((a, b) => {
       const ord = { leader: 0, coach: 1, member: 2 };
       return (ord[a.role] || 9) - (ord[b.role] || 9);
@@ -699,8 +716,16 @@ async function actionGetMyGroup(userId) {
 async function actionSetKpiRange(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
-  if (member.role !== 'coach') return fail('仅教练可设定 KPI 区间');
   if (member.status !== 'approved') return fail('你的报名尚未通过');
+  // 兼任教练可给挂职的组设区间：传了别的组 id 就按该组职务判权；不传保持主组行为（兼容老前端）
+  let groupId = member.groupId;
+  if (data.groupId && data.groupId !== member.groupId) {
+    const role = await roleInGroup(userId, String(data.groupId));
+    if (role !== 'coach') return fail('仅该组教练可设定 KPI 区间');
+    groupId = String(data.groupId);
+  } else if (member.role !== 'coach') {
+    return fail('仅教练可设定 KPI 区间');
+  }
   const type = data.type === 'attendance' ? 'attendance' : 'distance';
   const min = toNum(data.min), max = toNum(data.max), minDuration = toNum(data.minDuration);
   if (min <= 0 || max <= 0) return fail('请填写有效的区间数值');
@@ -708,7 +733,7 @@ async function actionSetKpiRange(userId, data) {
   const cfg = await getConfig();
   const weekIndex = calcWeekIndex(cfg);
   const range = {
-    groupId: member.groupId,
+    groupId,
     type,
     min, max, minDuration,
     effectiveWeek: Math.max(1, weekIndex),
@@ -716,7 +741,7 @@ async function actionSetKpiRange(userId, data) {
     createTime: new Date(),
   };
   await db.collection('winter_kpi_range').add({ data: range });
-  await saveLog({ type: 'kpi-range', action: 'publish', operatorId: userId, groupId: member.groupId, detail: `${type === 'distance' ? '跑量' : '出勤'} ${min}~${max}` });
+  await saveLog({ type: 'kpi-range', action: 'publish', operatorId: userId, groupId, detail: `${type === 'distance' ? '跑量' : '出勤'} ${min}~${max}` });
   return ok({ range });
 }
 
@@ -1385,15 +1410,23 @@ async function actionWeeklyStats(userId, data) {
 async function actionPublishSchedule(userId, data) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
-  if (member.role !== 'coach') return fail('仅教练可发布课表');
   if (member.status !== 'approved') return fail('报名未通过');
+  // 兼任教练可给挂职的组发课表：传了别的组 id 就按该组职务判权；不传保持主组行为（兼容老前端）
+  let groupId = member.groupId;
+  if (data.groupId && data.groupId !== member.groupId) {
+    const role = await roleInGroup(userId, String(data.groupId));
+    if (role !== 'coach') return fail('仅该组教练可发布课表');
+    groupId = String(data.groupId);
+  } else if (member.role !== 'coach') {
+    return fail('仅教练可发布课表');
+  }
   const cfg = await getConfig();
   const weekIndex = Number(data.weekIndex) || calcWeekIndex(cfg);
   const tiers = Array.isArray(data.tiers) ? data.tiers : [];
   // 每档上限 800 字（与前端 maxlength 一致，防止绕过前端提交超长内容）
   const MAX_LEN = 800;
   const payload = {
-    groupId: member.groupId, weekIndex,
+    groupId, weekIndex,
     a: String((tiers[0] || {}).content || data.a || '').slice(0, MAX_LEN),
     b: String((tiers[1] || {}).content || data.b || '').slice(0, MAX_LEN),
     c: String((tiers[2] || {}).content || data.c || '').slice(0, MAX_LEN),
@@ -1402,7 +1435,7 @@ async function actionPublishSchedule(userId, data) {
     readBy: [],
     updateTime: new Date(),
   };
-  const exist = await db.collection('winter_schedule').where({ groupId: member.groupId, weekIndex }).limit(1).get().catch(() => null);
+  const exist = await db.collection('winter_schedule').where({ groupId, weekIndex }).limit(1).get().catch(() => null);
   if (exist && exist.data && exist.data.length) {
     await db.collection('winter_schedule').doc(exist.data[0]._id).update({ data: payload });
     return ok({ id: exist.data[0]._id, updated: true });
@@ -1416,7 +1449,8 @@ async function actionGetSchedule(userId, data) {
   const cfg = await getConfig();
   const weekIndex = Number(data.weekIndex) || calcWeekIndex(cfg);
   const member = await getMyMember(userId);
-  const groupId = member ? member.groupId : String(data.groupId || '');
+  // 显式指定的组别优先（兼任教练看挂职组的课表）；课表内容不敏感，组卡片本就公开
+  const groupId = String(data.groupId || '') || (member ? member.groupId : '');
   if (!groupId) return fail('尚未报名且未指定组别');
   const r = await db.collection('winter_schedule').where({ groupId, weekIndex }).limit(1).get().catch(() => null);
   const s = r && r.data && r.data.length ? r.data[0] : null;
@@ -1791,7 +1825,38 @@ async function actionAdminMembers(userId, data) {
   }
   // 组别列表供下拉
   const gRes = await db.collection('winter_group').orderBy('sort', 'asc').limit(50).get().catch(() => null);
-  return ok({ list: out, groups: ((gRes && gRes.data) || []).map(g => ({ _id: g._id, name: g.name })) });
+  const groups = ((gRes && gRes.data) || []);
+  const gNameMap = {};
+  groups.forEach(g => { gNameMap[g._id] = g.name; });
+
+  // 兼任指派的人（主记录在别的组）也要出现在该组名单里：
+  // 否则成员管理里看不到这个组的教练，会误以为指派丢了。
+  // 这类行 staffOnly=true：只是挂着职务，不占名额、不考核，前端隐藏缴费/调组操作。
+  const stRes = await db.collection('winter_staff').limit(200).get().catch(() => null);
+  const seen = new Set(out.map(m => m.groupId + '|' + m.userId));
+  const userCache = {};
+  for (const s of ((stRes && stRes.data) || [])) {
+    if (!s.groupId || seen.has(s.groupId + '|' + s.userId)) continue;
+    seen.add(s.groupId + '|' + s.userId);
+    if (!userCache[s.userId]) {
+      const u = await getUser(s.userId);
+      userCache[s.userId] = u || {};
+    }
+    const u = userCache[s.userId];
+    const main = await getMyMember(s.userId);
+    out.push({
+      _id: 'staff-' + s._id, userId: s.userId,
+      nickName: (u && (u.nickName || u.nickname)) || '未知',
+      avatarUrl: (u && u.avatarUrl) || '',
+      groupId: s.groupId, groupName: gNameMap[s.groupId] || '',
+      role: s.role, roleText: (ROLE_TEXT[s.role] || s.role) + '·兼任',
+      status: 'staff', statusText: main ? ('主组：' + (gNameMap[main.groupId] || '未分组')) : '未报名',
+      kpiType: '', kpiValue: 0, continuousFailWeeks: 0,
+      remark: '', feeStatus: '', staffOnly: true,
+    });
+  }
+
+  return ok({ list: out, groups: groups.map(g => ({ _id: g._id, name: g.name })) });
 }
 
 // 手动调组 / 伤病备注（留痕）

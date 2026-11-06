@@ -5,8 +5,14 @@
     <!-- 教练：设定区间（教练同时也是队员，下方仍有自己的 KPI 填报） -->
     <block wx:if="{{isCoach}}">
       <view class="card">
-        <text class="card-title">设定本组 KPI 区间</text>
+        <text class="card-title">设定{{coachGName ? '「' + coachGName + '」' : '本组'}} KPI 区间</text>
         <text class="card-sub">保存即生效，队员只能在本区间内填报</text>
+        <view wx:if="{{coachOptions.length > 1}}" style="margin:16rpx 0">
+          <text class="card-sub">你在多个组担任教练，选择要设定的组：</text>
+          <view class="chip-row">
+            <text class="chip {{coachGid === item.gid ? 'on' : ''}}" wx:for="{{coachOptions}}" wx:key="gid" data-gid="{{item.gid}}" bindtap="onSelectCoachGroup">{{item.name}}</text>
+          </view>
+        </view>
         <view class="notice-bar" wx:if="{{draftTip}}">📋 {{draftTip}}</view>
         <view class="field">
           <text class="field-label">考核类型</text>

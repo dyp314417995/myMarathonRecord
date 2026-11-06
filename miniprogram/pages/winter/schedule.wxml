@@ -8,6 +8,14 @@
       <text class="hero-sub" wx:else>本周课表尚未发布</text>
     </view>
 
+    <!-- 兼任教练：在多个组担任教练时先选组，发布 / 编辑都针对所选组 -->
+    <view class="card" wx:if="{{coachOptions.length > 1}}">
+      <text class="card-sub">你在多个组担任教练，选择要查看 / 发布课表的组：</text>
+      <view class="chip-row">
+        <text class="chip {{coachGid === item.gid ? 'on' : ''}}" wx:for="{{coachOptions}}" wx:key="gid" data-gid="{{item.gid}}" bindtap="onSelectCoachGroup">{{item.name}}</text>
+      </view>
+    </view>
+
     <!-- 教练编辑 -->
     <block wx:if="{{isCoach}}">
       <view class="card" wx:if="{{editing || !schedule}}">
