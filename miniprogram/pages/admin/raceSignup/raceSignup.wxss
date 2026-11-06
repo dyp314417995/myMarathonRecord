@@ -32,3 +32,4 @@
 .rs-input { border: 1rpx solid #e5e5e5; border-radius: 10rpx; padding: 14rpx 20rpx; font-size: 27rpx; }
 .rs-picker { border: 1rpx solid #e5e5e5; border-radius: 10rpx; padding: 14rpx 20rpx; font-size: 27rpx; }
 .rs-sheet-btn { margin: 20rpx 32rpx 0; background: #1aad19; color: #fff; font-size: 29rpx; }
+.rs-btn-export { margin-left: 16rpx; }

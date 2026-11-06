@@ -270,6 +270,12 @@
           <text class="form-label">报名费说明</text>
           <input class="form-input" placeholder="如：30 元/人（含保险），现场缴费" value="{{selfFeeNote}}" data-k="feeNote" bindinput="onSelfInput" />
 
+          <view class="self-row">
+            <text class="form-label" style="flex:1;">为参与者购买保险（报名需收身份证号）</text>
+            <switch checked="{{selfInsurance}}" bindchange="onToggleSelfInsurance" color="#1aad19" />
+          </view>
+          <text class="self-tip" wx:if="{{selfInsurance}}">报名者的身份证号将加密保存，仅用于购买保险；名单页可导出投保名单，每次导出都会留审计记录。</text>
+
           <text class="form-label">距离档 *（组别，用于报名与成绩榜）</text>
           <view class="btn-row">
             <text class="opt-btn {{selfGroups['5km'] ? 'on' : ''}}" data-g="5km" bindtap="onSelfToggleGroup">5km</text>

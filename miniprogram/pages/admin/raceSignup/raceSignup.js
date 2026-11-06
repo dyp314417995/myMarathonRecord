@@ -2,7 +2,7 @@
 // 线下：勾「已收款」；线上：看名单 + 代退赛；入口：赛事管理 → 报名名单
 Page({
   data: {
-    loading: true, eventId: '', eventName: '', eventMode: 'offline',
+    loading: true, eventId: '', eventName: '', eventMode: 'offline', insurance: false, exporting: false,
     list: [], active: 0, capacity: 0,
     // 代报名
     showAdd: false, addForm: { keyword: '', candidates: [], userIdx: 0, groupIdx: 0 },
@@ -36,6 +36,7 @@ Page({
       active: res.active || 0,
       capacity: res.capacity || 0,
       eventMode: (res.event && res.event.mode) || 'offline',
+      insurance: !!(res.event && res.event.insurance),
     });
   },
 
@@ -49,6 +50,33 @@ Page({
     const res = (r && r.result) || {};
     if (!res.ok) return wx.showToast({ title: res.error || '操作失败', icon: 'none' });
     this.load();
+  },
+
+  // 导出投保名单：服务端解密身份证号（每次导出云端都留审计记录），复制到剪贴板交给保险公司
+  async onExportInsurance() {
+    if (this.data.exporting) return;
+    const userInfo = wx.getStorageSync('userInfo');
+    const go = async () => {
+      this.setData({ exporting: true });
+      wx.showLoading({ title: '导出中' });
+      const r = await wx.cloud.callFunction({
+        name: 'raceEvent',
+        data: { action: 'exportInsurance', userId: userInfo._id, eventId: this.data.eventId },
+      }).catch(() => ({ result: { ok: false } }));
+      wx.hideLoading();
+      this.setData({ exporting: false });
+      const res = (r && r.result) || {};
+      if (!res.ok) return wx.showToast({ title: res.error || '导出失败', icon: 'none' });
+      const lines = (res.list || []).map(x => `${x.nickName}\t${x.group}\t${x.idCard || '（无证件信息）'}`);
+      const text = `${res.eventName} 投保名单（${lines.length} 人）\n姓名\t距离档\t身份证号\n` + lines.join('\n');
+      if (!lines.length) return wx.showToast({ title: '没有有效投保人', icon: 'none' });
+      wx.setClipboardData({ data: text, success: () => wx.showToast({ title: `已复制 ${lines.length} 人名单`, icon: 'success' }) });
+    };
+    wx.showModal({
+      title: '导出投保名单',
+      content: '将解密并复制报名者身份证号明文，仅限用于购买保险。本次导出会记录审计日志。继续？',
+      success: (m) => { if (m.confirm) go(); },
+    });
   },
 
   onTapQuit(e) {

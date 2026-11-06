@@ -69,7 +69,7 @@ Page({
     selfCustomGroups: [],   // [{ name, km }]
     selfCustomName: '', selfCustomKm: '',
     selfRunStart: '', selfRunEnd: '', selfResultDeadline: '',
-    selfProofRequired: true, selfHealthNotice: '',
+    selfProofRequired: true, selfHealthNotice: '', selfInsurance: false,
   },
 
   // 预设距离档（与云函数 raceEvent 的 GROUP_PRESETS 对应）
@@ -524,7 +524,7 @@ Page({
       selfGroups: { '5km': false, '10km': false, '半马': false, '全马': false },
       selfCustomGroups: [], selfCustomName: '', selfCustomKm: '',
       selfRunStart: '', selfRunEnd: '', selfResultDeadline: '',
-      selfProofRequired: true, selfHealthNotice: '',
+      selfProofRequired: true, selfHealthNotice: '', selfInsurance: false,
       form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [], qrCode: '', qrCodeUpdatedAt: null, qrNotifyDisabled: false },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
@@ -638,6 +638,7 @@ Page({
       selfResultDeadline: r.resultDeadline || '',
       selfProofRequired: r.proofRequired !== false,
       selfHealthNotice: r.healthNotice || '',
+      selfInsurance: !!r.insurance,
       posterTemp: initPosters, formQrUrl: qrInit, qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'),
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
       form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline, qrCode: r.qrCode || '', qrCodeUpdatedAt: r.qrCodeUpdatedAt || null, qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'), qrNotifyDisabled: !!r.qrNotifyDisabled },
@@ -1158,6 +1159,7 @@ Page({
   },
   onSelfPickDate(e) { this.setData({ ['self' + e.currentTarget.dataset.k.charAt(0).toUpperCase() + e.currentTarget.dataset.k.slice(1)]: e.detail.value }); },
   onToggleSelfProof(e) { this.setData({ selfProofRequired: e.detail.value }); },
+  onToggleSelfInsurance(e) { this.setData({ selfInsurance: e.detail.value }); },
   onAddCustomGroup() {
     const name = (this.data.selfCustomName || '').trim();
     if (!name) return wx.showToast({ title: '请填写档位名称', icon: 'none' });
@@ -1202,6 +1204,7 @@ Page({
       feeNote: (d.selfFeeNote || '').trim(),
       groups: groups.groups, groupKm: groups.groupKm,
       healthNotice: (d.selfHealthNotice || '').trim(),
+      insurance: !!d.selfInsurance,
     };
     if (d.selfMode === 'offline') {
       if (!(d.selfLocation || '').trim()) return { error: '线下赛请填写比赛地点' };

@@ -610,6 +610,10 @@
         <view class="self-sheet-picker">{{selfGroups[signupForm.groupIdx] || '请选择'}} ›</view>
       </picker>
     </view>
+    <view class="self-sheet-field" wx:if="{{selfInsurance}}">
+      <text class="self-sheet-label">身份证号</text>
+      <input class="self-sheet-input" type="idcard" maxlength="18" placeholder="购买保险必需" value="{{signupForm.idCard}}" bindinput="onSignupIdInput" />
+    </view>
     <view class="self-sheet-field">
       <text class="self-sheet-label">紧急联系人</text>
       <input class="self-sheet-input" placeholder="姓名 + 电话（选填）" value="{{signupForm.emergencyContact}}" bindinput="onSignupInput" />
@@ -621,6 +625,7 @@
       <text class="self-sheet-notice">{{selfHealthNotice}}</text>
       <text class="self-sheet-notice-done" wx:if="{{noticeRead}}">— 已读完全文，可以勾选了 —</text>
     </scroll-view>
+    <text class="self-sheet-privacy" wx:if="{{selfInsurance}}">🔒 身份证号仅用于购买保险，将加密保存，严格保密，不作其他用途</text>
     <button class="self-sheet-btn" catchtap="onConfirmSignup">确认报名</button>
   </view>
 </view>

@@ -283,6 +283,7 @@ Page({
         selfHealthNotice: event.healthNotice || '',
         selfRankEnabled: event.rankEnabled !== false,
         selfProofRequired: event.proofRequired !== false,
+        selfInsurance: !!event.insurance,
         myReviewTags: myReview ? (myReview.tags || []).join('、') : '',
         'myReview.myAvg': myReview && myReview.scores ? Math.round((myReview.scores.difficulty + myReview.scores.atmosphere + myReview.scores.supply + myReview.scores.transport) / 0.4) / 10 : 0,
       });
@@ -1361,10 +1362,11 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
     if (!this.data.selfGroups.length) return wx.showToast({ title: '主办方未设置距离档', icon: 'none' });
-    this.setData({ showSignup: true, showNoticeFull: false, noticeRead: false, signupForm: { groupIdx: 0, emergencyContact: '', noticeAgreed: false } });
+    this.setData({ showSignup: true, showNoticeFull: false, noticeRead: false, signupForm: { groupIdx: 0, emergencyContact: '', idCard: '', noticeAgreed: false } });
   },
   onHideSignup() { this.setData({ showSignup: false }); },
   onSignupGroupPick(e) { this.setData({ 'signupForm.groupIdx': Number(e.detail.value) || 0 }); },
+  onSignupIdInput(e) { this.setData({ 'signupForm.idCard': e.detail.value }); },
   onSignupInput(e) { this.setData({ 'signupForm.emergencyContact': e.detail.value }); },
   onToggleNoticeCheck() {
     // 强制阅读：没点开读完（滚到底）之前不允许勾选
@@ -1394,10 +1396,15 @@ Page({
   onNoticeReachBottom() { if (!this.data.noticeRead) this.setData({ noticeRead: true }); },
 
   async onConfirmSignup() {
-    const { eventId, selfGroups, signupForm } = this.data;
+    const { eventId, selfGroups, selfInsurance, signupForm } = this.data;
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
     if (!signupForm.noticeAgreed) return wx.showToast({ title: '请先勾选免责声明', icon: 'none' });
+    // 保险：身份证号必填（18 位基础校验，校验位由服务端验证）
+    const idCard = (signupForm.idCard || '').trim().toUpperCase().replace(/\s/g, '');
+    if (selfInsurance && !/^\d{17}[\dXx]$/.test(idCard)) {
+      return wx.showToast({ title: '请填写 18 位身份证号（购买保险必需）', icon: 'none' });
+    }
     wx.showLoading({ title: '提交中' });
     const r = await wx.cloud.callFunction({
       name: 'raceEvent',
@@ -1405,6 +1412,7 @@ Page({
         action: 'signup', userId: userInfo._id, eventId,
         group: selfGroups[signupForm.groupIdx] || '',
         emergencyContact: signupForm.emergencyContact,
+        idCard: selfInsurance ? idCard : '',
         noticeAgreed: signupForm.noticeAgreed,
       },
     }).catch(e => ({ result: { ok: false, error: e.message } }));

@@ -7,6 +7,7 @@
       <text class="rs-sub">已报名 {{active}}{{capacity > 0 ? ' / ' + capacity : ''}} 人 · 共 {{list.length}} 条记录</text>
       <view class="rs-actions">
         <view class="rs-btn" bindtap="onOpenAdd">＋ 代报名</view>
+        <view class="rs-btn rs-btn-export" wx:if="{{insurance}}" bindtap="onExportInsurance">📋 导出投保名单</view>
       </view>
     </view>
 
@@ -22,6 +23,7 @@
           <text class="rs-tag t-orange" wx:if="{{item.status === 'registered' && !item.paid && eventMode === 'offline'}}">待缴费</text>
         </view>
         <text class="rs-meta" wx:if="{{item.group}}">距离档：{{item.group}}</text>
+        <text class="rs-meta" wx:if="{{item.idCardMask}}">保险证件：{{item.idCardMask}}（明文仅在导出时可见）</text>
         <text class="rs-meta" wx:if="{{item.emergencyContact}}">紧急联系人：{{item.emergencyContact}}</text>
       </view>
       <view class="rs-right">

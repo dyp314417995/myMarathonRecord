@@ -10,6 +10,7 @@
 // 注意：race_markers.userId 存的是 users._id 不是 openid（历史坑，已踩两次），
 //       本函数入参 userId 统一走 resolveUser 兼容两种。
 const cloud = require('wx-server-sdk');
+const crypto = require('crypto');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
@@ -32,6 +33,53 @@ const PACE_LIMIT = 150; // 秒/公里，> 2:30/km 直接拒
 
 const ok = (data = {}) => Object.assign({ ok: true }, data);
 const fail = (error) => ({ ok: false, error });
+
+// ==================== 身份证号加密（仅保险用途） ====================
+// 报名收集的身份证号只为购买保险；库里只存 AES-256-GCM 密文，不落明文。
+// 密钥优先取云函数环境变量 ID_ENC_KEY（64 位 hex）；未配置则在 race_private_config
+// 集合自动生成保管（与业务数据同库，安全等级有限，正式启用保险采购后建议换环境变量）。
+let _idKeyCache = null;
+async function getIdEncKey() {
+  if (_idKeyCache) return _idKeyCache;
+  const envKey = process.env.ID_ENC_KEY;
+  if (envKey && /^[0-9a-fA-F]{64}$/.test(envKey)) {
+    _idKeyCache = Buffer.from(envKey, 'hex');
+    return _idKeyCache;
+  }
+  const r = await db.collection('race_private_config').doc('idkey').get().catch(() => null);
+  if (r && r.data && r.data.key && /^[0-9a-fA-F]{64}$/.test(r.data.key)) {
+    _idKeyCache = Buffer.from(r.data.key, 'hex');
+    return _idKeyCache;
+  }
+  const key = crypto.randomBytes(32);
+  await db.collection('race_private_config').doc('idkey')
+    .set({ data: { key: key.toString('hex'), createTime: new Date() } }).catch(() => null);
+  _idKeyCache = key;
+  return _idKeyCache;
+}
+function encryptIdCard(id) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', _idKeyCache, iv);
+  const enc = Buffer.concat([c.update(String(id), 'utf8'), c.final()]);
+  return ['v1', iv.toString('base64'), c.getAuthTag().toString('base64'), enc.toString('base64')].join('.');
+}
+function decryptIdCard(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 4 || parts[0] !== 'v1') return '';
+  try {
+    const d = crypto.createDecipheriv('aes-256-gcm', _idKeyCache, Buffer.from(parts[1], 'base64'));
+    d.setAuthTag(Buffer.from(parts[2], 'base64'));
+    return Buffer.concat([d.update(Buffer.from(parts[3], 'base64')), d.final()]).toString('utf8');
+  } catch (e) { return ''; }
+}
+// 18 位身份证校验位验证（15 位老号不支持，要求升位）
+function validIdCard(s) {
+  if (!/^\d{17}[\dXx]$/.test(s)) return false;
+  const w = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+  let sum = 0;
+  for (let i = 0; i < 17; i++) sum += Number(s[i]) * w[i];
+  return '10X98765432'[sum % 11] === s[17].toUpperCase();
+}
 
 // 云函数跑 UTC，日期口径统一 +8 小时（设计文档 12.3）
 function todayStr() {
@@ -144,6 +192,7 @@ function normalizeSelfFields(d, isCreate) {
   out.signupDeadline = str(d.signupDeadline, 10);   // 'YYYY-MM-DD'，空 = 不限
   out.feeNote = str(d.feeNote, 200);
   out.healthNotice = str(d.healthNotice, 2000);
+  out.insurance = !!d.insurance;   // 是否为参与者购买保险（报名时需收集身份证号，加密存储）
   // 距离档：数组存组名，groupKm 存公里数（预设档自动带，自定义档管理员可填）
   const groups = Array.isArray(d.groups) ? d.groups
     .map(g => String(g || '').trim().slice(0, 20)).filter(Boolean).slice(0, 10) : [];
@@ -276,6 +325,16 @@ async function actionSignup(userId, data) {
   const emergencyContact = String(data.emergencyContact || '').trim().slice(0, 100);
   if (data.noticeAgreed !== true) return fail('请阅读并勾选免责声明');
 
+  // 保险：开启后必须提供身份证号；AES-256-GCM 加密入库，数据库不存明文
+  let idCardEnc = null, idCardMask = '';
+  if (ev.insurance) {
+    const id = String(data.idCard || '').trim().toUpperCase().replace(/\s/g, '');
+    if (!validIdCard(id)) return fail('请填写正确的 18 位身份证号');
+    await getIdEncKey();
+    idCardEnc = encryptIdCard(id);
+    idCardMask = '**************' + id.slice(-4);
+  }
+
   // 满员读时判定，不落库状态（设计文档 12.4）
   const capacity = Number(ev.capacity) || 0;
   if (capacity > 0) {
@@ -294,8 +353,8 @@ async function actionSignup(userId, data) {
     group,
     emergencyContact,
     noticeAgreed: true,
-    paid: false, paidAt: null, paidNote: '',
-    insuredStatus: ev.insuranceMode === 'none' ? 'none' : 'pending',
+    idCardEnc, idCardMask,
+    insuredStatus: ev.insurance ? 'pending' : 'none',
     quitAt: null,
     raceType: ev.raceType || '',
     updateTime: new Date(),
@@ -361,13 +420,46 @@ async function actionListSignups(userId, data) {
     avatarUrl: (uMap[x.userId] && uMap[x.userId].avatarUrl) || '',
     status: x.status, group: x.group || '', emergencyContact: x.emergencyContact || '',
     paid: !!x.paid, paidAt: x.paidAt || null,
+    idCardMask: x.idCardMask || '',   // 脱敏展示；明文仅 exportInsurance 且留审计
     insuredStatus: x.insuredStatus || 'none',
     recordId: x.recordId || '',
     regTime: x.regTime || x.createTime || null,
     quitAt: x.quitAt || null,
   }));
   const active = list.filter(x => ['registered', 'finished'].includes(x.status)).length;
-  return ok({ list, active, capacity: Number(ev.capacity) || 0, event: { name: ev.name, mode: ev.mode || 'offline' } });
+  return ok({ list, active, capacity: Number(ev.capacity) || 0, event: { name: ev.name, mode: ev.mode || 'offline', insurance: !!ev.insurance } });
+}
+
+// 导出投保名单：明文身份证仅此处可见（super admin），每次导出写审计留痕
+async function actionExportInsurance(userId, data) {
+  const me = await resolveUser(userId);
+  if (!me || !(await isAdminUser(me._id))) return fail('仅管理员可导出投保名单');
+  const eventId = String(data.eventId || '');
+  const ev = await getEvent(eventId);
+  if (!ev) return fail('赛事不存在');
+  if (!ev.insurance) return fail('该赛事未开启保险');
+  const r = await db.collection(MARKERS).where({ eventId, status: _.in(['registered', 'finished']) }).limit(500).get().catch(() => null);
+  const rows = (r && r.data) || [];
+  await getIdEncKey();
+  const uMap = {};
+  for (const id of [...new Set(rows.map(x => x.userId).filter(Boolean))]) {
+    const u = await db.collection('users').doc(id).get().catch(() => null);
+    if (u && u.data) uMap[id] = u.data;
+  }
+  const list = [];
+  for (const x of rows) {
+    const id = x.idCardEnc ? decryptIdCard(x.idCardEnc) : '';
+    list.push({
+      nickName: (uMap[x.userId] && (uMap[x.userId].nickName || uMap[x.userId].nickname)) || '未知',
+      group: x.group || '', idCard: id,
+    });
+  }
+  await ensureAdd('race_audit_log', {
+    type: 'export-insurance', eventId, eventName: ev.name,
+    count: list.length, operatorId: me._id, operatorName: me.nickName || me.nickname || '',
+    createTime: new Date(),
+  }).catch(() => {});
+  return ok({ list, eventName: ev.name });
 }
 
 async function actionMarkPaid(userId, data) {
@@ -654,6 +746,7 @@ exports.main = async (event) => {
       case 'quit': return await actionQuit(userId, data);
       case 'listSignups': return await actionListSignups(userId, data);
       case 'markPaid': return await actionMarkPaid(userId, data);
+      case 'exportInsurance': return await actionExportInsurance(userId, data);
       case 'submitResult': return await actionSubmitResult(userId, data);
       case 'reviewResult': return await actionReviewResult(userId, data);
       case 'pendingResults': return await actionPendingResults(userId, data);
