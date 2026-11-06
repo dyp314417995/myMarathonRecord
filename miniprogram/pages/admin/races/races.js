@@ -61,7 +61,19 @@ Page({
     showWishes: false,
     wishList: [],
     wishCount: 0,
+    // 自办赛事（source='self'）：线下有地点，线上无地点有跑步窗口
+    selfEnabled: false, selfMode: 'offline',
+    selfLocation: '', selfMeetInfo: '',
+    selfCapacity: '', selfSignupDeadline: '', selfFeeNote: '',
+    selfGroups: { '5km': false, '10km': false, '半马': false, '全马': false },
+    selfCustomGroups: [],   // [{ name, km }]
+    selfCustomName: '', selfCustomKm: '',
+    selfRunStart: '', selfRunEnd: '', selfResultDeadline: '',
+    selfProofRequired: true, selfHealthNotice: '',
   },
+
+  // 预设距离档（与云函数 raceEvent 的 GROUP_PRESETS 对应）
+  SELF_PRESETS: ['5km', '10km', '半马', '全马'],
 
   labels: ['白金标', '金标', '精英标', '普通标'],
   mechanisms: ['抽签', '先到先得'],
@@ -507,6 +519,12 @@ Page({
     this.setData({
       showForm: true, editingId: '', posterTemp: [], showPaste: false, pasteText: '', parsing: false, nameDupStatus: '',
       typeFull: true, typeHalf: false, type10k: false,
+      selfEnabled: false, selfMode: 'offline',
+      selfLocation: '', selfMeetInfo: '', selfCapacity: '', selfSignupDeadline: '', selfFeeNote: '',
+      selfGroups: { '5km': false, '10km': false, '半马': false, '全马': false },
+      selfCustomGroups: [], selfCustomName: '', selfCustomKm: '',
+      selfRunStart: '', selfRunEnd: '', selfResultDeadline: '',
+      selfProofRequired: true, selfHealthNotice: '',
       form: { name: '', raceGroup: '', date: '', province: '', city: '', raceTypes: ['full'], raceLevel: 'A', label: '', scale: '', subScale: '', fee: '', organizer: '', operator: '', contactPhone: '', contactEmail: '', wechatAccount: '', website: '', mechanism: '抽签', payment: '报名时缴费', signupChannels: '', medicalReport: '', finishRequirement: '', refundRule: '', startPoint: '', medalImage: '', routeMap: '', regStatus: '', posters: [], timeline: [], qrCode: '', qrCodeUpdatedAt: null, qrNotifyDisabled: false },
       gunTimes: [{ zone: 'A', time: '07:00', zoneIdx: 0 }],
       zoneOptions: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
@@ -608,6 +626,18 @@ Page({
     })();
     this.setData({
       showForm: true, editingId: r._id, nameDupStatus: '',
+      // 自办赛回填
+      selfEnabled: r.source === 'self',
+      selfMode: r.mode || 'offline',
+      selfLocation: r.location || '', selfMeetInfo: r.meetInfo || '',
+      selfCapacity: r.capacity ? String(r.capacity) : '',
+      selfSignupDeadline: r.signupDeadline || '', selfFeeNote: r.feeNote || '',
+      selfGroups: { '5km': !!(r.groups || []).includes('5km'), '10km': !!(r.groups || []).includes('10km'), '半马': !!(r.groups || []).includes('半马'), '全马': !!(r.groups || []).includes('全马') },
+      selfCustomGroups: ((r.groups || []).filter(g => ['5km', '10km', '半马', '全马'].indexOf(g) < 0)).map(g => ({ name: g, km: ((r.groupKm || {})[g]) || '' })),
+      selfRunStart: (r.runWindow || {}).start || '', selfRunEnd: (r.runWindow || {}).end || '',
+      selfResultDeadline: r.resultDeadline || '',
+      selfProofRequired: r.proofRequired !== false,
+      selfHealthNotice: r.healthNotice || '',
       posterTemp: initPosters, formQrUrl: qrInit, qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'),
       typeFull: raceTypes.includes('full'), typeHalf: raceTypes.includes('half'), type10k: raceTypes.includes('10k'),
       form: { name: r.name||'', raceGroup: r.raceGroup || '', date: this.fmtDate(r.date), province: r.province||'', city: r.city||'', raceTypes, raceLevel: r.raceLevel||'', label: r.label||'', scale: r.scale||'', subScale: r.subScale||'', fee: r.fee||'', organizer: r.organizer||'', operator: r.operator||'', contactPhone: r.contactPhone||'', contactEmail: r.contactEmail||'', wechatAccount: r.wechatAccount||'', website: r.website||'', mechanism: r.mechanism||'', payment: r.payment||'', signupChannels: r.signupChannels||'', medicalReport: r.medicalReport||'', finishRequirement: r.finishRequirement||'', refundRule: r.refundRule||'', startPoint: r.startPoint||'', medalImage: r.medalImage||'', routeMap: r.routeMap||'', regStatus: r.regStatus||'', posters: initPosters, timeline: existingTimeline, qrCode: r.qrCode || '', qrCodeUpdatedAt: r.qrCodeUpdatedAt || null, qrNotifyMode: r.qrNotifyMode || (r.qrNotifyDisabled ? 'expired' : 'all'), qrNotifyDisabled: !!r.qrNotifyDisabled },
@@ -618,8 +648,31 @@ Page({
     });
   },
 
+  goSignupList(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name || '';
+    wx.navigateTo({ url: '/pages/admin/raceSignup/raceSignup?eventId=' + id + '&name=' + encodeURIComponent(name) });
+  },
+
+  goRaceReview(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: '/pages/admin/raceReview/raceReview?eventId=' + id });
+  },
+
   onDel(e) {
     const id = e.currentTarget.dataset.id;
+    const target = this.data.allRaceList.find(x => x._id === id) || {};
+    // 自办赛删除走云函数级联：清报名/成绩提交/互助/评价，跑马记录保留
+    if (target.source === 'self') {
+      wx.showModal({ title: '删除自办赛事', content: '报名记录、成绩提交会一并清除，跑马记录会保留。确定删除？', confirmColor: '#ff4d4f', success: async (res) => {
+        if (!res.confirm) return;
+        const out = await wx.cloud.callFunction({ name: 'raceEvent', data: { action: 'deleteEvent', userId: this.data.userId, eventId: id } }).catch(() => ({ result: { ok: false } }));
+        const r = (out && out.result) || {};
+        if (r.ok) { wx.showToast({ title: '已删除', icon: 'success' }); this.loadRaces(); }
+        else wx.showToast({ title: r.error || '删除失败', icon: 'none' });
+      }});
+      return;
+    }
     wx.showModal({ title: '删除赛事', content: '确定删除？', confirmColor: '#ff4d4f', success: async (res) => {
       if (!res.confirm) return;
       await raceUtil.remove(id);
@@ -1095,6 +1148,79 @@ Page({
   onDateChange(e) { this.setData({ 'form.date': e.detail.value }); },
   onHideForm() { this.setData({ showForm: false }); },
 
+  // ---------- 自办赛事表单 ----------
+  onToggleSelf(e) { this.setData({ selfEnabled: e.detail.value }); },
+  onPickSelfMode(e) { this.setData({ selfMode: e.currentTarget.dataset.v }); },
+  onSelfInput(e) { this.setData({ ['self' + e.currentTarget.dataset.k.charAt(0).toUpperCase() + e.currentTarget.dataset.k.slice(1)]: e.detail.value }); },
+  onSelfToggleGroup(e) {
+    const g = e.currentTarget.dataset.g;
+    this.setData({ ['selfGroups.' + g]: !this.data.selfGroups[g] });
+  },
+  onSelfPickDate(e) { this.setData({ ['self' + e.currentTarget.dataset.k.charAt(0).toUpperCase() + e.currentTarget.dataset.k.slice(1)]: e.detail.value }); },
+  onToggleSelfProof(e) { this.setData({ selfProofRequired: e.detail.value }); },
+  onAddCustomGroup() {
+    const name = (this.data.selfCustomName || '').trim();
+    if (!name) return wx.showToast({ title: '请填写档位名称', icon: 'none' });
+    if (['5km', '10km', '半马', '全马'].includes(name)) return wx.showToast({ title: '与预设档重名', icon: 'none' });
+    if ((this.data.selfCustomGroups || []).some(g => g.name === name)) return wx.showToast({ title: '该档位已存在', icon: 'none' });
+    const km = Number(this.data.selfCustomKm);
+    const arr = this.data.selfCustomGroups.concat([{ name, km: km > 0 ? km : '' }]);
+    this.setData({ selfCustomGroups: arr, selfCustomName: '', selfCustomKm: '' });
+  },
+  onDelCustomGroup(e) {
+    const name = e.currentTarget.dataset.name;
+    this.setData({ selfCustomGroups: this.data.selfCustomGroups.filter(g => g.name !== name) });
+  },
+  onCustomKmInput(e) {
+    const name = e.currentTarget.dataset.name;
+    const km = Number(e.detail.value);
+    this.setData({ selfCustomGroups: this.data.selfCustomGroups.map(g => g.name === name ? { ...g, km: km > 0 ? km : '' } : g) });
+  },
+  // 收集距离档：预设勾选 + 自定义档 → { groups: [名字], groupKm: { 名字: 公里 } }
+  collectSelfGroups() {
+    const groups = [];
+    const groupKm = {};
+    const PRESET_KM = { '5km': 5, '10km': 10, '半马': 21.0975, '全马': 42.195 };
+    Object.keys(this.data.selfGroups).forEach(g => {
+      if (this.data.selfGroups[g]) { groups.push(g); groupKm[g] = PRESET_KM[g]; }
+    });
+    this.data.selfCustomGroups.forEach(g => {
+      groups.push(g.name);
+      if (g.km > 0) groupKm[g.name] = Number(g.km);
+    });
+    return { groups, groupKm };
+  },
+  // 校验并组装自办赛字段；有问题返回 { error }，提示直接给 toast
+  buildSelfFields() {
+    const d = this.data;
+    const groups = this.collectSelfGroups();
+    if (!groups.groups.length) return { error: '请至少选择一个距离档' };
+    const out = {
+      mode: d.selfMode,
+      capacity: Number(d.selfCapacity) || 0,
+      signupDeadline: (d.selfSignupDeadline || '').trim(),
+      feeNote: (d.selfFeeNote || '').trim(),
+      groups: groups.groups, groupKm: groups.groupKm,
+      healthNotice: (d.selfHealthNotice || '').trim(),
+    };
+    if (d.selfMode === 'offline') {
+      if (!(d.selfLocation || '').trim()) return { error: '线下赛请填写比赛地点' };
+      out.location = d.selfLocation.trim();
+      out.meetInfo = (d.selfMeetInfo || '').trim();
+    } else {
+      const ws = d.selfRunStart, we = d.selfRunEnd, rd = d.selfResultDeadline;
+      if (!ws || !we) return { error: '线上赛请设置跑步窗口' };
+      if (ws > we) return { error: '窗口开始不能晚于结束' };
+      if (!rd) return { error: '线上赛请设置成绩提交截止' };
+      if (rd < we) return { error: '成绩提交截止不能早于窗口结束' };
+      out.runWindow = { start: ws, end: we };
+      out.resultDeadline = rd;
+      out.proofRequired = !!d.selfProofRequired;
+      out.rankEnabled = true;
+    }
+    return { fields: out };
+  },
+
   // 群二维码提醒模式：'expired' = 关闭定时提醒（仅控制每日汇总），'all' = 正常推送
   // 注意：手动催办（用户在详情页点「通知负责人处理」）始终能送达，不受此开关影响
   onToggleQrNotify(e) {
@@ -1143,6 +1269,25 @@ Page({
         ? (((this.data.allRaceList.find(r => r._id === this.data.editingId) || {}).source) || 'manual')
         : 'manual',
     };
+
+    // 自办赛：走云函数（服务端管理员校验 + 字段白名单），不走官方赛事的客户端直写路径
+    if (this.data.selfEnabled) {
+      const selfFields = this.buildSelfFields();
+      if (selfFields.error) { wx.hideLoading(); return wx.showToast({ title: selfFields.error, icon: 'none' }); }
+      const payload = Object.assign({}, data, selfFields.fields, { source: 'self' });
+      payload.date = f.date;  // 云函数传 'YYYY-MM-DD' 字符串，避免 Date 序列化带来的时区偏移
+      const res = await wx.cloud.callFunction({
+        name: 'raceEvent',
+        data: { action: this.data.editingId ? 'updateEvent' : 'createEvent', userId: this.data.userId, eventId: this.data.editingId, event: payload },
+      }).catch(e => ({ result: { ok: false, error: e.message } }));
+      const r = (res && res.result) || {};
+      wx.hideLoading();
+      if (!r.ok) return wx.showToast({ title: r.error || '保存失败', icon: 'none' });
+      await this.loadRaces();
+      this.setData({ showForm: false });
+      wx.showToast({ title: '已保存', icon: 'success' });
+      return;
+    }
 
     if (this.data.editingId) {
       const old = this.data.allRaceList.find(r => r._id === this.data.editingId) || {};

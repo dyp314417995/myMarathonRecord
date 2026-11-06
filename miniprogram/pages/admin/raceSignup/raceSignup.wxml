@@ -1,0 +1,55 @@
+<!-- pages/admin/raceSignup/raceSignup.wxml - 自办赛报名名单 -->
+<view class="rs-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="rs-head">
+      <text class="rs-title">{{eventName}}</text>
+      <text class="rs-sub">已报名 {{active}}{{capacity > 0 ? ' / ' + capacity : ''}} 人 · 共 {{list.length}} 条记录</text>
+      <view class="rs-actions">
+        <view class="rs-btn" bindtap="onOpenAdd">＋ 代报名</view>
+      </view>
+    </view>
+
+    <view class="rs-empty" wx:if="{{list.length === 0}}"><text>还没有人报名</text></view>
+
+    <view class="rs-row {{item.status === 'quit' || item.status === 'dns' ? 'rs-row-quit' : ''}}" wx:for="{{list}}" wx:key="_id">
+      <image wx:if="{{item.avatarUrl}}" class="rs-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="rs-avatar rs-avatar-fb">👤</view>
+      <view class="rs-info">
+        <view class="rs-name-line">
+          <text class="rs-name">{{item.nickName}}</text>
+          <text class="rs-tag {{item.status === 'finished' ? 't-green' : (item.status === 'quit' ? 't-gray' : 't-blue')}}">{{item.statusText || item.status}}</text>
+          <text class="rs-tag t-orange" wx:if="{{item.status === 'registered' && !item.paid && eventMode === 'offline'}}">待缴费</text>
+        </view>
+        <text class="rs-meta" wx:if="{{item.group}}">距离档：{{item.group}}</text>
+        <text class="rs-meta" wx:if="{{item.emergencyContact}}">紧急联系人：{{item.emergencyContact}}</text>
+      </view>
+      <view class="rs-right">
+        <view class="rs-btn-mini {{item.paid ? 'paid' : ''}}"
+          wx:if="{{item.status === 'registered' && eventMode === 'offline'}}"
+          data-id="{{item._id}}" data-paid="{{item.paid}}" bindtap="onTogglePaid">
+          {{item.paid ? '已收款' : '标记收款'}}
+        </view>
+        <view class="rs-btn-mini danger" wx:if="{{item.status === 'registered'}}"
+          data-uid="{{item.userId}}" bindtap="onTapQuit">退赛</view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 代报名弹层 -->
+  <view class="rs-mask" wx:if="{{showAdd}}" catchtap="onHideAdd"></view>
+  <view class="rs-sheet" wx:if="{{showAdd}}">
+    <view class="rs-sheet-title">代报名</view>
+    <view class="rs-field">
+      <text class="rs-label">搜索成员昵称</text>
+      <input class="rs-input" placeholder="至少 2 个字" value="{{addForm.keyword}}" bindinput="onSearchUser" />
+    </view>
+    <view class="rs-field" wx:if="{{addForm.candidates.length}}">
+      <text class="rs-label">选择成员</text>
+      <picker range="{{addForm.candidates}}" range-key="nickName" value="{{addForm.userIdx}}" bindchange="onPickUser">
+        <view class="rs-picker">{{addForm.candidates[addForm.userIdx].nickName}} ›</view>
+      </picker>
+    </view>
+    <button class="rs-sheet-btn" loading="{{saving}}" bindtap="onConfirmAdd">确认代报名</button>
+  </view>
+</view>

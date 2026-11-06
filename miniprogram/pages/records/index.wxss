@@ -110,3 +110,9 @@
 .btn-primary { flex: 1; background: #1aad19; color: #fff; padding: 20rpx; border-radius: 12rpx; font-size: 28rpx; border: none; }
 
 .wrap { flex-wrap: wrap; }
+
+/* 来源标记：自办 / 线上 */
+.source-tag { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: auto; }
+.source-tag.self { background: #e8f7e8; color: #1a7a1a; }
+.source-tag.online { background: #e6f0fb; color: #2a6aa8; }
+

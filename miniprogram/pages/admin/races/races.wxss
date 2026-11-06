@@ -1,5 +1,18 @@
 /* pages/admin/races/races.wxss */
 .races-page { padding-bottom: 40rpx; }
+
+/* 自办赛事表单分组 */
+.self-block { margin-top: 24rpx; padding: 20rpx; background: #f7faf7; border: 1rpx solid #d6ead6; border-radius: 12rpx; }
+.self-head { display: flex; align-items: center; justify-content: space-between; }
+.self-row { display: flex; align-items: center; justify-content: space-between; margin: 12rpx 0; }
+.self-custom-row { display: flex; align-items: center; gap: 12rpx; margin: 8rpx 0; }
+.self-custom-name { width: 160rpx; font-size: 26rpx; color: #333; }
+.self-custom-name-input { flex: 1; border: 1rpx solid #e0e0e0; border-radius: 8rpx; padding: 10rpx 16rpx; font-size: 26rpx; }
+.self-custom-km { width: 140rpx; border: 1rpx solid #e0e0e0; border-radius: 8rpx; padding: 10rpx 16rpx; font-size: 26rpx; }
+.self-custom-del { color: #ff4d4f; padding: 0 12rpx; }
+.self-custom-add { color: #1aad19; font-size: 26rpx; padding: 0 12rpx; white-space: nowrap; }
+.self-tip { display: block; margin-top: 12rpx; font-size: 24rpx; color: #999; }
+
 .race-card { position: relative; padding: 20rpx 28rpx; margin: 8rpx 12rpx; }
 .race-card-row { display: flex; justify-content: space-between; align-items: center; }
 .race-info { flex: 1; }

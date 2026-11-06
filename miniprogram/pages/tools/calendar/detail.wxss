@@ -1,5 +1,25 @@
 .detail-page { padding-bottom: 40rpx; }
 
+/* ==================== 自办赛事 ==================== */
+.self-card { border: 1rpx solid #d6ead6; background: #fbfdfb; }
+.self-info { display: flex; flex-direction: column; gap: 8rpx; }
+.self-info-row { font-size: 26rpx; color: #555; line-height: 1.6; }
+.self-reg-status { font-size: 28rpx; color: #1a7a1a; font-weight: 600; display: block; margin-bottom: 16rpx; }
+.self-btn-row { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.self-btn { flex: 1; min-width: 180rpx; text-align: center; padding: 16rpx 0; border-radius: 12rpx; font-size: 28rpx; border: 1rpx solid #cfe3cf; color: #2a7a2a; background: #fff; }
+.self-btn-main { background: #1aad19; color: #fff; border-color: #1aad19; font-weight: 600; }
+.self-btn-danger { color: #d9534f; border-color: #eec4c2; }
+.self-btn-disabled { background: #f2f2f2; color: #aaa; border-color: #e5e5e5; text-align: center; padding: 16rpx 0; border-radius: 12rpx; font-size: 28rpx; }
+.self-sub { display: block; margin-top: 14rpx; font-size: 24rpx; color: #888; line-height: 1.6; }
+.self-sheet-field { display: flex; align-items: center; padding: 20rpx 32rpx; border-bottom: 1rpx solid #f2f2f2; }
+.self-sheet-label { width: 170rpx; font-size: 28rpx; color: #666; }
+.self-sheet-picker { font-size: 28rpx; color: #333; }
+.self-sheet-input { flex: 1; font-size: 28rpx; }
+.self-sheet-check { padding: 20rpx 32rpx 4rpx; font-size: 26rpx; color: #333; }
+.self-sheet-notice { display: block; margin: 8rpx 32rpx 0; font-size: 22rpx; color: #999; line-height: 1.6; max-height: 200rpx; overflow: hidden; }
+.self-sheet-btn { margin: 24rpx 32rpx 32rpx; background: #1aad19; color: #fff; font-size: 30rpx; }
+
+
 /* 朋友圈式图片网格 */
 .dtl-poster-grid {
   display: grid;

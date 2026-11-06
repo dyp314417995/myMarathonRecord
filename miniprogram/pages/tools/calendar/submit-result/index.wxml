@@ -1,0 +1,61 @@
+<!-- pages/tools/calendar/submit-result/index.wxml - 线上赛提交成绩 -->
+<view class="sr-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="sr-head">
+      <text class="sr-title">{{event.name}}</text>
+      <text class="sr-sub" wx:if="{{runWindow}}">跑步窗口 {{runWindow.start}} ~ {{runWindow.end}}</text>
+      <text class="sr-sub" wx:if="{{resultDeadline}}">成绩提交截止 {{resultDeadline}}</text>
+    </view>
+
+    <!-- 我的最近提交 -->
+    <view class="sr-status" wx:if="{{mySubmit}}">
+      <text wx:if="{{mySubmit.status === 'pending'}}">⏳ 上次提交待审核：{{mySubmit.result}}（{{mySubmit.paceText}}），再次提交会覆盖</text>
+      <text wx:if="{{mySubmit.status === 'approved'}}">✅ 成绩已通过：{{mySubmit.result}}（{{mySubmit.paceText}}）</text>
+      <text wx:if="{{mySubmit.status === 'rejected'}}">❌ 已驳回：{{mySubmit.reviewNote || '未填写理由'}}（可修改后重新提交）</text>
+    </view>
+
+    <view class="sr-card">
+      <view class="sr-field">
+        <text class="sr-label">跑步日期 *</text>
+        <picker mode="date" value="{{form.runDate}}" bindchange="onPickDate">
+          <view class="sr-picker">{{form.runDate}}</view>
+        </picker>
+      </view>
+      <view class="sr-field" wx:if="{{groups.length}}">
+        <text class="sr-label">距离档</text>
+        <picker range="{{groups}}" value="{{form.groupIdx}}" bindchange="onPickGroup">
+          <view class="sr-picker">{{groups[form.groupIdx] || '未分组'}} ›</view>
+        </picker>
+      </view>
+      <view class="sr-field">
+        <text class="sr-label">距离（公里）*</text>
+        <input class="sr-input" type="digit" placeholder="如 10.2" value="{{form.distanceKm}}" bindinput="onInputDistance" />
+      </view>
+      <view class="sr-field">
+        <text class="sr-label">完赛成绩 *（时:分:秒）</text>
+        <input class="sr-input" placeholder="如 0:52:30" value="{{form.result}}" bindinput="onInputResult" />
+      </view>
+      <text class="sr-pace" wx:if="{{paceText}}">{{paceText}}</text>
+      <view class="sr-field">
+        <text class="sr-label">截图{{proofRequired ? ' *（1-3 张，含日期/距离/配速）' : '（选填）'}}</text>
+        <view class="sr-imgs">
+          <view class="sr-img-item" wx:for="{{images}}" wx:key="*this" wx:for-index="idx">
+            <image src="{{item}}" mode="aspectFill" class="sr-img" data-idx="{{idx}}" bindtap="onPreviewImage" />
+            <text class="sr-img-del" data-idx="{{idx}}" catchtap="onRemoveImage">✕</text>
+          </view>
+          <view class="sr-img-add" wx:if="{{images.length < 3}}" bindtap="onChooseImage">
+            <text class="sr-img-add-icon">＋</text>
+            <text class="sr-img-add-tip">跑步 App 记录页 / 轨迹图</text>
+          </view>
+        </view>
+      </view>
+      <view class="sr-field">
+        <text class="sr-label">备注（选填）</text>
+        <input class="sr-input" placeholder="如：跑步机，坡度 2" value="{{form.note}}" bindinput="onInputNote" />
+      </view>
+      <button class="sr-submit" loading="{{submitting}}" bindtap="onSubmit">提交成绩</button>
+      <text class="sr-tip">提交后由管理员审核，通过后进入成绩榜；驳回会写明理由，截止前可修改后重新提交一次。</text>
+    </view>
+  </block>
+</view>

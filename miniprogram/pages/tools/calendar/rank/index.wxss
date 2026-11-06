@@ -1,0 +1,21 @@
+/* pages/tools/calendar/rank/index.wxss */
+.rank-page { padding: 24rpx; }
+.loading { text-align: center; color: #999; padding: 80rpx 0; }
+.rank-head { margin-bottom: 20rpx; }
+.rank-title { font-size: 34rpx; font-weight: 700; display: block; }
+.rank-sub { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }
+.rank-chips { white-space: nowrap; margin-bottom: 20rpx; }
+.chip { display: inline-block; padding: 10rpx 26rpx; margin-right: 14rpx; border-radius: 30rpx; font-size: 25rpx; background: #f2f2f2; color: #666; }
+.chip.on { background: #1aad19; color: #fff; }
+.rank-empty { text-align: center; color: #aaa; padding: 100rpx 0; font-size: 26rpx; }
+.rank-row { display: flex; align-items: center; background: #fff; border-radius: 14rpx; padding: 20rpx 24rpx; margin-bottom: 14rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.rank-no { width: 64rpx; font-size: 32rpx; font-weight: 700; color: #999; }
+.rank-no.r1 { color: #e6a23c; }
+.rank-no.r2 { color: #909399; }
+.rank-no.r3 { color: #b0724a; }
+.rank-avatar { width: 76rpx; height: 76rpx; border-radius: 50%; margin-right: 20rpx; }
+.rank-avatar-fallback { display: flex; align-items: center; justify-content: center; background: #f0f0f0; }
+.rank-info { flex: 1; min-width: 0; }
+.rank-name { font-size: 28rpx; font-weight: 600; display: block; }
+.rank-meta { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
+.rank-result { font-size: 32rpx; font-weight: 700; color: #1a7a1a; }

@@ -1,0 +1,22 @@
+/* pages/tools/calendar/submit-result/index.wxss */
+.sr-page { padding: 24rpx; padding-bottom: 60rpx; }
+.loading { text-align: center; color: #999; padding: 80rpx 0; }
+.sr-head { margin-bottom: 20rpx; }
+.sr-title { font-size: 36rpx; font-weight: 700; display: block; }
+.sr-sub { font-size: 24rpx; color: #888; display: block; margin-top: 6rpx; }
+.sr-status { background: #f7faf7; border: 1rpx solid #d6ead6; border-radius: 12rpx; padding: 18rpx 24rpx; font-size: 25rpx; color: #555; margin-bottom: 20rpx; line-height: 1.6; }
+.sr-card { background: #fff; border-radius: 16rpx; padding: 28rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.05); }
+.sr-field { margin-bottom: 24rpx; }
+.sr-label { display: block; font-size: 26rpx; color: #666; margin-bottom: 10rpx; }
+.sr-picker { border: 1rpx solid #e5e5e5; border-radius: 10rpx; padding: 16rpx 20rpx; font-size: 28rpx; }
+.sr-input { border: 1rpx solid #e5e5e5; border-radius: 10rpx; padding: 16rpx 20rpx; font-size: 28rpx; }
+.sr-pace { display: block; font-size: 26rpx; color: #1aad19; margin: -12rpx 0 20rpx; }
+.sr-imgs { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.sr-img-item { position: relative; width: 180rpx; height: 180rpx; }
+.sr-img { width: 100%; height: 100%; border-radius: 10rpx; }
+.sr-img-del { position: absolute; top: -12rpx; right: -12rpx; width: 40rpx; height: 40rpx; line-height: 36rpx; text-align: center; background: rgba(0,0,0,0.55); color: #fff; border-radius: 50%; font-size: 24rpx; }
+.sr-img-add { width: 180rpx; height: 180rpx; border: 2rpx dashed #ccc; border-radius: 10rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.sr-img-add-icon { font-size: 48rpx; color: #bbb; }
+.sr-img-add-tip { font-size: 20rpx; color: #bbb; margin-top: 6rpx; padding: 0 8rpx; text-align: center; }
+.sr-submit { margin-top: 12rpx; background: #1aad19; color: #fff; font-size: 30rpx; }
+.sr-tip { display: block; margin-top: 16rpx; font-size: 22rpx; color: #aaa; line-height: 1.6; }

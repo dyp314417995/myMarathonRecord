@@ -107,7 +107,9 @@ Page({
       const toSec = (t) => { const p = (t||'').split(':'); return +p[0]*3600 + +p[1]*60 + +(p[2]||0); };
       const pbFields = { '10k': u?.pb10k, half: u?.pbHalf, full: u?.pbFull };
       data.forEach(r => {
-        r.isPB = r.status === 'finished' && r.result && toSec(r.result) <= toSec(pbFields[r.raceType]) && r.result === pbFields[r.raceType];
+        const pbv = pbFields[r.raceType];
+        // 线上成绩无人见证，不计入 PB 口径（设计文档 12.12）
+        r.isPB = r.raceMode !== 'online' && r.status === 'finished' && r.result && !!pbv && toSec(r.result) <= toSec(pbv) && r.result === pbv;
       });
       this.setData({ records: data });
       this.buildTabs(data);

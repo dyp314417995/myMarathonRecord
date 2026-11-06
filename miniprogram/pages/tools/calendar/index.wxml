@@ -115,10 +115,10 @@
       </view>
       <view class="race-bottom">
         <text class="my-status" wx:if="{{item.myStatus && tab === 'review'}}">
-          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : '弃赛'}}
+          {{item.myStatus === 'planned' ? '计划报名' : item.myStatus === 'registered' ? '已报名' : item.myStatus === 'won' ? '已中签' : item.myStatus === 'lost' ? '未中签' : item.myStatus === 'finished' ? '已完赛' : item.myStatus === 'dnf' ? '未完赛' : item.myStatus === 'quit' ? '已退赛' : '弃赛'}}
         </text>
         <view wx:if="{{tab === 'mine' && item.myStatus}}" class="status-badge">
-          {{item.myStatus === 'planned' ? '📋 计划报名' : item.myStatus === 'registered' ? '✅ 已报名' : item.myStatus === 'won' ? '🎉 已中签' : item.myStatus === 'lost' ? '❌ 未中签' : item.myStatus === 'finished' ? '🏁 已完赛' : item.myStatus === 'dnf' ? '💔 未完赛' : '🚫 弃赛'}}
+          {{item.myStatus === 'planned' ? '📋 计划报名' : item.myStatus === 'registered' ? '✅ 已报名' : item.myStatus === 'won' ? '🎉 已中签' : item.myStatus === 'lost' ? '❌ 未中签' : item.myStatus === 'finished' ? '🏁 已完赛' : item.myStatus === 'dnf' ? '💔 未完赛' : item.myStatus === 'quit' ? '🏃 已退赛' : '🚫 弃赛'}}
         </view>
         <view class="mark-btn" catchtap="onShowMark" data-id="{{item._id}}" data-name="{{item.name}}">
           {{item.isMine ? '修改状态' : '关注赛事'}}

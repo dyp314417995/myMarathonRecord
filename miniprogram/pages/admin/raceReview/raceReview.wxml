@@ -1,0 +1,39 @@
+<!-- pages/admin/raceReview/raceReview.wxml - 线上赛成绩审核 -->
+<view class="rr-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="rr-tip">
+      📋 人工审核要点：截图有日期/距离/配速/账号水印 · 有 GPS 轨迹优先采信 ·
+      注意拼接痕迹 · 与本人平时水平对比 · 同一天是否多场
+    </view>
+
+    <view class="rr-empty" wx:if="{{list.length === 0}}"><text>✅ 没有待审核的成绩</text></view>
+
+    <view class="rr-card" wx:for="{{list}}" wx:key="_id">
+      <view class="rr-head">
+        <text class="rr-name">{{item.nickName}}</text>
+        <text class="rr-event">{{item.eventName}}</text>
+      </view>
+      <view class="rr-meta">
+        <text class="rr-meta-item">{{item.group || '未分组'}}</text>
+        <text class="rr-meta-item">跑步日期 {{item.runDate}}</text>
+        <text class="rr-meta-item">{{item.distanceKm}} km</text>
+        <text class="rr-meta-item result">{{item.result}}</text>
+        <text class="rr-meta-item">配速 {{item.paceText}}</text>
+        <text class="rr-meta-item warn" wx:if="{{item.retryCount > 0}}">已被驳回 {{item.retryCount}} 次</text>
+      </view>
+      <text class="rr-note" wx:if="{{item.note}}">备注：{{item.note}}</text>
+      <view class="rr-flag" wx:if="{{item.flags.indexOf('reuse') >= 0}}">⚠️ 疑似截图复用：该图片在其他提交中出现过，请重点核对</view>
+      <view class="rr-imgs">
+        <image wx:for="{{item.proofImages}}" wx:key="*this" wx:for-item="img"
+          src="{{img}}" mode="aspectFill" class="rr-img"
+          data-urls="{{item.proofImages}}" data-cur="{{img}}" bindtap="onPreview" />
+        <text class="rr-noimg" wx:if="{{item.proofImages.length === 0}}">未上传截图（无截图时需结合备注判断）</text>
+      </view>
+      <view class="rr-btns">
+        <view class="rr-btn rr-btn-ghost" data-id="{{item._id}}" bindtap="onReject">驳回（写理由）</view>
+        <view class="rr-btn rr-btn-main" data-id="{{item._id}}" bindtap="onApprove">通过</view>
+      </view>
+    </view>
+  </block>
+</view>

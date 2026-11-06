@@ -52,6 +52,13 @@
       "memorySize": 256
     },
     {
+      "name": "raceEvent",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
       "name": "winterTraining",
       "timeout": 120,
       "runtime": "Nodejs16.13",

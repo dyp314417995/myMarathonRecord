@@ -33,6 +33,66 @@
 
   </view>
 
+  <!-- 自办赛事：信息 + 报名区 -->
+  <block wx:if="{{isSelf}}">
+    <view class="card self-card">
+      <view class="section-title"><text>🏃 自办赛事 · {{selfMode === 'online' ? '线上赛' : '线下赛'}}</text></view>
+      <view class="self-info">
+        <block wx:if="{{selfMode === 'offline'}}">
+          <text class="self-info-row">📍 地点：{{selfLocation || '待公布'}}</text>
+          <text class="self-info-row" wx:if="{{selfMeetInfo}}">⏰ {{selfMeetInfo}}</text>
+        </block>
+        <block wx:else>
+          <text class="self-info-row" wx:if="{{selfRunWindow}}">🪟 跑步窗口：{{selfRunWindow.start}} ~ {{selfRunWindow.end}}（窗口内自选时间地点完成）</text>
+          <text class="self-info-row" wx:if="{{selfResultDeadline}}">⏱️ 成绩提交截止：{{selfResultDeadline}}{{selfProofRequired ? ' · 需上传跑步截图' : ''}}</text>
+        </block>
+        <text class="self-info-row" wx:if="{{selfGroups.length}}">🏷️ 距离档：{{selfGroups}}</text>
+        <text class="self-info-row" wx:if="{{selfFeeNote}}">💰 {{selfFeeNote}}</text>
+        <text class="self-info-row" wx:if="{{selfCounts}}">👥 已报名 {{selfCounts.signups}}{{selfCapacity > 0 ? ' / ' + selfCapacity : ''}} 人</text>
+        <text class="self-info-row" wx:if="{{selfMode === 'online' && selfCounts}}">✅ 已通过 {{selfCounts.approved}} 人 · 待审核 {{selfCounts.pending}} 人</text>
+      </view>
+    </view>
+
+    <view class="card self-card">
+      <view class="section-title"><text>📝 报名</text></view>
+      <block wx:if="{{regState === 'registered'}}">
+        <text class="self-reg-status">✅ 已报名{{myMarker && myMarker.paid ? ' · 已确认' : ' · 待缴费'}}</text>
+        <view class="self-btn-row">
+          <view class="self-btn self-btn-main" wx:if="{{selfMode === 'online' && (!mySubmit || mySubmit.status === 'rejected')}}" catchtap="onGoSubmitResult">提交成绩</view>
+          <view class="self-btn" wx:if="{{selfMode === 'offline'}}" catchtap="onSelfFinish">我已完赛 · 录成绩</view>
+          <view class="self-btn" wx:if="{{selfMode === 'online' && selfRankEnabled}}" catchtap="onGoRank">成绩榜</view>
+          <view class="self-btn self-btn-danger" catchtap="onTapQuitSignup">退赛</view>
+        </view>
+        <text class="self-sub" wx:if="{{mySubmit && mySubmit.status === 'pending'}}">⏳ 成绩待审核：{{mySubmit.result}}（{{mySubmit.paceText}}）</text>
+        <text class="self-sub" wx:if="{{mySubmit && mySubmit.status === 'approved'}}">✅ 成绩已通过：{{mySubmit.result}}（{{mySubmit.paceText}}）</text>
+        <text class="self-sub" wx:if="{{mySubmit && mySubmit.status === 'rejected'}}">❌ 成绩被驳回：{{mySubmit.reviewNote}}（截止前可修改后重新提交）</text>
+      </block>
+      <block wx:elif="{{regState === 'finished'}}">
+        <text class="self-reg-status">🏁 已完赛</text>
+        <view class="self-btn-row">
+          <view class="self-btn" wx:if="{{selfMode === 'online' && selfRankEnabled}}" catchtap="onGoRank">成绩榜</view>
+        </view>
+      </block>
+      <block wx:elif="{{regState === 'quit'}}">
+        <text class="self-reg-status">已退赛</text>
+        <view class="self-btn self-btn-main" catchtap="onTapSignup" style="margin-top:16rpx;">重新报名</view>
+      </block>
+      <block wx:elif="{{regState === 'can'}}">
+        <view class="self-btn self-btn-main" catchtap="onTapSignup">我要报名</view>
+      </block>
+      <block wx:elif="{{regState === 'full'}}">
+        <view class="self-btn self-btn-disabled">报名已满（{{selfCounts.signups}}/{{selfCapacity}}）</view>
+      </block>
+      <block wx:elif="{{regState === 'deadline'}}">
+        <view class="self-btn self-btn-disabled">报名已截止</view>
+      </block>
+      <block wx:elif="{{regState === 'ended'}}">
+        <view class="self-btn self-btn-disabled">报名已结束</view>
+      </block>
+      <text class="self-sub" wx:if="{{selfHealthNotice}}">📋 {{selfHealthNotice}}</text>
+    </view>
+  </block>
+
   <!-- 赛事信息（表格字段） -->
   <view class="card" wx:if="{{event.organizer || event.operator || event.regStatus || event.startPoint || event.signupChannels || event.medicalReport || event.finishRequirement || event.refundRule || event.contactPhone || event.contactEmail || event.wechatAccount || event.medalImage || event.routeMap}}">
     <view class="section-title"><text>🏅 赛事信息</text></view>
@@ -213,15 +273,15 @@
     </view>
   </view>
 
-  <!-- 我的状态 & 操作按钮 -->
-  <view class="card" wx:if="{{isMine}}">
+  <!-- 我的状态 & 操作按钮（自办赛有自己的报名区，这里不重复显示） -->
+  <view class="card" wx:if="{{isMine && !isSelf}}">
     <view class="section-title"><text>📌 我的状态</text></view>
     <view class="mark-row">
       <text>{{myStatus === 'planned' ? '📋 计划报名' : myStatus === 'registered' ? '✅ 已报名' : myStatus === 'won' ? '🎉 已中签' : myStatus === 'lost' ? '❌ 未中签' : myStatus === 'finished' ? '🏁 已完赛' : myStatus === 'dnf' ? '💔 未完赛' : myStatus === 'dns' ? '🚫 弃赛' : '未关注'}}</text>
       <text class="act" catchtap="onMark">修改</text>
     </view>
   </view>
-  <view class="card" wx:elif="{{!isMine}}">
+  <view class="card" wx:elif="{{!isMine && !isSelf}}">
     <view class="btn-primary" catchtap="onMark" hover-class="btn-hover">⭐ 关注赛事</view>
   </view>
 
@@ -538,5 +598,26 @@
         </view>
       </block>
     </scroll-view>
+  </view>
+
+  <!-- 自办赛报名弹层 -->
+  <view class="action-sheet-mask" wx:if="{{showSignup}}" catchtap="onHideSignup"></view>
+  <view class="action-sheet" wx:if="{{showSignup}}">
+    <view class="action-sheet-title">报名 · {{event.name}}</view>
+    <view class="self-sheet-field">
+      <text class="self-sheet-label">距离档</text>
+      <picker range="{{selfGroups}}" value="{{signupForm.groupIdx}}" bindchange="onSignupGroupPick">
+        <view class="self-sheet-picker">{{selfGroups[signupForm.groupIdx] || '请选择'}} ›</view>
+      </picker>
+    </view>
+    <view class="self-sheet-field">
+      <text class="self-sheet-label">紧急联系人</text>
+      <input class="self-sheet-input" placeholder="姓名 + 电话（选填）" value="{{signupForm.emergencyContact}}" bindinput="onSignupInput" />
+    </view>
+    <view class="self-sheet-check" bindtap="onToggleNoticeCheck">
+      <text>{{signupForm.noticeAgreed ? '☑' : '☐'}} 我已阅读并同意免责声明</text>
+    </view>
+    <text class="self-sheet-notice" wx:if="{{selfHealthNotice}}">{{selfHealthNotice}}</text>
+    <button class="self-sheet-btn" catchtap="onConfirmSignup">确认报名</button>
   </view>
 </view>

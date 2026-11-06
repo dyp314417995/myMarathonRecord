@@ -269,11 +269,25 @@ Page({
         raceGroup: event.raceGroup || '',
         reviewStats: stats,
         topTags: tagEntries,
-        isMine, myStatus, myReview,
+        isMine, myStatus, myReview, myMarker,
+        isSelf: event.source === 'self',
+        selfMode: event.mode || 'offline',
+        selfLocation: event.location || '',
+        selfMeetInfo: event.meetInfo || '',
+        selfRunWindow: event.runWindow || null,
+        selfResultDeadline: event.resultDeadline || '',
+        selfCapacity: Number(event.capacity) || 0,
+        selfFeeNote: event.feeNote || '',
+        selfGroups: event.groups || [],
+        selfGroupKm: event.groupKm || {},
+        selfHealthNotice: event.healthNotice || '',
+        selfRankEnabled: event.rankEnabled !== false,
+        selfProofRequired: event.proofRequired !== false,
         myReviewTags: myReview ? (myReview.tags || []).join('、') : '',
         'myReview.myAvg': myReview && myReview.scores ? Math.round((myReview.scores.difficulty + myReview.scores.atmosphere + myReview.scores.supply + myReview.scores.transport) / 0.4) / 10 : 0,
       });
       if (!silent) wx.hideLoading();
+      if (event.source === 'self') this.loadSelfState(); else this.setData({ regState: 'none' });
       this.loadHelps();
       // 群二维码：cloud:// 需转 http 临时链接才能渲染（开发者工具不认 cloud:// 会拼成相对 URL 报错）
       // 优先用云函数 getImageUrls（与管理端编辑弹窗同源，已验证稳定），失败再退回客户端 API，
@@ -1252,6 +1266,16 @@ Page({
           images: [],
           createTime: new Date(),
         };
+        // 自办赛：标记来源与形态，成绩榜 / 记录页要区分「自办」「线上」
+        if (event.source === 'self') {
+          recordData.source = 'self';
+          recordData.raceMode = event.mode || 'offline';
+          recordData.eventId = eventId;
+          recordData.eventName = event.name || '';
+          const mkGroup = (this.data.myMarker && this.data.myMarker.group) || '';
+          const km = ((event.groupKm || {})[mkGroup]) || 0;
+          if (km > 0) recordData.distanceKm = km;
+        }
         const addRes = await db.collection('race_records').add({ data: recordData });
 
         // 更新 marker 关联 recordId
@@ -1297,6 +1321,104 @@ Page({
       return true;
     }
     return false;
+  },
+
+  // ==================== 自办赛事 ====================
+
+  // 报名区状态：我的报名 / 我的成绩提交 / 报名人数（raceEvent.myStatus）
+  async loadSelfState() {
+    const userInfo = wx.getStorageSync('userInfo');
+    const uid = userInfo ? (userInfo._id || userInfo.openid) : '';
+    if (!uid) { this.setData({ selfCounts: null, mySubmit: null }); this.calcRegState(); return; }
+    const r = await wx.cloud.callFunction({
+      name: 'raceEvent',
+      data: { action: 'myStatus', userId: uid, eventId: this.data.eventId },
+    }).catch(() => null);
+    const res = (r && r.result) || {};
+    if (res.ok) this.setData({ selfCounts: res.counts || null, mySubmit: res.mySubmit || null });
+    this.calcRegState();
+  },
+
+  // 报名按钮状态机：can / full / deadline / ended / registered / finished / quit
+  calcRegState() {
+    if (!this.data.isSelf) return;
+    const { selfMode, selfCapacity, selfCounts, myStatus } = this.data;
+    const ev = this.data.event || {};
+    const today = this.fmtDate(new Date());
+    const evDate = ev.fmtDate || '';
+    if (['registered', 'finished'].includes(myStatus)) return this.setData({ regState: myStatus });
+    const over = this.data.selfMode === 'online'
+      ? (this.data.selfResultDeadline && today > this.data.selfResultDeadline)
+      : (evDate && today > evDate);
+    if (myStatus === 'quit') return this.setData({ regState: over ? 'ended' : 'can' });
+    if (over) return this.setData({ regState: 'ended' });
+    if (selfCapacity > 0 && selfCounts && selfCounts.signups >= selfCapacity) return this.setData({ regState: 'full' });
+    if (ev.signupDeadline && today > ev.signupDeadline) return this.setData({ regState: 'deadline' });
+    return this.setData({ regState: 'can' });
+  },
+
+  onTapSignup() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
+    if (!this.data.selfGroups.length) return wx.showToast({ title: '主办方未设置距离档', icon: 'none' });
+    this.setData({ showSignup: true, signupForm: { groupIdx: 0, emergencyContact: '', noticeAgreed: false } });
+  },
+  onHideSignup() { this.setData({ showSignup: false }); },
+  onSignupGroupPick(e) { this.setData({ 'signupForm.groupIdx': Number(e.detail.value) || 0 }); },
+  onSignupInput(e) { this.setData({ 'signupForm.emergencyContact': e.detail.value }); },
+  onToggleNoticeCheck() { this.setData({ 'signupForm.noticeAgreed': !this.data.signupForm.noticeAgreed }); },
+
+  async onConfirmSignup() {
+    const { eventId, selfGroups, signupForm } = this.data;
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
+    if (!signupForm.noticeAgreed) return wx.showToast({ title: '请先勾选免责声明', icon: 'none' });
+    wx.showLoading({ title: '提交中' });
+    const r = await wx.cloud.callFunction({
+      name: 'raceEvent',
+      data: {
+        action: 'signup', userId: userInfo._id, eventId,
+        group: selfGroups[signupForm.groupIdx] || '',
+        emergencyContact: signupForm.emergencyContact,
+        noticeAgreed: signupForm.noticeAgreed,
+      },
+    }).catch(e => ({ result: { ok: false, error: e.message } }));
+    wx.hideLoading();
+    const res = (r && r.result) || {};
+    if (!res.ok) return wx.showToast({ title: res.error || '报名失败', icon: 'none' });
+    wx.showToast({ title: '报名成功', icon: 'success' });
+    this.setData({ showSignup: false, myStatus: 'registered', isMine: true });
+    cache.invalidate('calendar');
+    this.loadEvent(true);
+  },
+
+  onTapQuitSignup() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo._id) return;
+    wx.showModal({ title: '退赛', content: '报名名额将释放，已缴费用线下协商退还。确定退赛？', confirmColor: '#ff4d4f', success: async (res) => {
+      if (!res.confirm) return;
+      const r = await wx.cloud.callFunction({ name: 'raceEvent', data: { action: 'quit', userId: userInfo._id, eventId: this.data.eventId } }).catch(() => ({ result: { ok: false } }));
+      const out = (r && r.result) || {};
+      if (!out.ok) return wx.showToast({ title: out.error || '退赛失败', icon: 'none' });
+      wx.showToast({ title: '已退赛', icon: 'success' });
+      cache.invalidate('calendar');
+      this.loadEvent(true);
+    }});
+  },
+
+  onGoSubmitResult() {
+    wx.navigateTo({ url: '/pages/tools/calendar/submit-result/index?eventId=' + this.data.eventId });
+  },
+  onGoRank() {
+    wx.navigateTo({ url: '/pages/tools/calendar/rank/index?eventId=' + this.data.eventId + '&name=' + encodeURIComponent(this.data.event.name || '') });
+  },
+
+  // 线下自办赛：已报名的人直接录成绩（raceType 按报名的距离档定）
+  onSelfFinish() {
+    const mkGroup = (this.data.myMarker && this.data.myMarker.group) || '';
+    const km = ((this.data.selfGroupKm || {})[mkGroup]) || 0;
+    const rt = km >= 40 ? 'full' : km >= 18 ? 'half' : (mkGroup.indexOf('10') === 0 ? '10k' : 'custom');
+    this.setData({ showResultModal: true, resultRaceType: rt });
   },
 
   onScoreDetail() {

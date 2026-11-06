@@ -1,0 +1,29 @@
+<!-- pages/tools/calendar/rank/index.wxml - 线上赛成绩榜 -->
+<view class="rank-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <block wx:else>
+    <view class="rank-head">
+      <text class="rank-title">{{eventName}} · 成绩榜</text>
+      <text class="rank-sub">仅显示审核通过的成绩 · 按组别排名</text>
+    </view>
+
+    <scroll-view class="rank-chips" scroll-x="true">
+      <text class="chip {{curGroup === 'all' ? 'on' : ''}}" data-g="all" bindtap="onPickGroup">全部 {{list.length}}</text>
+      <text class="chip {{curGroup === item ? 'on' : ''}}" wx:for="{{groups}}" wx:key="*this" data-g="{{item}}" bindtap="onPickGroup">{{item}} {{groupCounts[item] || 0}}</text>
+    </scroll-view>
+
+    <view class="rank-empty" wx:if="{{shown.length === 0}}">
+      <text>还没有通过审核的成绩</text>
+    </view>
+    <view class="rank-row" wx:for="{{shown}}" wx:key="userId">
+      <text class="rank-no {{item.rank === 1 ? 'r1' : (item.rank === 2 ? 'r2' : (item.rank === 3 ? 'r3' : ''))}}">{{item.rank}}</text>
+      <image wx:if="{{item.avatarUrl}}" class="rank-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="rank-avatar rank-avatar-fallback">👤</view>
+      <view class="rank-info">
+        <text class="rank-name">{{item.nickName}}</text>
+        <text class="rank-meta">{{item.group}} · {{item.runDate}} · 配速 {{item.paceText}}</text>
+      </view>
+      <text class="rank-result">{{item.result}}</text>
+    </view>
+  </block>
+</view>

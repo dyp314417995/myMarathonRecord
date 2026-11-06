@@ -89,6 +89,7 @@
           <text class="race-name">{{item.name}}</text>
           <text class="race-meta">{{item.fmtDate}} · {{item.province || item.city || '未知'}} · {{item.raceTypesStr}}<text wx:if="{{item.raceLevel}}"> · {{item.raceLevel}}级</text>{{item.label ? ' · ' + item.label : ''}}{{item.scale ? ' · 规模' + item.scale : ''}}<text wx:if="{{item.displayRegStatus}}"> · {{item.displayRegStatus}}</text></text>
           <view class="race-tags-row">
+            <text class="tag tag-green" wx:if="{{item.source === 'self'}}">自办{{item.mode === 'online' ? '·线上' : ''}}</text>
             <text class="tag tag-green" wx:if="{{item.status === 'upcoming'}}">{{item.countdown}}</text>
             <text class="tag tag-gray" wx:else>{{item.countdown}}</text>
             <text class="qr-tag {{item.qrStatus === 'expired' ? 'qr-expired' : (item.qrStatus === 'none' ? 'qr-missing' : 'qr-ok')}}">📱 {{item.qrStatusText}}<text wx:if="{{item.qrNotifyMode === 'expired'}}"> ·已关提醒</text></text>
@@ -101,6 +102,8 @@
           <text class="act" data-id="{{item._id}}" catchtap="onDup">📋</text>
           <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onShare">📱</text>
           <text class="act" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="onManageReviews">📝</text>
+          <text class="act" wx:if="{{item.source === 'self'}}" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="goSignupList">🧾</text>
+          <text class="act" wx:if="{{item.source === 'self' && item.mode === 'online'}}" data-id="{{item._id}}" catchtap="goRaceReview">✅</text>
           <text class="act del" data-id="{{item._id}}" catchtap="onDel">🗑</text>
         </view>
       </view>
@@ -218,7 +221,83 @@
       <input class="form-input" placeholder="https:// 奖牌图片" value="{{form.medalImage}}" data-k="medalImage" bindinput="onInput" />
       <text class="form-label">路线图 URL（表格导入，可改）</text>
       <input class="form-input" placeholder="https:// 比赛路线图" value="{{form.routeMap}}" data-k="routeMap" bindinput="onInput" />
-<text class="form-label">时间节点</text>
+
+      <!-- 自办赛事：source=self，线下有地点 / 线上有跑步窗口 -->
+      <view class="self-block">
+        <view class="self-head">
+          <text class="form-label">自办赛事（跑团自己办的比赛）</text>
+          <switch checked="{{selfEnabled}}" bindchange="onToggleSelf" color="#1aad19" />
+        </view>
+        <block wx:if="{{selfEnabled}}">
+          <text class="form-label">形态</text>
+          <view class="btn-row">
+            <text class="opt-btn {{selfMode === 'offline' ? 'on' : ''}}" data-v="offline" bindtap="onPickSelfMode">线下赛（固定集合点）</text>
+            <text class="opt-btn {{selfMode === 'online' ? 'on' : ''}}" data-v="online" bindtap="onPickSelfMode">线上赛（窗口内自跑）</text>
+          </view>
+
+          <block wx:if="{{selfMode === 'offline'}}">
+            <text class="form-label">比赛地点 *</text>
+            <input class="form-input" placeholder="如：解放广场" value="{{selfLocation}}" data-k="location" bindinput="onSelfInput" />
+            <text class="form-label">集合信息</text>
+            <input class="form-input" placeholder="如：7:30 集合签到，8:00 统一起跑" value="{{selfMeetInfo}}" data-k="meetInfo" bindinput="onSelfInput" />
+          </block>
+          <block wx:else>
+            <text class="form-label">跑步窗口 *</text>
+            <view style="display:flex;gap:12rpx;">
+              <picker style="flex:1;" mode="date" value="{{selfRunStart}}" data-k="RunStart" bindchange="onSelfPickDate">
+                <view class="tl-date-pick"><text class="{{selfRunStart ? '' : 'placeholder'}}">{{selfRunStart || '开始日期'}}</text></view>
+              </picker>
+              <picker style="flex:1;" mode="date" value="{{selfRunEnd}}" data-k="RunEnd" bindchange="onSelfPickDate">
+                <view class="tl-date-pick"><text class="{{selfRunEnd ? '' : 'placeholder'}}">{{selfRunEnd || '结束日期'}}</text></view>
+              </picker>
+            </view>
+            <text class="form-label">成绩提交截止 *</text>
+            <picker mode="date" value="{{selfResultDeadline}}" data-k="ResultDeadline" bindchange="onSelfPickDate">
+              <view class="tl-date-pick"><text class="{{selfResultDeadline ? '' : 'placeholder'}}">{{selfResultDeadline || '选择日期'}}</text></view>
+            </picker>
+            <view class="self-row">
+              <text class="form-label" style="flex:1;">必须上传跑步截图</text>
+              <switch checked="{{selfProofRequired}}" bindchange="onToggleSelfProof" color="#1aad19" />
+            </view>
+          </block>
+
+          <text class="form-label">报名人数上限（0 = 不限）</text>
+          <input class="form-input" type="number" placeholder="如 50" value="{{selfCapacity}}" data-k="capacity" bindinput="onSelfInput" />
+          <text class="form-label">报名截止（留空 = 不限）</text>
+          <picker mode="date" value="{{selfSignupDeadline}}" data-k="SignupDeadline" bindchange="onSelfPickDate">
+            <view class="tl-date-pick"><text class="{{selfSignupDeadline ? '' : 'placeholder'}}">{{selfSignupDeadline || '选择日期'}}</text></view>
+          </picker>
+          <text class="form-label">报名费说明</text>
+          <input class="form-input" placeholder="如：30 元/人（含保险），现场缴费" value="{{selfFeeNote}}" data-k="feeNote" bindinput="onSelfInput" />
+
+          <text class="form-label">距离档 *（组别，用于报名与成绩榜）</text>
+          <view class="btn-row">
+            <text class="opt-btn {{selfGroups['5km'] ? 'on' : ''}}" data-g="5km" bindtap="onSelfToggleGroup">5km</text>
+            <text class="opt-btn {{selfGroups['10km'] ? 'on' : ''}}" data-g="10km" bindtap="onSelfToggleGroup">10km</text>
+            <text class="opt-btn {{selfGroups['半马'] ? 'on' : ''}}" data-g="半马" bindtap="onSelfToggleGroup">半马</text>
+            <text class="opt-btn {{selfGroups['全马'] ? 'on' : ''}}" data-g="全马" bindtap="onSelfToggleGroup">全马</text>
+          </view>
+          <view wx:for="{{selfCustomGroups}}" wx:key="name" wx:for-item="g" class="self-custom-row">
+            <text class="self-custom-name">{{g.name}}</text>
+            <input class="self-custom-km" type="digit" placeholder="公里数" value="{{g.km}}" data-name="{{g.name}}" bindinput="onCustomKmInput" />
+            <text class="self-custom-del" data-name="{{g.name}}" bindtap="onDelCustomGroup">✕</text>
+          </view>
+          <view class="self-custom-row">
+            <input class="self-custom-name-input" placeholder="自定义档名，如 15km" value="{{selfCustomName}}" data-k="customName" bindinput="onSelfInput" />
+            <input class="self-custom-km" type="digit" placeholder="公里数" value="{{selfCustomKm}}" data-k="customKm" bindinput="onSelfInput" />
+            <text class="self-custom-add" bindtap="onAddCustomGroup">＋添加</text>
+          </view>
+
+          <text class="form-label">免责声明全文</text>
+          <textarea class="form-textarea" maxlength="2000" placeholder="组织方已为参与者投保；参与者应如实告知健康状况；隐瞒病史的责任自负" value="{{selfHealthNotice}}" data-k="healthNotice" bindinput="onSelfInput" />
+          <text class="self-tip">报名费线下收取，名单里勾「已收款」；保险功能下一版本开放。</text>
+        </block>
+      </view>
+
+      <!-- 官方赛事的时间线（报名开启/截止/起跑…）：自办赛不用它，
+           报名与成绩节点走下方自办赛的报名截止 / 跑步窗口 / 成绩提交截止，两套混填会互相打架 -->
+      <block wx:if="{{!selfEnabled}}">
+      <text class="form-label">时间节点</text>
       <block wx:for="{{timelineNodes}}" wx:key="label" wx:for-item="node" wx:for-index="idx">
         <view wx:if="{{node.label === '鸣枪开跑'}}" class="gun-block">
           <text class="tl-label" style="margin-bottom:8rpx;">{{node.label}}</text>
@@ -246,6 +325,7 @@
             <text class="tl-clear" wx:if="{{node.date || node.time}}" catchtap="onClearTime" data-idx="{{idx}}">✕</text>
           </view>
         </view>
+      </block>
       </block>
       <text class="form-label">赛事图片（选填，最多9张）</text>
       <!-- 群二维码（v2.7） -->
