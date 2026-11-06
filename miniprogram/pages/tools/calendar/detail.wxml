@@ -328,7 +328,7 @@
     <text class="qr-notice-foot">{{remindDone ? '负责人已收到提醒，会优先处理；也可以先把链接发给同场跑友' : '点一下就通知到负责人，不用凑人；攒到 3 人负责人会优先建群，不满 3 人他可以先不建'}}</text>
   </view>
 
-  <!-- 已有二维码但过期了：直接提醒管理员更新（不展示进度，每天 10 点也会自动提醒一次） -->
+  <!-- 已有二维码但过期了：直接提醒管理员更新（不展示进度，过期后每天 10 点自动提醒，直到换新） -->
   <view class="card qr-notice" wx:elif="{{!raceFinished && qrStatus === 'expired'}}">
     <view class="section-title">
       <text>⚠️ 群二维码已过期</text>
@@ -338,7 +338,7 @@
     <view class="qr-notice-btn {{notifyingOwner || cooldownLeft > 0 ? 'disabled' : ''}}" catchtap="onNotifyOwner">
       <text>{{notifyingOwner ? '提醒中…' : (cooldownText ? ('已提醒，' + cooldownText) : (myReminded ? '🔔 再提醒一次' : '🔔 提醒管理员更新'))}}</text>
     </view>
-    <text class="qr-notice-foot">除你手动提醒外，系统每天 10 点也会自动提醒管理员一次</text>
+    <text class="qr-notice-foot">除你手动提醒外，系统每天 10 点自动提醒管理员；二维码换新前每天都会提醒</text>
   </view>
 
   <!-- ===== 跑友互助：只有关注了这场赛事的跑友才看得到 ===== -->

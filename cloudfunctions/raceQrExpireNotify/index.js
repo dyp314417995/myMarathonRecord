@@ -3,6 +3,7 @@
 // 按省合并成一条通知（「缺N个，过期M个群二维码」+ 赛事名列表），推给负责该省的 active 管理员
 // 点击通知进管理页并自动套二维码筛选（page 带 qrScope）；赛事级开关 qrNotifyDisabled=true 的不发
 // 一天只跑一次（race_qr_expire_notify_log 去重）
+// 触发节奏：过期（有码没换）每天催；缺失（没传过）按省数量变化才催
 const cloud = require('wx-server-sdk');
 cloud.init({ env: 'cloud1-d5gy0iuiba5f9300f' });
 const db = cloud.database();
@@ -173,9 +174,11 @@ exports.main = async (event, context) => {
     racesExpired.forEach(r => addRace(r, 'expired'));
 
     for (const g of Object.values(groupMap)) {
-      // 有变化才发：该省数量与上次运行完全一致则跳过（已提醒过，无新增无进展）
+      // 去重策略（2026-11 调整）：
+      //  - 过期（有码但 7 天没换）：每天催一次，直到更新；真不需要更新的由负责人自己关定时提醒
+      //  - 缺失（从来没传过）：数量与该省上次运行一致则跳过，避免「一直没传」被天天轰炸
       const curKey = `${g.missing.length}-${g.expired.length}`;
-      if (prevMap[g.province] === curKey) {
+      if (g.expired.length === 0 && prevMap[g.province] === curKey) {
         detail.push({ province: g.province, status: 'skipped_no_change', missing: g.missing.length, expired: g.expired.length });
         continue;
       }
