@@ -16,7 +16,12 @@
 .self-sheet-picker { font-size: 28rpx; color: #333; }
 .self-sheet-input { flex: 1; font-size: 28rpx; }
 .self-sheet-check { padding: 20rpx 32rpx 4rpx; font-size: 26rpx; color: #333; }
-.self-sheet-notice { display: block; margin: 8rpx 32rpx 0; font-size: 22rpx; color: #999; line-height: 1.6; max-height: 200rpx; overflow: hidden; }
+.self-sheet-check.lock { color: #bbb; }
+.self-sheet-notice-link { color: #576b95; }
+.self-sheet-notice-done { display: block; text-align: center; font-size: 20rpx; color: #1aad19; padding: 12rpx 0 4rpx; }
+/* 免责声明全文：展开后可滚动（此前 max-height+hidden 裁掉长文，没入口看全文） */
+.self-sheet-notice-full { display: block; margin: 8rpx 32rpx 0; max-height: 420rpx; border: 1rpx solid #eee; border-radius: 10rpx; padding: 16rpx 20rpx; box-sizing: border-box; }
+.self-sheet-notice { display: block; font-size: 22rpx; color: #999; line-height: 1.6; }
 .self-sheet-btn { margin: 24rpx 32rpx 32rpx; background: #1aad19; color: #fff; font-size: 30rpx; }
 
 

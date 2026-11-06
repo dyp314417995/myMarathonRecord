@@ -1361,12 +1361,37 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return wx.navigateTo({ url: '/pages/login/login' });
     if (!this.data.selfGroups.length) return wx.showToast({ title: '主办方未设置距离档', icon: 'none' });
-    this.setData({ showSignup: true, signupForm: { groupIdx: 0, emergencyContact: '', noticeAgreed: false } });
+    this.setData({ showSignup: true, showNoticeFull: false, noticeRead: false, signupForm: { groupIdx: 0, emergencyContact: '', noticeAgreed: false } });
   },
   onHideSignup() { this.setData({ showSignup: false }); },
   onSignupGroupPick(e) { this.setData({ 'signupForm.groupIdx': Number(e.detail.value) || 0 }); },
   onSignupInput(e) { this.setData({ 'signupForm.emergencyContact': e.detail.value }); },
-  onToggleNoticeCheck() { this.setData({ 'signupForm.noticeAgreed': !this.data.signupForm.noticeAgreed }); },
+  onToggleNoticeCheck() {
+    // 强制阅读：没点开读完（滚到底）之前不允许勾选
+    if (!this.data.signupForm.noticeAgreed && !this.data.noticeRead) {
+      return wx.showToast({ title: '请先点开《免责声明》阅读到底部', icon: 'none' });
+    }
+    this.setData({ 'signupForm.noticeAgreed': !this.data.signupForm.noticeAgreed });
+  },
+
+  // 展开/收起免责声明全文；展开时若内容不足以滚动，直接视为已读完
+  onToggleNoticeFull() {
+    const open = !this.data.showNoticeFull;
+    this.setData({ showNoticeFull: open }, () => {
+      if (open && !this.data.noticeRead) this.checkNoticeScrollable();
+    });
+  },
+  checkNoticeScrollable() {
+    const q = wx.createSelectorQuery();
+    q.select('.self-sheet-notice-full').boundingClientRect();
+    q.select('.self-sheet-notice').boundingClientRect();
+    q.exec(res => {
+      const box = res && res[0], txt = res && res[1];
+      // 文本没超出滚动区 → 无需滚动也算读完
+      if (box && txt && txt.height <= box.height + 4) this.setData({ noticeRead: true });
+    });
+  },
+  onNoticeReachBottom() { if (!this.data.noticeRead) this.setData({ noticeRead: true }); },
 
   async onConfirmSignup() {
     const { eventId, selfGroups, signupForm } = this.data;

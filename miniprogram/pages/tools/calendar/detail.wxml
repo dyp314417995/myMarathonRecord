@@ -614,10 +614,13 @@
       <text class="self-sheet-label">紧急联系人</text>
       <input class="self-sheet-input" placeholder="姓名 + 电话（选填）" value="{{signupForm.emergencyContact}}" bindinput="onSignupInput" />
     </view>
-    <view class="self-sheet-check" bindtap="onToggleNoticeCheck">
-      <text>{{signupForm.noticeAgreed ? '☑' : '☐'}} 我已阅读并同意免责声明</text>
+    <view class="self-sheet-check {{noticeRead || signupForm.noticeAgreed ? '' : 'lock'}}" bindtap="onToggleNoticeCheck">
+      <text>{{signupForm.noticeAgreed ? '☑' : '☐'}} 我已阅读并同意 <text class="self-sheet-notice-link" catchtap="onToggleNoticeFull">《免责声明》</text>{{noticeRead ? '' : '（先点开阅读到底部）'}}</text>
     </view>
-    <text class="self-sheet-notice" wx:if="{{selfHealthNotice}}">{{selfHealthNotice}}</text>
+    <scroll-view wx:if="{{showNoticeFull && selfHealthNotice}}" scroll-y class="self-sheet-notice-full" bindscrolltolower="onNoticeReachBottom">
+      <text class="self-sheet-notice">{{selfHealthNotice}}</text>
+      <text class="self-sheet-notice-done" wx:if="{{noticeRead}}">— 已读完全文，可以勾选了 —</text>
+    </scroll-view>
     <button class="self-sheet-btn" catchtap="onConfirmSignup">确认报名</button>
   </view>
 </view>
