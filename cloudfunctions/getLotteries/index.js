@@ -4,6 +4,17 @@ cloud.init();
 const db = cloud.database();
 const _ = db.command;
 
+// ===== 成员门禁（与 getActivities 一致）=====
+// 活动广场内的抽奖内容同样只对已注册成员开放，分享打开的陌生人拿不到数据。
+async function isMember(uid) {
+  if (!uid) return false;
+  const r = await db.collection('users').doc(uid).get().catch(() => null);
+  if (r && r.data) return true;
+  const q = await db.collection('users').where({ _openid: uid }).limit(1).get().catch(() => null);
+  return !!(q && q.data && q.data.length);
+}
+const NEED_REGISTER = { ok: false, needRegister: true, error: '请先注册加入跑团' };
+
 function generateCode(len = 8) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -101,6 +112,12 @@ exports.main = async (event) => {
   const { action, id, data, userId, codes, page, pageSize } = event || {};
   const limit = pageSize || 20;
   const skip = ((page || 1) - 1) * limit;
+
+  // 成员门禁：抽奖的看/参与只对已注册成员开放（管理端 action 不在列）
+  if (['list', 'my', 'detail', 'enter'].indexOf(action) >= 0) {
+    const uid = userId || (event.userInfo && event.userInfo._id) || '';
+    if (!(await isMember(uid))) return NEED_REGISTER;
+  }
 
   // ------- 管理员：创建抽奖 + 生成抽奖码 -------
   if (action === 'create') {

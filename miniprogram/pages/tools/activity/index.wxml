@@ -1,5 +1,14 @@
 <!-- pages/tools/activity/index.wxml -->
 <view class="page">
+  <!-- 未注册用户：活动内容一律不展示，只留引导 -->
+  <view class="join-gate" wx:if="{{needJoin}}">
+    <text class="join-gate-icon">🏃</text>
+    <text class="join-gate-title">活动内容仅对跑团成员开放</text>
+    <text class="join-gate-desc">你还没有注册加入。完成注册并通过后，即可查看活动、报名和参与抽奖。</text>
+    <view class="join-gate-btn" bindtap="goRegister">立即注册加入</view>
+  </view>
+
+  <block wx:else>
   <view class="tabs">
     <text class="tab {{tab === 'all' ? 'on' : ''}}" bindtap="onTab" data-t="all">所有活动</text>
     <text class="tab {{tab === 'my' ? 'on' : ''}}" bindtap="onTab" data-t="my">我的活动</text>
@@ -55,4 +64,5 @@
     <view wx:if="{{!allLotteries.length}}" class="empty">暂无抽奖活动</view>
     <view class="load-more" wx:if="{{lotHasMore}}" bindtap="onLotLoadMore">加载更多</view>
   </view>
+  </block>
 </view>

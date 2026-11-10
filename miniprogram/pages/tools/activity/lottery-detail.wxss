@@ -33,3 +33,8 @@
 .share-bar { display: flex; align-items: center; margin-top: 20rpx; }
 .share-btn { font-size: 24rpx; background: #1aad19; color: #fff; border-radius: 8rpx; padding: 10rpx 28rpx; line-height: 1.5; margin: 0; flex-shrink: 0; }
 .share-btn::after { border: none; }
+
+/* 未注册门禁 */
+.gate-icon { font-size: 96rpx; line-height: 1; margin-bottom: 24rpx; }
+.gate-desc { font-size: 26rpx; color: #888; line-height: 1.7; margin-top: 16rpx; text-align: center; padding: 0 24rpx; }
+.gate-btn { margin-top: 44rpx; background: #1aad19; color: #fff; font-size: 30rpx; padding: 20rpx 72rpx; border-radius: 48rpx; }

@@ -10,6 +10,7 @@ Page({
     codeInput: '',
     submitting: false,
     result: { show: false, type: '', title: '', invalid: [], used: [] },
+    needJoin: false,
   },
 
   onLoad(options) {
@@ -27,11 +28,15 @@ Page({
     if (this.data.lotteryId) this.loadDetail();
   },
 
+  goRegister() {
+    wx.navigateTo({ url: '/pages/login/login' });
+  },
+
   // 转发（右上角菜单 + 页面按钮）
   onShareAppMessage() {
     const lot = this.data.lottery;
     return shareUtil.buildShare({
-      title: lot ? `快来参与「${lot.name}」抽奖` : '九州战马联盟抽奖',
+      title: lot ? `${lot.name}｜跑团成员可查看` : '九州战马联盟抽奖｜注册加入后可查看',
       path: `/pages/tools/activity/lottery-detail?id=${this.data.lotteryId}`,
       imageUrl: (lot && lot.images && lot.images[0]) || '',
     });
@@ -40,23 +45,33 @@ Page({
   onShareTimeline() {
     const lot = this.data.lottery;
     return shareUtil.buildTimeline({
-      title: lot ? `快来参与「${lot.name}」抽奖` : '九州战马联盟抽奖',
+      title: lot ? `${lot.name}｜跑团成员可查看` : '九州战马联盟抽奖｜注册加入后可查看',
       query: `id=${this.data.lotteryId}`,
       imageUrl: (lot && lot.images && lot.images[0]) || '',
     });
   },
 
   async loadDetail() {
-    this.setData({ loading: true, loadError: false });
+    const userInfo = wx.getStorageSync('userInfo');
+    // 门禁：未注册用户（含分享打开的陌生人）不请求抽奖数据
+    if (!userInfo || !userInfo._id) {
+      this.setData({ needJoin: true, loading: false, loadError: false, lottery: null });
+      return;
+    }
+    this.setData({ loading: true, loadError: false, needJoin: false });
     wx.showLoading({ title: '加载中' });
     try {
-      const userInfo = wx.getStorageSync('userInfo');
-      const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
+      const userId = userInfo._id;
 
       const res = await wx.cloud.callFunction({
         name: 'getLotteries',
         data: { action: 'detail', id: this.data.lotteryId, userId },
       });
+      if (res.result && res.result.needRegister) {
+        this.setData({ needJoin: true, loading: false, lottery: null });
+        wx.hideLoading();
+        return;
+      }
       const lot = res.result;
       if (!lot || lot.error) throw new Error(lot ? lot.error : '抽奖不存在');
 

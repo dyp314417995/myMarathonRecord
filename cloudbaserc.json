@@ -59,6 +59,20 @@
       "memorySize": 256
     },
     {
+      "name": "getActivities",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
+      "name": "getLotteries",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
       "name": "winterTraining",
       "timeout": 120,
       "runtime": "Nodejs16.13",

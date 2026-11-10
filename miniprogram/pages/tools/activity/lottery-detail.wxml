@@ -1,5 +1,11 @@
 <view class="lottery-page">
-  <view wx:if="{{loading}}" class="loading-wrap">
+  <view wx:if="{{needJoin}}" class="loading-wrap">
+    <text class="gate-icon">🏃</text>
+    <text class="loading-text">抽奖仅对跑团成员开放</text>
+    <text class="gate-desc">你还没有注册加入。完成注册并通过后，即可查看与参与抽奖。</text>
+    <view class="gate-btn" bindtap="goRegister">立即注册加入</view>
+  </view>
+  <view wx:elif="{{loading}}" class="loading-wrap">
     <text class="loading-text">加载中...</text>
   </view>
   <view wx:elif="{{loadError}}" class="loading-wrap">

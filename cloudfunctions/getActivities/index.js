@@ -13,6 +13,16 @@ exports.main = async (event) => {
     return { ok: true, source: 'trigger', time: new Date().toISOString(), ...r };
   }
 
+  // ===== 成员门禁 =====
+  // 活动内容（列表/详情/报名/我的）仅对已注册的团内成员开放。
+  // 通过分享卡片打开的陌生人也会走到这里，一律返回 needRegister，由前端引导去注册加入。
+  // 管理端 action（all/create/update/...）不在此列，避免影响后台。
+  const MEMBER_ACTIONS = ['detail', 'list', 'my', 'register', 'unregister'];
+  if (MEMBER_ACTIONS.indexOf(action) >= 0) {
+    const uid = userId || (event.userInfo && event.userInfo._id) || '';
+    if (!(await isMember(uid))) return NEED_REGISTER;
+  }
+
   if (action === 'create') {
     return await db.collection('activities').add({ data: { ...data, status: 'active', createTime: new Date() } });
   }
@@ -35,7 +45,10 @@ exports.main = async (event) => {
   }
   if (action === 'detail') {
     const act = await db.collection('activities').doc(id).get();
-    return act.data;
+    // 报名人数由服务端算：客户端不再拉报名名单（名单含手机号，仅管理员可见）
+    const cnt = await db.collection('activity_registrations')
+      .where({ activityId: id, status: 'active' }).count().catch(() => ({ total: 0 }));
+    return { ...act.data, regCount: (cnt && cnt.total) || 0 };
   }
 
   // 共用：自动完成已结束的活动
@@ -143,9 +156,11 @@ exports.main = async (event) => {
   // 报名
   if (action === 'register') {
     const { activityId, userInfo, customValues } = event;
+    const uid = (userInfo && userInfo._id) || userId;
+    if (!uid) return { error: '未登录' };
     // 检查是否已报名
     const exist = await db.collection('activity_registrations')
-      .where({ activityId, userId: userInfo._id, status: 'active' }).get();
+      .where({ activityId, userId: uid, status: 'active' }).get();
     if (exist.data.length) return { error: '已报名' };
     // 检查活动详情（截止时间 + 人数上限）
     const act = await db.collection('activities').doc(activityId).get();
@@ -159,9 +174,9 @@ exports.main = async (event) => {
     }
     return await db.collection('activity_registrations').add({
       data: {
-        activityId, userId: userInfo._id,
-        userName: userInfo.nickName || '',
-        userPhone: userInfo.phone || '',
+        activityId, userId: uid,
+        userName: (userInfo && userInfo.nickName) || '',
+        userPhone: (userInfo && userInfo.phone) || '',
         customValues: customValues || {},
         status: 'active',
         createTime: new Date(),
@@ -177,8 +192,9 @@ exports.main = async (event) => {
     return { ok: true };
   }
 
-  // 报名列表（管理端）
+  // 报名列表（管理端）：名单含手机号，服务端校验管理员身份，不能只靠前端隐藏
   if (action === 'registrations') {
+    if (!(await isAdminCaller())) return { error: '无权限' };
     const res = await db.collection('activity_registrations')
       .where({ activityId: id, status: 'active' })
       .orderBy('createTime', 'asc')
@@ -188,6 +204,30 @@ exports.main = async (event) => {
 
   return { error: 'unknown action' };
 };
+
+// 是否已注册成员：users 表里存在记录（_id 或 openid 命中）
+async function isMember(uid) {
+  if (!uid) return false;
+  const r = await db.collection('users').doc(uid).get().catch(() => null);
+  if (r && r.data) return true;
+  const q = await db.collection('users').where({ _openid: uid }).limit(1).get().catch(() => null);
+  return !!(q && q.data && q.data.length);
+}
+
+// 是否管理员：按调用者 openid 查 users.role
+async function isAdminCaller() {
+  try {
+    const { OPENID } = cloud.getWXContext();
+    if (!OPENID) return false;
+    const q = await db.collection('users').where({ _openid: OPENID }).limit(1).get();
+    const u = q.data && q.data[0];
+    return !!(u && (u.role === 'admin' || u.role === 'super_admin'));
+  } catch (e) {
+    console.warn('isAdminCaller error', e);
+    return false;
+  }
+}
+const NEED_REGISTER = { ok: false, needRegister: true, error: '请先注册加入跑团' };
 
 // 计算展示状态
 function computeState(a, regCount, now) {

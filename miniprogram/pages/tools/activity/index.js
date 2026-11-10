@@ -13,25 +13,40 @@ Page({
     filterIdx: 0, filterOptions: ['全部状态', '报名中', '进行中', '已截止', '已完成', '已取消'],
     // 抽奖分页
     lotPage: 1, lotHasMore: false, allLotteries: [],
+    needJoin: false,   // 未注册用户：只显示引导注册，不展示任何活动内容
   },
 
   async onShow() {
     shareUtil.enableShareMenu();
-    this.setData({ page: 1, allLoaded: [], hasMore: false, lotPage: 1, allLotteries: [] });
+    const userInfo = wx.getStorageSync('userInfo');
+    // 门禁：未注册用户（含通过分享打开的陌生人）不展示任何活动内容，只引导注册
+    if (!userInfo || !userInfo._id) {
+      this.setData({
+        needJoin: true,
+        activities: [], myActivities: [], allLoaded: [], lotteries: [], myLotteries: [], allLotteries: [],
+        hasMore: false, lotHasMore: false, page: 1, lotPage: 1,
+      });
+      return;
+    }
+    this.setData({ needJoin: false, page: 1, allLoaded: [], hasMore: false, lotPage: 1, allLotteries: [] });
     this.loadData();
     this.loadLotteries();
   },
 
-  // 转发（右上角菜单）
+  goRegister() {
+    wx.navigateTo({ url: '/pages/login/login' });
+  },
+
+  // 转发（右上角菜单）：允许对外分享，但对方未注册看不到内容，会先被引导注册
   onShareAppMessage() {
     return shareUtil.buildShare({
-      title: '九州战马联盟活动｜报名、抽奖、组队一起跑',
+      title: '九州战马联盟活动｜注册加入后可查看',
       path: '/pages/tools/activity/index',
     });
   },
 
   onShareTimeline() {
-    return shareUtil.buildTimeline({ title: '九州战马联盟活动｜报名、抽奖、组队一起跑' });
+    return shareUtil.buildTimeline({ title: '九州战马联盟活动｜注册加入后可查看' });
   },
 
   // ---------- 活动 ----------
@@ -43,8 +58,14 @@ Page({
     const skip = (this.data.page - 1) * this.data.pageSize;
 
     try {
-      const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list', skip, limit: this.data.pageSize } });
+      const allRes = await wx.cloud.callFunction({ name: 'getActivities', data: { action: 'list', skip, limit: this.data.pageSize, userId } });
       const result = allRes.result || {};
+      // 服务端门禁兜底：账号失效/不在成员表里时，直接转为引导注册
+      if (result.needRegister) {
+        this.setData({ needJoin: true, activities: [], myActivities: [], allLoaded: [], hasMore: false });
+        wx.hideLoading();
+        return;
+      }
       const allList = result.list || [];
       allList.forEach(item => { item._fmtStart = this.fmtDate(item.timeStart); });
       const merged = isLoadMore ? [...this.data.allLoaded, ...allList] : allList;

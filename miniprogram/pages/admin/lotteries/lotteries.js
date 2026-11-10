@@ -63,7 +63,10 @@ Page({
   },
 
   async _loadDetail(id) {
-    const res = await wx.cloud.callFunction({ name: 'getLotteries', data: { action: 'detail', id } });
+    // 成员门禁：detail 需带 userId，否则云函数会判定为未注册而返回 needRegister
+    const userInfo = wx.getStorageSync('userInfo');
+    const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
+    const res = await wx.cloud.callFunction({ name: 'getLotteries', data: { action: 'detail', id, userId } });
     return res.result;
   },
 

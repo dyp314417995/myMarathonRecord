@@ -11,6 +11,7 @@ Page({
     registration: null,
     isAdmin: false,
     regList: [],
+    needJoin: false,   // 未注册用户：只显示引导注册，不展示活动内容
   },
 
   async onLoad(options) {
@@ -22,11 +23,11 @@ Page({
   },
   async onShow() { if (this.data.activityId) await this.loadDetail(); },
 
-  // 转发（右上角菜单 + 页面按钮）
+  // 转发（右上角菜单 + 页面按钮）：允许分享，但对方未注册看不到内容，会先被引导注册
   onShareAppMessage() {
     const a = this.data.activity;
     return shareUtil.buildShare({
-      title: a ? `快来报名「${a.name}」活动` : '九州战马联盟活动',
+      title: a ? `${a.name}｜跑团成员可查看` : '九州战马联盟活动｜注册加入后可查看',
       path: `/pages/tools/activity/detail?id=${this.data.activityId}`,
       imageUrl: (a && a.images && a.images[0]) || '',
     });
@@ -35,10 +36,14 @@ Page({
   onShareTimeline() {
     const a = this.data.activity;
     return shareUtil.buildTimeline({
-      title: a ? `快来报名「${a.name}」活动` : '九州战马联盟活动',
+      title: a ? `${a.name}｜跑团成员可查看` : '九州战马联盟活动｜注册加入后可查看',
       query: `id=${this.data.activityId}`,
       imageUrl: (a && a.images && a.images[0]) || '',
     });
+  },
+
+  goRegister() {
+    wx.navigateTo({ url: '/pages/login/login' });
   },
 
   // 带超时的云函数调用（默认15s客户端超时）
@@ -53,43 +58,65 @@ Page({
   },
 
   async loadDetail() {
-    this.setData({ loading: true, loadError: false });
-    wx.showLoading({ title: '加载中' });
     const userInfo = wx.getStorageSync('userInfo');
-    const userId = userInfo ? (userInfo._id || userInfo.openid) : null;
+    // 门禁：未注册用户（含分享打开的陌生人）不请求任何活动数据
+    if (!userInfo || !userInfo._id) {
+      this.setData({ needJoin: true, loading: false, loadError: false, activity: null, regList: [] });
+      return;
+    }
+    this.setData({ loading: true, loadError: false, needJoin: false });
+    wx.showLoading({ title: '加载中' });
+    const userId = userInfo._id;
 
     try {
-      const res = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'detail', id: this.data.activityId } });
+      const res = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'detail', id: this.data.activityId, userId } });
+      // 服务端门禁兜底：账号不在成员表里 → 引导注册，不展示任何活动信息
+      if (res.result && res.result.needRegister) {
+        this.setData({ needJoin: true, loading: false, activity: null, regList: [] });
+        wx.hideLoading();
+        return;
+      }
       const act = res.result;
       if (!act) throw new Error('活动不存在');
-
-      // 报名人数
-      const cntRes = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'registrations', id: this.data.activityId } });
-      const allRegs = (cntRes.result || {}).list || [];
-      act.regCount = allRegs.length;
 
       act._fmtStart = this.fmtDate(act.timeStart);
       act._fmtEnd = act.timeEnd ? this.fmtDate(act.timeEnd) : '';
       act._fmtDeadline = act.deadline ? this.fmtDate(act.deadline) : '';
       act._expired = act.deadline && new Date(act.deadline) < new Date();
+      act.regCount = act.regCount || 0;
 
-      // 管理员：从 DB 查，不靠本地缓存
+      // 管理员：从 DB 查角色，不靠本地缓存
       let isAdmin = false;
-      if (userInfo && userInfo._id) {
+      try {
         const db = wx.cloud.database();
-        const userRes = await db.collection('users').doc(userInfo._id).get();
+        const userRes = await db.collection('users').doc(userId).get();
         const role = userRes.data ? (userRes.data.role || 'user') : 'user';
         isAdmin = role === 'admin' || role === 'super_admin';
+      } catch (e) { isAdmin = false; }
+
+      // 报名名单含手机号，仅管理员拉取；普通用户只看人数（服务端已算好）
+      let regList = [];
+      if (isAdmin) {
+        const cntRes = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'registrations', id: this.data.activityId } });
+        regList = (cntRes.result || {}).list || [];
       }
 
       // 是否已报名
       let registered = false;
-      if (userId) {
-        const mine = allRegs.find(r => r.userId === userId);
-        if (mine) { registered = true; this.setData({ registration: mine }); }
+      let registration = null;
+      if (regList.length) {
+        const mine = regList.find(r => r.userId === userId);
+        if (mine) { registered = true; registration = mine; }
+      } else if (!isAdmin) {
+        const myRes = await this.callFunctionWithTimeout({ name: 'getActivities', data: { action: 'my', userId } }).catch(() => null);
+        const myList = (myRes && myRes.result && myRes.result.list) || [];
+        if (myList.some(a => a._id === this.data.activityId)) registered = true;
       }
 
-      this.setData({ activity: act, registered, isAdmin, regList: isAdmin ? allRegs : [], loading: false, loadError: false });
+      this.setData({
+        activity: act, registered, registration, isAdmin, regList,
+        loading: false, loadError: false,
+      });
     } catch (e) {
       console.error('[loadDetail]', e);
       this.setData({ loading: false, loadError: true });
@@ -139,6 +166,7 @@ Page({
         data: {
           action: 'register',
           activityId: this.data.activityId,
+          userId: userInfo._id || userInfo.openid,
           userInfo,
           customValues: this.data.customValues,
         },

@@ -3,6 +3,13 @@
 .tab { flex: 1; text-align: center; padding: 20rpx; font-size: 28rpx; color: #999; }
 .tab.on { color: #1aad19; font-weight: 700; border-bottom: 4rpx solid #1aad19; }
 
+/* 未注册门禁 */
+.join-gate { display: flex; flex-direction: column; align-items: center; padding: 160rpx 56rpx 0; text-align: center; }
+.join-gate-icon { font-size: 96rpx; line-height: 1; }
+.join-gate-title { font-size: 32rpx; color: #222; font-weight: 600; margin-top: 28rpx; }
+.join-gate-desc { font-size: 26rpx; color: #888; line-height: 1.7; margin-top: 16rpx; }
+.join-gate-btn { margin-top: 48rpx; background: #1aad19; color: #fff; font-size: 30rpx; padding: 20rpx 72rpx; border-radius: 48rpx; }
+
 .list { padding: 16rpx; }
 .act-card { display: flex; background: #fff; border-radius: 12rpx; margin-bottom: 16rpx; overflow: hidden; align-items: center; }
 .card-body { flex: 1; padding: 16rpx; }
