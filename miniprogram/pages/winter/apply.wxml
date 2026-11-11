@@ -62,7 +62,11 @@
     </view>
 
     <view class="notice-bar">
-      💰 费用：参赛费 + 教练费 + 奖池，线下收取；报名即代表已阅读并同意训练规则与安全免责声明
+      💰 费用：免费参加
+    </view>
+
+    <view class="field" style="margin-top:16rpx">
+      <text class="row-label {{agree ? 'adjust-on' : ''}}" bindtap="onToggleAgree">{{agree ? '☑' : '☐'}} 我已阅读并同意 <text class="rules-link" catchtap="onViewRules">《破冬行动 · 冬训规则（含安全免责声明）》</text></text>
     </view>
 
     <button class="btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">提交报名</button>

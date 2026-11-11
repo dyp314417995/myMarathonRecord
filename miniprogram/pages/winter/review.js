@@ -41,9 +41,9 @@ Page({
     reviewed.forEach(initial);
     leaves.forEach(initial);
 
-    // 队长：同时拉取本组待审批入队申请（队员/教练的入队由队长审，不在管理后台）
+    // 队长/教练：同时拉取本组待审批入队申请（队员/教练的入队由本组队长/教练审，不在管理后台）
     let applies = [];
-    if (r.myRole === 'leader') {
+    if (r.myRole === 'leader' || r.myRole === 'coach') {
       const ap = await w.api.leaderApplies().catch(() => null);
       if (ap && ap.ok) {
         applies = await w.resolveAvatars(ap.list || []);

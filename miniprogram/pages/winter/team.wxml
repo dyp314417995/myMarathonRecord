@@ -15,22 +15,16 @@
 
     <view class="frozen-bar notice-bar" wx:if="{{frozen}}">{{frozenText}}</view>
 
-    <!-- 队长：待审批入队申请 -->
-    <view class="card" wx:if="{{isLeader && pendingApplies.length > 0}}">
+    <!-- 队长/教练：待审批入队申请 -->
+    <view class="card" wx:if="{{isBoss && pendingApplies.length > 0}}">
       <text class="card-title">待审批入队（{{pendingApplies.length}} 人）</text>
-      <text class="card-sub">缴费由你线下收款后自行标记，不阻塞审批</text>
       <view class="member-row" wx:for="{{pendingApplies}}" wx:key="userId">
         <view class="member-info">
           <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>
           <text class="member-meta">近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
           <text class="member-meta" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
-          <text class="member-meta">
-            缴费：
-            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
-          </text>
         </view>
         <view class="member-right">
-          <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
           <view class="mini-btn-row">
             <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onLeaderReview">驳回</text>
             <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onLeaderReview">通过</text>
@@ -80,12 +74,9 @@
         <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-k="mates" data-i="{{index}}" />
         <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
         <view class="member-info">
-          <text class="member-name">{{item.nickName}}
-            <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
-          </text>
+          <text class="member-name">{{item.nickName}}</text>
           <text class="member-meta">KPI {{item.kpiValue}}{{item.kpiType === 'attendance' ? ' 天' : ' 公里'}}{{item.remark ? ' · ' + item.remark : ''}}</text>
           <view class="mini-btn-row" wx:if="{{isLeader || isBoss}}">
-            <text wx:if="{{isLeader}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
             <text wx:if="{{isBoss}}" class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-nick="{{item.nickName}}" bindtap="onTransferRole">转让{{me.roleText}}</text>
           </view>
         </view>
@@ -94,25 +85,6 @@
         </view>
       </view>
       <view class="empty" wx:if="{{mates.length === 0}}">暂无队员</view>
-    </view>
-
-    <!-- 我的请假 -->
-    <view class="card">
-      <view class="card-head">
-        <text class="card-title">请假</text>
-        <text class="tag tag-blue" bindtap="onOpenLeave">＋ 申请请假</text>
-      </view>
-      <text class="card-sub">伤病 / 事假 / 参赛调整都可以，单次最长 7 天；队长审批通过后该周不考核</text>
-      <view class="member-row" wx:for="{{leaves}}" wx:key="_id">
-        <view class="member-info">
-          <text class="member-name">{{item.startDate}} ~ {{item.endDate}}（{{item.days}} 天）</text>
-          <text class="member-meta">{{item.typeText || '其他'}}{{item.reason ? ' · ' + item.reason : ''}}</text>
-        </view>
-        <view class="member-right">
-          <text class="tag {{item.status === 'approved' ? 'tag-green' : (item.status === 'rejected' ? 'tag-red' : 'tag-orange')}}">{{item.status === 'approved' ? '已批准' : (item.status === 'rejected' ? '已驳回' : '待审批')}}</text>
-        </view>
-      </view>
-      <view class="empty" wx:if="{{leaves.length === 0}}">暂无请假记录</view>
     </view>
 
     <view class="quit-row">
@@ -142,43 +114,6 @@
       <view class="modal-btns">
         <button class="btn btn-gray" bindtap="onCloseGroupEdit">取消</button>
         <button class="btn" loading="{{busy}}" bindtap="onSaveGroupInfo">保存</button>
-      </view>
-    </view>
-  </view>
-
-  <!-- 请假申请 -->
-  <view class="modal-mask" wx:if="{{showLeave}}">
-    <view class="modal-box">
-      <text class="modal-title">申请请假</text>
-      <view class="field">
-        <text class="field-label">开始日期</text>
-        <picker mode="date" value="{{leaveForm.startDate}}" bindchange="onLeaveStartDate">
-          <text class="row-value">{{leaveForm.startDate}} ›</text>
-        </picker>
-      </view>
-      <view class="field">
-        <text class="field-label">结束日期</text>
-        <picker mode="date" value="{{leaveForm.endDate}}" start="{{leaveForm.startDate}}" bindchange="onLeaveEndDate">
-          <text class="row-value">{{leaveForm.endDate}} ›</text>
-        </picker>
-      </view>
-      <view class="field">
-        <text class="field-label">原因类型</text>
-        <view class="chip-row">
-          <text class="chip {{leaveForm.type === 'injury' ? 'on' : ''}}" data-type="injury" bindtap="onLeaveType">伤病</text>
-          <text class="chip {{leaveForm.type === 'personal' ? 'on' : ''}}" data-type="personal" bindtap="onLeaveType">事假</text>
-          <text class="chip {{leaveForm.type === 'race' ? 'on' : ''}}" data-type="race" bindtap="onLeaveType">参赛调整</text>
-          <text class="chip {{leaveForm.type === 'other' ? 'on' : ''}}" data-type="other" bindtap="onLeaveType">其他</text>
-        </view>
-      </view>
-      <view class="field">
-        <text class="field-label">具体原因 *</text>
-        <textarea class="textarea" value="{{leaveForm.reason}}" data-f="reason" bindinput="onLeaveInput" placeholder="简单说明一下，方便队长判断"></textarea>
-      </view>
-      <text class="card-sub">单次最长 7 天；审批通过后，请假覆盖到的那几周不考核（不计完成率、不计罚金）。</text>
-      <view class="modal-btns">
-        <button class="btn btn-gray" bindtap="onCloseLeave">取消</button>
-        <button class="btn" loading="{{busy}}" bindtap="onSaveLeave">提交</button>
       </view>
     </view>
   </view>

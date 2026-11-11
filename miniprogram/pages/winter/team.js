@@ -68,9 +68,9 @@ Page({
     const isLeader = me.role === 'leader' && me.status === 'approved';
     const isBoss = (me.role === 'leader' || me.role === 'coach') && me.status === 'approved';
 
-    // 队长：拉取本组待审批入队申请
+    // 队长/教练：拉取本组待审批入队申请（2026-11 起教练也可审）
     let pendingApplies = [];
-    if (isLeader) {
+    if (isBoss) {
       const ap = await w.api.leaderApplies();
       if (ap.ok) pendingApplies = ap.list || [];
     }

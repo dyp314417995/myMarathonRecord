@@ -17,10 +17,9 @@
 
       <!-- ============ 待审 ============ -->
       <block wx:if="{{tab === 'pending'}}">
-        <!-- 待审入队申请（仅队长） -->
+        <!-- 待审入队申请（队长/教练） -->
         <view class="card" wx:if="{{applies.length > 0}}">
           <text class="card-title">待审入队（{{applies.length}} 人）</text>
-          <text class="card-sub">缴费由你线下收款后自行标记，不阻塞审批</text>
           <view class="apply-item" wx:for="{{applies}}" wx:key="userId">
             <view class="member-row" style="border-bottom:none">
               <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
@@ -29,34 +28,11 @@
                 <text class="member-name">{{item.nickName}} <text class="tag tag-gray">{{item.roleText}}</text></text>
                 <text class="member-meta">近期成绩 {{item.recentResult || '未填'}} · 目标 {{item.target || '未填'}}</text>
               </view>
-              <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '未缴费')}}</text>
             </view>
             <text class="card-sub" wx:if="{{item.reason}}">申请理由：{{item.reason}}</text>
             <view class="mini-btn-row">
-              <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-fee="{{item.feeStatus}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '改免费' : (item.feeStatus === 'free' ? '改未缴' : '标记已缴')}}</text>
               <text class="mini-btn mini-ghost" data-uid="{{item.userId}}" data-pass="{{false}}" bindtap="onApplyReview">驳回</text>
               <text class="mini-btn" data-uid="{{item.userId}}" data-pass="{{true}}" bindtap="onApplyReview">通过</text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 待审请假（队长/教练） -->
-        <view class="card" wx:if="{{leaves.length > 0}}">
-          <text class="card-title">待审请假（{{leaves.length}}）</text>
-          <text class="card-sub">通过后该周不考核：不计完成率、不计罚金</text>
-          <view class="apply-item" wx:for="{{leaves}}" wx:key="_id">
-            <view class="member-row" style="border-bottom:none">
-              <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-              <view wx:else class="member-avatar avatar-fallback">{{item.avatarInitial || '?'}}</view>
-              <view class="member-info">
-                <text class="member-name">{{item.nickName}}</text>
-                <text class="member-meta">{{item.startDate}} ~ {{item.endDate}} · {{item.days}} 天 · {{item.typeText || '其他'}}</text>
-              </view>
-            </view>
-            <text class="card-sub" wx:if="{{item.reason}}">原因：{{item.reason}}</text>
-            <view class="mini-btn-row">
-              <text class="mini-btn mini-ghost" data-id="{{item._id}}" bindtap="onRejectLeave">驳回</text>
-              <text class="mini-btn" data-id="{{item._id}}" bindtap="onPassLeave">通过</text>
             </view>
           </view>
         </view>

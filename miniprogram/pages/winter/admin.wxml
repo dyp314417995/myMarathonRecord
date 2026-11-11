@@ -10,8 +10,7 @@
         <text class="chip {{tab === 'groups' ? 'on' : ''}}" data-v="groups" bindtap="onTab">组别</text>
         <text class="chip {{tab === 'applies' ? 'on' : ''}}" data-v="applies" bindtap="onTab">报名审核 {{counts.pending ? '(' + counts.pending + ')' : ''}}</text>
         <text class="chip {{tab === 'members' ? 'on' : ''}}" data-v="members" bindtap="onTab">成员</text>
-        <text class="chip {{tab === 'finance' ? 'on' : ''}}" data-v="finance" bindtap="onTab">费用/奖池</text>
-      </view>
+              </view>
 
       <!-- 概览 -->
       <block wx:if="{{tab === 'overview'}}">
@@ -35,7 +34,7 @@
             <text class="tag {{cfg.signupOpen ? 'tag-green' : 'tag-red'}}" bindtap="onToggleSignup">{{cfg.signupOpen ? '开放中（点击关闭）' : '已关闭（点击开放）'}}</text>
           </view>
           <text class="card-sub">{{weekIndex > 0 ? ('当前第 ' + weekIndex + ' 周 / 共 ' + cfg.totalWeeks + ' 周') : ('开营前（试运行，共 ' + cfg.totalWeeks + ' 周）')}} · 第 {{cfg.warnWeek}} 周为警告周（只提醒不罚） · 第 {{cfg.tailWeek}} 周收尾降档（完成 1 次即达标）{{cfg.holidayWeeks.length ? (' · 春节跳过考核周：' + cfg.holidayWeeks.join('、')) : ''}}</text>
-          <text class="card-sub">小红包梯度：连续第 1/2/3 周分别为 {{cfg.fineTiers[0]}}/{{cfg.fineTiers[1]}}/{{cfg.fineTiers[2]}} 元（封顶），每个 {{cfg.finePackets}} 个拼手气 · 规模目标 {{cfg.scale.target}} 人 / 上限 {{cfg.scale.max}} 人</text>
+          <text class="card-sub">红包规则（2026-11 起）：每周结算，未完成 KPI 固定发 10 元红包，份数 = 小队人数拼手气 · 规模目标 {{cfg.scale.target}} 人 / 上限 {{cfg.scale.max}} 人</text>
           <view style="margin-top:20rpx"><button class="btn" bindtap="onCalcWeek">结算本周（第 {{weekIndex}} 周）</button></view>
         </view>
 
@@ -118,9 +117,7 @@
                   <text class="member-meta" wx:if="{{item.remark}}">📝 {{item.remark}}</text>
                 </block>
               </view>
-              <view class="member-right" wx:if="{{!item.staffOnly}}">
-                <text class="tag {{item.feeStatus === 'paid' ? 'tag-green' : (item.feeStatus === 'free' ? 'tag-blue' : 'tag-orange')}}" data-id="{{item._id}}" bindtap="onToggleFee">{{item.feeStatus === 'paid' ? '已缴费' : (item.feeStatus === 'free' ? '免费' : '待缴费')}}</text>
-              </view>
+              <view class="member-right" wx:if="{{!item.staffOnly}}"></view>
             </view>
             <view class="chip-row" style="margin-top:16rpx" wx:if="{{!item.staffOnly}}">
               <text class="chip" data-id="{{item._id}}" bindtap="onOpenTransfer">调组</text>
@@ -132,35 +129,6 @@
           <view class="empty" wx:if="{{sec.count === 0}}" style="padding:24rpx">该组暂无成员</view>
         </block>
         <view class="empty" wx:if="{{memberSections.length === 0}}">暂无成员</view>
-      </block>
-
-      <!-- 费用与奖池 -->
-      <block wx:if="{{tab === 'finance'}}">
-        <view class="card" wx:if="{{finance}}">
-          <text class="card-title">费用汇总</text>
-          <view class="row"><text class="row-label">在训人数</text><text class="row-value">{{finance.memberCount}} 人</text></view>
-          <view class="row"><text class="row-label">已缴费</text><text class="row-value">{{finance.paidCount}} 人</text></view>
-          <view class="row"><text class="row-label">费用合计</text><text class="row-value">{{finance.feeTotal}} 元</text></view>
-          <view class="row"><text class="row-label">奖池总额</text><text class="row-value">{{finance.poolTotal}} 元</text></view>
-          <view class="row"><text class="row-label">罚金待发</text><text class="row-value" style="color:#e6a23c">{{finance.fineDue}} 元</text></view>
-          <view class="row"><text class="row-label">罚金已发</text><text class="row-value" style="color:#1aad19">{{finance.finePaid}} 元</text></view>
-          <text class="card-sub" style="margin-top:16rpx">队长/教练补贴与奖池支出请线下发放后在此公示更新</text>
-        </view>
-
-        <view class="card">
-          <text class="card-title">罚金明细</text>
-          <view class="member-row" wx:for="{{finance.fineList}}" wx:key="_id">
-            <view class="member-info">
-              <text class="member-name">第 {{item.weekIndex}} 周</text>
-              <text class="member-meta">{{item.amount}} 元 · {{item.packets}} 个红包</text>
-            </view>
-            <view class="member-right">
-              <text class="tag {{item.status === 'paid' ? 'tag-green' : 'tag-orange'}}" wx:if="{{item.status === 'paid'}}">已发</text>
-              <text class="tag tag-orange" wx:else data-id="{{item._id}}" data-status="paid" bindtap="onToggleFine">标记已发</text>
-            </view>
-          </view>
-          <view class="empty" wx:if="{{!finance.fineList || finance.fineList.length === 0}}">暂无罚金记录</view>
-        </view>
       </block>
     </block>
   </block>
@@ -184,8 +152,7 @@
       <view class="field"><text class="field-label">排序</text><input class="input" type="number" value="{{groupForm.sort}}" data-f="sort" bindinput="onGroupInput" /></view>
       <view class="field"><text class="row-label">{{groupForm.open ? '☑' : '☐'}} 开放报名</text><switch checked="{{groupForm.open}}" bindchange="onGroupOpen" color="#1aad19" /></view>
       <view class="field"><text class="row-label">{{groupForm.autoApprove ? '☑' : '☐'}} 打卡免审核（本组打卡自动通过，如 S 组）</text><switch checked="{{groupForm.autoApprove}}" bindchange="onGroupAutoApprove" color="#1aad19" /></view>
-      <view class="field"><text class="row-label">{{groupForm.autoFree ? '☑' : '☐'}} 加入即免费（新成员自动标记免费，如 S 组）</text><switch checked="{{groupForm.autoFree}}" bindchange="onGroupAutoFree" color="#1aad19" /></view>
-
+      
       <!-- 队长 / 教练指派：候选人取全部在训成员，可跨组兼任 -->
       <view class="field" wx:if="{{groupForm.id}}">
         <text class="field-label">队长 / 教练</text>

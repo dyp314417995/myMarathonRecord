@@ -3,7 +3,7 @@
   <view class="card">
     <text class="card-title">破冬行动 · 100 天能力组冬训</text>
     <text class="row-value">主办：九州战马联盟冬训管理组</text>
-    <text class="card-sub" style="margin-top:10rpx">不卷跑量，只卷出现。按能力分组抱团，自己定 KPI，完成有奖，未完成小红包提醒，娱乐为主、安全第一。</text>
+    <text class="card-sub" style="margin-top:10rpx">不卷跑量，只卷出现。按能力分组抱团，自己定 KPI，互相监督打卡，未完成发红包提醒，娱乐为主、安全第一。免费参加。</text>
     <view style="margin-top:16rpx">
       <text class="tag tag-green">{{phaseText}}</text>
       <text class="tag tag-blue" wx:if="{{weekIndex > 0}}">第 {{weekIndex}} / {{totalWeeks}} 周</text>
@@ -15,7 +15,6 @@
     <text class="card-title">一、时间线</text>
     <view class="row"><text class="row-label">报名/建组/任命</text><text class="row-value">10月下旬—10月31日</text></view>
     <view class="row"><text class="row-label">试运行</text><text class="row-value">11月1日—11月15日</text></view>
-    <view class="row"><text class="row-label">锁定缴费</text><text class="row-value">11月15日</text></view>
     <view class="row"><text class="row-label">正式冬训</text><text class="row-value">11月16日—2027年2月23日（100天）</text></view>
     <view class="row"><text class="row-label">正式第1周</text><text class="row-value">11月16日—22日（警告周）</text></view>
     <view class="row"><text class="row-label">计罚开始</text><text class="row-value">11月23日</text></view>
@@ -24,7 +23,7 @@
     <view class="row"><text class="row-label">收尾降档周</text><text class="row-value">2月17日—2月23日</text></view>
     <view class="row"><text class="row-label">结营</text><text class="row-value">2月23日</text></view>
     <text class="rule-line" style="margin-top:14rpx">试运行期：不罚款、不计连续、不结算榜单；可免费退出 / 调组 / 换角色。</text>
-    <text class="rule-line">正式第 {{warnWeek}} 周为警告周：未完成只提醒不罚，也不计入连续周数（计罚自第 2 周起，首罚 {{fineTiers[0]}} 元）。</text>
+    <text class="rule-line">正式第 {{warnWeek}} 周为警告周：未完成只提醒不罚，也不计入连续周数（计罚自第 2 周起，每次固定 10 元）。</text>
     <text class="rule-line">第 {{tailWeek}} 周起为收尾降档周（2月17日—23日）：自动降档，完成 1 次即达标。</text>
   </view>
 
@@ -44,10 +43,10 @@
 
   <view class="card">
     <text class="card-title">三、队长与教练</text>
-    <text class="rule-line">每组配置：队长 1 名 + 教练 1—2 名 + 队员。人少可队长兼教练，补贴合并。</text>
+    <text class="rule-line">每组配置：队长 1 名 + 教练 1—2 名 + 队员。人少可队长兼教练。</text>
     <text class="rule-line">队长（每队 1 名）：审核本组打卡（24 小时内通过/驳回并填原因）；每周统计本组完成情况、发布周榜；连续未完成时先私聊提醒再记录小红包；催打卡、发通知、维护气氛。</text>
     <text class="rule-line">教练（每队 1—2 名）：设定本组 KPI 区间（跑量或出勤，含上下限、单次最低时长），直接生效；每周日定稿、周一发布周课表（三档建议、质量课、力量拉伸、替代方案、降档规则）；发训练建议、组织云约练、答疑；对疲劳伤病队员给出降档建议。</text>
-    <text class="rule-line">队长与教练本人在本组正常打卡、正常考核，不额外免罚；可参评「最佳队长」「最佳教练」，奖池出小奖品 / 证书。队长和教练补贴同一标准，按实际岗位人数均摊，总额内调整。</text>
+    <text class="rule-line">队长与教练本人在本组正常打卡、正常考核，不额外免罚；冬训营免费参加，队长教练为义务服务，无补贴、无奖池，可参评「最佳队长」「最佳教练」荣誉表彰。</text>
   </view>
 
   <view class="card">
@@ -81,27 +80,26 @@
   </view>
 
   <view class="card">
-    <text class="card-title">七、小红包提醒</text>
-    <text class="rule-line">连续未完成时发小红包，不进奖池、不归队长教练，只是轻松提醒：</text>
-    <text class="rule-line">· 连续第 1 周未完成：群发 {{fineTiers[0]}} 元红包</text>
-    <text class="rule-line">· 连续第 2 周：{{fineTiers[1]}} 元</text>
-    <text class="rule-line">· 连续第 3 周：{{fineTiers[2]}} 元封顶</text>
+    <text class="card-title">七、红包监督</text>
+    <text class="rule-line">每周结算，未完成自己定的 KPI 就向小队群发红包，不进奖池、不归队长教练，只是互相监督：</text>
+    <text class="rule-line">· 每次固定 10 元，份数 = 小队群人数，拼手气分</text>
+    <text class="rule-line">· 每周未完成发一次，不按连续周数升档</text>
+    <text class="rule-line">· 有事完不成：提前给队长和教练发消息报备即可（无需在小程序里操作），说明情况和预计恢复时间，方便队长统计和队友理解</text>
     <text class="rule-line">· 第 4 周仍未完成且未沟通：退出冬训营，保留社群身份和回归资格</text>
-    <text class="rule-line">红包发 {{finePackets}} 个拼手气，组内人少按「人数-1」发。量力而行，真有特殊情况提前沟通。</text>
+    <text class="rule-line">量力而行，真有特殊情况提前和队长沟通。</text>
   </view>
 
   <view class="card">
     <text class="card-title">八、费用说明</text>
-    <text class="rule-line">每人 {{fee.entry}} 元参赛费 = {{fee.coach}} 元队长和教练辛苦补贴 + {{fee.pool}} 元结营奖池。</text>
-    <text class="rule-line">补贴是感谢队长审打卡、做统计、催进度，教练出课表、答疑、组织约练；奖池用于小奖品、证书和物料。收费和支出结营后公示。</text>
-    <text class="rule-line">不收押金；参赛费确认报名后进入统一支出，不再退还。系统只记录缴费状态，线下收款。</text>
+    <text class="rule-line">本季冬训营免费参加：不收报名费、不收押金，无补贴、无奖池。</text>
+    <text class="rule-line">唯一的「费用」是未完成 KPI 的红包：每周结算发到小队群，互相监督。</text>
   </view>
 
   <view class="card">
     <text class="card-title">九、转组与退出</text>
     <text class="rule-line">转组：队员如需升 / 降组，私聊管理组，由管理组手动调整并备注；队长 / 教练不转组；伤病只申请降档 KPI 或退出，不换组。转组不重复交费，连续未完成周数不清零。每月初集中处理，伤病随时处理。</text>
-    <text class="rule-line">伤病等原因退出：可申请退出，退出后不再计罚，不影响之后回社群；参赛费已进入统一支出，无法退还。</text>
-    <text class="rule-line">其他原因主动退出：尊重选择，退出后不再计罚；参赛费同样不退。</text>
+    <text class="rule-line">伤病等原因退出：可申请退出，退出后不再计罚，不影响之后回社群。</text>
+    <text class="rule-line">其他原因主动退出：尊重选择，退出后不再计罚。</text>
     <text class="rule-line">连续 4 周未完成且未沟通：先提醒、私聊，之后退出冬训营，但保留社群身份和回归资格。</text>
     <text class="rule-line">能坚持最好，坚持不了也别硬扛，提前说一声，大家都理解。</text>
   </view>
@@ -110,7 +108,7 @@
     <text class="card-title">十、积分与奖励</text>
     <text class="rule-line">积分奖打卡、完成本周 KPI、互助 / 约练、集体云约练、连续达标、首次 / 唤醒打卡；不奖跑量。</text>
     <text class="rule-line">队伍榜按人均 KPI 完成率，不按总跑量；个人娱乐跑量榜只展示不计分。</text>
-    <text class="rule-line">奖励：周 / 月破冬者勋章；百天破冬者证书（完成周数 ÷ 有效考核周数 ≥ 80% 且未退出冬训营）；全勤奖；最佳队长、最佳教练、最佳课表组、最佳唤醒奖、最暖队友；不设最快组奖。</text>
+    <text class="rule-line">奖励：不设物质奖励和奖池。荣誉表彰：周 / 月破冬者勋章；百天破冬者证书（完成周数 ÷ 有效考核周数 ≥ 80% 且未退出冬训营）；全勤奖；最佳队长、最佳教练、最佳课表组、最佳唤醒奖、最暖队友；不设最快组奖。</text>
   </view>
 
   <view class="card">

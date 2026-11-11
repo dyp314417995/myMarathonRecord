@@ -115,10 +115,10 @@ async function getConfig() {
     totalWeeks: 15,               // 第 1 周 11/16-11/22 … 第 15 周 2/22-2/28（结营日 2/23）
     holidayWeeks: [12, 13],       // 覆盖春节放假 2/5-2/11（第12周 2/1-2/7、第13周 2/8-2/14）
     scale: { target: 100, max: 150 }, // 规模：目标 100 人，上限 150 人
-    fee: { entry: 50, coach: 30, pool: 20 },
-    // 小红包提醒：按「连续未完成周数」取对应档位，超出取最后一档（20 元封顶）
+    fee: { entry: 0, coach: 0, pool: 0 },  // 2026-11 起免费参加：无报名费/补贴/奖池
+    // 旧字段已废弃（2026-11 改为固定 10 元红包、份数=小队人数），保留仅为兼容旧文档
     fineTiers: [5, 10, 20],
-    finePackets: 5,               // 5 个拼手气；组内人少按「人数-1」发
+    finePackets: 5,
     warnWeek: 1,                  // 正式第 1 周（11/16-11/22）为警告周：未完成只提醒不罚
     tailWeek: 14,                 // 第 14 周（2/15 起）进入收尾降档：自动降档，完成 1 次即达标
     tailPassOnce: true,           // 收尾周只需 1 次有效打卡即算完成
@@ -965,14 +965,14 @@ async function actionGroupCheckins(userId, data) {
   return ok({ weekIndex, list: out, myRole: member.role });
 }
 
-// 队长：查看本组待审的入队申请（队员/教练）
+// 队长/教练：查看本组待审的入队申请（队员/教练）
 async function actionLeaderApplies(userId) {
   const member = await getMyMember(userId);
   if (!member) return fail('尚未报名');
   if (member.status !== 'approved') return fail('你尚未通过任命');
-  // 同时在多个组担任队长时（兼任指派），把所有任职组的申请一并拉出来
-  const gids = await staffGroupIdsOf(userId, ['leader']);
-  if (!gids.length) return fail('仅队长可审核入队申请');
+  // 同时在多个组任职时（兼任指派），把所有任职组的申请一并拉出来
+  const gids = await staffGroupIdsOf(userId, ['leader', 'coach']);
+  if (!gids.length) return fail('仅队长/教练可审核入队申请');
   const gRes = await db.collection('winter_group').limit(50).get().catch(() => null);
   const gName = {};
   for (const g of ((gRes && gRes.data) || [])) gName[g._id] = g.name;
@@ -990,20 +990,20 @@ async function actionLeaderApplies(userId) {
   return ok({ list });
 }
 
-// 队长：审批入队申请（规则：确认线下缴费后才可通过）
+// 队长/教练：审批入队申请
 async function actionLeaderReviewApply(userId, data) {
   const me = await getMyMember(userId);
   if (!me) return fail('尚未报名');
   if (me.status !== 'approved') return fail('你尚未通过任命');
-  const myGroups = await staffGroupIdsOf(userId, ['leader']);
-  if (!myGroups.length) return fail('仅队长可审批');
+  const myGroups = await staffGroupIdsOf(userId, ['leader', 'coach']);
+  if (!myGroups.length) return fail('仅队长/教练可审批');
   const targetId = String(data.userId || data.id || '');
   const pass = data.pass === true || String(data.pass) === 'true';
   if (!targetId) return fail('缺少成员');
   const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
   if (!t || !t.data) return fail('报名记录不存在');
   const m = t.data;
-  if (myGroups.indexOf(m.groupId) < 0) return fail('只能审批你担任队长的组');
+  if (myGroups.indexOf(m.groupId) < 0) return fail('只能审批你任职的组');
   if (m.status !== 'pending') return fail('该申请已处理');
 
   if (!pass) {
@@ -2038,16 +2038,13 @@ async function actionAdminCalcWeek(userId, data) {
     if (!completed && target > 0 && !noFine) {
       const fineExist = await db.collection('winter_fine').where({ userId: m.userId, weekIndex }).limit(1).get().catch(() => null);
       if (!(fineExist && fineExist.data && fineExist.data.length)) {
-        // 金额按「连续未完成周数」取档：第1周5元、第2周10元、第3周及以上20元封顶
-        const tiers = Array.isArray(cfg.fineTiers) && cfg.fineTiers.length ? cfg.fineTiers : [5, 10, 20];
-        const idx = Math.max(0, Math.min(tiers.length - 1, continuousFailWeeks - 1));
-        const amount = toNum(tiers[idx]);
-        // 红包个数：默认 5 个拼手气；组内人数少于 6 时按「人数-1」发
+        // 2026-11 规则调整：不再按连续周数升档——每次固定 10 元，
+        // 份数 = 小队群人数（拼手气分，互相监督）
+        const amount = 10;
         const gmCnt = await db.collection('winter_member')
           .where({ groupId: m.groupId, status: _.in(['approved', 'quit-suggested']) }).count().catch(() => ({ total: 0 }));
         const memberCount = gmCnt.total || 0;
-        let packets = toNum(cfg.finePackets) || 5;
-        if (memberCount >= 2 && memberCount - 1 < packets) packets = memberCount - 1;
+        const packets = Math.max(1, memberCount);
         await db.collection('winter_fine').add({
           data: {
             userId: m.userId, groupId: m.groupId, weekIndex,
@@ -2064,6 +2061,23 @@ async function actionAdminCalcWeek(userId, data) {
   }
   await saveLog({ type: 'weekly', action: 'calc', operatorId: userId, detail: `第${weekIndex}周结算：完成${doneCnt}人，未完成${failCnt}人，罚金${fineTotal}元` });
   return ok({ weekIndex, frozen, done: doneCnt, failed: failCnt, fineTotal });
+}
+
+// 一次性迁移（2026-11 免费化）：config 费用清零 + 成员缴费状态统一标 free。迁移完此 action 可删
+async function actionMigrateFreeMode() {
+  const out = { configUpdated: false, membersUpdated: 0 };
+  try {
+    await db.collection('winter_config').doc(CONFIG_ID)
+      .update({ data: { fee: { entry: 0, coach: 0, pool: 0 }, updateTime: new Date() } });
+    out.configUpdated = true;
+  } catch (e) { out.configError = e.message; }
+  try {
+    const r = await db.collection('winter_member')
+      .where({ feeStatus: _.neq('free') })
+      .update({ data: { feeStatus: 'free' } });
+    out.membersUpdated = (r && r.stats && r.stats.updated) || 0;
+  } catch (e) { out.memberError = e.message; }
+  return ok(out);
 }
 
 // 阶段开关（试运行/正式/春节假期）
@@ -2214,6 +2228,7 @@ exports.main = async (event = {}) => {
     case 'leaderSaveGroup': return await actionLeaderSaveGroup(userId, data);
     case 'transferRole': return await actionTransferRole(userId, data);
       case 'pendingReview': return await actionPendingReview(userId, data);
+      case 'migrateFreeMode': return await actionMigrateFreeMode();
     case 'applyLeave': return await actionApplyLeave(userId, data);
     case 'myLeaves': return await actionMyLeaves(userId, data);
     case 'reviewLeave': return await actionReviewLeave(userId, data);

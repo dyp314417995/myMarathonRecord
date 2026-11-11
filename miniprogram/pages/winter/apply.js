@@ -14,6 +14,7 @@ Page({
     roles: ROLES, role: 'member',
     nickName: '', recentResult: '', target: '', reason: '',
     acceptAdjust: false,
+    agree: false,
     roleDesc: ROLES[0].desc,
   },
 
@@ -107,6 +108,9 @@ Page({
     this.setData({ [f]: e.detail.value });
   },
 
+  onToggleAgree() { this.setData({ agree: !this.data.agree }); },
+  onViewRules() { wx.navigateTo({ url: '/pages/winter/rules' }); },
+
   async onSubmit() {
     const d = this.data;
     if (!d.nickName.trim()) return wx.showToast({ title: '请填写昵称', icon: 'none' });
@@ -114,6 +118,7 @@ Page({
     if (d.role !== 'member' && !d.reason.trim()) {
       return wx.showToast({ title: '申请队长/教练需填写申请理由', icon: 'none' });
     }
+    if (!d.agree) return wx.showToast({ title: '请先阅读并勾选同意冬训规则', icon: 'none' });
     this.setData({ submitting: true });
     const r = await w.api.submitApply({
       nickName: d.nickName, recentResult: d.recentResult, target: d.target,
