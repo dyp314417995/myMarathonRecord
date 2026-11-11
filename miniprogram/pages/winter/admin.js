@@ -379,6 +379,23 @@ Page({
     });
   },
 
+  // ===== 移除成员：退出冬训营，重新报名需重新审核；打卡数据保留 =====
+  onRemoveMember(e) {
+    const { id, name } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '移除成员',
+      content: `确认将「${name || '该成员'}」移除冬训营？其打卡记录保留；若重新报名，需重新审核。`,
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        const r = await w.api.adminRemoveMember({ userId: id });
+        if (!r.ok) return wx.showToast({ title: r.error || '操作失败', icon: 'none' });
+        wx.showToast({ title: '已移除', icon: 'success' });
+        this.loadMembers();
+      },
+    });
+  },
+
   // ===== 罚金状态 =====
   async onToggleFine(e) {
     const { id, status } = e.currentTarget.dataset;
@@ -394,8 +411,8 @@ Page({
     const text = (this.data.phases.find(p => p.v === v) || {}).t || v;
     const tipMap = {
       holiday: '切换到春节假期：打卡照常开放，仅跳过考核——不计 KPI、不计连续、不发红包、不参与榜单（2/5—2/11 放假，对应第 12、13 周）',
-      formal: '正式进行期间正常计 KPI、连续未完成与罚金（注意：第 1 周为警告周，只提醒不罚）',
-      trial: '报名/试运行：不罚款、不计连续、不结算榜单，可免费调组换角色',
+      formal: '正式进行期间正常计 KPI 与红包（每周固定 10 元；第 1 周为警告周，只提醒不罚）',
+      trial: '报名/试运行：不计连续、不结算榜单，可免费调组换角色',
     };
     const tip = tipMap[v] || '确认切换运营阶段';
     wx.showModal({
@@ -430,7 +447,7 @@ Page({
   onCalcWeek() {
     wx.showModal({
       title: '结算本周？',
-      content: `对第 ${this.data.weekIndex} 周进行结算：统计完成率、更新连续未完成周数并生成罚金记录`,
+      content: `对第 ${this.data.weekIndex} 周进行结算：统计完成率、更新连续未完成周数并生成红包记录`,
       success: async (res) => {
         if (!res.confirm) return;
         wx.showLoading({ title: '结算中' });
@@ -439,7 +456,7 @@ Page({
         if (!r.ok) return wx.showToast({ title: r.error || '结算失败', icon: 'none' });
         wx.showModal({
           title: '结算完成',
-          content: `完成 ${r.done} 人 · 未完成 ${r.failed} 人 · 罚金合计 ${r.fineTotal} 元${r.frozen ? '（本周跳过考核：不计连续、不发红包、不参与榜单，打卡记录保留）' : ''}`,
+          content: `完成 ${r.done} 人 · 未完成 ${r.failed} 人 · 红包合计 ${r.fineTotal} 元${r.frozen ? '（本周跳过考核：不计连续、不发红包、不参与榜单，打卡记录保留）' : ''}`,
           showCancel: false,
         });
         this.load();

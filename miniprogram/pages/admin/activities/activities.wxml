@@ -64,7 +64,7 @@
       <input class="form-input" value="{{form.location}}" data-k="location" bindinput="onInput" placeholder="如：奥森南门" />
 
       <text class="form-label">费用</text>
-      <input class="form-input" value="{{form.fee}}" data-k="fee" bindinput="onInput" placeholder="如：免费 / AA 50元" />
+      <input class="form-input" value="{{form.fee}}" data-k="fee" bindinput="onInput" placeholder="如：免费 / 费用线下收取" />
 
       <text class="form-label">报名截止</text>
       <view style="display:flex;gap:12rpx;">

@@ -24,7 +24,7 @@
     </view>
     <view wx:if="{{event._feeDisplay || event.mechanism}}" class="dtl-meta">
       <text class="dtl-meta-label">费用</text>
-      <text class="dtl-meta-value">{{event._feeDisplay}}{{event._feeDisplay && event.mechanism ? ' · ' : ''}}{{event.mechanism || ''}}{{event.payment ? ' · ' + event.payment : ''}}</text>
+      <text class="dtl-meta-value">{{event._feeDisplay}}{{event._feeDisplay && event.mechanism ? ' · ' : ''}}{{event.mechanism || ''}}{{event.payment ? ' · ' + (event.payment === '报名时缴费' ? '报名时线下缴费' : '中签后线下缴费') : ''}}</text>
     </view>
     <view wx:if="{{event.website}}" class="dtl-meta link" bindtap="onWebsite">
       <text class="dtl-meta-label">官网</text>
@@ -47,7 +47,7 @@
           <text class="self-info-row" wx:if="{{selfResultDeadline}}">⏱️ 成绩提交截止：{{selfResultDeadline}}{{selfProofRequired ? ' · 需上传跑步截图' : ''}}</text>
         </block>
         <text class="self-info-row" wx:if="{{selfGroups.length}}">🏷️ 距离档：{{selfGroups}}</text>
-        <text class="self-info-row" wx:if="{{selfFeeNote}}">💰 {{selfFeeNote}}</text>
+        <text class="self-info-row" wx:if="{{selfFeeNote}}">💰 费用线下收取{{selfFeeNote ? '：' + selfFeeNote : ''}}</text>
         <text class="self-info-row" wx:if="{{selfCounts}}">👥 已报名 {{selfCounts.signups}}{{selfCapacity > 0 ? ' / ' + selfCapacity : ''}} 人</text>
         <text class="self-info-row" wx:if="{{selfMode === 'online' && selfCounts}}">✅ 已通过 {{selfCounts.approved}} 人 · 待审核 {{selfCounts.pending}} 人</text>
       </view>
@@ -56,7 +56,7 @@
     <view class="card self-card">
       <view class="section-title"><text>📝 报名</text></view>
       <block wx:if="{{regState === 'registered'}}">
-        <text class="self-reg-status">✅ 已报名{{myMarker && myMarker.paid ? ' · 已确认' : ' · 待缴费'}}</text>
+        <text class="self-reg-status">✅ 已报名{{myMarker && myMarker.paid ? ' · 已确认' : ' · 待确认'}}</text>
         <view class="self-btn-row">
           <view class="self-btn self-btn-main" wx:if="{{selfMode === 'online' && (!mySubmit || mySubmit.status === 'rejected')}}" catchtap="onGoSubmitResult">提交成绩</view>
           <view class="self-btn" wx:if="{{selfMode === 'offline'}}" catchtap="onSelfFinish">我已完赛 · 录成绩</view>

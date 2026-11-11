@@ -268,7 +268,7 @@
             <view class="tl-date-pick"><text class="{{selfSignupDeadline ? '' : 'placeholder'}}">{{selfSignupDeadline || '选择日期'}}</text></view>
           </picker>
           <text class="form-label">报名费说明</text>
-          <input class="form-input" placeholder="如：30 元/人（含保险），现场缴费" value="{{selfFeeNote}}" data-k="feeNote" bindinput="onSelfInput" />
+          <input class="form-input" placeholder="如：30 元/人（含保险），线下收取" value="{{selfFeeNote}}" data-k="feeNote" bindinput="onSelfInput" />
 
           <view class="self-row">
             <text class="form-label" style="flex:1;">为参与者购买保险（报名需收身份证号）</text>

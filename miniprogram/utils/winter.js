@@ -53,6 +53,7 @@ const api = {
   adminFinance: () => call('adminFinance'),
   adminUpdateFinance: (data) => call('adminUpdateFinance', data),
   adminConfirmQuit: (data) => call('adminConfirmQuit', data),
+  adminRemoveMember: (data) => call('adminRemoveMember', data),
 };
 
 // 上传打卡截图到云存储，返回 fileID

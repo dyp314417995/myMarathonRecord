@@ -107,6 +107,20 @@
           "config": "0 0 20 * * * *"
         }
       ]
+    },
+    {
+      "name": "checkRaceNotify",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256,
+      "triggers": [
+        {
+          "name": "dailyRaceNotify",
+          "type": "timer",
+          "config": "0 0 9 * * * *"
+        }
+      ]
     }
   ]
 }

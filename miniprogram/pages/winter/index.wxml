@@ -56,13 +56,13 @@
         <text class="card-title">现招募队长和教练</text>
         <text class="rule-line">队长（每队 1 名）：管审核、统计、提醒、催打卡、维护气氛。不要求你跑得最快，要求你靠得住。</text>
         <text class="rule-line">教练（每队 1—2 名）：定 KPI 区间、出周课表、答疑、给降档建议。不要求你最快，要求你懂训练、会降档。</text>
-        <text class="rule-line">冬训营免费参加，队长、教练为义务服务，无补贴、无奖池；本人在本组正常打卡、正常考核，不额外免罚。</text>
+        <text class="rule-line">冬训营免费参加，队长、教练为义务服务；本人在本组正常打卡、正常考核，不额外免罚。</text>
         <text class="card-sub">报名时选择角色「队长」或「教练」，填一句申请理由或相关经历，由管理组审核任命。</text>
       </view>
 
       <view class="card">
         <text class="card-title">费用说明（免费参加）</text>
-        <text class="card-sub" style="margin-top:16rpx">本季冬训营不收取任何费用：无报名费、无押金、无补贴、无奖池。互相监督靠红包：每周结算，未完成自己定的 KPI，向小队群发 10 元红包（份数 = 小队人数，拼手气）。</text>
+        <text class="card-sub" style="margin-top:16rpx">免费参加。互相监督：每周结算，未完成自己定的 KPI，向小队群发 10 元红包（份数 = 小队人数，拼手气）。</text>
       </view>
 
       <view class="card" style="text-align:center">

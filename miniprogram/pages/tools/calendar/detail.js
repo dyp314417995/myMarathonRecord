@@ -1428,7 +1428,7 @@ Page({
   onTapQuitSignup() {
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo._id) return;
-    wx.showModal({ title: '退赛', content: '报名名额将释放，已缴费用线下协商退还。确定退赛？', confirmColor: '#ff4d4f', success: async (res) => {
+    wx.showModal({ title: '退赛', content: '报名名额将释放，费用退还请与组织者线下协商。确定退赛？', confirmColor: '#ff4d4f', success: async (res) => {
       if (!res.confirm) return;
       const r = await wx.cloud.callFunction({ name: 'raceEvent', data: { action: 'quit', userId: userInfo._id, eventId: this.data.eventId } }).catch(() => ({ result: { ok: false } }));
       const out = (r && r.result) || {};

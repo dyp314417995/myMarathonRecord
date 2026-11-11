@@ -46,7 +46,7 @@
     <text class="rule-line">每组配置：队长 1 名 + 教练 1—2 名 + 队员。人少可队长兼教练。</text>
     <text class="rule-line">队长（每队 1 名）：审核本组打卡（24 小时内通过/驳回并填原因）；每周统计本组完成情况、发布周榜；连续未完成时先私聊提醒再记录小红包；催打卡、发通知、维护气氛。</text>
     <text class="rule-line">教练（每队 1—2 名）：设定本组 KPI 区间（跑量或出勤，含上下限、单次最低时长），直接生效；每周日定稿、周一发布周课表（三档建议、质量课、力量拉伸、替代方案、降档规则）；发训练建议、组织云约练、答疑；对疲劳伤病队员给出降档建议。</text>
-    <text class="rule-line">队长与教练本人在本组正常打卡、正常考核，不额外免罚；冬训营免费参加，队长教练为义务服务，无补贴、无奖池，可参评「最佳队长」「最佳教练」荣誉表彰。</text>
+    <text class="rule-line">队长与教练本人在本组正常打卡、正常考核，不额外免罚；可参评「最佳队长」「最佳教练」荣誉表彰。</text>
   </view>
 
   <view class="card">
@@ -81,9 +81,8 @@
 
   <view class="card">
     <text class="card-title">七、红包监督</text>
-    <text class="rule-line">每周结算，未完成自己定的 KPI 就向小队群发红包，不进奖池、不归队长教练，只是互相监督：</text>
+    <text class="rule-line">每周结算，未完成自己定的 KPI 就向小队群发红包，互相监督：</text>
     <text class="rule-line">· 每次固定 10 元，份数 = 小队群人数，拼手气分</text>
-    <text class="rule-line">· 每周未完成发一次，不按连续周数升档</text>
     <text class="rule-line">· 有事完不成：提前给队长和教练发消息报备即可（无需在小程序里操作），说明情况和预计恢复时间，方便队长统计和队友理解</text>
     <text class="rule-line">· 第 4 周仍未完成且未沟通：退出冬训营，保留社群身份和回归资格</text>
     <text class="rule-line">量力而行，真有特殊情况提前和队长沟通。</text>
@@ -91,8 +90,7 @@
 
   <view class="card">
     <text class="card-title">八、费用说明</text>
-    <text class="rule-line">本季冬训营免费参加：不收报名费、不收押金，无补贴、无奖池。</text>
-    <text class="rule-line">唯一的「费用」是未完成 KPI 的红包：每周结算发到小队群，互相监督。</text>
+    <text class="rule-line">免费参加。</text>
   </view>
 
   <view class="card">
@@ -108,7 +106,7 @@
     <text class="card-title">十、积分与奖励</text>
     <text class="rule-line">积分奖打卡、完成本周 KPI、互助 / 约练、集体云约练、连续达标、首次 / 唤醒打卡；不奖跑量。</text>
     <text class="rule-line">队伍榜按人均 KPI 完成率，不按总跑量；个人娱乐跑量榜只展示不计分。</text>
-    <text class="rule-line">奖励：不设物质奖励和奖池。荣誉表彰：周 / 月破冬者勋章；百天破冬者证书（完成周数 ÷ 有效考核周数 ≥ 80% 且未退出冬训营）；全勤奖；最佳队长、最佳教练、最佳课表组、最佳唤醒奖、最暖队友；不设最快组奖。</text>
+    <text class="rule-line">荣誉表彰：周 / 月破冬者勋章；百天破冬者证书（完成周数 ÷ 有效考核周数 ≥ 80% 且未退出冬训营）；全勤奖；最佳队长、最佳教练、最佳课表组、最佳唤醒奖、最暖队友；不设最快组奖。</text>
   </view>
 
   <view class="card">
@@ -122,7 +120,7 @@
     <text class="rule-line">7. 隐私保护。打卡图片仅用于队内审核和统计，不对外传播、不用于商业宣传；如活动需要展示，会提前征得本人同意。</text>
     <text class="rule-line">8. 友善交流。群内不嘲笑配速、不攀比跑量、不人身攻击。</text>
     <text class="rule-line">9. 规则微调。如遇极端天气、平台故障、不可抗力等，管理组可对节奏和规则做临时微调，并提前公告。</text>
-    <text class="rule-line">10. 异议处理。对审核结果、处罚、费用等有异议，先找队长 / 教练沟通，沟通不畅找管理组；管理组 3 天内答复。</text>
+    <text class="rule-line">10. 异议处理。对审核结果、处罚等有异议，先找队长 / 教练沟通，沟通不畅找管理组；管理组 3 天内答复。</text>
     <text class="rule-line">11. 最终解释权归九州战马联盟冬训管理组所有。</text>
   </view>
 

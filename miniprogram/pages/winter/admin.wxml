@@ -121,6 +121,7 @@
             </view>
             <view class="chip-row" style="margin-top:16rpx" wx:if="{{!item.staffOnly}}">
               <text class="chip" data-id="{{item._id}}" bindtap="onOpenTransfer">调组</text>
+              <text class="chip" wx:if="{{item.status === 'approved' || item.status === 'quit-suggested'}}" data-id="{{item._id}}" data-name="{{item.nickName}}" bindtap="onRemoveMember">移除</text>
               <text class="chip" data-id="{{item._id}}" bindtap="onOpenRemark">伤病备注</text>
               <text class="chip" wx:if="{{item.status === 'quit-suggested'}}" data-id="{{item._id}}" data-confirm="{{true}}" bindtap="onConfirmQuit">确认退出</text>
               <text class="chip" wx:if="{{item.status === 'quit'}}" data-id="{{item._id}}" data-confirm="{{false}}" bindtap="onConfirmQuit">恢复成员</text>

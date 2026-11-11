@@ -2200,6 +2200,26 @@ async function actionAdminConfirmQuit(userId, data) {
   return ok(update);
 }
 
+// 管理员移除成员：置为 quit（与自退同语义）。quit 在可重新报名名单里，
+// 重新报名一律走 pending 审核；打卡记录按 userId 存储不受影响，数据保留。
+async function actionAdminRemoveMember(userId, data) {
+  await requireAdmin(userId);
+  const targetId = String(data.userId || '');
+  if (!targetId) return fail('缺少成员');
+  const t = await db.collection('winter_member').doc(targetId).get().catch(() => null);
+  if (!t || !t.data) return fail('成员不存在');
+  const m = t.data;
+  if (!['approved', 'quit-suggested'].includes(m.status)) return fail('该状态无需移除');
+  await db.collection('winter_member').doc(targetId).update({
+    data: { status: 'quit', quitTime: new Date(), updateTime: new Date() },
+  });
+  await saveLog({
+    type: 'quit', action: 'admin-remove', operatorId: userId, targetUserId: targetId,
+    detail: `管理组移除 ${m.nickName || ''}（原状态 ${m.status}）`,
+  });
+  return ok({ status: 'quit' });
+}
+
 exports.main = async (event = {}) => {
   const action = String(event.action || '');
   const data = event.data || {};
@@ -2256,6 +2276,7 @@ exports.main = async (event = {}) => {
       case 'adminFinance': return await actionAdminFinance(userId);
       case 'adminUpdateFinance': return await actionAdminUpdateFinance(userId, data);
       case 'adminConfirmQuit': return await actionAdminConfirmQuit(userId, data);
+      case 'adminRemoveMember': return await actionAdminRemoveMember(userId, data);
       default: return fail('未知操作: ' + action);
     }
   } catch (err) {

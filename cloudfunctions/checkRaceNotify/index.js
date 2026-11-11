@@ -20,7 +20,7 @@ function getMsg(label, time, eventName, nodeDate) {
       date1: ds, thing2: `${eventName} 中签结果即将公布`, time3: ds
     },
     '缴费截止': {
-      date1: ds, thing2: `${eventName} 请及时缴费`, time3: ds
+      date1: ds, thing2: `${eventName} 缴费即将截止`, time3: ds
     },
     '候补时间': {
       date1: ds, thing2: `${eventName} 候补即将开启`, time3: ds
