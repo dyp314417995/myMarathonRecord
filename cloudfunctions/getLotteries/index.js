@@ -8,10 +8,16 @@ const _ = db.command;
 // 活动广场内的抽奖内容同样只对已注册成员开放，分享打开的陌生人拿不到数据。
 async function isMember(uid) {
   if (!uid) return false;
+  let u = null;
   const r = await db.collection('users').doc(uid).get().catch(() => null);
-  if (r && r.data) return true;
-  const q = await db.collection('users').where({ _openid: uid }).limit(1).get().catch(() => null);
-  return !!(q && q.data && q.data.length);
+  if (r && r.data) u = r.data;
+  else {
+    const q = await db.collection('users').where({ _openid: uid }).limit(1).get().catch(() => null);
+    if (q && q.data && q.data.length) u = q.data[0];
+  }
+  if (!u) return false;
+  // pending（注册未选群待审核）/ rejected（已驳回）不能使用；老用户无 status 视为已通过
+  return u.status !== 'pending' && u.status !== 'rejected';
 }
 const NEED_REGISTER = { ok: false, needRegister: true, error: '请先注册加入跑团' };
 

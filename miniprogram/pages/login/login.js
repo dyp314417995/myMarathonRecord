@@ -30,6 +30,8 @@ Page({
       wx.removeStorageSync('_logged_out');
       const user = await dbUtil.getCurrentUser();
       if (user) {
+        if (!this.ensureApproved(user)) { this.loadGroups(); return; }
+        await this.grantRegisterGifts(user);
         const res = await new Promise(resolve => {
           wx.showModal({
             title: '已有账号',
@@ -77,6 +79,8 @@ Page({
       }
       const user = await dbUtil.getCurrentUser();
       if (user) {
+        if (!this.ensureApproved(user)) { this.loadGroups(); return; }
+        await this.grantRegisterGifts(user);
         wx.setStorageSync('userInfo', user);
         wx.reLaunch({ url: `/pages/tools/activity/detail?id=${pending}` });
         return;
@@ -85,16 +89,28 @@ Page({
       return;
     }
 
-    // 正常登录/注册：已注册用户返回上一页（如从详情点报名过来）
+    // 已注册用户：仅审核通过的能直接进入；待审核/被驳回的留在本页，可补充群组后重新提交
+    const fresh = await dbUtil.getCurrentUser();
+    if (fresh && (fresh.status === 'pending' || fresh.status === 'rejected')) {
+      wx.showModal({
+        title: fresh.status === 'pending' ? '注册审核中' : '注册未通过',
+        content: fresh.status === 'pending'
+          ? '你注册时未选择加入任何群，需管理员审核通过后才能使用。也可在下方选择群组后重新提交，选择群组即可立即通过。'
+          : '你的注册申请未通过审核，如有疑问请联系管理员。也可在下方选择群组后重新提交，选择群组即可立即通过。',
+        showCancel: false,
+      });
+      this.loadGroups();
+      return;
+    }
+    if (fresh) await this.grantRegisterGifts(fresh);
     const cached = wx.getStorageSync('userInfo');
     if (cached && cached._id) {
       if (getCurrentPages().length > 1) wx.navigateBack();
       else wx.reLaunch({ url: '/pages/home/home' });
       return;
     }
-    const user = await dbUtil.getCurrentUser();
-    if (user) {
-      wx.setStorageSync('userInfo', user);
+    if (fresh) {
+      wx.setStorageSync('userInfo', fresh);
       if (getCurrentPages().length > 1) wx.navigateBack();
       else wx.reLaunch({ url: '/pages/home/home' });
       return;
@@ -173,6 +189,46 @@ Page({
     this.setData({ selectedGroupIds: ids, selectedGroupMap: map });
   },
 
+  // 审核状态闸口：pending/rejected 一律不放行（老用户无 status 视为已通过）
+  ensureApproved(user) {
+    if (!user) return true;
+    if (user.status !== 'pending' && user.status !== 'rejected') return true;
+    wx.showModal({
+      title: user.status === 'pending' ? '注册审核中' : '注册未通过',
+      content: user.status === 'pending'
+        ? '你注册时未选择加入任何群，需管理员审核通过后才能使用。也可在下方选择群组后重新提交，选择群组即可立即通过。'
+        : '你的注册申请未通过审核，如有疑问请联系管理员。也可在下方选择群组后重新提交，选择群组即可立即通过。',
+      showCancel: false,
+    });
+    return false;
+  },
+
+  // 注册赠送（积分 + 2 张补签卡）：signin_cards_granted 防重复发放；
+  // 未选群的待审核用户注册时不发，审核通过后首次登录/管理员审核通过时补发
+  async grantRegisterGifts(user) {
+    try {
+      if (!user || !user._id || user.signin_cards_granted) return;
+      const regPoints = await pointsUtil.getRulePoints('注册赠送');
+      if (regPoints > 0) {
+        await pointsUtil.addRecord({
+          userId: user._id, type: 'earn', category: '注册赠送',
+          points: regPoints, description: '新用户注册赠送',
+          images: [], earnDate: new Date(),
+          expireDate: new Date(Date.now() + 365 * 86400000),
+          status: 'approved',
+        });
+      }
+      const now = new Date();
+      const expire = new Date(now.getTime() + 30 * 86400000);
+      for (let i = 0; i < 2; i++) {
+        await dbUtil.db.collection('makeup_card').add({
+          data: { userId: user._id, source: 1, expire_at: expire, status: 0, used_at: null, created_at: now },
+        }).catch(() => {});
+      }
+      await dbUtil.updateUser(user._id, { signin_cards_granted: true }).catch(() => {});
+    } catch (e) { console.error('注册赠送发放失败:', e); }
+  },
+
   // 提交注册
   async onSubmit() {
     const { avatarUrl, nickName, city, phoneNumber, selectedGroupIds, submitting, pb10k, pbHalf, pbFull } = this.data;
@@ -212,19 +268,28 @@ Page({
       // 检查是否已注册
       let user = await dbUtil.getCurrentUser();
       if (user) {
-        await dbUtil.updateUser(user._id, {
+        const patch = {
           openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
           city: city.trim(), pb10k, pbHalf, pbFull,
           groupIds: selectedGroupIds
-        });
+        };
+        // 待审核/被驳回的用户重新提交：选了群 → 直接通过；仍没选群 → 维持待审核。
+        // 已通过的老用户不改状态，避免误降级。
+        if (user.status === 'pending' || user.status === 'rejected') {
+          patch.status = needReview ? 'pending' : 'approved';
+        }
+        await dbUtil.updateUser(user._id, patch);
+        if (patch.status === 'approved') {
+          user.status = 'approved';
+          await this.grantRegisterGifts(user);
+        }
         // 更新群成员数
         for (const gid of selectedGroupIds) {
           dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
       } else {
         // 新用户注册（已注册用户会被 getCurrentUser() 在 onLoad/onSubmit 前置拦截）
-        const regPoints = await pointsUtil.getRulePoints('注册赠送');
         const userData = {
           openid,
           avatarUrl: finalAvatar, nickName, phoneNumber: phoneNumber.trim(),
@@ -239,27 +304,19 @@ Page({
         for (const gid of selectedGroupIds) {
           dbUtil.db.collection('groups').doc(gid).update({ data: { memberCount: dbUtil._.inc(1) } }).catch(() => {});
         }
-        if (regPoints > 0) {
-          await pointsUtil.addRecord({
-            userId: addRes._id, type: 'earn', category: '注册赠送',
-            points: regPoints, description: '新用户注册赠送',
-            images: [], earnDate: new Date(),
-            expireDate: new Date(Date.now() + 365 * 86400000),
-            status: 'approved',
-          });
-        }
-        // 新用户注册赠送 2 张补签卡（仅首次注册发放，有效期 30 天）
-        const cardNow = new Date();
-        const cardExpire = new Date(cardNow.getTime() + 30 * 86400000);
-        for (let i = 0; i < 2; i++) {
-          await dbUtil.db.collection('makeup_card').add({
-            data: {
-              userId: addRes._id, source: 1, expire_at: cardExpire,
-              status: 0, used_at: null, created_at: cardNow,
-            },
-          }).catch(() => {});
-        }
-        await dbUtil.updateUser(addRes._id, { signin_cards_granted: true }).catch(() => {});
+        // 注册赠送：待审核（未选群）时不发，审核通过首次登录时补发
+        if (!needReview) await this.grantRegisterGifts(user);
+      }
+
+      // 待审核（未选群）：不缓存登录态、不进入应用，留在登录页等审核或补充群组
+      if (needReview) {
+        wx.hideLoading();
+        wx.showModal({
+          title: '已提交申请',
+          content: '你未选择加入任何群，需管理员审核通过后才能使用。审核期间无法浏览活动内容；如想立即通过，可在下方选择群组后重新提交。',
+          showCancel: false,
+        });
+        return;
       }
 
       // 保存到全局和本地
@@ -267,15 +324,7 @@ Page({
       wx.setStorageSync('userInfo', user);
 
       wx.hideLoading();
-      if (needReview) {
-        wx.showModal({
-          title: '已提交申请',
-          content: '你未选择加入任何群，需要管理员审核通过后才能使用完整功能',
-          showCancel: false,
-        });
-      } else {
-        wx.showToast({ title: '注册成功', icon: 'success' });
-      }
+      wx.showToast({ title: '注册成功', icon: 'success' });
       setTimeout(() => {
         const pending = app.globalData.pendingActivityId;
         if (pending) {

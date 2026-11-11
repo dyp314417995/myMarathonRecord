@@ -197,6 +197,62 @@ Page({
     return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
   },
 
+  // ===== 注册审核（未选群注册的用户 status=pending，需在此通过/驳回） =====
+  async onApproveUser(e) {
+    const { id, name } = e.currentTarget.dataset;
+    const go = await new Promise(res => wx.showModal({
+      title: '通过审核',
+      content: `确认通过「${name || '该用户'}」的注册申请？通过后即可正常使用小程序。`,
+      success: m => res(m.confirm),
+    }));
+    if (!go) return;
+    wx.showLoading({ title: '处理中' });
+    await dbUtil.updateUser(id, { status: 'approved' });
+    // 补发注册赠送（待审核期间不发）
+    const uRes = await dbUtil.db.collection('users').doc(id).get().catch(() => null);
+    const u = uRes && uRes.data;
+    if (u && !u.signin_cards_granted) {
+      const regPoints = await pointsUtil.getRulePoints('注册赠送');
+      if (regPoints > 0) {
+        await pointsUtil.addRecord({
+          userId: id, type: 'earn', category: '注册赠送',
+          points: regPoints, description: '新用户注册赠送',
+          images: [], earnDate: new Date(),
+          expireDate: new Date(Date.now() + 365 * 86400000),
+          status: 'approved',
+        });
+      }
+      const now = new Date();
+      const expire = new Date(now.getTime() + 30 * 86400000);
+      for (let i = 0; i < 2; i++) {
+        await dbUtil.db.collection('makeup_card').add({
+          data: { userId: id, source: 1, expire_at: expire, status: 0, used_at: null, created_at: now },
+        }).catch(() => {});
+      }
+      await dbUtil.updateUser(id, { signin_cards_granted: true }).catch(() => {});
+    }
+    wx.hideLoading();
+    wx.showToast({ title: '已通过', icon: 'success' });
+    cache.invalidate('users_v2'); cache.invalidate('members_v2');
+    this.loadUsers(true);
+  },
+
+  onRejectUser(e) {
+    const { id, name } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '驳回注册',
+      content: `确认驳回「${name || '该用户'}」的注册申请？驳回后其无法使用小程序；其可补充群组后重新提交。`,
+      confirmColor: '#ff9800',
+      success: async (res) => {
+        if (!res.confirm) return;
+        await dbUtil.updateUser(id, { status: 'rejected' });
+        wx.showToast({ title: '已驳回', icon: 'success' });
+        cache.invalidate('users_v2'); cache.invalidate('members_v2');
+        this.loadUsers(true);
+      },
+    });
+  },
+
   onDeleteUser(e) {
     const { id, name } = e.currentTarget.dataset;
     wx.showModal({

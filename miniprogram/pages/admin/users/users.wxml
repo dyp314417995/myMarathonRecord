@@ -39,9 +39,13 @@
         <view class="u-tags">
           <text class="tag tag-green" wx:if="{{item.role === 'super_admin'}}">超管</text>
           <text class="tag tag-blue" wx:elif="{{item.role === 'admin'}}">管理员</text>
+          <text class="tag tag-orange" wx:if="{{item.status === 'pending'}}">待审核</text>
+          <text class="tag tag-red" wx:elif="{{item.status === 'rejected'}}">已驳回</text>
         </view>
       </view>
       <view class="u-actions" wx:if="{{item.role !== 'super_admin'}}">
+        <button wx:if="{{item.status === 'pending' || item.status === 'rejected'}}" class="btn-approve" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onApproveUser">通过审核</button>
+        <button wx:if="{{item.status === 'pending'}}" class="btn-reject" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onRejectUser">驳回</button>
         <button wx:if="{{isSuperAdmin && item.role === 'admin'}}" class="btn-demote" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onDemoteAdmin">解除管理员</button>
         <button class="btn-remove" data-id="{{item._id}}" data-name="{{item.nickName}}" catchtap="onDeleteUser">删除用户</button>
       </view>

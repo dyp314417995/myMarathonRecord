@@ -205,13 +205,19 @@ exports.main = async (event) => {
   return { error: 'unknown action' };
 };
 
-// 是否已注册成员：users 表里存在记录（_id 或 openid 命中）
+// 是否已注册成员：users 表里存在记录（_id 或 openid 命中）且审核通过。
+// status: pending（注册未选群待审核）/ rejected（已驳回）不能使用；老用户无 status 视为已通过。
 async function isMember(uid) {
   if (!uid) return false;
+  let u = null;
   const r = await db.collection('users').doc(uid).get().catch(() => null);
-  if (r && r.data) return true;
-  const q = await db.collection('users').where({ _openid: uid }).limit(1).get().catch(() => null);
-  return !!(q && q.data && q.data.length);
+  if (r && r.data) u = r.data;
+  else {
+    const q = await db.collection('users').where({ _openid: uid }).limit(1).get().catch(() => null);
+    if (q && q.data && q.data.length) u = q.data[0];
+  }
+  if (!u) return false;
+  return u.status !== 'pending' && u.status !== 'rejected';
 }
 
 // 是否管理员：按调用者 openid 查 users.role
