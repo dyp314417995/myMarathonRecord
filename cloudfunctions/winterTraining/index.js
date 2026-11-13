@@ -291,11 +291,13 @@ async function groupStaffUserIds(groupId, roles) {
 
 // 组装成员展示信息（昵称/头像）
 async function decorateMembers(list) {
+  // 批量查用户（每批 50 个 _.in），替代逐个 getUser 的 N+1：全组 ~60 人时
+  // 串行 60+ 次往返会拖到前端请求超时，表现为页面一直转圈
   const ids = [...new Set(list.map(m => m.userId).filter(Boolean))];
   const uMap = {};
-  for (const id of ids) {
-    const u = await getUser(id);
-    if (u) uMap[id] = u;
+  for (let i = 0; i < ids.length; i += 50) {
+    const res = await db.collection('users').where({ _id: _.in(ids.slice(i, i + 50)) }).limit(50).get().catch(() => null);
+    ((res && res.data) || []).forEach(u => { uMap[u._id] = u; });
   }
   return list.map(m => ({
     _id: m._id,
@@ -653,12 +655,13 @@ async function actionGetMyGroup(userId) {
   // 试运行期照常考核，只有春节周跳过考核
   const holidayNow = cfg.phase === 'holiday' || isHolidayWeek(cfg, weekIndex);
 
-  // 本周还能不能改 KPI：本周已打过卡就不许改（周 KPI，每周一解锁）
+  // 本周还能不能改 KPI：已填过 → 仅周一可改；打过卡就不能改（周 KPI，每周一解锁）
   let kpiCanChange = true;
   if (member.kpiWeek === weekIndex) {
     const ckc = await db.collection('winter_checkin')
       .where({ userId, weekIndex }).limit(1).count().catch(() => ({ total: 0 }));
-    kpiCanChange = !(ckc.total > 0);
+    const dow = new Date(Date.now() + TZ_OFFSET).getUTCDay(); // 0=周日
+    kpiCanChange = !(ckc.total > 0) && dow === 1;
   }
   // 最近 8 周的 KPI 记录，供本人追溯
   const kr = await db.collection('winter_kpi').where({ userId })
@@ -828,13 +831,17 @@ async function actionSubmitKpi(userId, data) {
   const weekIndex = calcWeekIndex(cfg);
   const type = String(data.kpiType || range.type);
   if (type !== range.type) return fail(`本组 KPI 类型为${range.type === 'distance' ? '跑量' : '出勤'}，不可更改`);
-  // 本周已经打过卡就不允许再改目标（否则可以打完卡再把目标改低）
+  // 周 KPI 规则：没填过随时可填；本周已填过 → 只有周一允许修改（周一是定目标日）；
+  // 且打过卡就不能再改（否则可以打完卡再把目标改低）
   if (member.kpiWeek === weekIndex) {
     const ckc = await db.collection('winter_checkin')
       .where({ userId, weekIndex }).limit(1).count().catch(() => ({ total: 0 }));
     if ((ckc.total || 0) > 0) {
       return fail('本周已有打卡记录，KPI 不可再改；下周一可重新填报');
     }
+    // 周几按东八区算（云函数默认 UTC，直接 getDay 会把中国周一下午判成周一之前的星期日）
+    const dow = new Date(Date.now() + TZ_OFFSET).getUTCDay(); // 0=周日
+    if (dow !== 1) return fail('KPI 每周一可修改；本周目标已生效，下周一再调整');
   }
   const value = toNum(data.kpiValue);
   if (value < range.min || value > range.max) {
@@ -1807,23 +1814,8 @@ async function actionAdminMembers(userId, data) {
   const r = await db.collection('winter_member').where(Object.keys(where).length ? where : { status: _.exists(true) })
     .limit(500).get().catch(() => null);
   const list = (r && r.data) || [];
-  const out = [];
-  for (const m of list) {
-    const u = await getUser(m.userId);
-    const g = m.groupId ? await db.collection('winter_group').doc(m.groupId).get().catch(() => null) : null;
-    out.push({
-      _id: m._id, userId: m.userId,
-      nickName: (u && (u.nickName || u.nickname)) || m.nickName || '未知',
-      avatarUrl: (u && u.avatarUrl) || '',
-      groupId: m.groupId, groupName: g && g.data ? g.data.name : '未分组',
-      role: m.role, roleText: ROLE_TEXT[m.role] || '',
-      status: m.status, statusText: APPLY_STATUS_TEXT[m.status] || m.status,
-      kpiType: m.kpiType, kpiValue: m.kpiValue,
-      continuousFailWeeks: m.continuousFailWeeks || 0,
-      remark: m.remark || '', feeStatus: m.feeStatus || 'unpaid',
-    });
-  }
-  // 组别列表供下拉
+
+  // 组别一次拉全：名单组名与下拉列表共用，替代逐成员 doc().get()
   const gRes = await db.collection('winter_group').orderBy('sort', 'asc').limit(50).get().catch(() => null);
   const groups = ((gRes && gRes.data) || []);
   const gNameMap = {};
@@ -1833,17 +1825,49 @@ async function actionAdminMembers(userId, data) {
   // 否则成员管理里看不到这个组的教练，会误以为指派丢了。
   // 这类行 staffOnly=true：只是挂着职务，不占名额、不考核，前端隐藏缴费/调组操作。
   const stRes = await db.collection('winter_staff').limit(200).get().catch(() => null);
-  const seen = new Set(out.map(m => m.groupId + '|' + m.userId));
-  const userCache = {};
-  for (const s of ((stRes && stRes.data) || [])) {
+  const staffList = (stRes && stRes.data) || [];
+
+  // 批量查用户（成员 + 兼任合并，每批 50 个 _.in），替代逐成员 getUser 的 N+1
+  const uidSet = new Set();
+  list.forEach(m => m.userId && uidSet.add(m.userId));
+  staffList.forEach(s => s.userId && uidSet.add(s.userId));
+  const uids = Array.from(uidSet);
+  const userMap = {};
+  for (let i = 0; i < uids.length; i += 50) {
+    const res = await db.collection('users').where({ _id: _.in(uids.slice(i, i + 50)) }).limit(50).get().catch(() => null);
+    ((res && res.data) || []).forEach(u => { userMap[u._id] = u; });
+  }
+
+  // 兼任成员的主组信息同样批量查（winter_member._id = userId），替代逐个 getMyMember
+  const mainMap = {};
+  const staffUids = staffList.map(s => s.userId).filter(Boolean);
+  for (let i = 0; i < staffUids.length; i += 50) {
+    const res = await db.collection('winter_member').where({ _id: _.in(staffUids.slice(i, i + 50)) }).limit(50).get().catch(() => null);
+    ((res && res.data) || []).forEach(mm => { mainMap[mm._id] = mm; });
+  }
+
+  const out = [];
+  const seen = new Set();
+  for (const m of list) {
+    seen.add(m.groupId + '|' + m.userId);
+    const u = userMap[m.userId];
+    out.push({
+      _id: m._id, userId: m.userId,
+      nickName: (u && (u.nickName || u.nickname)) || m.nickName || '未知',
+      avatarUrl: (u && u.avatarUrl) || '',
+      groupId: m.groupId, groupName: gNameMap[m.groupId] || '未分组',
+      role: m.role, roleText: ROLE_TEXT[m.role] || '',
+      status: m.status, statusText: APPLY_STATUS_TEXT[m.status] || m.status,
+      kpiType: m.kpiType, kpiValue: m.kpiValue,
+      continuousFailWeeks: m.continuousFailWeeks || 0,
+      remark: m.remark || '', feeStatus: m.feeStatus || 'unpaid',
+    });
+  }
+  for (const s of staffList) {
     if (!s.groupId || seen.has(s.groupId + '|' + s.userId)) continue;
     seen.add(s.groupId + '|' + s.userId);
-    if (!userCache[s.userId]) {
-      const u = await getUser(s.userId);
-      userCache[s.userId] = u || {};
-    }
-    const u = userCache[s.userId];
-    const main = await getMyMember(s.userId);
+    const u = userMap[s.userId] || {};
+    const main = mainMap[s.userId] || null;
     out.push({
       _id: 'staff-' + s._id, userId: s.userId,
       nickName: (u && (u.nickName || u.nickname)) || '未知',

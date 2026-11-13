@@ -68,17 +68,17 @@ function getMsg(reason, raceName, count) {
   const ds = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const name = truncate(raceName, 10);
   if (reason === 'expired') {
-    return { date1: { value: ds }, thing2: { value: `${name}二维码过期啦` }, time3: { value: ds } };
+    return { date1: { value: ds }, thing2: { value: `${name}群码过期，被电醒了` }, time3: { value: ds } };
   }
-  return { date1: { value: ds }, thing2: { value: `${name}还没建群(${count}人催)` }, time3: { value: ds } };
+  return { date1: { value: ds }, thing2: { value: `${name}还没建群(${count}人已电)` }, time3: { value: ds } };
 }
 
 function getQrMsg(reason, raceName, count) {
   const today = new Date();
   const ds = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const content = reason === 'expired'
-    ? '群二维码已过期，请尽快更新'
-    : `${count} 位跑友在等你建群`;
+    ? '有人来电击你了：群码过期，快换新'
+    : `${count} 位跑友来电击你了，快建群`;
   return {
     [QR_MSG_KEYS.name]: { value: truncate(raceName, 20) },
     [QR_MSG_KEYS.content]: { value: truncate(content, 20) },

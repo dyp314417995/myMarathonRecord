@@ -84,9 +84,9 @@ Page({
     // ===== 跑友互助（拼房 / 拼车 / 拼饭 / 旅游 / 组队） =====
     helpList: [],
     helpLoading: false,
+    // 拼车已下线（2026-11，审核要求），恢复时把 carpool 项加回来即可
     helpTypes: [
       { key: 'room', label: '拼房', icon: '🏠' },
-      { key: 'carpool', label: '拼车', icon: '🚗' },
       { key: 'meal', label: '拼饭', icon: '🍜' },
       { key: 'tour', label: '旅游', icon: '🧳' },
       { key: 'team', label: '组队', icon: '👥' },
@@ -649,7 +649,7 @@ Page({
       cooldownLeft: left,
       // 只有「我」有冷却，别人随时能催
       cooldownText: left > 0
-        ? (left >= 60 ? `${Math.ceil(left / 60)} 分钟后可再催` : `${left} 秒后可再催`)
+        ? (left >= 60 ? `${Math.ceil(left / 60)} 分钟后可再电` : `${left} 秒后可再电`)
         : '',
     });
     const count = res.count || 0;
@@ -657,12 +657,12 @@ Page({
     const expired = this.data.qrStatus === 'expired';
     if (expired) {
       // 过期不展示进度，分享标题也不带人数
-      this.setData({ _shareTitle: `「${name}」群二维码过期了，有跑友在等管理员更新` });
+      this.setData({ _shareTitle: `「${name}」二维码过期了，来电一下管理员⚡` });
     } else if (count > 0) {
       this.setData({
         _shareTitle: res.done
           ? `「${name}」${count} 位跑友都在等建群，进群一起备赛！`
-          : `「${name}」还没建群，${count} 位跑友在催，一起来！`,
+          : `「${name}」还没建群，${count} 位跑友已来电，一起来电⚡`,
       });
     }
   },
@@ -786,7 +786,10 @@ Page({
       const r = await wx.cloud.callFunction({ name: 'raceHelp', data: { action: 'list', eventId } });
       const res = (r && r.result) || {};
       if (res.success) {
-        this.setData({ helpList: res.list || [], helpFollowed: res.followed !== false });
+        this.setData({
+        helpList: (res.list || []).filter(h => h.type !== 'carpool'),   // 拼车已下线
+        helpFollowed: res.followed !== false,
+      });
         this.openHelpFromShare();
       }
     } catch (e) {

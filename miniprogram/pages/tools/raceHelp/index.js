@@ -3,9 +3,9 @@
 // 放小工具里，不再藏在每场赛事的详情页深处：
 // 一进来就是「我发布的 / 我应征的」，两边都按赛事分组。
 // 发布时先选一场关注的赛事——互助必须挂在某场比赛上，没有赛事就没有上下文。
+// 拼车已下线（2026-11，审核要求），恢复时把 carpool 项加回来即可
 const TYPES = [
   { key: 'room', label: '拼房', icon: '🏠' },
-  { key: 'carpool', label: '拼车', icon: '🚗' },
   { key: 'meal', label: '拼饭', icon: '🍜' },
   { key: 'tour', label: '旅游', icon: '🧳' },
   { key: 'team', label: '组队', icon: '👥' },
@@ -109,7 +109,7 @@ Page({
     this._loaded = true;
     this.setData({
       loading: false,
-      mineList: mine.list || [],
+      mineList: (mine.list || []).filter(h => h.type !== 'carpool'),
       applyList: applied.list || [],
       tabCount: { mine: (mine.list || []).length, apply: (applied.list || []).length },
     }, () => this.buildGroups());

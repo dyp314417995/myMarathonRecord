@@ -48,7 +48,7 @@
       <!-- 本周已打过卡：目标锁定，下周一解锁 -->
       <view class="locked-box" wx:if="{{kpiLocked}}">
         <text class="locked-value">本周目标：{{myKpiValue}} {{unit}}</text>
-        <text class="field-tip">🔒 本周已有打卡，目标锁定；下周一可重新填报</text>
+        <text class="field-tip">🔒 本周目标已锁定；每周一可修改（打卡后不可再改）</text>
       </view>
       <block wx:else>
         <view class="field" style="margin-top:24rpx">

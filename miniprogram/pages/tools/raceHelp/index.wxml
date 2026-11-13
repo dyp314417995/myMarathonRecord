@@ -3,7 +3,7 @@
   <view class="hd">
     <view class="hd-main">
       <text class="hd-title">跑友互助</text>
-      <text class="hd-desc">拼房、拼车、拼饭，只在关注了同一场赛事的跑友之间</text>
+      <text class="hd-desc">拼房、拼饭、组队，只在关注了同一场赛事的跑友之间</text>
     </view>
   </view>
 

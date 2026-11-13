@@ -328,15 +328,15 @@ Page({
       || (this.data.allRaceList || []).find(x => x._id === id);
     if (!r) return;
     const list = r.remindList || [];
-    if (!list.length) return wx.showToast({ title: '还没有人催建群', icon: 'none' });
+    if (!list.length) return wx.showToast({ title: '还没人电他，先不用管', icon: 'none' });
     const names = list.slice(0, 15).map((u, i) => `${i + 1}. ${u.nickName || '跑友'}`).join('\n');
     const more = list.length > 15 ? `\n…共 ${list.length} 人` : '';
     const total = r.remindCount || list.length;
     const tip = total >= 3
-      ? '已满 3 人，建议尽快建群；上传群二维码后，催办入口会自动关闭。'
-      : `不满 3 人，你可以先不建，等人多了再说；上传群二维码后催办入口会自动关闭。`;
+      ? '已被 3 人电过，建议尽快建群；上传群二维码后，电击入口会自动关闭。'
+      : `还没电满 3 人，可以先不建，等人多了再说；上传群二维码后，电击入口会自动关闭。`;
     wx.showModal({
-      title: `${total} 位跑友在催建群`,
+      title: `${total} 位跑友来电击你了`,
       content: `${names}${more}\n\n${tip}`,
       confirmText: '去传二维码',
       cancelText: '知道了',

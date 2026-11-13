@@ -286,6 +286,7 @@ function parseHelpForm(event) {
 function validateHelpForm(f) {
   if (!f.eventId) return '缺少赛事';
   if (!TYPES[f.type]) return '类型不支持';
+  if (f.type === 'carpool') return '拼车互助已下线';   // 入口已撤，服务端兜底拦新建
   if (!f.title) return '请填写标题';
   if (!f.ruleAgreed) return '请先阅读并勾选互助规则';
   if (!f.wechat) return '请填写微信号';
@@ -361,6 +362,7 @@ exports.main = async (event = {}) => {
         .limit(50).get().catch(() => ({ data: [] }));
       const rows = (res.data || [])
         .filter(h => !h.deleted)
+        .filter(h => h.type !== 'carpool')   // 拼车互助已下线：历史数据也不再展示
         .filter(h => (parseInt(h.reportCount, 10) || 0) < 3);
 
       // 认「在不在组内」：发起人，或者应征过（后来退出的也算——他得看得到后面被取消/完成）
@@ -595,7 +597,7 @@ exports.main = async (event = {}) => {
         .orderBy('createTime', 'desc')
         .limit(50).get().catch(() => ({ data: [] }));
         // 删除过的不再露面；其余四种状态都留着，让人看得见这条互助的来龙去脉
-        const list = (res.data || []).filter(h => !h.deleted);
+        const list = (res.data || []).filter(h => !h.deleted && h.type !== 'carpool');
         const evMap = await eventBrief(list.map(h => h.eventId));
 
         const helps = await Promise.all(list.map(async (h) => {
@@ -631,7 +633,7 @@ exports.main = async (event = {}) => {
       const list = await Promise.all(applies.map(async (a) => {
         const hRes = await db.collection(HELPS).doc(a.helpId).get().catch(() => null);
         const h = hRes && hRes.data;
-        if (!h || h.deleted) return null;
+        if (!h || h.deleted || h.type === 'carpool') return null;   // 拼车互助已下线
         const state = helpState(h);
         return {
           applyId: a._id,

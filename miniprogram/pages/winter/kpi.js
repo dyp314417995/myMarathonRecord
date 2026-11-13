@@ -8,6 +8,7 @@ Page({
     kpiType: '', kpiValue: '', inRange: true, myKpiValue: 0,
     weekIndex: 0, kpiHistory: [],   // 周 KPI：当前周次 + 历史记录
     // 教练表单
+    coachOptions: [], coachGid: '', // 必须有初始值：load() 里会读 coachOptions.find，undefined 会抛错卡死页面
     form: { type: 'distance', min: '', max: '', minDuration: '' },
     submitting: false,
   },
@@ -17,6 +18,17 @@ Page({
   },
 
   async load() {
+    try {
+      await this._load();
+    } catch (e) {
+      // 兜底：任何一步出错都必须解除 loading，否则页面永久转圈
+      console.error('[kpi] load fail:', e);
+      this.setData({ loading: false });
+      wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' });
+    }
+  },
+
+  async _load() {
     const r = await w.api.myGroup();
     if (!r.ok) {
       wx.showToast({ title: r.error || '加载失败', icon: 'none' });
@@ -30,7 +42,7 @@ Page({
     ((r.staffRoles) || []).filter(s => s.role === 'coach').forEach(s => options.push({ gid: s.groupId, name: s.groupName, kpiRange: s.kpiRange || null, suggest: s.suggest || null }));
     const isCoach = options.length > 0;
     // 区间编辑器针对所选组；保持当前选择，无效或首次进入则落到第一项
-    const sel = (this.data.coachOptions.find(o => o.gid === this.data.coachGid && options.some(x => x.gid === o.gid))) || options[0] || null;
+    const sel = ((this.data.coachOptions || []).find(o => o.gid === this.data.coachGid && options.some(x => x.gid === o.gid))) || options[0] || null;
     const coachGid = sel ? sel.gid : '';
     const coachGName = sel ? sel.name : '';
     const coachRange = sel ? sel.kpiRange : null;
@@ -123,7 +135,12 @@ Page({
     const v = this.data.kpiValue;
     if (!this.data.inRange) return wx.showToast({ title: 'KPI 需在区间内', icon: 'none' });
     this.setData({ submitting: true });
-    const r = await w.api.submitKpi({ kpiType: this.data.kpiType, kpiValue: Number(v) });
+    let r;
+    try {
+      r = await w.api.submitKpi({ kpiType: this.data.kpiType, kpiValue: Number(v) });
+    } catch (e) {
+      r = { ok: false, error: '网络异常，请稍后重试' };
+    }
     this.setData({ submitting: false });
     if (!r.ok) return wx.showToast({ title: r.error || '提交失败', icon: 'none' });
     wx.showToast({ title: `第 ${r.weekIndex || this.data.weekIndex} 周目标已保存`, icon: 'success' });

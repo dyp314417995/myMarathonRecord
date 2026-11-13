@@ -75,8 +75,13 @@ Page({
   async loadMembers() {
     const r = await w.api.adminMembers({});
     if (!r.ok) return;
-    const members = await w.resolveAvatars(r.list || []);
+    // 先渲染名单（文字头像兜底），头像转链后台补，不阻塞列表显示
+    const members = r.list || [];
     this.setData({ members, allGroups: r.groups || [] }, () => this.buildMemberSections());
+    w.resolveAvatars(members).then((withAvatars) => {
+      if (!withAvatars.length) return;
+      this.setData({ members: withAvatars }, () => this.buildMemberSections());
+    });
   },
 
   // 按组归类：全部视图按组分段（空组隐藏），选中某组时只看该组

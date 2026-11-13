@@ -2,8 +2,15 @@
 const FUNC = 'winterTraining';
 
 async function call(action, data = {}) {
-  const res = await wx.cloud.callFunction({ name: FUNC, data: { action, data } });
-  return res.result || {};
+  try {
+    const res = await wx.cloud.callFunction({ name: FUNC, data: { action, data } });
+    return res.result || {};
+  } catch (e) {
+    // 超时/网络异常时 callFunction 会 reject：返回统一错误让页面解除 loading，
+    // 否则页面 await 抛错后 loading/submitting 永远卡住（表现为一直转圈）
+    console.error('[winter] call fail:', action, e);
+    return { ok: false, error: '网络异常，请稍后重试' };
+  }
 }
 
 // 统一错误处理：云函数返回 { ok:false, error } 时不弹 toast，交由页面决定
@@ -87,8 +94,13 @@ async function toTempUrl(fileID) {
   return fileID;
 }
 
+// 头像临时链接缓存：临时链接有效期约 2 小时，缓存 30 分钟足够页面来回切换复用，
+// 避免每次进成员管理都重新调 getImageUrls 拖慢渲染
+const _avatarCache = new Map();   // cloud:// -> { url, ts }
+const AVATAR_CACHE_TTL = 30 * 60 * 1000;
+
 // 批量把列表里的 cloud:// 头像转成 https 临时链接。
-// 注意：image 组件不支持 cloud:// 协议，且临时链接带签名(t)会过期，故每次加载都要重新转换。
+// 注意：image 组件不支持 cloud:// 协议，且临时链接带签名(t)会过期，故带 TTL 缓存。
 async function resolveAvatars(list) {
   if (!Array.isArray(list) || !list.length) return list || [];
   const ids = [];
@@ -100,19 +112,40 @@ async function resolveAvatars(list) {
   if (!ids.length) return list;
 
   const map = {};
+  const needFetch = [];
+  ids.forEach((id) => {
+    const hit = _avatarCache.get(id);
+    if (hit && Date.now() - hit.ts < AVATAR_CACHE_TTL) map[id] = hit.url;
+    else needFetch.push(id);
+  });
+  if (!needFetch.length) return applyAvatarMap(list, map);
+
   try {
-    const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: ids } });
-    (res.result || []).forEach((f) => { if (f && f.tempFileURL) map[f.fileID] = f.tempFileURL; });
+    const res = await wx.cloud.callFunction({ name: 'getImageUrls', data: { fileIDs: needFetch } });
+    (res.result || []).forEach((f) => {
+      if (f && f.tempFileURL) {
+        map[f.fileID] = f.tempFileURL;
+        _avatarCache.set(f.fileID, { url: f.tempFileURL, ts: Date.now() });
+      }
+    });
   } catch (e) { /* ignore */ }
   // 批量接口部分失败时逐个兜底重试
-  for (const id of ids) {
+  for (const id of needFetch) {
     if (map[id]) continue;
     try {
       const r = await wx.cloud.getTempFileURL({ fileList: [id] });
       const f = r.fileList && r.fileList[0];
-      if (f && f.tempFileURL) map[id] = f.tempFileURL;
+      if (f && f.tempFileURL) {
+        map[id] = f.tempFileURL;
+        _avatarCache.set(id, { url: f.tempFileURL, ts: Date.now() });
+      }
     } catch (e) { /* ignore */ }
   }
+  return applyAvatarMap(list, map);
+}
+
+// 用转换结果映射替换列表里的 cloud:// 头像
+function applyAvatarMap(list, map) {
   return list.map((it) => {
     if (!it) return it;
     let avatarUrl = it.avatarUrl || '';
