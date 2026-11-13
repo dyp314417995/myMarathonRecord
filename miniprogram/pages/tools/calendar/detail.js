@@ -7,7 +7,7 @@ const cache = require('../../../utils/cache');
 const HELP_TMPL_ID = 'xepY9QmUT4YPXUt7mLhQrtlVBcN01eGkk-NqH0Av5Ew';
 const HELP_MAX_DAYS = 90;   // 与后端 raceHelp 的 LIMIT.maxDays 保持一致，改一头要连另一头一起改
 
-// 每种互助该写些什么差别很大：拼房要交代酒店位置和到店时间，拼车要交代出发地点和往返安排。
+// 每种互助该写些什么差别很大：拼房要交代酒店位置和到店时间，拼饭要交代口味和人头。
 // 示例文案不对口，等于照着错的模板在写。这里的 key 与 helpTypes、后端 TYPES 保持一致。
 const HELP_PLACEHOLDER = {
   room: {
@@ -15,12 +15,6 @@ const HELP_PLACEHOLDER = {
     desc: '酒店位置偏好、到店时间、是否介意打鼾等，最多 200 字',
     costNote: '如：AA，约 200/晚',
     apply: '如：女生，想赛前一晚一起住',
-  },
-  carpool: {
-    title: '如：赛前领物往返拼车',
-    desc: '出发地点与时间、是否接站、回程怎么安排等，最多 200 字',
-    costNote: '如：AA油费过路费，约 50/人',
-    apply: '如：我这边两个人，可坐副驾',
   },
   meal: {
     title: '如：赛后一起吃碗热面',

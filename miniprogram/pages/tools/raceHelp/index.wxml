@@ -19,7 +19,7 @@
   <block wx:else>
     <view wx:if="{{groups.length === 0}}" class="empty">
       <text class="empty-t">{{tab === 'mine' ? '还没发布过互助' : '还没应征过互助'}}</text>
-      <text class="empty-d">{{tab === 'mine' ? '住得近、车顺路，拼一下省心也省钱' : '在赛事详情页看到合适的，点「我来应征」'}}</text>
+      <text class="empty-d" wx:if="{{tab !== 'mine'}}">在赛事详情页看到合适的，点「我来应征」</text>
       <view wx:if="{{tab === 'mine'}}" class="empty-btn" bindtap="onStartPublish">去发布</view>
     </view>
 
